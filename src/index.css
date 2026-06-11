@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .money { @apply font-money tabular-nums; }
+
+  .card { @apply bg-white border border-leaf rounded-xl shadow-sm; }
+  .label { @apply block text-xs font-semibold uppercase tracking-wider text-pine/70 mb-1; }
+  .input { @apply w-full border border-leaf rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest/40 focus:border-forest; }
+
+  .btn-primary { @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-forest text-white hover:bg-pine; }
+  .btn-ghost { @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-leaf bg-white text-pine hover:bg-leaf/50; }
+  .btn-amber { @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-amber text-white hover:opacity-90; }
+
+  .th { @apply text-left text-xs font-semibold uppercase tracking-wider text-pine/60 px-3 py-2 border-b border-leaf; }
+  .td { @apply px-3 py-2 text-sm border-b border-leaf/60; }
+  .status-chip { @apply inline-block px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide; }
+}
+
+body {
+  @apply bg-paper text-ink font-body antialiased;
+}
+
+/* ---------- PRINT: official documents only, strict black on white ---------- */
+#print-root { display: none; }
+@media print {
+  #root { display: none !important; }
+  #print-root { display: block !important; }
+  body { background: #fff !important; }
+  @page { size: A4; margin: 12mm; }
+  .print-doc { font-family: 'IBM Plex Sans', 'SolaimanLipi', sans-serif; color: #000; font-size: 12px; }
+  .print-doc table { width: 100%; border-collapse: collapse; }
+  .no-print { display: none !important; }
+}

@@ -1,0 +1,597 @@
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '../supabase'
+import {
+  fmtBDT, fmtDate, todayISO, nightsBetween, eachNight,
+  rateFor, computeCharge, sumCharges, STATUS_COLORS,
+} from '../lib/helpers'
+import PrintPortal from '../components/PrintPortal.jsx'
+import RegistrationCard from '../components/print/RegistrationCard.jsx'
+import GuestBill from '../components/print/GuestBill.jsx'
+import Mushak63 from '../components/print/Mushak63.jsx'
+import { exportXLSX } from '../lib/helpers'
+import {
+  ArrowLeft, MessageCircle, Mail, CheckCircle2, LogIn, BedDouble,
+  Plus, Trash2, Printer, FileDown, Receipt, BadgeCheck, Ban,
+} from 'lucide-react'
+
+const TABS = ['Overview', 'Quotation', 'Check-In', 'Folio & Payments', 'Invoices']
+
+export default function ReservationDetail({ id, back, userName }) {
+  const [res, setRes] = useState(null)
+  const [guest, setGuest] = useState(null)
+  const [resGuests, setResGuests] = useState([])
+  const [resRooms, setResRooms] = useState([])
+  const [rooms, setRooms] = useState([])
+  const [charges, setCharges] = useState([])
+  const [payments, setPayments] = useState([])
+  const [invoices, setInvoices] = useState([])
+  const [taxConfig, setTaxConfig] = useState([])
+  const [company, setCompany] = useState(null)
+  const [tab, setTab] = useState('Overview')
+  const [printDoc, setPrintDoc] = useState(null) // {type:'REG'|'BILL'|'MUSHAK', invoice?}
+  const [msg, setMsg] = useState('')
+
+  const loadAll = async () => {
+    const { data: r } = await supabase.from('reservations').select('*').eq('id', id).single()
+    setRes(r)
+    if (r?.primary_guest_id) {
+      const { data: g } = await supabase.from('guests').select('*').eq('id', r.primary_guest_id).single()
+      setGuest(g)
+    }
+    const [{ data: rg }, { data: rr }, { data: rm }, { data: ch }, { data: pm }, { data: inv }, { data: tc }, { data: co }] =
+      await Promise.all([
+        supabase.from('reservation_guests').select('*').eq('reservation_id', id).order('is_primary', { ascending: false }),
+        supabase.from('reservation_rooms').select('*, rooms(*)').eq('reservation_id', id),
+        supabase.from('rooms').select('*').eq('is_active', true).order('room_no'),
+        supabase.from('folio_charges').select('*').eq('reservation_id', id).order('charge_date'),
+        supabase.from('payments').select('*').eq('reservation_id', id).order('received_date'),
+        supabase.from('invoices').select('*').eq('reservation_id', id).order('created_at'),
+        supabase.from('tax_config').select('*'),
+        supabase.from('company_settings').select('*').eq('id', 1).single(),
+      ])
+    setResGuests(rg || []); setResRooms(rr || []); setRooms(rm || [])
+    setCharges(ch || []); setPayments(pm || []); setInvoices(inv || [])
+    setTaxConfig(tc || []); setCompany(co)
+  }
+  useEffect(() => { loadAll() }, [id])
+
+  const totals = useMemo(() => sumCharges(charges), [charges])
+  const paid = useMemo(() => payments.reduce((a, p) => a + Number(p.amount), 0), [payments])
+  const advance = useMemo(() => payments.filter((p) => p.payment_class === 'ADVANCE').reduce((a, p) => a + Number(p.amount), 0), [payments])
+  const due = +(totals.grand_total - paid).toFixed(2)
+  const nights = res ? nightsBetween(res.check_in, res.check_out) : 0
+
+  const setStatus = async (status, extra = {}) => {
+    await supabase.from('reservations').update({ status, ...extra }).eq('id', id)
+    await loadAll()
+  }
+
+  if (!res) return <div className="text-pine/50">Loading…</div>
+
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
+
+  return (
+    <div>
+      <button className="btn-ghost mb-4" onClick={back}><ArrowLeft size={15} /> All reservations</button>
+      <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-2xl font-bold text-pine">{res.reservation_name || guest?.full_name}</h1>
+            <span className={`status-chip ${STATUS_COLORS[res.status]}`}>{res.status.replace('_', ' ')}</span>
+          </div>
+          <p className="text-sm text-pine/60 money mt-1">
+            {res.res_no} · {fmtDate(res.check_in)} → {fmtDate(res.check_out)} · {nights} night{nights !== 1 && 's'} · {res.pax_adults} adult{res.pax_adults !== 1 && 's'}{res.pax_children > 0 && `, ${res.pax_children} child`}
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="text-xs uppercase tracking-wider text-pine/50 font-semibold">Balance due</div>
+          <div className={`font-display text-2xl font-bold money ${due > 0 ? 'text-red-600' : 'text-forest'}`}>{fmtBDT(due)}</div>
+          <div className="text-xs text-pine/50 money">Billed {fmtBDT(totals.grand_total)} · Paid {fmtBDT(paid)}</div>
+        </div>
+      </div>
+
+      {msg && <div className="mb-4 px-4 py-2 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
+
+      <div className="flex gap-1 border-b border-leaf mb-6">
+        {TABS.map((t) => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`px-4 py-2 text-sm font-semibold rounded-t-lg ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'Overview' && <Overview res={res} guest={guest} resRooms={resRooms} setStatus={setStatus} payments={payments} advance={advance} flash={flash} />}
+      {tab === 'Quotation' && <QuotationTab res={res} guest={guest} nights={nights} taxConfig={taxConfig} company={company} reload={loadAll} flash={flash} userName={userName} />}
+      {tab === 'Check-In' && <CheckInTab res={res} guest={guest} resGuests={resGuests} resRooms={resRooms} rooms={rooms} reload={loadAll} setStatus={setStatus} userName={userName} openCard={() => setPrintDoc({ type: 'REG' })} payments={payments} flash={flash} />}
+      {tab === 'Folio & Payments' && <FolioTab res={res} charges={charges} payments={payments} resRooms={resRooms} taxConfig={taxConfig} reload={loadAll} userName={userName} totals={totals} paid={paid} due={due} flash={flash} />}
+      {tab === 'Invoices' && <InvoicesTab res={res} guest={guest} charges={charges} totals={totals} paid={paid} due={due} invoices={invoices} company={company} reload={loadAll} userName={userName} setStatus={setStatus} setPrintDoc={setPrintDoc} flash={flash} />}
+
+      {printDoc?.type === 'REG' && (
+        <PrintPortal title="Guest Registration Card" onClose={() => setPrintDoc(null)}>
+          <RegistrationCard res={res} guest={guest} resGuests={resGuests} resRooms={resRooms} payments={payments} company={company} />
+        </PrintPortal>
+      )}
+      {printDoc?.type === 'BILL' && (
+        <PrintPortal title={`Guest Bill ${printDoc.invoice.invoice_no}`} onClose={() => setPrintDoc(null)}>
+          <GuestBill invoice={printDoc.invoice} res={res} guest={guest} company={company} />
+        </PrintPortal>
+      )}
+      {printDoc?.type === 'MUSHAK' && (
+        <PrintPortal title={`Mushak-6.3 — ${printDoc.invoice.invoice_no}`} onClose={() => setPrintDoc(null)}>
+          <Mushak63 invoice={printDoc.invoice} res={res} company={company} />
+        </PrintPortal>
+      )}
+    </div>
+  )
+}
+
+/* ---------------- OVERVIEW ---------------- */
+function Overview({ res, guest, resRooms, setStatus, payments, advance, flash }) {
+  const canConfirm = ['QUERY', 'QUOTED'].includes(res.status)
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="card p-5 lg:col-span-2">
+        <h3 className="font-display font-semibold text-pine mb-3">Guest & stay</h3>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <div><dt className="label">Primary guest</dt><dd className="font-semibold">{guest?.full_name || '—'}</dd></div>
+          <div><dt className="label">Contact</dt><dd>{guest?.phone || '—'}{guest?.email ? ` · ${guest.email}` : ''}</dd></div>
+          <div><dt className="label">Address</dt><dd>{guest?.address || '—'}</dd></div>
+          <div><dt className="label">Source</dt><dd>{res.source}</dd></div>
+          <div><dt className="label">Rooms assigned</dt><dd>{resRooms.length ? resRooms.map((r) => r.rooms?.room_no).join(', ') : 'Not yet assigned'}</dd></div>
+          <div><dt className="label">Notes</dt><dd>{res.notes || '—'}</dd></div>
+        </dl>
+      </div>
+      <div className="card p-5">
+        <h3 className="font-display font-semibold text-pine mb-3">Pipeline actions</h3>
+        <div className="space-y-2">
+          {canConfirm && (
+            <button className="btn-primary w-full justify-center" onClick={() => {
+              if (advance <= 0 && payments.length === 0) { flash('Record the advance payment first (Folio & Payments tab) — booking confirms on advance per your workflow.'); return }
+              setStatus('CONFIRMED'); flash('Booking confirmed.')
+            }}>
+              <CheckCircle2 size={16} /> Confirm booking
+            </button>
+          )}
+          {['QUERY', 'QUOTED', 'CONFIRMED'].includes(res.status) && (
+            <button className="btn-ghost w-full justify-center text-red-600" onClick={() => setStatus('CANCELLED')}><Ban size={15} /> Cancel reservation</button>
+          )}
+          <p className="text-xs text-pine/50 pt-2">
+            Advance received: <span className="money font-semibold">{fmtBDT(advance)}</span>. Per workflow, a booking is confirmed after the guest gives an advance.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- QUOTATION (req. 2) ---------------- */
+function QuotationTab({ res, guest, nights, taxConfig, company, reload, flash, userName }) {
+  const [roomRate, setRoomRate] = useState(res.room_rate || 0)
+  const [roomCount, setRoomCount] = useState(1)
+  const [validDays, setValidDays] = useState(7)
+  const [quotes, setQuotes] = useState([])
+  const rate = rateFor(taxConfig, 'ROOM', todayISO())
+
+  const perNight = computeCharge(Number(roomRate) * Number(roomCount), res.discount_pct, rate)
+  const total = +(perNight.total * nights).toFixed(2)
+
+  const loadQuotes = async () => {
+    const { data } = await supabase.from('quotations').select('*').eq('reservation_id', res.id).order('created_at', { ascending: false })
+    setQuotes(data || [])
+  }
+  useEffect(() => { loadQuotes() }, [res.id])
+
+  const message = useMemo(() => (
+    `Dear ${guest?.full_name || 'Guest'},\n\nGreetings from ${company?.name || 'Novem Eco Resort'}, Sreemangal!\n\nQuotation for your stay:\n• Check-in: ${fmtDate(res.check_in)}\n• Check-out: ${fmtDate(res.check_out)} (${nights} night${nights !== 1 ? 's' : ''})\n• Rooms: ${roomCount} × ${fmtBDT(roomRate)}/night\n• Service charge ${rate.service_charge_pct}% & VAT ${rate.vat_pct}% included\n• Total: ${fmtBDT(total)}\n\nAn advance payment confirms your booking. This quotation is valid for ${validDays} days.\n\nWarm regards,\n${company?.name || 'Novem Eco Resort'}\n${company?.phone || ''}`
+  ), [guest, res, nights, roomCount, roomRate, total, validDays, rate, company])
+
+  const record = async (via) => {
+    const validUntil = new Date(Date.now() + validDays * 86400000).toISOString().slice(0, 10)
+    await supabase.from('quotations').insert({
+      reservation_id: res.id, total_amount: total, valid_until: validUntil,
+      status: 'SENT', sent_via: via, sent_at: new Date().toISOString(), message,
+    })
+    if (['QUERY'].includes(res.status)) await supabase.from('reservations').update({ status: 'QUOTED', room_rate: roomRate }).eq('id', res.id)
+    else await supabase.from('reservations').update({ room_rate: roomRate }).eq('id', res.id)
+    await reload(); await loadQuotes(); flash(`Quotation recorded as sent via ${via}.`)
+  }
+
+  const sendWhatsApp = () => {
+    const phone = (guest?.phone || '').replace(/[^0-9]/g, '')
+    const intl = phone.startsWith('880') ? phone : phone.startsWith('0') ? '88' + phone : '880' + phone
+    window.open(`https://wa.me/${intl}?text=${encodeURIComponent(message)}`, '_blank')
+    record('WhatsApp')
+  }
+  const sendEmail = () => {
+    window.open(`mailto:${guest?.email || ''}?subject=${encodeURIComponent(`Quotation — ${company?.name || 'Novem Eco Resort'} (${res.res_no})`)}&body=${encodeURIComponent(message)}`, '_blank')
+    record('Email')
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="card p-5">
+        <h3 className="font-display font-semibold text-pine mb-3">Build quotation</h3>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div><label className="label">Rate / room / night</label><input type="number" className="input money" value={roomRate} onChange={(e) => setRoomRate(e.target.value)} /></div>
+          <div><label className="label">Rooms</label><input type="number" min="1" className="input money" value={roomCount} onChange={(e) => setRoomCount(e.target.value)} /></div>
+          <div><label className="label">Valid (days)</label><input type="number" min="1" className="input money" value={validDays} onChange={(e) => setValidDays(e.target.value)} /></div>
+        </div>
+        <div className="bg-leaf/40 rounded-lg p-4 text-sm space-y-1 money">
+          <Row k={`Room charge × ${nights} night(s)`} v={fmtBDT(perNight.base_amount * nights)} />
+          {res.discount_pct > 0 && <Row k={`Discount ${res.discount_pct}%`} v={'− ' + fmtBDT(perNight.discount * nights)} />}
+          <Row k={`Service charge ${rate.service_charge_pct}%`} v={fmtBDT(perNight.service_charge * nights)} />
+          {rate.sd_pct > 0 && <Row k={`SD ${rate.sd_pct}%`} v={fmtBDT(perNight.sd * nights)} />}
+          <Row k={`VAT ${rate.vat_pct}%`} v={fmtBDT(perNight.vat * nights)} />
+          <div className="border-t border-pine/20 pt-1 font-bold"><Row k="Total" v={fmtBDT(total)} /></div>
+        </div>
+        <div className="flex gap-2 mt-4">
+          <button className="btn-primary flex-1 justify-center" onClick={sendWhatsApp} disabled={!guest?.phone}><MessageCircle size={16} /> Send via WhatsApp</button>
+          <button className="btn-ghost flex-1 justify-center" onClick={sendEmail}><Mail size={16} /> Send via Email</button>
+        </div>
+        {!guest?.phone && <p className="text-xs text-amber mt-2">Add the guest's phone number to enable WhatsApp.</p>}
+      </div>
+      <div className="card p-5">
+        <h3 className="font-display font-semibold text-pine mb-3">Message preview</h3>
+        <pre className="text-xs whitespace-pre-wrap bg-paper border border-leaf rounded-lg p-3">{message}</pre>
+        <h4 className="label mt-4">Sent quotations</h4>
+        {quotes.length === 0 && <p className="text-sm text-pine/50">None yet.</p>}
+        {quotes.map((q) => (
+          <div key={q.id} className="flex justify-between text-sm py-1.5 border-b border-leaf/60 money">
+            <span>{q.quote_no} · {q.sent_via}</span>
+            <span>{fmtBDT(q.total_amount)} · valid till {fmtDate(q.valid_until)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const Row = ({ k, v }) => <div className="flex justify-between"><span>{k}</span><span>{v}</span></div>
+
+/* ---------------- CHECK-IN (req. 4) ---------------- */
+function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus, userName, openCard, payments, flash }) {
+  const [f, setF] = useState({
+    id_type: guest?.id_type || 'NID', id_number: guest?.id_number || '',
+    extra_pax: res.extra_pax, extra_pax_rate: res.extra_pax_rate,
+    driver_accommodation: res.driver_accommodation, driver_count: res.driver_count, driver_rate: res.driver_rate,
+    special_instructions: res.special_instructions || '',
+  })
+  const [newGuest, setNewGuest] = useState('')
+  const [roomSel, setRoomSel] = useState('')
+  const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
+  useEffect(() => { if (guest) setF((p) => ({ ...p, id_type: guest.id_type || 'NID', id_number: guest.id_number || '' })) }, [guest])
+
+  const assignRoom = async () => {
+    if (!roomSel) return
+    const room = rooms.find((r) => r.id === roomSel)
+    await supabase.from('reservation_rooms').insert({ reservation_id: res.id, room_id: room.id, rate: res.room_rate || room.base_rate })
+    setRoomSel(''); await reload()
+  }
+  const removeRoom = async (rrId) => { await supabase.from('reservation_rooms').delete().eq('id', rrId); await reload() }
+  const addGuest = async () => {
+    if (!newGuest.trim()) return
+    await supabase.from('reservation_guests').insert({ reservation_id: res.id, guest_name: newGuest.trim() })
+    setNewGuest(''); await reload()
+  }
+  const removeGuest = async (gid) => { await supabase.from('reservation_guests').delete().eq('id', gid); await reload() }
+
+  const doCheckIn = async () => {
+    if (resRooms.length === 0) { flash('Assign at least one room before check-in.'); return }
+    await supabase.from('guests').update({ id_type: f.id_type, id_number: f.id_number }).eq('id', res.primary_guest_id)
+    await setStatus('CHECKED_IN', {
+      extra_pax: +f.extra_pax, extra_pax_rate: +f.extra_pax_rate,
+      driver_accommodation: f.driver_accommodation, driver_count: +f.driver_count, driver_rate: +f.driver_rate,
+      special_instructions: f.special_instructions,
+      checked_in_at: new Date().toISOString(), checkin_by: userName,
+    })
+    flash('Guest checked in. Print the Registration Card for signatures.')
+  }
+
+  const assignedIds = new Set(resRooms.map((r) => r.room_id))
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="card p-5 space-y-4">
+        <h3 className="font-display font-semibold text-pine">Room assignment</h3>
+        <div className="flex gap-2">
+          <select className="input flex-1" value={roomSel} onChange={(e) => setRoomSel(e.target.value)}>
+            <option value="">Select room…</option>
+            {rooms.filter((r) => !assignedIds.has(r.id)).map((r) => (
+              <option key={r.id} value={r.id}>{r.room_no} — {r.room_type} ({fmtBDT(r.base_rate)})</option>
+            ))}
+          </select>
+          <button className="btn-primary" onClick={assignRoom}><BedDouble size={15} /> Assign</button>
+        </div>
+        {resRooms.map((rr) => (
+          <div key={rr.id} className="flex justify-between items-center text-sm border border-leaf rounded-lg px-3 py-2">
+            <span className="font-semibold">Room {rr.rooms?.room_no} <span className="text-pine/50 font-normal">· {rr.rooms?.room_type}</span></span>
+            <span className="flex items-center gap-3 money">{fmtBDT(rr.rate)}/night
+              {res.status !== 'CHECKED_OUT' && <button onClick={() => removeRoom(rr.id)} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button>}
+            </span>
+          </div>
+        ))}
+        {rooms.length === 0 && <p className="text-xs text-amber">No rooms defined yet — add your room inventory in Settings → Rooms.</p>}
+
+        <h3 className="font-display font-semibold text-pine pt-2">All guest names (for Registration Card)</h3>
+        <div className="flex gap-2">
+          <input className="input flex-1" placeholder="Add accompanying guest name" value={newGuest} onChange={(e) => setNewGuest(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addGuest()} />
+          <button className="btn-ghost" onClick={addGuest}><Plus size={15} /></button>
+        </div>
+        {resGuests.map((g) => (
+          <div key={g.id} className="flex justify-between items-center text-sm px-3 py-1.5 border-b border-leaf/60">
+            <span>{g.guest_name} {g.is_primary && <span className="status-chip bg-forest/15 text-forest ml-2">Primary</span>}</span>
+            {!g.is_primary && <button onClick={() => removeGuest(g.id)} className="text-red-400 hover:text-red-600"><Trash2 size={13} /></button>}
+          </div>
+        ))}
+      </div>
+
+      <div className="card p-5 space-y-4">
+        <h3 className="font-display font-semibold text-pine">Check-in details</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="label">Photo ID type</label>
+            <select className="input" value={f.id_type} onChange={(e) => set('id_type', e.target.value)}>
+              {['NID', 'Smart ID', 'Passport', 'Driving License', 'Birth Certificate'].map((t) => <option key={t}>{t}</option>)}
+            </select></div>
+          <div><label className="label">ID number</label><input className="input money" value={f.id_number} onChange={(e) => set('id_number', e.target.value)} /></div>
+          <div><label className="label">Extra pax</label><input type="number" min="0" className="input money" value={f.extra_pax} onChange={(e) => set('extra_pax', e.target.value)} /></div>
+          <div><label className="label">Extra pax rate / night</label><input type="number" className="input money" value={f.extra_pax_rate} onChange={(e) => set('extra_pax_rate', e.target.value)} /></div>
+          <div className="col-span-2 flex items-center gap-2 pt-1">
+            <input type="checkbox" id="drv" checked={f.driver_accommodation} onChange={(e) => set('driver_accommodation', e.target.checked)} />
+            <label htmlFor="drv" className="text-sm font-medium">Driver accommodation needed</label>
+          </div>
+          {f.driver_accommodation && (<>
+            <div><label className="label">No. of drivers</label><input type="number" min="0" className="input money" value={f.driver_count} onChange={(e) => set('driver_count', e.target.value)} /></div>
+            <div><label className="label">Driver rate / night</label><input type="number" className="input money" value={f.driver_rate} onChange={(e) => set('driver_rate', e.target.value)} /></div>
+          </>)}
+          <div className="col-span-2"><label className="label">Notes / special instructions</label>
+            <textarea className="input" rows={2} value={f.special_instructions} onChange={(e) => set('special_instructions', e.target.value)} /></div>
+        </div>
+        <div className="flex gap-2 pt-1">
+          {res.status !== 'CHECKED_IN' && res.status !== 'CHECKED_OUT' && res.status !== 'SETTLED' ? (
+            <button className="btn-primary flex-1 justify-center" onClick={doCheckIn}><LogIn size={16} /> Check in guest</button>
+          ) : (
+            <div className="text-sm text-forest font-semibold flex items-center gap-2"><BadgeCheck size={16} /> Checked in {res.checked_in_at && `· ${fmtDate(res.checked_in_at)}`} {res.checkin_by && `by ${res.checkin_by}`}</div>
+          )}
+          <button className="btn-amber flex-1 justify-center" onClick={openCard}><Printer size={16} /> Registration Card</button>
+        </div>
+        <p className="text-xs text-pine/50">Advance on record: <span className="money font-semibold">{fmtBDT(payments.filter((p) => p.payment_class === 'ADVANCE').reduce((a, p) => a + +p.amount, 0))}</span> — shown on the card.</p>
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- FOLIO & PAYMENTS (req. 5–8) ---------------- */
+function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userName, totals, paid, due, flash }) {
+  const [c, setC] = useState({ charge_type: 'OTHER', description: '', base_amount: '', charge_date: todayISO() })
+  const [p, setP] = useState({ amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName })
+
+  const postRoomCharges = async () => {
+    if (resRooms.length === 0) { flash('Assign rooms first (Check-In tab).'); return }
+    if (charges.some((ch) => ch.charge_type === 'ROOM')) { flash('Room charges already posted — add adjustments manually if needed.'); return }
+    const rows = []
+    for (const night of eachNight(res.check_in, res.check_out)) {
+      const rate = rateFor(taxConfig, 'ROOM', night)
+      for (const rr of resRooms) {
+        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Room ${rr.rooms?.room_no} — Night of ${fmtDate(night)}`, ...computeCharge(rr.rate, res.discount_pct, rate), created_by: userName })
+      }
+      if (res.extra_pax > 0 && res.extra_pax_rate > 0)
+        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Extra pax × ${res.extra_pax} — ${fmtDate(night)}`, ...computeCharge(res.extra_pax * res.extra_pax_rate, res.discount_pct, rate), created_by: userName })
+      if (res.driver_accommodation && res.driver_count > 0 && res.driver_rate > 0)
+        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Driver accommodation × ${res.driver_count} — ${fmtDate(night)}`, ...computeCharge(res.driver_count * res.driver_rate, res.discount_pct, rate), created_by: userName })
+    }
+    const { error } = await supabase.from('folio_charges').insert(rows)
+    if (error) flash(error.message); else { await reload(); flash(`${rows.length} room charge line(s) posted.`) }
+  }
+
+  const addCharge = async () => {
+    if (!c.description || !c.base_amount) return
+    const rate = rateFor(taxConfig, c.charge_type, c.charge_date)
+    const { error } = await supabase.from('folio_charges').insert({
+      reservation_id: res.id, charge_date: c.charge_date, charge_type: c.charge_type,
+      description: c.description, ...computeCharge(c.base_amount, 0, rate), created_by: userName,
+    })
+    if (error) flash(error.message)
+    else { setC({ charge_type: 'OTHER', description: '', base_amount: '', charge_date: todayISO() }); await reload() }
+  }
+
+  const addPayment = async () => {
+    if (!p.amount || +p.amount <= 0) return
+    const { error } = await supabase.from('payments').insert({ reservation_id: res.id, ...p, amount: +p.amount })
+    if (error) flash(error.message)
+    else { setP({ amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName }); await reload(); flash('Payment recorded — class set automatically.') }
+  }
+
+  const toggleStatus = async (ch) => {
+    await supabase.from('folio_charges').update({ status: ch.status === 'PAID' ? 'DUE' : 'PAID' }).eq('id', ch.id)
+    await reload()
+  }
+  const delCharge = async (chId) => { await supabase.from('folio_charges').delete().eq('id', chId); await reload() }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="card p-4 lg:col-span-2">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display font-semibold text-pine">Add charge</h3>
+            <button className="btn-ghost" onClick={postRoomCharges}><BedDouble size={15} /> Post room charges ({nightsBetween(res.check_in, res.check_out)} nights)</button>
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            <select className="input" value={c.charge_type} onChange={(e) => setC({ ...c, charge_type: e.target.value })}>
+              {['ROOM', 'RESTAURANT', 'LAUNDRY', 'OTHER'].map((t) => <option key={t}>{t}</option>)}
+            </select>
+            <input className="input col-span-2" placeholder="Description" value={c.description} onChange={(e) => setC({ ...c, description: e.target.value })} />
+            <input type="number" className="input money" placeholder="Base ৳" value={c.base_amount} onChange={(e) => setC({ ...c, base_amount: e.target.value })} />
+            <button className="btn-primary justify-center" onClick={addCharge}><Plus size={15} /> Add</button>
+          </div>
+          <p className="text-xs text-pine/50 mt-2">SC, SD & VAT are computed automatically from the Settings rates for the charge type. Restaurant orders for room guests post here as <b>RESTAURANT — Due</b> when not paid instantly.</p>
+        </div>
+        <div className="card p-4">
+          <h3 className="font-display font-semibold text-pine mb-3">Record payment</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <input type="number" className="input money" placeholder="Amount ৳" value={p.amount} onChange={(e) => setP({ ...p, amount: e.target.value })} />
+            <select className="input" value={p.method} onChange={(e) => setP({ ...p, method: e.target.value })}>
+              {['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER'].map((m) => <option key={m}>{m}</option>)}
+            </select>
+            <input type="date" className="input" value={p.received_date} onChange={(e) => setP({ ...p, received_date: e.target.value })} />
+            <input className="input" placeholder="Reference" value={p.reference} onChange={(e) => setP({ ...p, reference: e.target.value })} />
+          </div>
+          <button className="btn-primary w-full justify-center mt-2" onClick={addPayment}><Receipt size={15} /> Save payment</button>
+          <p className="text-xs text-pine/50 mt-2">Before {fmtDate(res.check_in)} → <b>ADVANCE</b>; from check-in day → <b>REGULAR</b>. Set automatically.</p>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="px-4 py-3 border-b border-leaf font-display font-semibold text-pine">Guest Total Billing History</div>
+        <table className="w-full">
+          <thead><tr>
+            <th className="th">Date</th><th className="th">Type</th><th className="th">Description</th>
+            <th className="th text-right">Base</th><th className="th text-right">Disc.</th><th className="th text-right">SC</th>
+            <th className="th text-right">SD</th><th className="th text-right">VAT</th><th className="th text-right">Total</th>
+            <th className="th">Status</th><th className="th"></th>
+          </tr></thead>
+          <tbody>
+            {charges.map((ch) => (
+              <tr key={ch.id} className="hover:bg-leaf/20">
+                <td className="td money text-xs">{fmtDate(ch.charge_date)}</td>
+                <td className="td text-xs">{ch.charge_type}</td>
+                <td className="td text-sm">{ch.description}</td>
+                <td className="td money text-right">{Number(ch.base_amount).toFixed(2)}</td>
+                <td className="td money text-right">{Number(ch.discount).toFixed(2)}</td>
+                <td className="td money text-right">{Number(ch.service_charge).toFixed(2)}</td>
+                <td className="td money text-right">{Number(ch.sd).toFixed(2)}</td>
+                <td className="td money text-right">{Number(ch.vat).toFixed(2)}</td>
+                <td className="td money text-right font-semibold">{Number(ch.total).toFixed(2)}</td>
+                <td className="td">
+                  <button onClick={() => toggleStatus(ch)} className={`status-chip ${ch.status === 'PAID' ? 'bg-forest/15 text-forest' : 'bg-red-100 text-red-600'}`}>{ch.status}</button>
+                </td>
+                <td className="td"><button onClick={() => delCharge(ch.id)} className="text-red-300 hover:text-red-600"><Trash2 size={13} /></button></td>
+              </tr>
+            ))}
+            {charges.length === 0 && <tr><td className="td text-pine/50" colSpan={11}>No charges yet — post room charges or add a line.</td></tr>}
+          </tbody>
+          {charges.length > 0 && (
+            <tfoot><tr className="bg-leaf/40 font-bold money">
+              <td className="td" colSpan={3}>Totals</td>
+              <td className="td text-right">{totals.base.toFixed(2)}</td>
+              <td className="td text-right">{totals.discount.toFixed(2)}</td>
+              <td className="td text-right">{totals.service_charge.toFixed(2)}</td>
+              <td className="td text-right">{totals.sd.toFixed(2)}</td>
+              <td className="td text-right">{totals.vat.toFixed(2)}</td>
+              <td className="td text-right">{totals.grand_total.toFixed(2)}</td>
+              <td className="td" colSpan={2}></td>
+            </tr></tfoot>
+          )}
+        </table>
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="px-4 py-3 border-b border-leaf font-display font-semibold text-pine">Payments</div>
+        <table className="w-full">
+          <thead><tr><th className="th">Date</th><th className="th">Class</th><th className="th">Method</th><th className="th">Reference</th><th className="th">Received by</th><th className="th text-right">Amount</th></tr></thead>
+          <tbody>
+            {payments.map((pm) => (
+              <tr key={pm.id}>
+                <td className="td money text-xs">{fmtDate(pm.received_date)}</td>
+                <td className="td"><span className={`status-chip ${pm.payment_class === 'ADVANCE' ? 'bg-amber/20 text-amber' : 'bg-forest/15 text-forest'}`}>{pm.payment_class}</span></td>
+                <td className="td text-sm">{pm.method}</td>
+                <td className="td text-xs">{pm.reference || '—'}</td>
+                <td className="td text-xs">{pm.received_by || '—'}</td>
+                <td className="td money text-right font-semibold">{Number(pm.amount).toFixed(2)}</td>
+              </tr>
+            ))}
+            {payments.length === 0 && <tr><td className="td text-pine/50" colSpan={6}>No payments recorded.</td></tr>}
+          </tbody>
+          <tfoot><tr className="bg-leaf/40 font-bold money">
+            <td className="td" colSpan={5}>Paid {fmtBDT(paid)} · Balance due</td>
+            <td className={`td text-right ${due > 0 ? 'text-red-600' : 'text-forest'}`}>{fmtBDT(due)}</td>
+          </tr></tfoot>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- INVOICES & CHECK-OUT (req. 9) ---------------- */
+function InvoicesTab({ res, guest, charges, totals, paid, due, invoices, company, reload, userName, setStatus, setPrintDoc, flash }) {
+  const canCheckout = res.status === 'CHECKED_IN'
+  const hasInvoices = invoices.length > 0
+
+  const generateInvoices = async () => {
+    if (charges.length === 0) { flash('No charges on the folio — post room charges first.'); return }
+    const t = { ...totals, paid, due }
+    const snapshot = charges.map((c) => ({
+      charge_date: c.charge_date, charge_type: c.charge_type, description: c.description,
+      base_amount: +c.base_amount, discount: +c.discount, service_charge: +c.service_charge,
+      sd: +c.sd, vat: +c.vat, total: +c.total, status: c.status,
+    }))
+    const buyer = {
+      buyer_name: res.reservation_name || guest?.full_name, buyer_address: guest?.address || '', buyer_bin: '',
+    }
+    const base = { reservation_id: res.id, totals: t, line_snapshot: snapshot, created_by: userName, ...buyer }
+    const { error: e1 } = await supabase.from('invoices').insert({ ...base, invoice_type: 'GUEST_BILL' })
+    const { error: e2 } = await supabase.from('invoices').insert({ ...base, invoice_type: 'MUSHAK_63' })
+    if (e1 || e2) { flash((e1 || e2).message); return }
+    if (due <= 0) await supabase.from('folio_charges').update({ status: 'PAID' }).eq('reservation_id', res.id)
+    await setStatus(due <= 0 ? 'SETTLED' : 'CHECKED_OUT', { checked_out_at: new Date().toISOString() })
+    await reload()
+    flash('Checked out — Guest Bill and Mushak-6.3 generated. The 6.3 is now in your VAT sales register.')
+  }
+
+  const downloadExcel = (inv) => {
+    const lines = inv.line_snapshot || []
+    const t = inv.totals || {}
+    const rows = [
+      [company?.name || 'Novem Eco Resort'], [company?.address || ''],
+      [`BIN: ${company?.bin || '—'}`], [],
+      [inv.invoice_type === 'MUSHAK_63' ? 'Mushak-6.3 — Tax Invoice' : 'Guest Bill'],
+      [`Invoice No: ${inv.invoice_no}`, `Date: ${fmtDate(inv.issued_at)}`],
+      [`Guest: ${inv.buyer_name || ''}`, `Reservation: ${res.res_no}`], [],
+      ['Date', 'Type', 'Description', 'Base', 'Discount', 'Service Charge', 'SD', 'VAT', 'Total', 'Status'],
+      ...lines.map((l) => [l.charge_date, l.charge_type, l.description, l.base_amount, l.discount, l.service_charge, l.sd, l.vat, l.total, l.status]),
+      [],
+      ['', '', 'TOTALS', t.base, t.discount, t.service_charge, t.sd, t.vat, t.grand_total, ''],
+      ['', '', 'Paid', '', '', '', '', '', t.paid, ''],
+      ['', '', 'Due', '', '', '', '', '', t.due, ''],
+    ]
+    exportXLSX(`${inv.invoice_no}.xlsx`, [{ name: inv.invoice_type === 'MUSHAK_63' ? 'Mushak 6.3' : 'Guest Bill', rows }])
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="card p-5 flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h3 className="font-display font-semibold text-pine">Check-out & invoice generation</h3>
+          <p className="text-sm text-pine/60">Generates both documents from the folio: the Guest Bill and the NBR Mushak-6.3 tax invoice (auto-entered into the 6.2 sales register).</p>
+        </div>
+        <button className="btn-primary" onClick={generateInvoices} disabled={!canCheckout && hasInvoices}>
+          <CheckCircle2 size={16} /> {canCheckout ? 'Check out & generate invoices' : 'Generate invoices'}
+        </button>
+      </div>
+      {due > 0 && <div className="px-4 py-3 rounded-lg bg-amber/10 text-amber text-sm font-medium money">Balance due {fmtBDT(due)} — guest can still check out; the reservation stays CHECKED_OUT (not SETTLED) until dues clear.</div>}
+
+      <div className="card overflow-hidden">
+        <table className="w-full">
+          <thead><tr><th className="th">Invoice No.</th><th className="th">Type</th><th className="th">Issued</th><th className="th text-right">Grand total</th><th className="th text-right">Actions</th></tr></thead>
+          <tbody>
+            {invoices.map((inv) => (
+              <tr key={inv.id}>
+                <td className="td money font-semibold">{inv.invoice_no}</td>
+                <td className="td text-sm">{inv.invoice_type === 'MUSHAK_63' ? 'Mushak-6.3 (NBR)' : 'Guest Bill'}</td>
+                <td className="td money text-xs">{fmtDate(inv.issued_at)}</td>
+                <td className="td money text-right">{fmtBDT(inv.totals?.grand_total)}</td>
+                <td className="td text-right">
+                  <div className="flex justify-end gap-2">
+                    <button className="btn-ghost !py-1" onClick={() => setPrintDoc({ type: inv.invoice_type === 'MUSHAK_63' ? 'MUSHAK' : 'BILL', invoice: inv })}><Printer size={14} /> Print / PDF</button>
+                    <button className="btn-ghost !py-1" onClick={() => downloadExcel(inv)}><FileDown size={14} /> Excel</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {invoices.length === 0 && <tr><td className="td text-pine/50" colSpan={5}>No invoices generated yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
