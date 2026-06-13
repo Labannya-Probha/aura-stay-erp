@@ -21,7 +21,7 @@ import ReportsHub from './pages/ReportsHub.jsx'
 import Settings from './pages/Settings.jsx'
 import {
   Leaf, LayoutDashboard, CalendarRange, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
-  FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut,
+  FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut, Brush,
 } from 'lucide-react'
 
 function BrandLogo({ url }) {
@@ -137,6 +137,7 @@ export default function App() {
         {page === 'calendar' && can(role, 'calendar') && <BookingCalendar openReservation={openReservation} />}
         {page === 'detail' && activeRes && (
           <ReservationDetail id={activeRes} back={() => setPage('reservations')} userName={userName} role={role} isAdmin={isAdmin} />
+        )}
         {page === 'nightaudit' && can(role, 'nightaudit') && <NightAudit userName={userName} isAdmin={isAdmin} />}
         {page === 'pos' && can(role, 'pos') && <RestaurantPOS userName={userName} role={role} isAdmin={isAdmin} />}
         {page === 'facilities' && can(role, 'facilities') && <Facilities userName={userName} isAdmin={isAdmin} />}
