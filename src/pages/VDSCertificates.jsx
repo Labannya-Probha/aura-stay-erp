@@ -99,13 +99,29 @@ export default function VDSCertificates() {
       </div>
 
       <table className="w-full">
-        <thead><tr><th className="th">Date</th><th className="th">Party</th><th className="th">VDS</th><th className="th">Challan</th><th className="th">Action</th></tr></thead>
+        <thead>
+          <tr>
+            <th className="th">DATE</th>
+            <th className="th">DIR</th>
+            <th className="th">CERT</th>
+            <th className="th">PARTY</th>
+            <th className="th">BASE</th>
+            <th className="th">RATE</th>
+            <th className="th">VDS</th>
+            <th className="th">CHALLAN</th>
+            <th className="th">ACTION</th>
+          </tr>
+        </thead>
         <tbody>
           {certs.map(c => (
             <tr key={c.id}>
               <td className="td">{c.challan_date}</td>
+              <td className="td">{c.direction}</td>
+              <td className="td">{c.cert_no}</td>
               <td className="td">{c.vendor_name}</td>
-              <td className="td">{c.vds_amount}</td>
+              <td className="td">{c.invoice_amount}</td>
+              <td className="td">{c.vds_rate}%</td>
+              <td className="td font-bold">{c.vds_amount}</td>
               <td className="td">{c.challan_no}</td>
               <td className="td flex gap-2">
                 <button onClick={() => printMushak66(c)} className="text-forest"><Printer size={16}/></button>
