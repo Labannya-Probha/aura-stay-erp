@@ -40,6 +40,12 @@ function BrandingCard({ reloadCompany }) {
   const set = (k, v) => setC((p) => ({ ...p, [k]: v }))
   const exec = (cmd, val = null) => document.execCommand(cmd, false, val)
 
+  const autoResize = (e) => {
+    const el = e.target;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  };
+
   const uploadLogo = async (file) => {
     if (!file) return
     setBusy(true)
@@ -103,7 +109,13 @@ function BrandingCard({ reloadCompany }) {
           <button type="button" onClick={() => exec('justifyLeft')} className="p-2 hover:bg-white rounded"><AlignLeft size={16}/></button>
           <button type="button" onClick={() => exec('justifyCenter')} className="p-2 hover:bg-white rounded"><AlignCenter size={16}/></button>
         </div>
-        <div ref={editorRef} contentEditable className="w-full h-60 p-4 border-x border-b border-leaf rounded-b-lg text-sm focus:outline-none bg-white" dangerouslySetInnerHTML={{ __html: c.terms_conditions || '' }} />
+        <div 
+          ref={editorRef} 
+          contentEditable 
+          onInput={autoResize}
+          className="w-full min-h-[160px] p-4 border-x border-b border-leaf rounded-b-lg text-sm focus:outline-none bg-white overflow-hidden" 
+          dangerouslySetInnerHTML={{ __html: c.terms_conditions || '' }} 
+        />
       </div>
       <button className="btn-primary mt-4" disabled={busy} onClick={save}><Save size={15} /> Save profile</button>
     </div>
