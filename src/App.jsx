@@ -137,7 +137,6 @@ export default function App() {
         {page === 'calendar' && can(role, 'calendar') && <BookingCalendar openReservation={openReservation} />}
         {page === 'detail' && activeRes && (
           <ReservationDetail id={activeRes} back={() => setPage('reservations')} userName={userName} role={role} isAdmin={isAdmin} />
-        {page === 'housekeeping' && <HousekeepingHub />}
         {page === 'nightaudit' && can(role, 'nightaudit') && <NightAudit userName={userName} isAdmin={isAdmin} />}
         {page === 'pos' && can(role, 'pos') && <RestaurantPOS userName={userName} role={role} isAdmin={isAdmin} />}
         {page === 'facilities' && can(role, 'facilities') && <Facilities userName={userName} isAdmin={isAdmin} />}
@@ -147,6 +146,7 @@ export default function App() {
         {page === 'hr' && can(role, 'hr') && <HrOffice userName={userName} role={role} isAdmin={isAdmin} company={company} />}
         {page === 'reports' && can(role, 'reports') && <ReportsHub userName={userName} />}
         {page === 'settings' && can(role, 'settings') && <Settings userName={userName} role={role} isAdmin={isAdmin} reloadCompany={loadCompany} />}
+        {page === 'housekeeping' && <HousekeepingHub />}          
       </main>
     </div>
   )
