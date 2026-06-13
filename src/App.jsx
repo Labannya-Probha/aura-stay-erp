@@ -124,7 +124,11 @@ export default function App() {
               <div className="truncate font-semibold text-white/80">{userName}</div>
               <div className="text-[10px] text-white/40">{ROLE_LABELS[role] || role}</div>
             </div>
-            <button title="Sign out" onClick={() => supabase.auth.signOut()} className="hover:text-white shrink-0"><LogOut size={15} /></button>
+            <button 
+  title="Sign out" 
+  onClick={async () => {
+    await supabase.auth.signOut(); window.location.reload();}} 
+  className="hover:text-white shrink-0">  <LogOut size={15} /></button>
           </div>
         </div>
       </aside>
