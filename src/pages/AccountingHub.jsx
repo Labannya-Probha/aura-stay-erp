@@ -38,6 +38,7 @@ function JournalsTab({ accounts, userName, flash }) {
   const [head, setHead] = useState({ jv_date: todayISO(), narration: '' });
   const [lines, setLines] = useState([{ account_id: '', debit: '', credit: '', line_note: '' }, { account_id: '', debit: '', credit: '', line_note: '' }]);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const componentRef = useRef();
   const handlePrint = useReactToPrint({ content: () => componentRef.current });
 
@@ -47,6 +48,18 @@ function JournalsTab({ accounts, userName, flash }) {
   };
   useEffect(() => { load() }, []);
 
+  const del = async (id) => {
+    if (!confirm('Are you sure you want to delete this voucher?')) return;
+    const { error } = await supabase.from('journal_entries').delete().eq('id', id);
+    if (error) flash(error.message); else { load(); flash('Voucher deleted.'); }
+  };
+
+  const edit = (r) => {
+    setEditingId(r.id);
+    setHead({ jv_date: r.jv_date, narration: r.narration });
+    setLines(r.journal_lines.map(l => ({ account_id: l.account_id, debit: l.debit, credit: l.credit, line_note: l.line_note })));
+  };
+
   const upd = (i, k, v) => { const n = [...lines]; n[i][k] = v; setLines(n) };
   const totDr = lines.reduce((a, l) => a + (+l.debit || 0), 0);
   const totCr = lines.reduce((a, l) => a + (+l.credit || 0), 0);
@@ -55,10 +68,17 @@ function JournalsTab({ accounts, userName, flash }) {
   const post = async () => {
     if (!balanced) { flash('Debit and credit must be equal and non-zero.'); return; }
     const valid = lines.filter((l) => l.account_id && (+l.debit || +l.credit));
-    const { data: jv, error } = await supabase.from('journal_entries').insert({ jv_date: head.jv_date, narration: head.narration, source: 'MANUAL', posted_by: userName }).select().single();
-    if (error) { flash(error.message); return; }
-    await supabase.from('journal_lines').insert(valid.map((l) => ({ entry_id: jv.id, account_id: l.account_id, debit: +l.debit || 0, credit: +l.credit || 0, line_note: l.line_note })));
-    setHead({ jv_date: todayISO(), narration: '' }); setLines([{ account_id: '', debit: '', credit: '', line_note: '' }, { account_id: '', debit: '', credit: '', line_note: '' }]); load(); flash(`${jv.jv_no} posted.`);
+    
+    if (editingId) {
+       await supabase.from('journal_entries').update({ jv_date: head.jv_date, narration: head.narration }).eq('id', editingId);
+       await supabase.from('journal_lines').delete().eq('entry_id', editingId);
+       await supabase.from('journal_lines').insert(valid.map((l) => ({ entry_id: editingId, account_id: l.account_id, debit: +l.debit || 0, credit: +l.credit || 0, line_note: l.line_note })));
+       setEditingId(null);
+    } else {
+       const { data: jv } = await supabase.from('journal_entries').insert({ jv_date: head.jv_date, narration: head.narration, source: 'MANUAL', posted_by: userName }).select().single();
+       await supabase.from('journal_lines').insert(valid.map((l) => ({ entry_id: jv.id, account_id: l.account_id, debit: +l.debit || 0, credit: +l.credit || 0, line_note: l.line_note })));
+    }
+    setHead({ jv_date: todayISO(), narration: '' }); setLines([{ account_id: '', debit: '', credit: '', line_note: '' }, { account_id: '', debit: '', credit: '', line_note: '' }]); load(); flash('Journal processed.');
   };
 
   const openPrint = (r) => { setSelectedVoucher(r); setTimeout(() => handlePrint(), 100); };
@@ -78,14 +98,24 @@ function JournalsTab({ accounts, userName, flash }) {
             <input className="input col-span-3" placeholder="Note" value={l.line_note} onChange={(e) => upd(i, 'line_note', e.target.value)} />
           </div>
         ))}
-        <button className="btn-primary" disabled={!balanced} onClick={post}><Plus size={15} /> Post journal</button>
+        <button className="btn-primary" disabled={!balanced} onClick={post}>{editingId ? 'Update' : 'Post'} journal</button>
       </div>
       <div className="card overflow-hidden">
         <table className="w-full">
-          <thead><tr><th className="th">JV No</th><th className="th">Date</th><th className="th">Narration</th><th className="th">Source</th><th className="th text-right">Amount</th><th className="th"></th></tr></thead>
+          <thead><tr><th className="th">JV No</th><th className="th">Date</th><th className="th">Narration</th><th className="th text-right">Actions</th></tr></thead>
           <tbody>
-            {rows.map((r) => { const amt = (r.journal_lines || []).reduce((a, l) => a + +l.debit, 0); return (
-              <tr key={r.id}><td className="td money font-semibold">{r.jv_no}</td><td className="td money text-xs">{fmtDate(r.jv_date)}</td><td className="td text-sm">{r.narration}</td><td className="td text-xs">{r.source}</td><td className="td money text-right">{fmtBDT(amt)}</td><td className="td text-right"><button className="btn-ghost !py-1 text-xs" onClick={() => openPrint(r)}>Print</button></td></tr>) })}
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td className="td font-semibold">{r.jv_no}</td>
+                <td className="td text-xs">{fmtDate(r.jv_date)}</td>
+                <td className="td text-sm">{r.narration}</td>
+                <td className="td text-right flex gap-2 justify-end">
+                  <button className="text-blue-500 hover:underline" onClick={() => edit(r)}>Edit</button>
+                  <button className="text-red-500 hover:underline" onClick={() => del(r.id)}>Delete</button>
+                  <button className="text-green-500 hover:underline" onClick={() => openPrint(r)}>Print</button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
