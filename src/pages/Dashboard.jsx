@@ -76,3 +76,4 @@ export default function Dashboard({ openReservation }) {
     </div>
   )
 }
+export default Dashboard;
