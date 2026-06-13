@@ -14,11 +14,11 @@ export const NAV_ACCESS = {
   facilities: ['ADMIN', 'MANAGER', 'FRONT_OFFICE', 'RESTAURANT'],
   housekeeping: ['ADMIN', 'MANAGER', 'FRONT_OFFICE'],
   inventory: ['ADMIN', 'MANAGER', 'STORE'],
-  vat: ['ADMIN', 'MANAGER', 'ACCOUNTS'],
-  accounting: ['ADMIN', 'MANAGER', 'ACCOUNTS'],
-  hr: ['ADMIN', 'MANAGER', 'HR'],
-  reports: ['ADMIN', 'MANAGER', 'ACCOUNTS'],
-  settings: ['ADMIN', 'MANAGER'],
+  vat: ['ADMIN', 'MANAGER', 'ACCOUNTS', 'FRONT_OFFICE'],
+  accounting: ['ADMIN', 'MANAGER', 'ACCOUNTS', 'FRONT_OFFICE'],
+  hr: ['ADMIN', 'MANAGER', 'HR', 'FRONT_OFFICE'],
+  reports: ['ADMIN', 'MANAGER', 'ACCOUNTS', 'FRONT_OFFICE'],
+  settings: ['ADMIN', 'MANAGER', 'FRONT_OFFICE'],
 }
 
 export const can = (role, pageId) =>
