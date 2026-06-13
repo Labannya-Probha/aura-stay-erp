@@ -1,7 +1,7 @@
 import { fmtBDT, fmtDate, takaInWords, nightsBetween } from '../../lib/helpers'
 
 export default function GuestBill({ invoice, res, guest, company }) {
-  const lines = invoice.line_snapshot || []
+  const lines = (invoice.line_snapshot || []).filter((l) => l.charge_type !== 'ROUNDING')
   const t = invoice.totals || {}
   const cell = { borderBottom: '1px solid #ccc', padding: '5px 6px', fontSize: 11 }
   const num = { ...cell, textAlign: 'right', fontFamily: '"IBM Plex Mono", monospace' }
@@ -92,6 +92,8 @@ export default function GuestBill({ invoice, res, guest, company }) {
           <TR k="Service charge" v={fmtBDT(t.service_charge)} />
           <TR k="Supplementary duty (SD)" v={fmtBDT(t.sd)} />
           <TR k="VAT" v={fmtBDT(t.vat)} />
+          {!!t.rounding && <TR k="Subtotal" v={fmtBDT(t.grand_total_raw ?? t.grand_total)} />}
+          {!!t.rounding && <TR k="Rounding adjustment" v={(t.rounding > 0 ? '+ ' : '− ') + fmtBDT(Math.abs(t.rounding))} />}
           <tr>
             <td style={{ padding: '6px', borderTop: '2px solid #2E7D32', fontWeight: 700 }}>GRAND TOTAL</td>
             <td style={{ padding: '6px', borderTop: '2px solid #2E7D32', fontWeight: 700, textAlign: 'right', fontFamily: '"IBM Plex Mono", monospace' }}>{fmtBDT(t.grand_total)}</td>

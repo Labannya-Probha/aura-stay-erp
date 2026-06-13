@@ -23,3 +23,17 @@ Supabase credentials live in `src/supabase.js`.
 
 ## Roles
 ADMIN, MANAGER, FRONT_OFFICE, RESTAURANT, STORE, ACCOUNTS, HR — module access is role-gated.
+
+## Login (username-based, no email)
+Staff sign in with a **username + password** — no email required. Internally each
+account maps to a system address. Create staff in **Settings → Staff & roles**
+(admin only): enter name, username, password, role.
+
+IMPORTANT for new installs: in Supabase → Authentication → Providers → Email,
+turn **off** "Confirm email" so username accounts activate instantly.
+
+## Bill rounding
+Grand total auto-rounds per **Settings → Branding → Bill rounding**
+(None / Nearest 1 / 5 / 10). Taxable value, service charge, SD and VAT stay exact;
+the difference posts as a "Rounding adjustment" line so the folio balance and the
+printed bill agree to the rounded payable.

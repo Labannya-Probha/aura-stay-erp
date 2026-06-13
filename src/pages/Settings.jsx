@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase, SUPABASE_CONFIG } from '../supabase'
 import { fmtBDT, todayISO, setCurrency } from '../lib/helpers'
 import { ROLES, ROLE_LABELS } from '../lib/roles'
 import { Save, Plus, BedDouble, Percent, Building2, Trash2, Users, ShieldCheck, Upload, Image } from 'lucide-react'
@@ -59,7 +59,7 @@ function BrandingCard({ reloadCompany }) {
       name: c.name, legal_name: c.legal_name, address: c.address, phone: c.phone, email: c.email,
       bin: c.bin, vat_circle: c.vat_circle, invoice_footer: c.invoice_footer,
       short_code: c.short_code, software_name: c.software_name, currency: c.currency,
-      mushak610_threshold: +c.mushak610_threshold || 0, terms_conditions: c.terms_conditions, updated_at: new Date().toISOString(),
+      mushak610_threshold: +c.mushak610_threshold || 0, terms_conditions: c.terms_conditions, rounding_mode: c.rounding_mode || 'NEAREST_1', updated_at: new Date().toISOString(),
     }).eq('id', 1)
     setBusy(false)
     if (error) flash(error.message)
@@ -84,6 +84,14 @@ function BrandingCard({ reloadCompany }) {
       <div className="grid grid-cols-2 gap-3">
         <div><label className="label">Software name (shown in app)</label><input className="input" value={c.software_name || ''} onChange={(e) => set('software_name', e.target.value)} /></div>
         <div><label className="label">Currency symbol</label><input className="input" value={c.currency || ''} onChange={(e) => set('currency', e.target.value)} /></div>
+        <div><label className="label">Bill rounding</label>
+          <select className="input" value={c.rounding_mode || 'NEAREST_1'} onChange={(e) => set('rounding_mode', e.target.value)}>
+            <option value="NONE">No rounding</option>
+            <option value="NEAREST_1">Nearest 1 (৳)</option>
+            <option value="NEAREST_5">Nearest 5</option>
+            <option value="NEAREST_10">Nearest 10</option>
+          </select>
+        </div>
         <div><label className="label">Property / brand name</label><input className="input" value={c.name || ''} onChange={(e) => set('name', e.target.value)} /></div>
         <div><label className="label">Legal name</label><input className="input" value={c.legal_name || ''} onChange={(e) => set('legal_name', e.target.value)} /></div>
         <div className="col-span-2"><label className="label">Address</label><input className="input" value={c.address || ''} onChange={(e) => set('address', e.target.value)} /></div>
@@ -179,23 +187,67 @@ function RoomsCard() {
 function StaffCard({ isAdmin }) {
   const [rows, setRows] = useState([])
   const [msg, setMsg] = useState('')
-  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
+  const [busy, setBusy] = useState(false)
+  const [nu, setNu] = useState({ full_name: '', username: '', password: '', role: 'FRONT_OFFICE' })
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 6000) }
   const load = async () => { const { data } = await supabase.from('v_staff').select('*').order('created_at'); setRows(data || []) }
   useEffect(() => { load() }, [])
+
+  const LOGIN_DOMAIN = 'aura-stay.local' // system domain — staff never type it; they log in with the username only
+
+  const addStaff = async () => {
+    const uname = nu.username.trim().toLowerCase()
+    if (!nu.full_name.trim() || !uname || nu.password.length < 6) { flash('Enter name, username and a password of at least 6 characters.'); return }
+    if (/[^a-z0-9._-]/.test(uname)) { flash('Username can use letters, numbers, dot, dash and underscore only.'); return }
+    setBusy(true)
+    try {
+      // Use a throwaway client so creating a user does NOT replace the admin's own session.
+      const { createClient } = await import('@supabase/supabase-js')
+      const tmp = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
+      const email = `${uname}@${LOGIN_DOMAIN}`
+      const { data, error } = await tmp.auth.signUp({ email, password: nu.password, options: { data: { username: uname, full_name: nu.full_name.trim() } } })
+      if (error) throw error
+      const newId = data?.user?.id
+      if (newId) {
+        // ensure profile reflects chosen role + name (trigger created the row; admin session can update it)
+        await supabase.from('app_users').update({ role: nu.role, full_name: nu.full_name.trim(), username: uname }).eq('id', newId)
+      }
+      await tmp.auth.signOut()
+      setNu({ full_name: '', username: '', password: '', role: 'FRONT_OFFICE' })
+      await load()
+      flash(`Staff "${uname}" created. They can sign in with that username and the password you set.`)
+    } catch (e) {
+      flash(e.message?.includes('already registered') ? 'That username is already taken.' : e.message)
+    }
+    setBusy(false)
+  }
+
   const setRole = async (id, role) => { const { error } = await supabase.from('app_users').update({ role }).eq('id', id); if (error) flash('Admin access required.'); else load() }
   const toggle = async (u) => { const { error } = await supabase.from('app_users').update({ is_active: !u.is_active }).eq('id', u.id); if (error) flash('Admin access required.'); else load() }
+
   return (
     <div className="card p-5">
       <h2 className="font-display font-semibold text-pine flex items-center gap-2 mb-2"><Users size={18} className="text-forest" /> Staff & roles</h2>
-      <p className="text-xs text-pine/50 mb-4">To add a new staff member: create their login in Supabase → Authentication → Users. They appear here automatically on first sign-in; the very first user becomes Administrator. Then set their role below.</p>
-      {msg && <div className="mb-3 px-3 py-2 rounded-lg bg-red-50 text-red-600 text-sm">{msg}</div>}
+      <p className="text-xs text-pine/50 mb-4">Create staff with a <b>username &amp; password</b> — no email needed. They sign in with the username only. The first account is the Administrator.</p>
+      {msg && <div className="mb-3 px-3 py-2 rounded-lg bg-forest/10 text-forest text-sm">{msg}</div>}
+
+      {isAdmin && (
+        <div className="grid grid-cols-5 gap-2 mb-4">
+          <input className="input" placeholder="Full name" value={nu.full_name} onChange={(e) => setNu({ ...nu, full_name: e.target.value })} />
+          <input className="input" placeholder="Username" autoCapitalize="none" value={nu.username} onChange={(e) => setNu({ ...nu, username: e.target.value })} />
+          <input className="input" type="text" placeholder="Password (min 6)" value={nu.password} onChange={(e) => setNu({ ...nu, password: e.target.value })} />
+          <select className="input" value={nu.role} onChange={(e) => setNu({ ...nu, role: e.target.value })}>{ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}</select>
+          <button className="btn-primary justify-center" disabled={busy} onClick={addStaff}><Plus size={15} /> {busy ? 'Creating…' : 'Add staff'}</button>
+        </div>
+      )}
+
       <table className="w-full">
-        <thead><tr><th className="th">Name</th><th className="th">Email</th><th className="th">Role</th><th className="th">Active</th></tr></thead>
+        <thead><tr><th className="th">Name</th><th className="th">Username</th><th className="th">Role</th><th className="th">Active</th></tr></thead>
         <tbody>
           {rows.map((u) => (
             <tr key={u.id} className={!u.is_active ? 'opacity-50' : ''}>
               <td className="td text-sm font-medium">{u.full_name || '—'}</td>
-              <td className="td text-xs">{u.email}</td>
+              <td className="td text-sm money">{u.username || (u.email ? u.email.split('@')[0] : '—')}</td>
               <td className="td">{isAdmin ? <select className="input !py-1 !w-40" value={u.role} onChange={(e) => setRole(u.id, e.target.value)}>{ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}</select> : <span className="text-sm">{ROLE_LABELS[u.role] || u.role}</span>}</td>
               <td className="td"><button onClick={() => toggle(u)} disabled={!isAdmin} className={`status-chip ${u.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'}`}>{u.is_active ? 'Active' : 'Disabled'}</button></td>
             </tr>
@@ -203,6 +255,7 @@ function StaffCard({ isAdmin }) {
           {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={4}>No staff yet.</td></tr>}
         </tbody>
       </table>
+      <p className="text-xs text-pine/50 mt-3">Note for resale / new installs: in Supabase → Authentication → Providers → Email, turn <b>off</b> “Confirm email” so username accounts work instantly (the system uses an internal address per user).</p>
     </div>
   )
 }

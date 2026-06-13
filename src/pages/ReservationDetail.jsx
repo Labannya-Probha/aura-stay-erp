@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 import {
   fmtBDT, fmtDate, todayISO, nightsBetween, eachNight,
-  rateFor, computeCharge, sumCharges, STATUS_COLORS,
+  rateFor, computeCharge, sumCharges, applyRounding, STATUS_COLORS,
 } from '../lib/helpers'
 import PrintPortal from '../components/PrintPortal.jsx'
 import RegistrationCard from '../components/print/RegistrationCard.jsx'
@@ -56,7 +56,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
   }
   useEffect(() => { loadAll() }, [id])
 
-  const totals = useMemo(() => sumCharges(charges), [charges])
+  const totals = useMemo(() => applyRounding(sumCharges(charges), company?.rounding_mode || 'NEAREST_1'), [charges, company])
   const paid = useMemo(() => payments.reduce((a, p) => a + Number(p.amount), 0), [payments])
   const advance = useMemo(() => payments.filter((p) => p.payment_class === 'ADVANCE').reduce((a, p) => a + Number(p.amount), 0), [payments])
   const due = +(totals.grand_total - paid).toFixed(2)
@@ -635,11 +635,22 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
               <td className="td text-right">{totals.service_charge.toFixed(2)}</td>
               <td className="td text-right">{totals.sd.toFixed(2)}</td>
               <td className="td text-right">{totals.vat.toFixed(2)}</td>
-              <td className="td text-right">{totals.grand_total.toFixed(2)}</td>
+              <td className="td text-right">{(totals.grand_total_raw ?? totals.grand_total).toFixed(2)}</td>
               <td className="td" colSpan={2}></td>
             </tr></tfoot>
           )}
         </table>
+        {charges.length > 0 && (
+          <div className="px-4 py-3 border-t border-leaf flex justify-end">
+            <div className="w-72 text-sm money space-y-1">
+              <div className="flex justify-between text-pine/70"><span>Subtotal</span><span>{fmtBDT(totals.grand_total_raw ?? totals.grand_total)}</span></div>
+              {!!totals.rounding && <div className="flex justify-between text-pine/70"><span>Rounding adjustment</span><span>{totals.rounding > 0 ? '+ ' : '− '}{fmtBDT(Math.abs(totals.rounding))}</span></div>}
+              <div className="flex justify-between font-bold text-pine border-t border-leaf pt-1"><span>Grand total (payable)</span><span>{fmtBDT(totals.grand_total)}</span></div>
+              <div className="flex justify-between text-forest"><span>Paid</span><span>{fmtBDT(paid)}</span></div>
+              <div className={`flex justify-between font-bold ${due > 0 ? 'text-red-600' : 'text-forest'}`}><span>Balance due</span><span>{fmtBDT(due)}</span></div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="card overflow-hidden">
@@ -703,8 +714,24 @@ function InvoicesTab({ res, guest, charges, totals, paid, due, invoices, company
       if (de) { flash(de.message); return }
       await supabase.from('audit_log').insert({ actor: userName, action: 'VOID_INVOICE', entity: 'reservation', entity_id: res.res_no, details: { reason, cause: 'regenerate' } })
     }
-    const t = { ...totals, paid, due }
-    const snapshot = charges.map((c) => ({
+    // Make the rounding real on the folio so the DB balance matches the rounded payable
+    // (keeps checkout-due enforcement exact regardless of rounding mode). Idempotent: stale
+    // ROUNDING lines are cleared and recomputed each time.
+    await supabase.from('folio_charges').delete().eq('reservation_id', res.id).eq('charge_type', 'ROUNDING')
+    const mode = company?.rounding_mode || 'NEAREST_1'
+    const { data: chNow } = await supabase.from('folio_charges').select('*').eq('reservation_id', res.id).order('charge_date')
+    const rr = applyRounding(sumCharges(chNow || []), mode)
+    let allCharges = chNow || []
+    if (rr.rounding !== 0) {
+      const { data: rline } = await supabase.from('folio_charges').insert({
+        reservation_id: res.id, charge_date: todayISO(), charge_type: 'ROUNDING', status: 'PAID',
+        description: 'Rounding adjustment', base_amount: 0, discount: 0, service_charge: 0, sd: 0, vat: 0, total: rr.rounding, created_by: userName,
+      }).select().single()
+      if (rline) allCharges = [...allCharges, rline]
+    }
+    const finalTotals = applyRounding(sumCharges(allCharges), mode)
+    const t = { ...finalTotals, rounding: rr.rounding, grand_total_raw: rr.grand_total_raw, paid, due: +(finalTotals.grand_total - paid).toFixed(2) }
+    const snapshot = allCharges.map((c) => ({
       charge_date: c.charge_date, charge_type: c.charge_type, description: c.description,
       base_amount: +c.base_amount, discount: +c.discount, service_charge: +c.service_charge,
       sd: +c.sd, vat: +c.vat, total: +c.total, status: c.status,

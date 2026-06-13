@@ -112,3 +112,23 @@ export const STATUS_COLORS = {
   CANCELLED: 'bg-red-100 text-red-600',
   NO_SHOW: 'bg-red-100 text-red-600',
 }
+
+// ---- Bill rounding (auto) ----
+// Rounds the GRAND TOTAL only; taxable value, SC, SD & VAT stay exact for the NBR register.
+// The difference is exposed as `rounding` so a "Rounding adjustment" line can be shown.
+export const roundGrand = (amount, mode = 'NEAREST_1') => {
+  const a = Number(amount) || 0
+  switch (mode) {
+    case 'NONE': return a
+    case 'NEAREST_5': return Math.round(a / 5) * 5
+    case 'NEAREST_10': return Math.round(a / 10) * 10
+    case 'NEAREST_1':
+    default: return Math.round(a)
+  }
+}
+
+export const applyRounding = (totals, mode = 'NEAREST_1') => {
+  const raw = +(Number(totals.grand_total) || 0).toFixed(2)
+  const rounded = roundGrand(raw, mode)
+  return { ...totals, grand_total_raw: raw, rounding: +(rounded - raw).toFixed(2), grand_total: rounded }
+}

@@ -2,7 +2,7 @@ import { fmtBDT, fmtDate, takaInWords } from '../../lib/helpers'
 
 // NBR-prescribed Mushak-6.3 (কর চালানপত্র) layout — strict black on white
 export default function Mushak63({ invoice, res, company, refNo }) {
-  const lines = invoice.line_snapshot || []
+  const lines = (invoice.line_snapshot || []).filter((l) => l.charge_type !== 'ROUNDING')
   const t = invoice.totals || {}
   const issued = new Date(invoice.issued_at)
   const issueTime = issued.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dhaka' })
@@ -102,10 +102,16 @@ export default function Mushak63({ invoice, res, company, refNo }) {
             <td style={{ ...br, fontWeight: 700 }}>{Number(t.sd || 0).toFixed(2)}</td>
             <td style={bc}>—</td>
             <td style={{ ...br, fontWeight: 700 }}>{Number(t.vat || 0).toFixed(2)}</td>
-            <td style={{ ...br, fontWeight: 700 }}>{Number(t.grand_total || 0).toFixed(2)}</td>
+            <td style={{ ...br, fontWeight: 700 }}>{Number(t.grand_total_raw ?? t.grand_total ?? 0).toFixed(2)}</td>
           </tr>
         </tbody>
       </table>
+
+      {!!t.rounding && (
+        <div style={{ fontSize: 10.5, marginTop: 6, textAlign: 'right' }}>
+          রাউন্ডিং (Rounding): {t.rounding > 0 ? '+' : '−'}{fmtBDT(Math.abs(t.rounding))} &nbsp;·&nbsp; <b>প্রদেয় (Net payable): {fmtBDT(t.grand_total)}</b>
+        </div>
+      )}
 
       <div style={{ fontSize: 10.5, marginTop: 6 }}>
         <b>কথায় (In words):</b> {takaInWords(t.grand_total)}
