@@ -14,8 +14,8 @@ const HousekeepingHub = () => {
       {rooms.map(room => (
         <div key={room.id} className="border p-4 mb-2">
           <p>Room {room.id} - Status: {room.status}</p>
-          <button onClick={() => updateStatus(room.id, 'Clean')} className="bg-green-500 text-white mr-2">Clean</button>
-          <button onClick={() => updateStatus(room.id, 'Dirty')} className="bg-red-500 text-white">Dirty</button>
+          <button onClick={() => updateStatus(room.id, 'Clean')} className="bg-green-500 text-white mr-2 p-1 px-2 rounded">Clean</button>
+          <button onClick={() => updateStatus(room.id, 'Dirty')} className="bg-red-500 text-white p-1 px-2 rounded">Dirty</button>
         </div>
       ))}
     </div>
