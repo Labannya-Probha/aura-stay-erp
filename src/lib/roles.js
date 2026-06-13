@@ -1,5 +1,4 @@
 export const ROLES = ['ADMIN', 'MANAGER', 'FRONT_OFFICE', 'RESTAURANT', 'STORE', 'ACCOUNTS', 'HR']
-
 export const ROLE_LABELS = {
   ADMIN: 'Administrator', MANAGER: 'Manager', FRONT_OFFICE: 'Front Office',
   RESTAURANT: 'Restaurant', STORE: 'Store', ACCOUNTS: 'Accounts', HR: 'HR & Admin',
@@ -7,19 +6,19 @@ export const ROLE_LABELS = {
 
 // Which roles can open which module. ADMIN always passes.
 export const NAV_ACCESS = {
-  dashboard: ['MANAGER', 'FRONT_OFFICE', 'RESTAURANT', 'STORE', 'ACCOUNTS', 'HR'],
-  reservations: ['MANAGER', 'FRONT_OFFICE'],
-  calendar: ['MANAGER', 'FRONT_OFFICE'],
-  nightaudit: ['MANAGER', 'FRONT_OFFICE'],
-  pos: ['MANAGER', 'RESTAURANT', 'FRONT_OFFICE'],
-  facilities: ['MANAGER', 'FRONT_OFFICE', 'RESTAURANT'],
-  housekeeping: ['MANAGER', 'FRONT_OFFICE'],
-  inventory: ['MANAGER', 'STORE'],
-  vat: ['MANAGER', 'ACCOUNTS'],
-  accounting: ['MANAGER', 'ACCOUNTS'],
-  hr: ['MANAGER', 'HR'],
-  reports: ['MANAGER', 'ACCOUNTS'],
-  settings: ['MANAGER'],
+  dashboard: ['ADMIN', 'MANAGER', 'FRONT_OFFICE', 'RESTAURANT', 'STORE', 'ACCOUNTS', 'HR'],
+  reservations: ['ADMIN', 'MANAGER', 'FRONT_OFFICE'],
+  calendar: ['ADMIN', 'MANAGER', 'FRONT_OFFICE'],
+  nightaudit: ['ADMIN', 'MANAGER', 'FRONT_OFFICE'],
+  pos: ['ADMIN', 'MANAGER', 'RESTAURANT', 'FRONT_OFFICE'],
+  facilities: ['ADMIN', 'MANAGER', 'FRONT_OFFICE', 'RESTAURANT'],
+  housekeeping: ['ADMIN', 'MANAGER', 'FRONT_OFFICE'],
+  inventory: ['ADMIN', 'MANAGER', 'STORE'],
+  vat: ['ADMIN', 'MANAGER', 'ACCOUNTS'],
+  accounting: ['ADMIN', 'MANAGER', 'ACCOUNTS'],
+  hr: ['ADMIN', 'MANAGER', 'HR'],
+  reports: ['ADMIN', 'MANAGER', 'ACCOUNTS'],
+  settings: ['ADMIN', 'MANAGER'],
 }
 
 export const can = (role, pageId) =>
