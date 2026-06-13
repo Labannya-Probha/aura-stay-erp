@@ -37,7 +37,7 @@ export default function ReportsHub() {
     setData({ revByCat, payByMethod, roomNights, adr, occupancy, capacity, dueList, totalRev: Object.values(revByCat).reduce((a, v) => a + v, 0), totalPay: Object.values(payByMethod).reduce((a, v) => a + v, 0) })
     setLoading(false)
   }
-  useEffect(() => { run() }, []) // eslint-disable-line
+  useEffect(() => { run() }, [])
 
   const exportAll = () => {
     if (!data) return
