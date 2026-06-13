@@ -13,6 +13,7 @@ export const NAV_ACCESS = {
   nightaudit: ['MANAGER', 'FRONT_OFFICE'],
   pos: ['MANAGER', 'RESTAURANT', 'FRONT_OFFICE'],
   facilities: ['MANAGER', 'FRONT_OFFICE', 'RESTAURANT'],
+  housekeeping: ['MANAGER', 'FRONT_OFFICE'],
   inventory: ['MANAGER', 'STORE'],
   vat: ['MANAGER', 'ACCOUNTS'],
   accounting: ['MANAGER', 'ACCOUNTS'],
