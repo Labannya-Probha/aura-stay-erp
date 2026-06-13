@@ -72,14 +72,19 @@ export default function NightAudit({ userName, isAdmin }) {
     const rows = []
     for (const res of inHouse) {
       if (postedSet.has(res.id)) continue
-      if (auditDate < res.check_in || auditDate >= res.check_out) continue
       const rate = rateFor(taxConfig, 'ROOM', auditDate)
-      for (const rr of res.reservation_rooms || [])
-        rows.push({ reservation_id: res.id, charge_date: auditDate, charge_type: 'ROOM', description: `Room ${rr.rooms?.room_no} — Night of ${fmtDate(auditDate)} (night audit)`, ...computeCharge(rr.rate, res.discount_pct, rate), created_by: userName })
-      if (res.extra_pax > 0 && res.extra_pax_rate > 0)
-        rows.push({ reservation_id: res.id, charge_date: auditDate, charge_type: 'ROOM', description: `Extra pax × ${res.extra_pax} — ${fmtDate(auditDate)} (night audit)`, ...computeCharge(res.extra_pax * res.extra_pax_rate, res.discount_pct, rate), created_by: userName })
-      if (res.driver_accommodation && res.driver_count > 0 && res.driver_rate > 0)
-        rows.push({ reservation_id: res.id, charge_date: auditDate, charge_type: 'ROOM', description: `Driver accommodation × ${res.driver_count} — ${fmtDate(auditDate)} (night audit)`, ...computeCharge(res.driver_count * res.driver_rate, res.discount_pct, rate), created_by: userName })
+      for (const rr of res.reservation_rooms || []) {
+        const ci = rr.from_date || res.check_in
+        const co = rr.to_date || res.check_out
+        if (auditDate < ci || auditDate >= co) continue
+        rows.push({ reservation_id: res.id, charge_date: auditDate, charge_type: 'ROOM', description: `Room ${rr.rooms?.room_no}${rr.rooms?.room_name ? ` (${rr.rooms.room_name})` : ''} — Night of ${fmtDate(auditDate)} (night audit)`, ...computeCharge(rr.rate, res.discount_pct, rate), created_by: userName })
+      }
+      if (auditDate >= res.check_in && auditDate < res.check_out) {
+        if (res.extra_pax > 0 && res.extra_pax_rate > 0)
+          rows.push({ reservation_id: res.id, charge_date: auditDate, charge_type: 'ROOM', description: `Extra pax × ${res.extra_pax} — ${fmtDate(auditDate)} (night audit)`, ...computeCharge(res.extra_pax * res.extra_pax_rate, res.discount_pct, rate), created_by: userName })
+        if (res.driver_accommodation && res.driver_count > 0 && res.driver_rate > 0)
+          rows.push({ reservation_id: res.id, charge_date: auditDate, charge_type: 'ROOM', description: `Driver accommodation × ${res.driver_count} — ${fmtDate(auditDate)} (night audit)`, ...computeCharge(res.driver_count * res.driver_rate, res.discount_pct, rate), created_by: userName })
+      }
     }
     if (rows.length === 0) { setBusy(false); flash('Nothing to post — every in-house room already has tonight\'s charge.'); return }
     const { error } = await supabase.from('folio_charges').insert(rows)

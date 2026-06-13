@@ -315,7 +315,7 @@ function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus,
     if (locked) { flash('After check-in, only an administrator can change room assignment.'); return }
     if (!roomSel) return
     const room = rooms.find((r) => r.id === roomSel)
-    await supabase.from('reservation_rooms').insert({ reservation_id: res.id, room_id: room.id, rate: res.room_rate || room.base_rate })
+    await supabase.from('reservation_rooms').insert({ reservation_id: res.id, room_id: room.id, rate: res.room_rate || room.base_rate, from_date: res.check_in, to_date: res.check_out })
     setRoomSel(''); await reload()
   }
   const removeRoom = async (rrId) => { if (locked) { flash('Administrator access required after check-in.'); return } await supabase.from('reservation_rooms').delete().eq('id', rrId); await reload() }
@@ -323,6 +323,12 @@ function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus,
     if (locked) { flash('Administrator access required after check-in.'); return }
     if (rate === '' || isNaN(+rate)) return
     await supabase.from('reservation_rooms').update({ rate: +rate }).eq('id', rrId)
+    await reload()
+  }
+  const updateRoomDates = async (rrId, field, val) => {
+    if (locked) { flash('Administrator access required after check-in.'); return }
+    if (!val) return
+    await supabase.from('reservation_rooms').update({ [field]: val }).eq('id', rrId)
     await reload()
   }
   const addGuest = async () => {
@@ -363,16 +369,30 @@ function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus,
           <button className="btn-primary" onClick={assignRoom}><BedDouble size={15} /> Assign</button>
         </div>
         {resRooms.map((rr) => (
-          <div key={rr.id} className="flex justify-between items-center text-sm border border-leaf rounded-lg px-3 py-2">
-            <span className="font-semibold">Room {rr.rooms?.room_no}{rr.rooms?.room_name ? ` · ${rr.rooms.room_name}` : ''} <span className="text-pine/50 font-normal">· {rr.rooms?.room_type}</span></span>
-            <span className="flex items-center gap-2 money">
+          <div key={rr.id} className="text-sm border border-leaf rounded-lg px-3 py-2 space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="font-semibold">Room {rr.rooms?.room_no}{rr.rooms?.room_name ? ` · ${rr.rooms.room_name}` : ''} <span className="text-pine/50 font-normal">· {rr.rooms?.room_type}</span></span>
+              <span className="flex items-center gap-2 money">
+                {locked ? (
+                  <>{fmtBDT(rr.rate)}/night</>
+                ) : (
+                  <><input type="number" defaultValue={rr.rate} onBlur={(e) => updateRoomRate(rr.id, e.target.value)} className="input !w-28 !py-1 money text-right" title="Edit rate — then Repost room charges in Folio" />/night
+                  <button onClick={() => removeRoom(rr.id)} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button></>
+                )}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-pine/60">
+              <span>Stay:</span>
               {locked ? (
-                <>{fmtBDT(rr.rate)}/night</>
+                <span className="money">{fmtDate(rr.from_date || res.check_in)} → {fmtDate(rr.to_date || res.check_out)}</span>
               ) : (
-                <><input type="number" defaultValue={rr.rate} onBlur={(e) => updateRoomRate(rr.id, e.target.value)} className="input !w-28 !py-1 money text-right" title="Edit rate — then Repost room charges in Folio" />/night
-                <button onClick={() => removeRoom(rr.id)} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button></>
+                <>
+                  <input type="date" defaultValue={rr.from_date || res.check_in} onBlur={(e) => updateRoomDates(rr.id, 'from_date', e.target.value)} className="input !py-1 !w-36" />
+                  <span>→</span>
+                  <input type="date" defaultValue={rr.to_date || res.check_out} onBlur={(e) => updateRoomDates(rr.id, 'to_date', e.target.value)} className="input !py-1 !w-36" />
+                </>
               )}
-            </span>
+            </div>
           </div>
         ))}
         {rooms.length === 0 && <p className="text-xs text-amber">No rooms defined yet — add your room inventory in Settings → Rooms.</p>}
@@ -435,20 +455,33 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
   const [discType, setDiscType] = useState('ROOM')
   const [p, setP] = useState({ amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName })
 
-  const postRoomCharges = async () => {
-    if (resRooms.length === 0) { flash('Assign rooms first (Check-In tab).'); return }
-    if (charges.some((ch) => ch.charge_type === 'ROOM')) { flash('Room charges already posted — use "Repost" to replace them with current rates.'); return }
+  // Build ROOM folio lines. Each room is billed over its OWN date range (from_date/to_date)
+  // when set, otherwise the whole reservation window. Extra-pax & driver charges follow the
+  // overall reservation window.
+  const buildRoomRows = () => {
     const rows = []
+    for (const rr of resRooms) {
+      const ci = rr.from_date || res.check_in
+      const co = rr.to_date || res.check_out
+      for (const night of eachNight(ci, co)) {
+        const rate = rateFor(taxConfig, 'ROOM', night)
+        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Room ${rr.rooms?.room_no}${rr.rooms?.room_name ? ` (${rr.rooms.room_name})` : ''} — Night of ${fmtDate(night)}`, ...computeCharge(rr.rate, res.discount_pct, rate), created_by: userName })
+      }
+    }
     for (const night of eachNight(res.check_in, res.check_out)) {
       const rate = rateFor(taxConfig, 'ROOM', night)
-      for (const rr of resRooms) {
-        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Room ${rr.rooms?.room_no} — Night of ${fmtDate(night)}`, ...computeCharge(rr.rate, res.discount_pct, rate), created_by: userName })
-      }
       if (res.extra_pax > 0 && res.extra_pax_rate > 0)
         rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Extra pax × ${res.extra_pax} — ${fmtDate(night)}`, ...computeCharge(res.extra_pax * res.extra_pax_rate, res.discount_pct, rate), created_by: userName })
       if (res.driver_accommodation && res.driver_count > 0 && res.driver_rate > 0)
         rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Driver accommodation × ${res.driver_count} — ${fmtDate(night)}`, ...computeCharge(res.driver_count * res.driver_rate, res.discount_pct, rate), created_by: userName })
     }
+    return rows
+  }
+
+  const postRoomCharges = async () => {
+    if (resRooms.length === 0) { flash('Assign rooms first (Check-In tab).'); return }
+    if (charges.some((ch) => ch.charge_type === 'ROOM')) { flash('Room charges already posted — use "Repost" to replace them with current rates.'); return }
+    const rows = buildRoomRows()
     const { error } = await supabase.from('folio_charges').insert(rows)
     if (error) flash(error.message); else { await reload(); flash(`${rows.length} room charge line(s) posted.`) }
   }
@@ -459,17 +492,7 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
     if (resRooms.length === 0) { flash('Assign rooms first (Check-In tab).'); return }
     const { error: de } = await supabase.from('folio_charges').delete().eq('reservation_id', res.id).eq('charge_type', 'ROOM')
     if (de) { flash(de.message); return }
-    const rows = []
-    for (const night of eachNight(res.check_in, res.check_out)) {
-      const rate = rateFor(taxConfig, 'ROOM', night)
-      for (const rr of resRooms) {
-        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Room ${rr.rooms?.room_no} — Night of ${fmtDate(night)}`, ...computeCharge(rr.rate, res.discount_pct, rate), created_by: userName })
-      }
-      if (res.extra_pax > 0 && res.extra_pax_rate > 0)
-        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Extra pax × ${res.extra_pax} — ${fmtDate(night)}`, ...computeCharge(res.extra_pax * res.extra_pax_rate, res.discount_pct, rate), created_by: userName })
-      if (res.driver_accommodation && res.driver_count > 0 && res.driver_rate > 0)
-        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Driver accommodation × ${res.driver_count} — ${fmtDate(night)}`, ...computeCharge(res.driver_count * res.driver_rate, res.discount_pct, rate), created_by: userName })
-    }
+    const rows = buildRoomRows()
     const { error } = await supabase.from('folio_charges').insert(rows)
     if (error) flash(error.message); else { await reload(); flash(`Room bill reposted — ${rows.length} line(s) at current rates and ${res.discount_pct}% discount.`) }
   }

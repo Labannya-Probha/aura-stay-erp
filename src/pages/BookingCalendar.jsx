@@ -19,7 +19,7 @@ export default function BookingCalendar({ openReservation }) {
     const start = days[0], end = days[days.length - 1]
     const [{ data: rm }, { data: rr }] = await Promise.all([
       supabase.from('rooms').select('*').eq('is_active', true).order('room_no'),
-      supabase.from('reservation_rooms').select('room_id, reservations!inner(id, res_no, reservation_name, status, check_in, check_out)')
+      supabase.from('reservation_rooms').select('room_id, from_date, to_date, reservations!inner(id, res_no, reservation_name, status, check_in, check_out)')
         .in('reservations.status', ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'SETTLED', 'QUOTED'])
         .lte('reservations.check_in', end).gte('reservations.check_out', start),
     ])
@@ -27,7 +27,9 @@ export default function BookingCalendar({ openReservation }) {
     const map = {}
     for (const row of rr || []) {
       const res = row.reservations
-      for (const day of days) if (day >= res.check_in && day < res.check_out) map[`${row.room_id}|${day}`] = res
+      const ci = row.from_date || res.check_in
+      const co = row.to_date || res.check_out
+      for (const day of days) if (day >= ci && day < co) map[`${row.room_id}|${day}`] = res
     }
     setCells(map); setLoading(false)
   }

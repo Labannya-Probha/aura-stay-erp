@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtBDT, fmtDate, todayISO, STATUS_COLORS } from '../lib/helpers'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Trash2 } from 'lucide-react'
 
 const STATUSES = ['ALL', 'QUERY', 'QUOTED', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'SETTLED', 'CANCELLED']
 
@@ -85,55 +85,65 @@ function NewReservation({ close, openReservation, userName }) {
     check_in: t, check_out: t, pax_adults: 2, pax_children: 0, source: 'Phone', notes: '', discount_pct: 0,
   })
   const [rooms, setRooms] = useState([])
-  const [busyIds, setBusyIds] = useState(new Set())
-  const [selRooms, setSelRooms] = useState([])
+  const [booked, setBooked] = useState([]) // {room_id, ci, co}
+  const [roomRows, setRoomRows] = useState([]) // {room_id, from_date, to_date}
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
 
   useEffect(() => {
-    supabase.from('rooms').select('*').eq('is_active', true).order('room_no')
-      .then(({ data }) => setRooms(data || []))
+    supabase.from('rooms').select('*').eq('is_active', true).order('room_no').then(({ data }) => setRooms(data || []))
+    // Pull existing occupancy once; overlap is checked per room-row client-side (each row can have its own dates).
+    supabase.from('reservation_rooms')
+      .select('room_id, from_date, to_date, reservations!inner(check_in,check_out,status)')
+      .in('reservations.status', ['CONFIRMED', 'CHECKED_IN'])
+      .then(({ data }) => setBooked((data || []).map((d) => ({
+        room_id: d.room_id,
+        ci: d.from_date || d.reservations.check_in,
+        co: d.to_date || d.reservations.check_out,
+      }))))
   }, [])
 
-  // Mark rooms already booked for an overlapping stay
-  useEffect(() => {
-    if (!f.check_in || !f.check_out || f.check_out <= f.check_in) { setBusyIds(new Set()); return }
-    supabase.from('reservation_rooms')
-      .select('room_id, reservations!inner(check_in,check_out,status)')
-      .lt('reservations.check_in', f.check_out)
-      .gt('reservations.check_out', f.check_in)
-      .in('reservations.status', ['CONFIRMED', 'CHECKED_IN'])
-      .then(({ data }) => setBusyIds(new Set((data || []).map((d) => d.room_id))))
-  }, [f.check_in, f.check_out])
+  const isBusy = (roomId, from, to) => !!roomId && from && to && to > from &&
+    booked.some((b) => b.room_id === roomId && b.ci < to && b.co > from)
 
-  const toggleRoom = (id) =>
-    setSelRooms((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  const addRoomRow = () => setRoomRows((p) => [...p, { room_id: '', from_date: f.check_in, to_date: f.check_out }])
+  const updRow = (i, k, v) => setRoomRows((p) => p.map((r, idx) => idx === i ? { ...r, [k]: v } : r))
+  const delRow = (i) => setRoomRows((p) => p.filter((_, idx) => idx !== i))
+
+  const validRows = roomRows.filter((r) => r.room_id && r.from_date && r.to_date && r.to_date > r.from_date)
+  const overallCI = validRows.length ? validRows.reduce((m, r) => r.from_date < m ? r.from_date : m, validRows[0].from_date) : f.check_in
+  const overallCO = validRows.length ? validRows.reduce((m, r) => r.to_date > m ? r.to_date : m, validRows[0].to_date) : f.check_out
 
   const save = async () => {
     setBusy(true); setErr('')
     try {
       if (!f.guest_name) throw new Error('Guest name is required')
-      if (f.check_out <= f.check_in) throw new Error('Check-out must be after check-in')
+      if (validRows.length === 0) {
+        if (f.check_out <= f.check_in) throw new Error('Check-out must be after check-in')
+      }
+      // block double-booking
+      for (const r of validRows) if (isBusy(r.room_id, r.from_date, r.to_date)) {
+        const rm = rooms.find((x) => x.id === r.room_id)
+        throw new Error(`Room ${rm?.room_no} is already booked for ${r.from_date} → ${r.to_date}`)
+      }
       const { data: g, error: ge } = await supabase.from('guests')
         .insert({ full_name: f.guest_name, phone: f.phone, email: f.email, address: f.address }).select().single()
       if (ge) throw ge
-      const firstRoom = rooms.find((r) => r.id === selRooms[0])
+      const firstRoom = validRows.length ? rooms.find((r) => r.id === validRows[0].room_id) : null
       const { data: r, error: re } = await supabase.from('reservations').insert({
         reservation_name: f.reservation_name || f.guest_name,
-        primary_guest_id: g.id, check_in: f.check_in, check_out: f.check_out,
+        primary_guest_id: g.id, check_in: overallCI, check_out: overallCO,
         pax_adults: +f.pax_adults, pax_children: +f.pax_children,
         discount_pct: +f.discount_pct || 0, room_rate: firstRoom ? firstRoom.base_rate : null,
         source: f.source, notes: f.notes, created_by: userName,
       }).select().single()
       if (re) throw re
-      await supabase.from('reservation_guests').insert({
-        reservation_id: r.id, guest_name: f.guest_name, is_primary: true,
-      })
-      if (selRooms.length > 0) {
-        await supabase.from('reservation_rooms').insert(selRooms.map((rid) => {
-          const rm = rooms.find((x) => x.id === rid)
-          return { reservation_id: r.id, room_id: rid, rate: rm?.base_rate || 0 }
+      await supabase.from('reservation_guests').insert({ reservation_id: r.id, guest_name: f.guest_name, is_primary: true })
+      if (validRows.length > 0) {
+        await supabase.from('reservation_rooms').insert(validRows.map((row) => {
+          const rm = rooms.find((x) => x.id === row.room_id)
+          return { reservation_id: r.id, room_id: row.room_id, rate: rm?.base_rate || 0, from_date: row.from_date, to_date: row.to_date }
         }))
       }
       close(); openReservation(r.id)
@@ -150,24 +160,38 @@ function NewReservation({ close, openReservation, userName }) {
           <div><label className="label">Phone (WhatsApp)</label><input className="input" placeholder="01XXXXXXXXX" value={f.phone} onChange={(e) => set('phone', e.target.value)} /></div>
           <div><label className="label">Email</label><input className="input" value={f.email} onChange={(e) => set('email', e.target.value)} /></div>
           <div className="col-span-2"><label className="label">Reservation name (if different)</label><input className="input" value={f.reservation_name} onChange={(e) => set('reservation_name', e.target.value)} /></div>
-          <div><label className="label">Check-in *</label><input type="date" className="input" value={f.check_in} onChange={(e) => set('check_in', e.target.value)} /></div>
-          <div><label className="label">Check-out *</label><input type="date" className="input" value={f.check_out} onChange={(e) => set('check_out', e.target.value)} /></div>
+          <div><label className="label">Default check-in *</label><input type="date" className="input" value={f.check_in} onChange={(e) => set('check_in', e.target.value)} /></div>
+          <div><label className="label">Default check-out *</label><input type="date" className="input" value={f.check_out} onChange={(e) => set('check_out', e.target.value)} /></div>
+
           <div className="col-span-2">
-            <label className="label">Room number(s) — booked rooms for these dates are marked</label>
-            <div className="flex flex-wrap gap-2">
-              {rooms.map((rm) => {
-                const sel = selRooms.includes(rm.id)
-                const taken = busyIds.has(rm.id)
+            <div className="flex items-center justify-between mb-1">
+              <label className="label !mb-0">Rooms — pick from dropdown, each with its own dates</label>
+              <button type="button" className="btn-ghost !py-1 text-xs" onClick={addRoomRow}>+ Add room</button>
+            </div>
+            <div className="space-y-2">
+              {roomRows.map((row, i) => {
+                const taken = isBusy(row.room_id, row.from_date, row.to_date)
                 return (
-                  <button key={rm.id} type="button" disabled={taken} onClick={() => toggleRoom(rm.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${taken ? 'bg-stone-100 border-stone-200 text-stone-400 line-through cursor-not-allowed' : sel ? 'bg-forest border-forest text-white' : 'bg-white border-leaf text-pine hover:bg-leaf/50'}`}>
-                    {rm.room_no}{rm.room_name ? " · "+rm.room_name : ""} · {rm.room_type} · <span className="money">{fmtBDT(rm.base_rate)}</span>{taken ? ' (booked)' : ''}
-                  </button>
+                  <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                    <select className={`input col-span-5 ${taken ? 'border-red-400' : ''}`} value={row.room_id} onChange={(e) => updRow(i, 'room_id', e.target.value)}>
+                      <option value="">Select room…</option>
+                      {rooms.map((rm) => (
+                        <option key={rm.id} value={rm.id}>{rm.room_no}{rm.room_name ? ` · ${rm.room_name}` : ''} · {rm.room_type} · {fmtBDT(rm.base_rate)}</option>
+                      ))}
+                    </select>
+                    <input type="date" className="input col-span-3" value={row.from_date} onChange={(e) => updRow(i, 'from_date', e.target.value)} />
+                    <input type="date" className="input col-span-3" value={row.to_date} onChange={(e) => updRow(i, 'to_date', e.target.value)} />
+                    <button type="button" className="text-red-400 hover:text-red-600 col-span-1" onClick={() => delRow(i)}><Trash2 size={15} /></button>
+                    {taken && <p className="col-span-12 text-xs text-red-600 -mt-1">This room is already booked for the selected dates.</p>}
+                  </div>
                 )
               })}
-              {rooms.length === 0 && <span className="text-xs text-amber">No rooms defined — add room inventory in Settings first.</span>}
+              {roomRows.length === 0 && <p className="text-xs text-pine/50">No rooms added yet — click “Add room”. You can add the same or different rooms with different date ranges. Leave empty to keep it a query without room assignment.</p>}
+              {rooms.length === 0 && <p className="text-xs text-amber">No rooms defined — add room inventory in Settings first.</p>}
             </div>
+            {validRows.length > 0 && <p className="text-xs text-pine/50 mt-1">Stay window: <b>{overallCI} → {overallCO}</b> · {validRows.length} room booking(s).</p>}
           </div>
+
           <div><label className="label">Adults</label><input type="number" min="1" className="input" value={f.pax_adults} onChange={(e) => set('pax_adults', e.target.value)} /></div>
           <div><label className="label">Children</label><input type="number" min="0" className="input" value={f.pax_children} onChange={(e) => set('pax_children', e.target.value)} /></div>
           <div><label className="label">Discount %</label><input type="number" min="0" max="100" className="input money" value={f.discount_pct} onChange={(e) => set('discount_pct', e.target.value)} /></div>
