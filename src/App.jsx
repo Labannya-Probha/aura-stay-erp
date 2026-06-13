@@ -7,7 +7,9 @@ import Dashboard from './pages/Dashboard.jsx'
 import Reservations from './pages/Reservations.jsx'
 import ReservationDetail from './pages/ReservationDetail.jsx'
 import BookingCalendar from './pages/BookingCalendar.jsx'
-import HousekeepingHub from './pages/HousekeepingHub'; 
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Dashboard from './pages/Dashboard';
+import HousekeepingHub from './pages/HousekeepingHub';
 import RestaurantPOS from './pages/RestaurantPOS.jsx'
 import Facilities from './pages/Facilities.jsx'
 import InventoryHub from './pages/InventoryHub.jsx'
@@ -135,8 +137,7 @@ export default function App() {
         {page === 'calendar' && can(role, 'calendar') && <BookingCalendar openReservation={openReservation} />}
         {page === 'detail' && activeRes && (
           <ReservationDetail id={activeRes} back={() => setPage('reservations')} userName={userName} role={role} isAdmin={isAdmin} />
-          {page === 'housekeeping' && <HousekeepingHub />}
-        )}
+        {page === 'housekeeping' && <HousekeepingHub />}
         {page === 'nightaudit' && can(role, 'nightaudit') && <NightAudit userName={userName} isAdmin={isAdmin} />}
         {page === 'pos' && can(role, 'pos') && <RestaurantPOS userName={userName} role={role} isAdmin={isAdmin} />}
         {page === 'facilities' && can(role, 'facilities') && <Facilities userName={userName} isAdmin={isAdmin} />}
