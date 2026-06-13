@@ -8,15 +8,21 @@ export default function GuestBill({ invoice, res, guest, company }) {
   const hcell = { borderBottom: '2px solid #2E7D32', padding: '6px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'left' }
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto' }}>
+    <div style={{ maxWidth: 720, margin: '0 auto', position: 'relative' }}>
+      {invoice.is_void && <div style={{ position: 'absolute', top: '40%', left: 0, right: 0, textAlign: 'center', transform: 'rotate(-24deg)', fontSize: 96, fontWeight: 800, color: 'rgba(220,0,0,0.16)', letterSpacing: 8, pointerEvents: 'none' }}>VOID</div>}
       {/* Branded header */}
       <table style={{ width: '100%' }}>
         <tbody>
           <tr>
-            <td>
-              <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'Fraunces, serif', color: '#2E7D32' }}>{company?.name || 'Novem Eco Resort'}</div>
-              <div style={{ fontSize: 10, color: '#333' }}>{company?.legal_name}</div>
-              <div style={{ fontSize: 10, color: '#333' }}>{company?.address}</div>
+            <td style={{ verticalAlign: 'top' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {company?.logo_url && <img src={company.logo_url} alt="" style={{ height: 46, width: 46, objectFit: 'contain' }} />}
+                <div>
+                  <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'Fraunces, serif', color: '#2E7D32' }}>{company?.name || 'Novem Eco Resort'}</div>
+                  <div style={{ fontSize: 10, color: '#333' }}>{company?.legal_name}</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 10, color: '#333', marginTop: 2 }}>{company?.address}</div>
               <div style={{ fontSize: 10, color: '#333' }}>{company?.phone} · {company?.email}</div>
               {company?.bin && <div style={{ fontSize: 10, color: '#333' }}>BIN: {company.bin}</div>}
             </td>

@@ -1,421 +1,263 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
-import { fmtBDT, fmtDate, todayISO, rateFor, computeCharge } from '../lib/helpers'
-import { ShieldAlert, Play, CheckCircle2, AlertTriangle, Calendar, Moon, Sparkles } from 'lucide-react'
+import { fmtBDT, fmtDate, todayISO, rateFor, computeCharge, exportXLSX } from '../lib/helpers'
+import { MoonStar, BedDouble, UserX, CheckCircle2, FileDown, BookOpenCheck } from 'lucide-react'
 
-export default function NightAudit({ userName, userRole, requestAdminPermission }) {
-  const [businessDate, setBusinessDate] = useState(() => {
-    return localStorage.getItem('resort_business_date') || todayISO()
-  })
-  const [step, setStep] = useState('IDLE') // IDLE, CHECKING, READY, RUNNING, DONE
-  const [checks, setChecks] = useState({
-    openOrders: [],
-    pendingDepartures: [],
-    pendingArrivals: [],
-    inHouseCount: 0,
-  })
-  const [auditResult, setAuditResult] = useState(null)
-  const [errorMsg, setErrorMsg] = useState('')
+/* Account codes used for the optional auto-JV */
+const CASH_ACC = { CASH: '1010', BKASH: '1020', NAGAD: '1020', CARD: '1030', BANK: '1030', OTHER: '1030' }
+const REV_ACC = { ROOM: '4100', RESTAURANT: '4200', TEA: '4300', PICKLE: '4300', SPORTS: '4300', LAUNDRY: '4400', OTHER: '4400' }
 
-  // Load the current audit checklist status
-  const runChecks = async () => {
-    setStep('CHECKING')
-    setErrorMsg('')
-    try {
-      // 1. Get open restaurant orders
-      const { data: openOrders } = await supabase
-        .from('pos_orders')
-        .select('*')
-        .eq('status', 'OPEN')
+export default function NightAudit({ userName, isAdmin }) {
+  const [auditDate, setAuditDate] = useState(todayISO())
+  const [inHouse, setInHouse] = useState([])
+  const [noShows, setNoShows] = useState([])
+  const [postedToday, setPostedToday] = useState([])
+  const [taxConfig, setTaxConfig] = useState([])
+  const [summary, setSummary] = useState(null)
+  const [audits, setAudits] = useState([])
+  const [existing, setExisting] = useState(null)
+  const [makeJV, setMakeJV] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 6000) }
 
-      // 2. Get departures that are still checked in
-      const { data: pendingDepartures } = await supabase
-        .from('reservations')
-        .select('*, guests:primary_guest_id(full_name), reservation_rooms(rooms(room_no))')
-        .eq('status', 'CHECKED_IN')
-        .lte('check_out', businessDate)
+  const loadAll = async () => {
+    const [ih, ns, fc, tc, na, ex] = await Promise.all([
+      supabase.from('reservations').select('*, reservation_rooms(*, rooms(*))').eq('status', 'CHECKED_IN'),
+      supabase.from('reservations').select('*, guests:primary_guest_id(full_name)').eq('status', 'CONFIRMED').lt('check_in', auditDate),
+      supabase.from('folio_charges').select('reservation_id, charge_type').eq('charge_date', auditDate).eq('charge_type', 'ROOM'),
+      supabase.from('tax_config').select('*'),
+      supabase.from('night_audits').select('*').order('audit_date', { ascending: false }).limit(15),
+      supabase.from('night_audits').select('*').eq('audit_date', auditDate).maybeSingle(),
+    ])
+    setInHouse(ih.data || []); setNoShows(ns.data || []); setPostedToday(fc.data || [])
+    setTaxConfig(tc.data || []); setAudits(na.data || []); setExisting(ex.data || null)
+    await buildSummary()
+  }
 
-      // 3. Get expected arrivals that have not checked in or cancelled
-      const { data: pendingArrivals } = await supabase
-        .from('reservations')
-        .select('*, guests:primary_guest_id(full_name)')
-        .in('status', ['QUERY', 'QUOTED', 'CONFIRMED'])
-        .lte('check_in', businessDate)
-
-      // 4. In-house guest count
-      const { count: inHouseCount } = await supabase
-        .from('reservations')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'CHECKED_IN')
-
-      setChecks({
-        openOrders: openOrders || [],
-        pendingDepartures: pendingDepartures || [],
-        pendingArrivals: pendingArrivals || [],
-        inHouseCount: inHouseCount || 0,
-      })
-      setStep('READY')
-    } catch (e) {
-      setErrorMsg(e.message)
-      setStep('IDLE')
+  const buildSummary = async () => {
+    const [fc, pay, posWalk, facWalk] = await Promise.all([
+      supabase.from('folio_charges').select('*').eq('charge_date', auditDate),
+      supabase.from('payments').select('*').eq('received_date', auditDate),
+      supabase.from('pos_orders').select('*').eq('status', 'SETTLED').is('reservation_id', null)
+        .gte('settled_at', auditDate + 'T00:00:00').lte('settled_at', auditDate + 'T23:59:59'),
+      supabase.from('facility_sales').select('*').eq('status', 'SETTLED').is('reservation_id', null).eq('sale_date', auditDate),
+    ])
+    const revenue = {} // charge_type -> {net, sc, sd, vat, total}
+    const add = (type, net, sc, sd, vat, total) => {
+      const r = revenue[type] || { net: 0, sc: 0, sd: 0, vat: 0, total: 0 }
+      r.net += net; r.sc += sc; r.sd += sd; r.vat += vat; r.total += total
+      revenue[type] = r
     }
+    for (const c of fc.data || []) add(c.charge_type, +c.base_amount - +c.discount, +c.service_charge, +c.sd, +c.vat, +c.total)
+    for (const o of posWalk.data || []) add('RESTAURANT', +o.base_amount - +o.discount, +o.service_charge, +o.sd, +o.vat, +o.total)
+    for (const f of facWalk.data || []) add(f.item_name?.toUpperCase().includes('TEA') ? 'TEA' : 'OTHER FACILITY', +f.base_amount - +f.discount, +f.service_charge, +f.sd, +f.vat, +f.total)
+
+    const receipts = {} // method -> amount
+    for (const p of pay.data || []) receipts[p.method] = (receipts[p.method] || 0) + +p.amount
+    for (const o of posWalk.data || []) receipts[o.payment_method || 'CASH'] = (receipts[o.payment_method || 'CASH'] || 0) + +o.total
+    for (const f of facWalk.data || []) receipts[f.payment_method || 'CASH'] = (receipts[f.payment_method || 'CASH'] || 0) + +f.total
+
+    const tot = Object.values(revenue).reduce((a, r) => ({ net: a.net + r.net, sc: a.sc + r.sc, sd: a.sd + r.sd, vat: a.vat + r.vat, total: a.total + r.total }), { net: 0, sc: 0, sd: 0, vat: 0, total: 0 })
+    const recTotal = Object.values(receipts).reduce((a, v) => a + v, 0)
+    setSummary({ revenue, totals: tot, receipts, recTotal, inHouseCount: inHouse.length })
   }
 
-  useEffect(() => {
-    runChecks()
-  }, [businessDate])
+  useEffect(() => { loadAll() }, [auditDate]) // eslint-disable-line
 
-  const startNightAudit = () => {
-    // Audit requires Admin permissions
-    requestAdminPermission(async () => {
-      // Block if there are open restaurant orders
-      if (checks.openOrders.length > 0) {
-        setErrorMsg('Night Audit Blocked: Please settle or cancel all open restaurant POS orders first.')
-        return
-      }
-
-      setStep('RUNNING')
-      try {
-        const nextDate = new Date(new Date(businessDate + 'T00:00:00').getTime() + 86400000)
-          .toISOString()
-          .slice(0, 10)
-
-        // 1. Fetch active checked-in reservations
-        const { data: activeRes } = await supabase
-          .from('reservations')
-          .select('*, reservation_rooms(id, room_id, rate, rooms(room_no))')
-          .eq('status', 'CHECKED_IN')
-
-        // Fetch tax config
-        const { data: taxConfig } = await supabase.from('tax_config').select('*')
-        const rate = rateFor(taxConfig, 'ROOM', businessDate)
-
-        let postedCount = 0
-        let postedRevenue = 0
-
-        // 2. Loop through active reservations and post nightly charges
-        if (activeRes && activeRes.length > 0) {
-          const rowsToInsert = []
-          for (const res of activeRes) {
-            // Check if room charge was already posted for this date
-            const { data: existing } = await supabase
-              .from('folio_charges')
-              .select('id')
-              .eq('reservation_id', res.id)
-              .eq('charge_date', businessDate)
-              .eq('charge_type', 'ROOM')
-              .limit(1)
-
-            if (existing && existing.length > 0) {
-              continue // Already posted for tonight
-            }
-
-            // Post room charges for assigned rooms
-            for (const rr of res.reservation_rooms || []) {
-              const charge = computeCharge(rr.rate, res.discount_pct, rate)
-              rowsToInsert.push({
-                reservation_id: res.id,
-                charge_date: businessDate,
-                charge_type: 'ROOM',
-                description: `Room ${rr.rooms?.room_no} — Night of ${fmtDate(businessDate)} (Auto Night Audit)`,
-                ...charge,
-                created_by: userName,
-              })
-              postedRevenue += charge.total
-              postedCount++
-            }
-
-            // Post extra pax charges if configured
-            if (res.extra_pax > 0 && res.extra_pax_rate > 0) {
-              const charge = computeCharge(res.extra_pax * res.extra_pax_rate, res.discount_pct, rate)
-              rowsToInsert.push({
-                reservation_id: res.id,
-                charge_date: businessDate,
-                charge_type: 'ROOM',
-                description: `Extra Pax × ${res.extra_pax} — ${fmtDate(businessDate)} (Auto Night Audit)`,
-                ...charge,
-                created_by: userName,
-              })
-              postedRevenue += charge.total
-            }
-
-            // Post driver accommodation if configured
-            if (res.driver_accommodation && res.driver_count > 0 && res.driver_rate > 0) {
-              const charge = computeCharge(res.driver_count * res.driver_rate, res.discount_pct, rate)
-              rowsToInsert.push({
-                reservation_id: res.id,
-                charge_date: businessDate,
-                charge_type: 'ROOM',
-                description: `Driver Accom. × ${res.driver_count} — ${fmtDate(businessDate)} (Auto Night Audit)`,
-                ...charge,
-                created_by: userName,
-              })
-              postedRevenue += charge.total
-            }
-          }
-
-          if (rowsToInsert.length > 0) {
-            const { error: insertError } = await supabase.from('folio_charges').insert(rowsToInsert)
-            if (insertError) throw insertError
-          }
-        }
-
-        // 3. Compile revenue summaries for the audited day
-        // POS orders revenue
-        const { data: posOrders } = await supabase
-          .from('pos_orders')
-          .select('total')
-          .neq('status', 'CANCELLED')
-          .gte('created_at', `${businessDate}T00:00:00`)
-          .lte('created_at', `${businessDate}T23:59:59`)
-
-        const posRevenue = (posOrders || []).reduce((sum, o) => sum + Number(o.total || 0), 0)
-
-        // Other folio charges posted today
-        const { data: otherCharges } = await supabase
-          .from('folio_charges')
-          .select('total')
-          .eq('charge_date', businessDate)
-          .in('charge_type', ['TEA_SALE', 'PICKLE_SALE', 'SPORTS_RENTAL', 'LAUNDRY', 'OTHER'])
-
-        const otherRevenue = (otherCharges || []).reduce((sum, c) => sum + Number(c.total || 0), 0)
-
-        // Total payments collected
-        const { data: payments } = await supabase
-          .from('payments')
-          .select('amount, method')
-          .eq('received_date', businessDate)
-
-        const totalPayments = (payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)
-        const paymentSummary = (payments || []).reduce((acc, p) => {
-          acc[p.method] = (acc[p.method] || 0) + Number(p.amount)
-          return acc
-        }, {})
-
-        // 4. Save audit log/report
-        const report = {
-          date: businessDate,
-          run_at: new Date().toISOString(),
-          run_by: userName,
-          rooms_occupied: checks.inHouseCount,
-          room_revenue: postedRevenue,
-          pos_revenue: posRevenue,
-          other_revenue: otherRevenue,
-          total_revenue: postedRevenue + posRevenue + otherRevenue,
-          total_payments: totalPayments,
-          payment_summary: paymentSummary,
-          posted_charges_count: postedCount,
-        }
-
-        const existingReports = JSON.parse(localStorage.getItem('night_audit_reports') || '[]')
-        localStorage.setItem('night_audit_reports', JSON.stringify([report, ...existingReports]))
-
-        // 5. Advance system date
-        localStorage.setItem('resort_business_date', nextDate)
-        
-        // Dispatch event so App.jsx or others can react
-        window.dispatchEvent(new Event('branding_update'))
-
-        setAuditResult(report)
-        setBusinessDate(nextDate)
-        setStep('DONE')
-      } catch (err) {
-        setErrorMsg('Night Audit Failed: ' + err.message)
-        setStep('READY')
-      }
-    }, "Execute Night Audit")
+  /* Step 1 — post tonight's room charges for every in-house reservation (skip already posted) */
+  const postRoomCharges = async () => {
+    setBusy(true)
+    const postedSet = new Set(postedToday.map((p) => p.reservation_id))
+    const rows = []
+    for (const res of inHouse) {
+      if (postedSet.has(res.id)) continue
+      if (auditDate < res.check_in || auditDate >= res.check_out) continue
+      const rate = rateFor(taxConfig, 'ROOM', auditDate)
+      for (const rr of res.reservation_rooms || [])
+        rows.push({ reservation_id: res.id, charge_date: auditDate, charge_type: 'ROOM', description: `Room ${rr.rooms?.room_no} — Night of ${fmtDate(auditDate)} (night audit)`, ...computeCharge(rr.rate, res.discount_pct, rate), created_by: userName })
+      if (res.extra_pax > 0 && res.extra_pax_rate > 0)
+        rows.push({ reservation_id: res.id, charge_date: auditDate, charge_type: 'ROOM', description: `Extra pax × ${res.extra_pax} — ${fmtDate(auditDate)} (night audit)`, ...computeCharge(res.extra_pax * res.extra_pax_rate, res.discount_pct, rate), created_by: userName })
+      if (res.driver_accommodation && res.driver_count > 0 && res.driver_rate > 0)
+        rows.push({ reservation_id: res.id, charge_date: auditDate, charge_type: 'ROOM', description: `Driver accommodation × ${res.driver_count} — ${fmtDate(auditDate)} (night audit)`, ...computeCharge(res.driver_count * res.driver_rate, res.discount_pct, rate), created_by: userName })
+    }
+    if (rows.length === 0) { setBusy(false); flash('Nothing to post — every in-house room already has tonight\'s charge.'); return }
+    const { error } = await supabase.from('folio_charges').insert(rows)
+    setBusy(false)
+    if (error) flash(error.message)
+    else { flash(`${rows.length} room charge line(s) posted for ${fmtDate(auditDate)}.`); await loadAll() }
   }
 
-  const hasIssues = checks.openOrders.length > 0 || checks.pendingArrivals.length > 0 || checks.pendingDepartures.length > 0
+  /* Step 2 — mark stale CONFIRMED bookings as NO_SHOW */
+  const markNoShow = async (res) => {
+    if (!window.confirm(`Mark ${res.res_no} (${res.reservation_name || res.guests?.full_name || ''}) as NO-SHOW?`)) return
+    await supabase.from('reservations').update({ status: 'NO_SHOW' }).eq('id', res.id)
+    await supabase.from('audit_log').insert({ actor: userName, action: 'NO_SHOW', entity: 'reservation', entity_id: res.res_no, details: { audit_date: auditDate } })
+    await loadAll()
+  }
+
+  /* Step 3 — close the day: save summary, optional JV, stamp company.last_audit_date */
+  const closeDay = async () => {
+    if (!summary) return
+    setBusy(true)
+    let jvId = null
+    try {
+      if (makeJV && summary.recTotal + summary.totals.total > 0) {
+        const { data: coa } = await supabase.from('chart_of_accounts').select('id, code')
+        const acc = Object.fromEntries((coa || []).map((a) => [a.code, a.id]))
+        const lines = []
+        for (const [m, amt] of Object.entries(summary.receipts))
+          if (amt > 0 && acc[CASH_ACC[m] || '1030']) lines.push({ account_id: acc[CASH_ACC[m] || '1030'], debit: +amt.toFixed(2), credit: 0, line_note: `Receipts — ${m}` })
+        for (const [t, r] of Object.entries(summary.revenue))
+          if (r.net > 0 && acc[REV_ACC[t] || '4400']) lines.push({ account_id: acc[REV_ACC[t] || '4400'], debit: 0, credit: +r.net.toFixed(2), line_note: `Revenue — ${t}` })
+        if (summary.totals.vat > 0) lines.push({ account_id: acc['2200'], debit: 0, credit: +summary.totals.vat.toFixed(2), line_note: 'VAT payable' })
+        if (summary.totals.sd > 0) lines.push({ account_id: acc['2210'], debit: 0, credit: +summary.totals.sd.toFixed(2), line_note: 'SD payable' })
+        if (summary.totals.sc > 0) lines.push({ account_id: acc['2300'], debit: 0, credit: +summary.totals.sc.toFixed(2), line_note: 'Service charge payable' })
+        const dr = lines.reduce((a, l) => a + l.debit, 0), cr = lines.reduce((a, l) => a + l.credit, 0)
+        const diff = +(cr - dr).toFixed(2)
+        if (diff > 0) lines.push({ account_id: acc['1100'], debit: diff, credit: 0, line_note: 'Charged to folios — receivable' })
+        if (diff < 0) lines.push({ account_id: acc['2400'], debit: 0, credit: -diff, line_note: 'Advance / unapplied receipts' })
+        if (lines.length > 1) {
+          const { data: jv, error: je } = await supabase.from('journal_entries').insert({ jv_date: auditDate, narration: `Night audit — ${fmtDate(auditDate)}`, source: 'NIGHT_AUDIT', posted_by: userName }).select().single()
+          if (je) throw je
+          const { error: jle } = await supabase.from('journal_lines').insert(lines.map((l) => ({ ...l, entry_id: jv.id })))
+          if (jle) throw jle
+          jvId = jv.id
+        }
+      }
+      const payload = { audit_date: auditDate, performed_by: userName, summary, jv_id: jvId, notes: makeJV ? 'Auto-JV posted' : null }
+      const { error } = existing
+        ? await supabase.from('night_audits').update({ ...payload, performed_at: new Date().toISOString() }).eq('id', existing.id)
+        : await supabase.from('night_audits').insert(payload)
+      if (error) throw error
+      await supabase.from('company_settings').update({ last_audit_date: auditDate }).gt('id', 0)
+      flash(`Night audit for ${fmtDate(auditDate)} ${existing ? 'updated' : 'closed'}.${jvId ? ' Journal voucher posted.' : ''}`)
+      await loadAll()
+    } catch (e) { flash(e.message) }
+    setBusy(false)
+  }
+
+  const exportSummary = () => {
+    if (!summary) return
+    const rows = [
+      [`Night Audit — ${fmtDate(auditDate)}`], [`Performed by: ${userName}`], [],
+      ['REVENUE (accrual — charges posted today)'], ['Type', 'Net of discount', 'Service Charge', 'SD', 'VAT', 'Total'],
+      ...Object.entries(summary.revenue).map(([t, r]) => [t, r.net, r.sc, r.sd, r.vat, r.total]),
+      ['TOTAL', summary.totals.net, summary.totals.sc, summary.totals.sd, summary.totals.vat, summary.totals.total], [],
+      ['RECEIPTS (cash basis — money in today)'], ['Method', 'Amount'],
+      ...Object.entries(summary.receipts).map(([m, v]) => [m, v]),
+      ['TOTAL', summary.recTotal],
+    ]
+    exportXLSX(`Night_Audit_${auditDate}.xlsx`, [{ name: 'Night Audit', rows }])
+  }
+
+  const unposted = inHouse.filter((r) => !postedToday.some((p) => p.reservation_id === r.id) && auditDate >= r.check_in && auditDate < r.check_out)
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
-          <Moon size={24} className="text-amber" /> Night Audit Center
-        </h1>
-        <p className="text-sm text-pine/60">
-          Roll the resort business date, auto-post nightly room charges, and generate daily revenue statements.
-        </p>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2"><MoonStar className="text-forest" /> Night Audit</h1>
+          <p className="text-sm text-pine/60">End-of-day routine: post room charges, clear no-shows, balance the day and lock the summary.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="label !mb-0">Audit date</span>
+          <input type="date" className="input !w-44" value={auditDate} onChange={(e) => setAuditDate(e.target.value)} />
+        </div>
       </div>
+      {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
+      {existing && <div className="px-4 py-3 rounded-lg bg-amber/10 text-amber text-sm font-medium">This date was already audited by {existing.performed_by} on {fmtDate(existing.performed_at)}. Closing again will overwrite the saved summary.</div>}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card p-5 bg-white flex flex-col justify-between">
-          <div>
-            <div className="label">Resort Business Date</div>
-            <div className="text-3xl font-display font-bold text-pine flex items-center gap-2 mt-1">
-              <Calendar className="text-forest" size={24} /> {fmtDate(businessDate)}
-            </div>
-          </div>
-          <p className="text-[11px] text-pine/50 mt-3">All hotel transactions and room charges post under this date.</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Step 1 */}
+        <div className="card p-5">
+          <h3 className="font-display font-semibold text-pine flex items-center gap-2 mb-2"><BedDouble size={17} className="text-forest" /> 1 · Post tonight's room charges</h3>
+          <p className="text-sm text-pine/60 mb-3">{inHouse.length} guest(s) in house · {unposted.length} still without a charge for {fmtDate(auditDate)}.</p>
+          {unposted.length > 0 && (
+            <ul className="text-sm mb-3 space-y-1">
+              {unposted.map((r) => <li key={r.id} className="flex justify-between"><span>{r.res_no} — {r.reservation_name}</span><span className="text-pine/50">{(r.reservation_rooms || []).map((x) => x.rooms?.room_no).join(', ')}</span></li>)}
+            </ul>
+          )}
+          <button className="btn-primary" disabled={busy || unposted.length === 0} onClick={postRoomCharges}><CheckCircle2 size={15} /> Post room charges ({unposted.length})</button>
         </div>
 
-        <div className="card p-5 bg-white flex flex-col justify-between">
-          <div>
-            <div className="label">Occupied Rooms (Tonight)</div>
-            <div className="text-3xl font-display font-bold text-pine mt-1">
-              {checks.inHouseCount} Rooms
-            </div>
-          </div>
-          <p className="text-[11px] text-pine/50 mt-3">Charges will be posted to these folios during the audit run.</p>
-        </div>
-
-        <div className="card p-5 bg-white flex flex-col justify-between border-dashed border-2 border-forest/30">
-          <div>
-            <div className="label">Audit Control</div>
-            <p className="text-xs text-pine/70 mt-2">
-              Runs end-of-day processes, posts room taxes, and rolls dates forward.
-            </p>
-          </div>
-          <button
-            className={`btn-primary w-full justify-center mt-3 ${step === 'CHECKING' || step === 'RUNNING' ? 'opacity-50 cursor-not-allowed' : ''}`}
-            onClick={step === 'READY' ? startNightAudit : runChecks}
-            disabled={step === 'RUNNING' || step === 'CHECKING'}
-          >
-            {step === 'RUNNING' ? (
-              <span>Auditing…</span>
-            ) : (
-              <>
-                <Play size={16} /> Run Night Audit
-              </>
-            )}
-          </button>
+        {/* Step 2 */}
+        <div className="card p-5">
+          <h3 className="font-display font-semibold text-pine flex items-center gap-2 mb-2"><UserX size={17} className="text-amber" /> 2 · No-shows</h3>
+          <p className="text-sm text-pine/60 mb-3">Confirmed bookings whose check-in date has passed without arrival.</p>
+          {noShows.length === 0 ? <p className="text-sm text-pine/40">None — clean slate.</p> : (
+            <ul className="text-sm space-y-2">
+              {noShows.map((r) => (
+                <li key={r.id} className="flex items-center justify-between gap-2">
+                  <span>{r.res_no} — {r.reservation_name || r.guests?.full_name} <span className="text-pine/40">(in {fmtDate(r.check_in)})</span></span>
+                  <button className="btn-ghost !py-1 text-red-600" onClick={() => markNoShow(r)}>Mark no-show</button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
-      {errorMsg && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold flex items-center gap-3">
-          <ShieldAlert size={20} className="shrink-0" />
-          <span>{errorMsg}</span>
+      {/* Step 3 — day summary */}
+      {summary && (
+        <div className="card p-5 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="font-display font-semibold text-pine flex items-center gap-2"><BookOpenCheck size={17} className="text-forest" /> 3 · Day summary & close</h3>
+            <button className="btn-ghost !py-1.5" onClick={exportSummary}><FileDown size={14} /> Excel</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <div className="label">Revenue posted today (accrual)</div>
+              <table className="w-full">
+                <thead><tr><th className="th">Type</th><th className="th text-right">Net</th><th className="th text-right">SC</th><th className="th text-right">SD</th><th className="th text-right">VAT</th><th className="th text-right">Total</th></tr></thead>
+                <tbody>
+                  {Object.entries(summary.revenue).map(([t, r]) => (
+                    <tr key={t}><td className="td">{t}</td><td className="td money text-right">{r.net.toFixed(2)}</td><td className="td money text-right">{r.sc.toFixed(2)}</td><td className="td money text-right">{r.sd.toFixed(2)}</td><td className="td money text-right">{r.vat.toFixed(2)}</td><td className="td money text-right font-semibold">{r.total.toFixed(2)}</td></tr>
+                  ))}
+                  {Object.keys(summary.revenue).length === 0 && <tr><td className="td text-pine/40" colSpan={6}>No charges posted on this date.</td></tr>}
+                </tbody>
+                <tfoot><tr className="bg-leaf/40 font-bold money"><td className="td">TOTAL</td><td className="td text-right">{summary.totals.net.toFixed(2)}</td><td className="td text-right">{summary.totals.sc.toFixed(2)}</td><td className="td text-right">{summary.totals.sd.toFixed(2)}</td><td className="td text-right">{summary.totals.vat.toFixed(2)}</td><td className="td text-right">{summary.totals.total.toFixed(2)}</td></tr></tfoot>
+              </table>
+            </div>
+            <div>
+              <div className="label">Receipts today (cash basis)</div>
+              <table className="w-full">
+                <thead><tr><th className="th">Method</th><th className="th text-right">Amount</th></tr></thead>
+                <tbody>
+                  {Object.entries(summary.receipts).map(([m, v]) => <tr key={m}><td className="td">{m}</td><td className="td money text-right">{fmtBDT(v)}</td></tr>)}
+                  {Object.keys(summary.receipts).length === 0 && <tr><td className="td text-pine/40" colSpan={2}>No receipts on this date.</td></tr>}
+                </tbody>
+                <tfoot><tr className="bg-leaf/40 font-bold money"><td className="td">TOTAL</td><td className="td text-right">{fmtBDT(summary.recTotal)}</td></tr></tfoot>
+              </table>
+              <label className="flex items-center gap-2 text-sm mt-4 cursor-pointer">
+                <input type="checkbox" checked={makeJV} onChange={(e) => setMakeJV(e.target.checked)} className="accent-forest" />
+                Also post a balanced journal voucher into Accounting (Dr cash/bank · Cr revenue + VAT/SD/SC, difference to receivable/advance)
+              </label>
+              <button className="btn-primary mt-3" disabled={busy} onClick={closeDay}><MoonStar size={15} /> {existing ? 'Re-close day' : 'Close the day'}</button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Checklist Grid */}
-      <div className="card p-6 bg-white space-y-4">
-        <h3 className="font-display font-bold text-pine text-lg border-b border-leaf pb-2">Pre-Audit Checklist</h3>
-
-        <div className="space-y-3">
-          {/* Check 1: Open Restaurant Orders */}
-          <div className="flex items-start gap-4 p-3 rounded-lg border border-leaf hover:bg-leaf/10">
-            {checks.openOrders.length > 0 ? (
-              <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={18} />
-            ) : (
-              <CheckCircle2 className="text-forest shrink-0 mt-0.5" size={18} />
-            )}
-            <div className="flex-1 text-sm">
-              <div className="font-semibold text-pine">Open POS Restaurant Orders</div>
-              <p className="text-xs text-pine/60 mt-0.5">All restaurant orders must be settled or cancelled.</p>
-              {checks.openOrders.length > 0 && (
-                <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded border border-red-100 font-mono">
-                  Blocked: {checks.openOrders.length} active order(s) pending (e.g. {checks.openOrders.map(o => o.order_no).join(', ')}).
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Check 2: Unprocessed Departures */}
-          <div className="flex items-start gap-4 p-3 rounded-lg border border-leaf hover:bg-leaf/10">
-            {checks.pendingDepartures.length > 0 ? (
-              <AlertTriangle className="text-amber shrink-0 mt-0.5" size={18} />
-            ) : (
-              <CheckCircle2 className="text-forest shrink-0 mt-0.5" size={18} />
-            )}
-            <div className="flex-1 text-sm">
-              <div className="font-semibold text-pine">Pending Departures</div>
-              <p className="text-xs text-pine/60 mt-0.5">Guests due to check out on or before today.</p>
-              {checks.pendingDepartures.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {checks.pendingDepartures.map(d => (
-                    <div key={d.id} className="text-xs bg-amber/10 border border-amber/20 text-amber-800 p-1.5 rounded flex justify-between">
-                      <span>{d.reservation_name || d.guests?.full_name} ({d.res_no})</span>
-                      <span>Room {d.reservation_rooms?.map(x => x.rooms?.room_no).join(', ')}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Check 3: Unprocessed Arrivals */}
-          <div className="flex items-start gap-4 p-3 rounded-lg border border-leaf hover:bg-leaf/10">
-            {checks.pendingArrivals.length > 0 ? (
-              <AlertTriangle className="text-amber shrink-0 mt-0.5" size={18} />
-            ) : (
-              <CheckCircle2 className="text-forest shrink-0 mt-0.5" size={18} />
-            )}
-            <div className="flex-1 text-sm">
-              <div className="font-semibold text-pine">Pending Arrivals / Queries</div>
-              <p className="text-xs text-pine/60 mt-0.5">Guests expected to check in on or before today.</p>
-              {checks.pendingArrivals.length > 0 && (
-                <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
-                  {checks.pendingArrivals.map(a => (
-                    <div key={a.id} className="text-xs bg-amber/10 border border-amber/20 text-amber-800 p-1.5 rounded flex justify-between">
-                      <span>{a.reservation_name || a.guests?.full_name} ({a.res_no})</span>
-                      <span>Status: {a.status}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {hasIssues && (
-          <div className="p-3 text-xs bg-amber/5 text-amber-700 border border-amber/20 rounded-lg">
-            <b>Warning:</b> There are unresolved items in the checklist. Pending arrivals/departures will not block the audit, but nightly room charges will post to all active checked-in rooms. Open POS orders MUST be settled.
-          </div>
-        )}
+      {/* History */}
+      <div className="card overflow-hidden">
+        <div className="px-5 pt-4 pb-2 font-display font-semibold text-pine">Recent audits</div>
+        <table className="w-full">
+          <thead><tr><th className="th">Date</th><th className="th">By</th><th className="th text-right">Revenue total</th><th className="th text-right">Receipts</th><th className="th">JV</th></tr></thead>
+          <tbody>
+            {audits.map((a) => (
+              <tr key={a.id}>
+                <td className="td money">{fmtDate(a.audit_date)}</td>
+                <td className="td text-sm">{a.performed_by}</td>
+                <td className="td money text-right">{fmtBDT(a.summary?.totals?.total)}</td>
+                <td className="td money text-right">{fmtBDT(a.summary?.recTotal)}</td>
+                <td className="td text-xs">{a.jv_id ? 'Posted' : '—'}</td>
+              </tr>
+            ))}
+            {audits.length === 0 && <tr><td className="td text-pine/40" colSpan={5}>No audits yet.</td></tr>}
+          </tbody>
+        </table>
       </div>
-
-      {/* Done summary modal/overlay */}
-      {step === 'DONE' && auditResult && (
-        <div className="fixed inset-0 bg-ink/70 z-50 flex items-center justify-center p-4">
-          <div className="card max-w-lg w-full p-6 bg-white space-y-4 shadow-xl border-forest animate-fade-in">
-            <div className="flex items-center gap-3 text-forest">
-              <Sparkles size={28} className="text-amber animate-pulse" />
-              <h2 className="font-display text-xl font-bold text-pine">Night Audit Completed!</h2>
-            </div>
-            <p className="text-sm text-pine/70">
-              The resort business date has been successfully rolled forward to <b>{fmtDate(businessDate)}</b>. Daily charges have been posted.
-            </p>
-
-            <div className="bg-leaf/40 rounded-xl p-4 space-y-2 text-sm money border border-leaf">
-              <div className="flex justify-between border-b border-leaf pb-1">
-                <span className="font-semibold text-pine">Audited Date:</span>
-                <span>{fmtDate(auditResult.date)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Auto Room Charges Posted:</span>
-                <span>{auditResult.posted_charges_count} lines</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Nightly Room Revenue:</span>
-                <span className="font-semibold text-forest">{fmtBDT(auditResult.room_revenue)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Restaurant POS Sales:</span>
-                <span className="font-semibold text-forest">{fmtBDT(auditResult.pos_revenue)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Other Facilities Sales:</span>
-                <span className="font-semibold text-forest">{fmtBDT(auditResult.other_revenue)}</span>
-              </div>
-              <div className="flex justify-between border-t border-pine/20 pt-1 text-base font-bold">
-                <span>Total Daily Revenue:</span>
-                <span className="text-pine">{fmtBDT(auditResult.total_revenue)}</span>
-              </div>
-              <div className="flex justify-between border-t border-dashed border-pine/20 pt-1 font-semibold">
-                <span>Total Payments Collected:</span>
-                <span className="text-forest">{fmtBDT(auditResult.total_payments)}</span>
-              </div>
-            </div>
-
-            <button className="btn-primary w-full justify-center" onClick={() => { setStep('IDLE'); setAuditResult(null); runChecks() }}>
-              Close Statement
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

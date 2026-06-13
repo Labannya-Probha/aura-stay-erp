@@ -13,7 +13,7 @@ export function PosReceipt({ order, items, company, mushakNo }) {
         <div style={{ fontSize: 17, fontWeight: 700, fontFamily: 'Fraunces, serif', color: '#2E7D32' }}>{company?.name || 'Novem Eco Resort'}</div>
         <div style={{ fontSize: 9 }}>{company?.address}</div>
         <div style={{ fontSize: 9 }}>{company?.phone}{company?.bin ? ` · BIN: ${company.bin}` : ''}</div>
-        <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, letterSpacing: 1 }}>RESTAURANT BILL</div>
+        <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, letterSpacing: 1 }}>{(order.outlet || 'Restaurant').toUpperCase()} BILL</div>
       </div>
 
       <table style={{ width: '100%', fontSize: 10, margin: '6px 0' }}>

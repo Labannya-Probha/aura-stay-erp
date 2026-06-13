@@ -8,10 +8,13 @@ export default function RegistrationCard({ res, guest, resGuests, resRooms, paym
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
-      <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 8, marginBottom: 10 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, fontFamily: 'Fraunces, serif' }}>{company?.name || 'Novem Eco Resort'}</div>
-        <div style={{ fontSize: 11 }}>{company?.address} · {company?.phone} · {company?.email}</div>
-        <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6, letterSpacing: 1 }}>GUEST REGISTRATION CARD</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '2px solid #000', paddingBottom: 8, marginBottom: 10 }}>
+        {company?.logo_url && <img src={company.logo_url} alt="" style={{ height: 50, width: 50, objectFit: 'contain' }} />}
+        <div style={{ flex: 1, textAlign: company?.logo_url ? 'left' : 'center' }}>
+          <div style={{ fontSize: 20, fontWeight: 700, fontFamily: 'Fraunces, serif' }}>{company?.name || 'Novem Eco Resort'}</div>
+          <div style={{ fontSize: 11 }}>{company?.address} · {company?.phone} · {company?.email}</div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6, letterSpacing: 1 }}>GUEST REGISTRATION CARD</div>
+        </div>
       </div>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -21,7 +24,7 @@ export default function RegistrationCard({ res, guest, resGuests, resRooms, paym
             <td style={cell} colSpan={2}><div style={lbl}>Reservation Name / No.</div><b>{res.reservation_name || '—'}</b> · <span>{res.res_no}</span></td>
           </tr>
           <tr>
-            <td style={cell}><div style={lbl}>Room No(s).</div><b>{resRooms.map((r) => r.rooms?.room_no).join(', ') || '—'}</b></td>
+            <td style={cell}><div style={lbl}>Room No(s).</div><b>{resRooms.map((r) => `${r.rooms?.room_no}${r.rooms?.room_name ? ` (${r.rooms.room_name})` : ''}`).join(', ') || '—'}</b></td>
             <td style={cell}><div style={lbl}>Check-In</div>{fmtDate(res.check_in)}</td>
             <td style={cell}><div style={lbl}>Check-Out</div>{fmtDate(res.check_out)}</td>
             <td style={cell}><div style={lbl}>Nights / Pax</div>{nightsBetween(res.check_in, res.check_out)} night(s) · {res.pax_adults} adult, {res.pax_children} child</td>

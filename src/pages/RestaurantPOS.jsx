@@ -4,6 +4,7 @@ import { fmtBDT, fmtDate, todayISO, rateFor, computeCharge } from '../lib/helper
 import PrintPortal from '../components/PrintPortal.jsx'
 import { PosReceipt, KitchenTicket } from '../components/print/PosDocs.jsx'
 import Mushak63 from '../components/print/Mushak63.jsx'
+import GuestPicker from '../components/GuestPicker.jsx'
 import {
   Plus, Minus, Trash2, Printer, ChefHat, Banknote, BedDouble,
   Search, Save, XCircle, RotateCcw, Receipt,
@@ -11,7 +12,7 @@ import {
 
 const TABS = ['New Order', 'Orders', 'Menu']
 
-export default function RestaurantPOS({ userName, userRole, requestAdminPermission }) {
+export default function RestaurantPOS({ userName, isAdmin }) {
   const [tab, setTab] = useState('New Order')
   const [taxConfig, setTaxConfig] = useState([])
   const [company, setCompany] = useState(null)
@@ -64,8 +65,8 @@ export default function RestaurantPOS({ userName, userRole, requestAdminPermissi
           userName={userName} existing={editOrder} flash={flash}
           onDone={(doc) => { setEditOrder(null); if (doc) setPrintDoc(doc); setTab('Orders') }} />
       )}
-      {tab === 'Orders' && <OrdersList company={company} flash={flash} resumeOrder={resumeOrder} setPrintDoc={setPrintDoc} userRole={userRole} requestAdminPermission={requestAdminPermission} />}
-      {tab === 'Menu' && <MenuManager cats={cats} items={items} reload={loadMenu} />}
+      {tab === 'Orders' && <OrdersList company={company} flash={flash} resumeOrder={resumeOrder} setPrintDoc={setPrintDoc} isAdmin={isAdmin} />}
+      {tab === 'Menu' && <MenuManager cats={cats} items={items} reload={loadMenu} isAdmin={isAdmin} />}
 
       {printDoc?.type === 'RECEIPT' && (
         <PrintPortal title={`Restaurant Bill — ${printDoc.order.order_no}`} onClose={() => setPrintDoc(null)}>
@@ -372,50 +373,8 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, onDone, flas
   )
 }
 
-/* ---------- In-house guest picker ---------- */
-function GuestPicker({ close, pick }) {
-  const [rows, setRows] = useState([])
-  const [q, setQ] = useState('')
-  useEffect(() => {
-    supabase.from('reservations')
-      .select('id,res_no,reservation_name, guests:primary_guest_id(full_name), reservation_rooms(rooms(room_no))')
-      .eq('status', 'CHECKED_IN')
-      .then(({ data }) => setRows(data || []))
-  }, [])
-  const filtered = rows.filter((r) => {
-    const roomStr = (r.reservation_rooms || []).map((x) => x.rooms?.room_no).join(', ')
-    return !q || [r.res_no, r.reservation_name, r.guests?.full_name, roomStr].join(' ').toLowerCase().includes(q.toLowerCase())
-  })
-  return (
-    <div className="fixed inset-0 bg-ink/60 z-40 flex items-start justify-center p-6 overflow-auto">
-      <div className="card max-w-lg w-full p-5 my-10">
-        <h3 className="font-display font-semibold text-pine mb-3">In-house guests (checked-in)</h3>
-        <div className="relative mb-3">
-          <Search size={15} className="absolute left-3 top-2.5 text-pine/40" />
-          <input className="input pl-9" autoFocus placeholder="Search guest or room no…" value={q} onChange={(e) => setQ(e.target.value)} />
-        </div>
-        <div className="max-h-72 overflow-auto space-y-2">
-          {filtered.map((r) => {
-            const roomStr = (r.reservation_rooms || []).map((x) => x.rooms?.room_no).join(', ')
-            const name = r.guests?.full_name || r.reservation_name
-            return (
-              <button key={r.id} onClick={() => pick({ reservation_id: r.id, guest_name: name, room_no: roomStr })}
-                className="w-full flex justify-between items-center p-3 rounded-lg border border-leaf hover:bg-leaf/40 text-left">
-                <span className="font-semibold text-sm">{name}</span>
-                <span className="text-xs text-pine/60 money">Room {roomStr || '—'} · {r.res_no}</span>
-              </button>
-            )
-          })}
-          {filtered.length === 0 && <p className="text-sm text-pine/50 text-center py-4">No checked-in guests found.</p>}
-        </div>
-        <div className="flex justify-end mt-3"><button className="btn-ghost" onClick={close}>Close</button></div>
-      </div>
-    </div>
-  )
-}
-
 /* ================= ORDERS LIST ================= */
-function OrdersList({ company, flash, resumeOrder, setPrintDoc, userRole, requestAdminPermission }) {
+function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin }) {
   const [rows, setRows] = useState([])
   const [filter, setFilter] = useState('TODAY')
 
@@ -442,10 +401,17 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, userRole, reques
     if (inv) setPrintDoc({ type: 'MUSHAK', invoice: inv, refNo: o.order_no })
   }
   const cancel = async (o) => {
-    requestAdminPermission(async () => {
-      await supabase.from('pos_orders').update({ status: 'CANCELLED' }).eq('id', o.id)
-      flash(`${o.order_no} cancelled.`); load()
-    }, "Cancel POS Order")
+    await supabase.from('pos_orders').update({ status: 'CANCELLED' }).eq('id', o.id)
+    flash(`${o.order_no} cancelled.`); load()
+  }
+
+  // Admin-only: void a settled / charged order and reverse everything it created
+  const voidOrder = async (o) => {
+    if (o.folio_charge_id) await supabase.from('folio_charges').delete().eq('id', o.folio_charge_id)
+    if (o.reservation_id) await supabase.from('payments').delete().eq('reservation_id', o.reservation_id).eq('reference', o.order_no)
+    if (o.invoice_id) await supabase.from('invoices').delete().eq('id', o.invoice_id)
+    await supabase.from('pos_orders').update({ status: 'CANCELLED', notes: ((o.notes || '') + ' [VOIDED by admin]').trim() }).eq('id', o.id)
+    flash(`${o.order_no} voided — folio charge, payment and Mushak entry reversed.`); load()
   }
 
   const chip = {
@@ -491,6 +457,7 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, userRole, reques
                     <button className="btn-ghost !py-1 !px-2" title="KOT" onClick={() => printKot(o)}><ChefHat size={13} /></button>
                     {o.invoice_id && <button className="btn-ghost !py-1 !px-2" title="Mushak-6.3" onClick={() => printMushak(o)}><Printer size={13} /></button>}
                     {o.status === 'OPEN' && <button className="btn-ghost !py-1 !px-2 text-red-500" title="Cancel" onClick={() => cancel(o)}><XCircle size={13} /></button>}
+                    {isAdmin && ['SETTLED', 'CHARGED_TO_ROOM'].includes(o.status) && <button className="btn-ghost !py-1 !px-2 text-red-500 text-xs" title="Void & reverse (admin)" onClick={() => voidOrder(o)}>Void</button>}
                   </div>
                 </td>
               </tr>
@@ -504,7 +471,7 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, userRole, reques
 }
 
 /* ================= MENU MANAGER ================= */
-function MenuManager({ cats, items, reload }) {
+function MenuManager({ cats, items, reload, isAdmin }) {
   const [nc, setNc] = useState('')
   const [ni, setNi] = useState({ category_id: '', name: '', price: '' })
 
@@ -530,14 +497,18 @@ function MenuManager({ cats, items, reload }) {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="card p-5">
         <h3 className="font-display font-semibold text-pine mb-3">Categories</h3>
-        <div className="flex gap-2 mb-3">
-          <input className="input flex-1" placeholder="New category" value={nc} onChange={(e) => setNc(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addCat()} />
-          <button className="btn-primary" onClick={addCat}><Plus size={15} /></button>
-        </div>
+        {isAdmin ? (
+          <div className="flex gap-2 mb-3">
+            <input className="input flex-1" placeholder="New category" value={nc} onChange={(e) => setNc(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addCat()} />
+            <button className="btn-primary" onClick={addCat}><Plus size={15} /></button>
+          </div>
+        ) : (
+          <p className="text-xs text-pine/50 mb-3">Menu changes require administrator access.</p>
+        )}
         {cats.map((c) => (
           <div key={c.id} className="flex justify-between items-center py-1.5 border-b border-leaf/60 text-sm">
             <span className="font-medium">{c.name}</span>
-            <button onClick={() => toggleCat(c)} className={`status-chip ${c.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'}`}>
+            <button onClick={() => isAdmin && toggleCat(c)} disabled={!isAdmin} className={`status-chip ${c.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'} ${!isAdmin ? 'cursor-default' : ''}`}>
               {c.is_active ? 'ACTIVE' : 'OFF'}
             </button>
           </div>
@@ -546,7 +517,8 @@ function MenuManager({ cats, items, reload }) {
 
       <div className="card p-5 lg:col-span-2">
         <h3 className="font-display font-semibold text-pine mb-3">Menu items</h3>
-        <div className="grid grid-cols-4 gap-2 mb-4 items-end">
+        {!isAdmin && <p className="text-xs text-pine/50 mb-3">Read-only — ask an administrator to change items or prices.</p>}
+        {isAdmin && <div className="grid grid-cols-4 gap-2 mb-4 items-end">
           <div><label className="label">Category</label>
             <select className="input" value={ni.category_id} onChange={(e) => setNi({ ...ni, category_id: e.target.value })}>
               <option value="">Select…</option>
@@ -555,7 +527,7 @@ function MenuManager({ cats, items, reload }) {
           <div><label className="label">Item name</label><input className="input" value={ni.name} onChange={(e) => setNi({ ...ni, name: e.target.value })} /></div>
           <div><label className="label">Price ৳</label><input type="number" className="input money" value={ni.price} onChange={(e) => setNi({ ...ni, price: e.target.value })} /></div>
           <button className="btn-primary justify-center" onClick={addItem}><Plus size={15} /> Add item</button>
-        </div>
+        </div>}
         <table className="w-full">
           <thead><tr><th className="th">Item</th><th className="th">Category</th><th className="th text-right">Price (editable)</th><th className="th">Status</th><th className="th"></th></tr></thead>
           <tbody>
@@ -564,15 +536,19 @@ function MenuManager({ cats, items, reload }) {
                 <td className="td font-medium text-sm">{it.name}</td>
                 <td className="td text-xs text-pine/60">{cats.find((c) => c.id === it.category_id)?.name || '—'}</td>
                 <td className="td text-right">
-                  <input type="number" defaultValue={it.price} onBlur={(e) => updatePrice(it, e.target.value)}
-                    className="input !w-28 !py-1 money text-right inline-block" />
+                  {isAdmin ? (
+                    <input type="number" defaultValue={it.price} onBlur={(e) => updatePrice(it, e.target.value)}
+                      className="input !w-28 !py-1 money text-right inline-block" />
+                  ) : (
+                    <span className="money">{Number(it.price).toFixed(2)}</span>
+                  )}
                 </td>
                 <td className="td">
-                  <button onClick={() => toggleItem(it)} className={`status-chip ${it.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'}`}>
+                  <button onClick={() => isAdmin && toggleItem(it)} disabled={!isAdmin} className={`status-chip ${it.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'} ${!isAdmin ? 'cursor-default' : ''}`}>
                     {it.is_active ? 'ACTIVE' : 'OFF'}
                   </button>
                 </td>
-                <td className="td text-right"><button onClick={() => delItem(it)} className="text-red-300 hover:text-red-600"><Trash2 size={14} /></button></td>
+                <td className="td text-right">{isAdmin && <button onClick={() => delItem(it)} className="text-red-300 hover:text-red-600"><Trash2 size={14} /></button>}</td>
               </tr>
             ))}
             {items.length === 0 && <tr><td className="td text-pine/50" colSpan={5}>No items yet — add your menu above.</td></tr>}

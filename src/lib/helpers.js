@@ -1,7 +1,11 @@
 import * as XLSX from 'xlsx'
 
+let CUR = '৳'
+export const setCurrency = (c) => { CUR = (c || '৳').toString().trim() }
+export const getCurrency = () => CUR
+
 export const fmtBDT = (n) =>
-  '৳ ' + Number(n || 0).toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  CUR + ' ' + Number(n || 0).toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export const fmtDate = (d) => {
   if (!d) return '—'

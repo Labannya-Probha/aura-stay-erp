@@ -16,7 +16,8 @@ export default function Mushak63({ invoice, res, company, refNo }) {
   const totalValue = lines.reduce((a, l) => a + lineValue(l), 0)
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', color: '#000' }}>
+    <div style={{ maxWidth: 720, margin: '0 auto', color: '#000', position: 'relative' }}>
+      {invoice.is_void && <div style={{ position: 'absolute', top: '40%', left: 0, right: 0, textAlign: 'center', transform: 'rotate(-24deg)', fontSize: 96, fontWeight: 800, color: 'rgba(220,0,0,0.16)', letterSpacing: 8, pointerEvents: 'none' }}>VOID / বাতিল</div>}
       <table style={{ width: '100%' }}>
         <tbody>
           <tr>

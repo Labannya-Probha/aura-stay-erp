@@ -13,7 +13,7 @@ export default function Reservations({ openReservation, userName }) {
 
   const load = async () => {
     const { data } = await supabase.from('reservations')
-      .select('id,res_no,reservation_name,status,check_in,check_out,pax_adults,pax_children,source,created_at, guests:primary_guest_id(full_name,phone), reservation_rooms(rooms(room_no))')
+      .select('id,res_no,reservation_name,status,check_in,check_out,pax_adults,pax_children,source,created_at, guests:primary_guest_id(full_name,phone), reservation_rooms(rooms(room_no,room_name))')
       .order('created_at', { ascending: false }).limit(300)
     setRows(data || [])
   }
@@ -62,7 +62,7 @@ export default function Reservations({ openReservation, userName }) {
                   <div className="text-xs text-pine/50">{r.guests?.full_name} {r.guests?.phone && `· ${r.guests.phone}`}</div>
                 </td>
                 <td className="td money text-xs">{fmtDate(r.check_in)} → {fmtDate(r.check_out)}</td>
-                <td className="td money text-xs font-semibold">{(r.reservation_rooms || []).map((x) => x.rooms?.room_no).filter(Boolean).join(', ') || '—'}</td>
+                <td className="td money text-xs font-semibold">{(r.reservation_rooms || []).map((x) => x.rooms ? `${x.rooms.room_no}${x.rooms.room_name ? ' ('+x.rooms.room_name+')' : ''}` : null).filter(Boolean).join(', ') || '—'}</td>
                 <td className="td money">{r.pax_adults + r.pax_children}</td>
                 <td className="td text-xs">{r.source}</td>
                 <td className="td"><span className={`status-chip ${STATUS_COLORS[r.status]}`}>{r.status.replace('_', ' ')}</span></td>
@@ -161,7 +161,7 @@ function NewReservation({ close, openReservation, userName }) {
                 return (
                   <button key={rm.id} type="button" disabled={taken} onClick={() => toggleRoom(rm.id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${taken ? 'bg-stone-100 border-stone-200 text-stone-400 line-through cursor-not-allowed' : sel ? 'bg-forest border-forest text-white' : 'bg-white border-leaf text-pine hover:bg-leaf/50'}`}>
-                    {rm.room_no} · {rm.room_type} · <span className="money">{fmtBDT(rm.base_rate)}</span>{taken ? ' (booked)' : ''}
+                    {rm.room_no}{rm.room_name ? " · "+rm.room_name : ""} · {rm.room_type} · <span className="money">{fmtBDT(rm.base_rate)}</span>{taken ? ' (booked)' : ''}
                   </button>
                 )
               })}
