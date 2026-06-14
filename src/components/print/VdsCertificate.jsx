@@ -35,24 +35,22 @@ export default function VdsCertificate({ cert, company }) {
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', color: '#000', fontSize: 11 }}>
-      {/* Header: NBR logo | title block | মূসক-৬.৬ box */}
-      <table style={{ width: '100%' }}>
-        <tbody>
-          <tr>
-            <td style={{ width: 70, verticalAlign: 'top' }}><NbrLogo url={company?.nbr_logo_url} size={58} /></td>
-            <td style={{ textAlign: 'center', verticalAlign: 'top' }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</div>
-              <div style={{ fontSize: 12, fontWeight: 700 }}>জাতীয় রাজস্ব বোর্ড</div>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>উৎসে কর কর্তন সনদপত্র</div>
-              <div style={{ fontSize: 9 }}>[বিধি ৪০ এর উপ-বিধি (১) এর দফা (চ) দ্রষ্টব্য]</div>
-            </td>
-            <td style={{ width: 110, textAlign: 'right', verticalAlign: 'top' }}>
-              {company?.logo_url && <img src={company.logo_url} alt="" style={{ height: 40, width: 40, objectFit: 'contain', display: 'block', marginLeft: 'auto', marginBottom: 4 }} />}
-              <span style={{ display: 'inline-block', border: '1px solid #000', padding: '3px 10px', fontWeight: 700, fontSize: 12 }}>মূসক-৬.৬</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      {/* Header: NBR logo on top, centered — then title block */}
+      <div style={{ position: 'relative', textAlign: 'center', paddingTop: 4 }}>
+        {/* company logo + form-code box: top-right corner */}
+        <div style={{ position: 'absolute', top: 0, right: 0, textAlign: 'right' }}>
+          {company?.logo_url && <img src={company.logo_url} alt="" style={{ height: 40, width: 40, objectFit: 'contain', display: 'block', marginLeft: 'auto', marginBottom: 4 }} />}
+          <span style={{ display: 'inline-block', border: '1px solid #000', padding: '3px 10px', fontWeight: 700, fontSize: 12 }}>মূসক-৬.৬</span>
+        </div>
+        {/* NBR logo centered, above the government heading */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+          <NbrLogo url={company?.nbr_logo_url} size={60} />
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</div>
+        <div style={{ fontSize: 12, fontWeight: 700 }}>জাতীয় রাজস্ব বোর্ড</div>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>উৎসে কর কর্তন সনদপত্র</div>
+        <div style={{ fontSize: 9 }}>[বিধি ৪০ এর উপ-বিধি (১) এর দফা (চ) দ্রষ্টব্য]</div>
+      </div>
 
       {/* Withholding entity block */}
       <div style={{ marginTop: 12, lineHeight: 1.9 }}>
