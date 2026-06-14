@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtBDT, fmtDate, todayISO, rateFor, computeCharge, exportXLSX } from '../lib/helpers'
-import { MoonStar, BedDouble, UserX, CheckCircle2, FileDown, BookOpenCheck } from 'lucide-react'
+import PrintPortal from '../components/PrintPortal.jsx'
+import { MoonStar, BedDouble, UserX, CheckCircle2, FileDown, BookOpenCheck, Printer } from 'lucide-react'
 
-/* Account codes used for the optional auto-JV */
 const CASH_ACC = { CASH: '1010', BKASH: '1020', NAGAD: '1020', CARD: '1030', BANK: '1030', OTHER: '1030' }
 const REV_ACC = { ROOM: '4100', RESTAURANT: '4200', TEA: '4300', PICKLE: '4300', SPORTS: '4300', LAUNDRY: '4400', OTHER: '4400' }
 
@@ -16,10 +16,14 @@ export default function NightAudit({ userName, isAdmin }) {
   const [summary, setSummary] = useState(null)
   const [audits, setAudits] = useState([])
   const [existing, setExisting] = useState(null)
+  const [company, setCompany] = useState(null)
+  const [printAudit, setPrintAudit] = useState(null)
   const [makeJV, setMakeJV] = useState(false)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 6000) }
+
+  useEffect(() => { supabase.from('company_settings').select('*').eq('id', 1).single().then(({ data }) => setCompany(data)) }, [])
 
   const loadAll = async () => {
     const [ih, ns, fc, tc, na, ex] = await Promise.all([
@@ -43,7 +47,7 @@ export default function NightAudit({ userName, isAdmin }) {
         .gte('settled_at', auditDate + 'T00:00:00').lte('settled_at', auditDate + 'T23:59:59'),
       supabase.from('facility_sales').select('*').eq('status', 'SETTLED').is('reservation_id', null).eq('sale_date', auditDate),
     ])
-    const revenue = {} // charge_type -> {net, sc, sd, vat, total}
+    const revenue = {}
     const add = (type, net, sc, sd, vat, total) => {
       const r = revenue[type] || { net: 0, sc: 0, sd: 0, vat: 0, total: 0 }
       r.net += net; r.sc += sc; r.sd += sd; r.vat += vat; r.total += total
@@ -53,7 +57,7 @@ export default function NightAudit({ userName, isAdmin }) {
     for (const o of posWalk.data || []) add('RESTAURANT', +o.base_amount - +o.discount, +o.service_charge, +o.sd, +o.vat, +o.total)
     for (const f of facWalk.data || []) add(f.item_name?.toUpperCase().includes('TEA') ? 'TEA' : 'OTHER FACILITY', +f.base_amount - +f.discount, +f.service_charge, +f.sd, +f.vat, +f.total)
 
-    const receipts = {} // method -> amount
+    const receipts = {}
     for (const p of pay.data || []) receipts[p.method] = (receipts[p.method] || 0) + +p.amount
     for (const o of posWalk.data || []) receipts[o.payment_method || 'CASH'] = (receipts[o.payment_method || 'CASH'] || 0) + +o.total
     for (const f of facWalk.data || []) receipts[f.payment_method || 'CASH'] = (receipts[f.payment_method || 'CASH'] || 0) + +f.total
@@ -65,7 +69,6 @@ export default function NightAudit({ userName, isAdmin }) {
 
   useEffect(() => { loadAll() }, [auditDate]) // eslint-disable-line
 
-  /* Step 1 — post tonight's room charges for every in-house reservation (skip already posted) */
   const postRoomCharges = async () => {
     setBusy(true)
     const postedSet = new Set(postedToday.map((p) => p.reservation_id))
@@ -93,7 +96,6 @@ export default function NightAudit({ userName, isAdmin }) {
     else { flash(`${rows.length} room charge line(s) posted for ${fmtDate(auditDate)}.`); await loadAll() }
   }
 
-  /* Step 2 — mark stale CONFIRMED bookings as NO_SHOW */
   const markNoShow = async (res) => {
     if (!window.confirm(`Mark ${res.res_no} (${res.reservation_name || res.guests?.full_name || ''}) as NO-SHOW?`)) return
     await supabase.from('reservations').update({ status: 'NO_SHOW' }).eq('id', res.id)
@@ -101,7 +103,6 @@ export default function NightAudit({ userName, isAdmin }) {
     await loadAll()
   }
 
-  /* Step 3 — close the day: save summary, optional JV, stamp company.last_audit_date */
   const closeDay = async () => {
     if (!summary) return
     setBusy(true)
@@ -146,10 +147,10 @@ export default function NightAudit({ userName, isAdmin }) {
     if (!summary) return
     const rows = [
       [`Night Audit — ${fmtDate(auditDate)}`], [`Performed by: ${userName}`], [],
-      ['REVENUE (accrual — charges posted today)'], ['Type', 'Net of discount', 'Service Charge', 'SD', 'VAT', 'Total'],
+      ['REVENUE (accrual)'], ['Type', 'Net', 'Service Charge', 'SD', 'VAT', 'Total'],
       ...Object.entries(summary.revenue).map(([t, r]) => [t, r.net, r.sc, r.sd, r.vat, r.total]),
       ['TOTAL', summary.totals.net, summary.totals.sc, summary.totals.sd, summary.totals.vat, summary.totals.total], [],
-      ['RECEIPTS (cash basis — money in today)'], ['Method', 'Amount'],
+      ['RECEIPTS (cash basis)'], ['Method', 'Amount'],
       ...Object.entries(summary.receipts).map(([m, v]) => [m, v]),
       ['TOTAL', summary.recTotal],
     ]
@@ -160,10 +161,16 @@ export default function NightAudit({ userName, isAdmin }) {
 
   return (
     <div className="space-y-5">
+      {printAudit && (
+        <PrintPortal title={`Night Audit — ${printAudit.audit_date}`} onClose={() => setPrintAudit(null)}>
+          <NightAuditReport audit={printAudit} company={company} />
+        </PrintPortal>
+      )}
+
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2"><MoonStar className="text-forest" /> Night Audit</h1>
-          <p className="text-sm text-pine/60">End-of-day routine: post room charges, clear no-shows, balance the day and lock the summary.</p>
+          <p className="text-sm text-pine/60">End-of-day routine: post room charges, clear no-shows, balance the day and print the report.</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="label !mb-0">Audit date</span>
@@ -174,7 +181,6 @@ export default function NightAudit({ userName, isAdmin }) {
       {existing && <div className="px-4 py-3 rounded-lg bg-amber/10 text-amber text-sm font-medium">This date was already audited by {existing.performed_by} on {fmtDate(existing.performed_at)}. Closing again will overwrite the saved summary.</div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Step 1 */}
         <div className="card p-5">
           <h3 className="font-display font-semibold text-pine flex items-center gap-2 mb-2"><BedDouble size={17} className="text-forest" /> 1 · Post tonight's room charges</h3>
           <p className="text-sm text-pine/60 mb-3">{inHouse.length} guest(s) in house · {unposted.length} still without a charge for {fmtDate(auditDate)}.</p>
@@ -186,7 +192,6 @@ export default function NightAudit({ userName, isAdmin }) {
           <button className="btn-primary" disabled={busy || unposted.length === 0} onClick={postRoomCharges}><CheckCircle2 size={15} /> Post room charges ({unposted.length})</button>
         </div>
 
-        {/* Step 2 */}
         <div className="card p-5">
           <h3 className="font-display font-semibold text-pine flex items-center gap-2 mb-2"><UserX size={17} className="text-amber" /> 2 · No-shows</h3>
           <p className="text-sm text-pine/60 mb-3">Confirmed bookings whose check-in date has passed without arrival.</p>
@@ -203,7 +208,6 @@ export default function NightAudit({ userName, isAdmin }) {
         </div>
       </div>
 
-      {/* Step 3 — day summary */}
       {summary && (
         <div className="card p-5 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -236,7 +240,7 @@ export default function NightAudit({ userName, isAdmin }) {
               </table>
               <label className="flex items-center gap-2 text-sm mt-4 cursor-pointer">
                 <input type="checkbox" checked={makeJV} onChange={(e) => setMakeJV(e.target.checked)} className="accent-forest" />
-                Also post a balanced journal voucher into Accounting (Dr cash/bank · Cr revenue + VAT/SD/SC, difference to receivable/advance)
+                Also post a balanced journal voucher into Accounting
               </label>
               <button className="btn-primary mt-3" disabled={busy} onClick={closeDay}><MoonStar size={15} /> {existing ? 'Re-close day' : 'Close the day'}</button>
             </div>
@@ -244,11 +248,10 @@ export default function NightAudit({ userName, isAdmin }) {
         </div>
       )}
 
-      {/* History */}
       <div className="card overflow-hidden">
         <div className="px-5 pt-4 pb-2 font-display font-semibold text-pine">Recent audits</div>
         <table className="w-full">
-          <thead><tr><th className="th">Date</th><th className="th">By</th><th className="th text-right">Revenue total</th><th className="th text-right">Receipts</th><th className="th">JV</th></tr></thead>
+          <thead><tr><th className="th">Date</th><th className="th">By</th><th className="th text-right">Revenue total</th><th className="th text-right">Receipts</th><th className="th">JV</th><th className="th text-right">Report</th></tr></thead>
           <tbody>
             {audits.map((a) => (
               <tr key={a.id}>
@@ -257,12 +260,80 @@ export default function NightAudit({ userName, isAdmin }) {
                 <td className="td money text-right">{fmtBDT(a.summary?.totals?.total)}</td>
                 <td className="td money text-right">{fmtBDT(a.summary?.recTotal)}</td>
                 <td className="td text-xs">{a.jv_id ? 'Posted' : '—'}</td>
+                <td className="td text-right"><button className="btn-ghost !py-1" onClick={() => setPrintAudit(a)}><Printer size={13} /> Report</button></td>
               </tr>
             ))}
-            {audits.length === 0 && <tr><td className="td text-pine/40" colSpan={5}>No audits yet.</td></tr>}
+            {audits.length === 0 && <tr><td className="td text-pine/40" colSpan={6}>No audits yet.</td></tr>}
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+/* ---------------- A4 Night Audit report (print) ---------------- */
+function NightAuditReport({ audit, company }) {
+  const s = audit?.summary || {}
+  const revenue = s.revenue || {}
+  const receipts = s.receipts || {}
+  const totals = s.totals || { net: 0, sc: 0, sd: 0, vat: 0, total: 0 }
+  const recTotal = s.recTotal != null ? s.recTotal : Object.values(receipts).reduce((a, v) => a + (+v || 0), 0)
+  const cell = { border: '1px solid #000', padding: '5px 8px', fontSize: 11 }
+  const rt = { ...cell, textAlign: 'right', fontFamily: '"IBM Plex Mono", monospace' }
+
+  return (
+    <div style={{ maxWidth: 720, margin: '0 auto', color: '#000' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '2px solid #1B4D2E', paddingBottom: 8, marginBottom: 12 }}>
+        {company?.logo_url && <img src={company.logo_url} alt="" style={{ height: 50, width: 50, objectFit: 'contain' }} />}
+        <div style={{ flex: 1, textAlign: company?.logo_url ? 'left' : 'center' }}>
+          <div style={{ fontSize: 19, fontWeight: 700, fontFamily: 'Fraunces, serif', color: '#1B4D2E' }}>{company?.name || 'Resort'}</div>
+          <div style={{ fontSize: 10.5 }}>{company?.address}{company?.phone ? ` · ${company.phone}` : ''}</div>
+        </div>
+      </div>
+
+      <div style={{ textAlign: 'center', fontSize: 15, fontWeight: 700, letterSpacing: 1, marginBottom: 4, textDecoration: 'underline' }}>NIGHT AUDIT — DAY-END REPORT</div>
+      <table style={{ width: '100%', fontSize: 11, marginBottom: 10 }}>
+        <tbody>
+          <tr><td><b>Audit date:</b> {fmtDate(audit.audit_date)}</td><td style={{ textAlign: 'right' }}><b>Performed by:</b> {audit.performed_by || '—'}</td></tr>
+          <tr><td><b>In-house at audit:</b> {s.inHouseCount != null ? s.inHouseCount : '—'}</td><td style={{ textAlign: 'right' }}><b>Journal voucher:</b> {audit.jv_id ? 'Posted' : '—'}</td></tr>
+        </tbody>
+      </table>
+
+      <div style={{ fontSize: 12, fontWeight: 700, margin: '6px 0 4px' }}>A · Revenue posted (accrual)</div>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead><tr style={{ background: '#eee' }}>
+          <th style={cell}>Revenue head</th><th style={{ ...cell, textAlign: 'right' }}>Net</th><th style={{ ...cell, textAlign: 'right' }}>Service charge</th><th style={{ ...cell, textAlign: 'right' }}>SD</th><th style={{ ...cell, textAlign: 'right' }}>VAT</th><th style={{ ...cell, textAlign: 'right' }}>Total</th>
+        </tr></thead>
+        <tbody>
+          {Object.entries(revenue).map(([k, r]) => (
+            <tr key={k}><td style={cell}>{k}</td><td style={rt}>{fmtBDT(r.net)}</td><td style={rt}>{fmtBDT(r.sc)}</td><td style={rt}>{fmtBDT(r.sd)}</td><td style={rt}>{fmtBDT(r.vat)}</td><td style={rt}>{fmtBDT(r.total)}</td></tr>
+          ))}
+          {Object.keys(revenue).length === 0 && <tr><td style={cell} colSpan={6}>No revenue posted on this date.</td></tr>}
+        </tbody>
+        <tfoot><tr style={{ fontWeight: 700, background: '#f5f5f5' }}>
+          <td style={cell}>TOTAL</td><td style={rt}>{fmtBDT(totals.net)}</td><td style={rt}>{fmtBDT(totals.sc)}</td><td style={rt}>{fmtBDT(totals.sd)}</td><td style={rt}>{fmtBDT(totals.vat)}</td><td style={rt}>{fmtBDT(totals.total)}</td>
+        </tr></tfoot>
+      </table>
+
+      <div style={{ fontSize: 12, fontWeight: 700, margin: '14px 0 4px' }}>B · Receipts collected (cash basis)</div>
+      <table style={{ width: '60%', borderCollapse: 'collapse' }}>
+        <thead><tr style={{ background: '#eee' }}><th style={cell}>Method</th><th style={{ ...cell, textAlign: 'right' }}>Amount</th></tr></thead>
+        <tbody>
+          {Object.entries(receipts).map(([m, v]) => <tr key={m}><td style={cell}>{m}</td><td style={rt}>{fmtBDT(v)}</td></tr>)}
+          {Object.keys(receipts).length === 0 && <tr><td style={cell} colSpan={2}>No receipts on this date.</td></tr>}
+        </tbody>
+        <tfoot><tr style={{ fontWeight: 700, background: '#f5f5f5' }}><td style={cell}>TOTAL</td><td style={rt}>{fmtBDT(recTotal)}</td></tr></tfoot>
+      </table>
+
+      <div style={{ fontSize: 10, marginTop: 10, color: '#444' }}>Revenue is accrual (charges posted on the date); receipts are cash basis (money received on the date). The two need not match.</div>
+
+      <table style={{ width: '100%', marginTop: 44, fontSize: 11 }}>
+        <tbody><tr>
+          <td style={{ width: '45%', borderTop: '1px solid #000', paddingTop: 6, textAlign: 'center' }}>Night Auditor<br /><span style={{ fontSize: 10 }}>{audit.performed_by || ''}</span></td>
+          <td style={{ width: '10%' }}></td>
+          <td style={{ width: '45%', borderTop: '1px solid #000', paddingTop: 6, textAlign: 'center' }}>Manager / Accounts</td>
+        </tr></tbody>
+      </table>
     </div>
   )
 }
