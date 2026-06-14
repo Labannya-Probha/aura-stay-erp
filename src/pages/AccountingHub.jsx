@@ -155,9 +155,7 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
                   <td className="td money text-right">{fmtBDT(amt)}</td>
                   <td className="td text-right">
                     <div className="flex gap-1 justify-end items-center flex-wrap">
-                      <button className="btn-ghost !py-1" title="Journal Voucher" onClick={() => openVoucher(r, 'JV')}><Printer size={13} /> JV</button>
-                      <button className="btn-ghost !py-1" title="Debit Voucher" onClick={() => openVoucher(r, 'DEBIT')}>Dr</button>
-                      <button className="btn-ghost !py-1" title="Credit Voucher" onClick={() => openVoucher(r, 'CREDIT')}>Cr</button>
+                      <button className="btn-ghost !py-1" title="Print voucher (auto Dr/Cr/JV)" onClick={() => openVoucher(r, undefined)}><Printer size={13} /> Voucher</button>
                       <button className="btn-ghost !py-1" title="Edit" onClick={() => edit(r)}><Pencil size={13} /></button>
                       {isAdmin && <button className="btn-ghost !py-1 text-red-600" title="Delete" onClick={() => del(r.id)}><Trash2 size={13} /></button>}
                     </div>
