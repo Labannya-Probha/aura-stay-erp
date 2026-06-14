@@ -309,11 +309,100 @@ async function fetchReport(key, from, to) {
       const t = (data || []).reduce((a, r) => a + +r.amount, 0)
       return { head: ['Period', 'Asset code', 'Asset', 'Depreciation'], align: ['l', 'l', 'l', 'r'], rows, foot: ['', '', 'TOTAL', money(t)] }
     }
+    /* ---------- CLASS B: financial statements ---------- */
+    case 'acc_pnl': {
+      const acc = await periodBalances(from, to)
+      const inc = acc.filter((a) => a.type === 'INCOME')
+      const exp = acc.filter((a) => a.type === 'EXPENSE')
+      const incTot = inc.reduce((s, a) => s + a.credit - a.debit, 0)
+      const expTot = exp.reduce((s, a) => s + a.debit - a.credit, 0)
+      const rows = []
+      rows.push(['INCOME', '', ''])
+      inc.forEach((a) => rows.push(['', `${a.code} · ${a.name}`, money(a.credit - a.debit)]))
+      rows.push(['Total Income', '', money(incTot)])
+      rows.push(['EXPENSE', '', ''])
+      exp.forEach((a) => rows.push(['', `${a.code} · ${a.name}`, money(a.debit - a.credit)]))
+      rows.push(['Total Expense', '', money(expTot)])
+      return { head: ['Section', 'Account', 'Amount'], align: ['l', 'l', 'r'], rows, foot: ['NET PROFIT / (LOSS)', '', money(incTot - expTot)] }
+    }
+    case 'acc_balance_sheet': {
+      const acc = await periodBalances(null, to)
+      const assets = acc.filter((a) => a.type === 'ASSET')
+      const liab = acc.filter((a) => a.type === 'LIABILITY')
+      const eq = acc.filter((a) => a.type === 'EQUITY')
+      const aTot = assets.reduce((s, a) => s + a.debit - a.credit, 0)
+      const lTot = liab.reduce((s, a) => s + a.credit - a.debit, 0)
+      const eTot = eq.reduce((s, a) => s + a.credit - a.debit, 0)
+      const inc = acc.filter((a) => a.type === 'INCOME').reduce((s, a) => s + a.credit - a.debit, 0)
+      const exp = acc.filter((a) => a.type === 'EXPENSE').reduce((s, a) => s + a.debit - a.credit, 0)
+      const retained = inc - exp
+      const rows = []
+      rows.push(['ASSETS', '', ''])
+      assets.forEach((a) => rows.push(['', `${a.code} · ${a.name}`, money(a.debit - a.credit)]))
+      rows.push(['Total Assets', '', money(aTot)])
+      rows.push(['LIABILITIES', '', ''])
+      liab.forEach((a) => rows.push(['', `${a.code} · ${a.name}`, money(a.credit - a.debit)]))
+      rows.push(['Total Liabilities', '', money(lTot)])
+      rows.push(['EQUITY', '', ''])
+      eq.forEach((a) => rows.push(['', `${a.code} · ${a.name}`, money(a.credit - a.debit)]))
+      rows.push(['', 'Retained earnings (P&L)', money(retained)])
+      rows.push(['Total Equity', '', money(eTot + retained)])
+      return { head: ['Section', 'Account', 'Amount'], align: ['l', 'l', 'r'], rows, foot: ['Liabilities + Equity', '', money(lTot + eTot + retained)] }
+    }
+    case 'acc_nav': {
+      const acc = await periodBalances(null, to)
+      const aTot = acc.filter((a) => a.type === 'ASSET').reduce((s, a) => s + a.debit - a.credit, 0)
+      const lTot = acc.filter((a) => a.type === 'LIABILITY').reduce((s, a) => s + a.credit - a.debit, 0)
+      const rows = [['Total Assets', money(aTot)], ['Less: Total Liabilities', money(lTot)]]
+      return { head: ['Item', 'Amount'], align: ['l', 'r'], rows, foot: ['NET ASSET VALUE', money(aTot - lTot)] }
+    }
+    case 'acc_cash_flow': {
+      const { data } = await supabase.from('v_ledger').select('*').in('account_code', ['1010', '1020', '1030']).gte('jv_date', from).lte('jv_date', to)
+      const agg = {}
+      for (const r of data || []) { const k = r.source || 'OTHER'; agg[k] = (agg[k] || 0) + (+r.debit - +r.credit) }
+      const rows = Object.entries(agg).map(([k, v]) => [k, money(v)])
+      const net = Object.values(agg).reduce((a, v) => a + v, 0)
+      return { head: ['Cash flow by source', 'Net movement'], align: ['l', 'r'], rows, foot: ['NET CASH MOVEMENT', money(net)] }
+    }
+    case 'acc_vat_vs': {
+      const { data: s } = await supabase.from('vat_sales_register').select('vat, sd').eq('is_void', false).gte('issue_date', from).lte('issue_date', to)
+      const { data: p } = await supabase.from('vat_purchase_register').select('vat_amount').gte('entry_date', from).lte('entry_date', to)
+      const outVat = (s || []).reduce((a, r) => a + +r.vat, 0)
+      const outSd = (s || []).reduce((a, r) => a + +r.sd, 0)
+      const inVat = (p || []).reduce((a, r) => a + +r.vat_amount, 0)
+      const rows = [['Output VAT (collected on sales)', money(outVat)], ['Output SD (collected)', money(outSd)], ['Input VAT (rebate on purchase)', money(inVat)]]
+      return { head: ['Item', 'Amount'], align: ['l', 'r'], rows, foot: ['NET VAT PAYABLE', money(outVat + outSd - inVat)] }
+    }
+    case 'acc_due_balance': {
+      const { data: ch } = await supabase.from('folio_charges').select('reservation_id, total, reservations(res_no, reservation_name, status)')
+      const { data: pay } = await supabase.from('payments').select('reservation_id, amount')
+      const paid = {}
+      for (const p of pay || []) paid[p.reservation_id] = (paid[p.reservation_id] || 0) + +p.amount
+      const charged = {}
+      const meta = {}
+      for (const c of ch || []) { charged[c.reservation_id] = (charged[c.reservation_id] || 0) + +c.total; if (c.reservations) meta[c.reservation_id] = c.reservations }
+      const rows = []
+      let tot = 0
+      for (const rid of Object.keys(charged)) { const due = charged[rid] - (paid[rid] || 0); if (due > 0.5 && meta[rid] && meta[rid].status !== 'SETTLED') { rows.push([meta[rid].res_no, meta[rid].reservation_name || '—', meta[rid].status, money(charged[rid]), money(paid[rid] || 0), money(due)]); tot += due } }
+      return { head: ['Res No', 'Guest', 'Status', 'Charged', 'Paid', 'Due'], align: ['l', 'l', 'l', 'r', 'r', 'r'], rows, foot: ['', '', '', '', 'TOTAL DUE', money(tot)] }
+    }
     default:
       return { head: ['Info'], align: ['l'], rows: [['This report is not wired yet.']], foot: null }
   }
 }
-
+async function periodBalances(from, to) {
+  let q = supabase.from('v_ledger').select('account_code, account_name, account_type, debit, credit')
+  if (from) q = q.gte('jv_date', from)
+  if (to) q = q.lte('jv_date', to)
+  const { data } = await q
+  const agg = {}
+  for (const r of data || []) {
+    const k = r.account_code
+    agg[k] = agg[k] || { code: r.account_code, name: r.account_name, type: r.account_type, debit: 0, credit: 0 }
+    agg[k].debit += +r.debit; agg[k].credit += +r.credit
+  }
+  return Object.values(agg).sort((a, b) => a.code < b.code ? -1 : 1)
+}
 async function ledgerForCodes(codes, from, to, label) {
   const { data } = await supabase.from('v_ledger').select('*').in('account_code', codes).gte('jv_date', from).lte('jv_date', to).order('jv_date')
   let bal = 0
