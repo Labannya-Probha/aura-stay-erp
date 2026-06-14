@@ -4,13 +4,11 @@ const CASH_CODES = ['1010', '1020', '1030'] // Cash, Wallets, Bank
 
 // Auto-detect voucher type from the lines when not explicitly given.
 function detectType(lines) {
-  const cashLines = lines.filter((l) => CASH_CODES.includes(l.code))
-  if (cashLines.length === 0) return 'JV'
-  const cashDr = cashLines.some((l) => +l.debit > 0)
-  const cashCr = cashLines.some((l) => +l.credit > 0)
-  if (cashCr && !cashDr) return 'DEBIT'   // money going out → payment → Debit Voucher
-  if (cashDr && !cashCr) return 'CREDIT'  // money coming in → receipt → Credit Voucher
-  return 'JV'
+  const cashDr = lines.filter((l) => CASH_CODES.includes(l.code)).reduce((a, l) => a + (+l.debit || 0), 0)
+  const cashCr = lines.filter((l) => CASH_CODES.includes(l.code)).reduce((a, l) => a + (+l.credit || 0), 0)
+  if (cashDr === 0 && cashCr === 0) return 'JV'   // no cash/bank movement → pure journal
+  if (cashCr > cashDr) return 'DEBIT'             // net cash out → payment
+  return 'CREDIT'                                 // net cash in → receipt
 }
 
 const TITLES = {
