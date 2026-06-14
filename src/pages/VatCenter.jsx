@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtBDT, fmtDate, todayISO, exportXLSX } from '../lib/helpers'
-import { FileSpreadsheet, Plus, FileDown } from 'lucide-react'
-
+import { FileSpreadsheet, Plus, FileDown, Printer, Trash2, Pencil } from 'lucide-react'
+import PrintPortal from '../components/PrintPortal.jsx'
+import VdsCertificate from '../components/print/VdsCertificate.jsx'
 const TABS = ['Sales 6.2', 'Purchase 6.1', 'VDS 6.6', 'Monthly 9.1', 'Over-threshold 6.10']
 const monthBounds = (ym) => { const [y, m] = ym.split('-').map(Number); const start = `${ym}-01`; const end = new Date(y, m, 0); return { start, end: `${ym}-${String(end.getDate()).padStart(2, '0')}` } }
 const thisMonth = () => todayISO().slice(0, 7)
@@ -11,10 +12,16 @@ export default function VatCenter({ userName, company }) {
   const [tab, setTab] = useState('Sales 6.2')
   const [ym, setYm] = useState(thisMonth())
   const [msg, setMsg] = useState('')
+  const [printCert, setPrintCert] = useState(null)
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      {printCert && (
+        <PrintPortal title={`Mushak-6.6 — ${printCert.cert_no || 'VDS'}`} onClose={() => setPrintCert(null)}>
+          <VdsCertificate cert={printCert} company={company} />
+        </PrintPortal>
+      )}      
+    <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2"><FileSpreadsheet className="text-forest" /> VAT Center</h1>
           <p className="text-sm text-pine/60">NBR Mushak registers: 6.2 sales, 6.1 purchase, 6.6 VDS, and the 9.1 monthly position.</p>
@@ -27,7 +34,7 @@ export default function VatCenter({ userName, company }) {
       </div>
       {tab === 'Sales 6.2' && <SalesReg ym={ym} company={company} />}
       {tab === 'Purchase 6.1' && <PurchaseReg ym={ym} company={company} />}
-      {tab === 'VDS 6.6' && <VdsTab ym={ym} userName={userName} flash={flash} />}
+      {tab === 'VDS 6.6' && <VdsTab ym={ym} userName={userName} flash={flash} onPrint={setPrintCert} />}
       {tab === 'Monthly 9.1' && <Summary91 ym={ym} />}
       {tab === 'Over-threshold 6.10' && <Mushak610 company={company} />}
     </div>
@@ -74,17 +81,35 @@ function PurchaseReg({ ym, company }) {
   )
 }
 
-function VdsTab({ ym, userName, flash }) {
+function VdsTab({ ym, userName, flash, onPrint }) {
   const [rows, setRows] = useState([])
-  const [f, setF] = useState({ direction: 'RECEIVED', cert_no: '', cert_date: todayISO(), party_name: '', party_bin: '', base_amount: '', vds_rate: '', challan_no: '', challan_date: '' })
+  const [editId, setEditId] = useState(null)
+  const blank = { direction: 'RECEIVED', cert_no: '', cert_date: todayISO(), party_name: '', party_bin: '', base_amount: '', vds_rate: '', challan_no: '', challan_date: '' }
+  const [f, setF] = useState(blank)
   const load = () => { const { start, end } = monthBounds(ym); supabase.from('vds_certificates').select('*').gte('cert_date', start).lte('cert_date', end).order('cert_date', { ascending: false }).then(({ data }) => setRows(data || [])) }
   useEffect(() => { load() }, [ym])
-  const add = async () => {
+
+  const save = async () => {
     if (!f.base_amount) { flash('Enter base amount.'); return }
     const vds_amount = +(+f.base_amount * (+f.vds_rate || 0) / 100).toFixed(2)
-    const { error } = await supabase.from('vds_certificates').insert({ ...f, base_amount: +f.base_amount, vds_rate: +f.vds_rate || 0, vds_amount, challan_date: f.challan_date || null, created_by: userName })
-    if (error) flash(error.message); else { setF({ direction: 'RECEIVED', cert_no: '', cert_date: todayISO(), party_name: '', party_bin: '', base_amount: '', vds_rate: '', challan_no: '', challan_date: '' }); load() }
+    const payload = { ...f, base_amount: +f.base_amount, vds_rate: +f.vds_rate || 0, vds_amount, challan_date: f.challan_date || null }
+    if (editId) {
+      const { error } = await supabase.from('vds_certificates').update(payload).eq('id', editId)
+      if (error) { flash(error.message); return }
+      flash('VDS certificate updated.')
+    } else {
+      const { error } = await supabase.from('vds_certificates').insert({ ...payload, created_by: userName })
+      if (error) { flash(error.message); return }
+    }
+    setF(blank); setEditId(null); load()
   }
+  const edit = (r) => { setEditId(r.id); setF({ direction: r.direction, cert_no: r.cert_no || '', cert_date: r.cert_date, party_name: r.party_name || '', party_bin: r.party_bin || '', base_amount: r.base_amount, vds_rate: r.vds_rate, challan_no: r.challan_no || '', challan_date: r.challan_date || '' }) }
+  const del = async (id) => {
+    if (!window.confirm('Delete this VDS certificate? This cannot be undone.')) return
+    const { error } = await supabase.from('vds_certificates').delete().eq('id', id)
+    if (error) flash(error.message); else { if (editId === id) { setF(blank); setEditId(null) } load() }
+  }
+
   return (
     <div className="space-y-4">
       <div className="card p-4 grid grid-cols-4 gap-2">
@@ -96,14 +121,34 @@ function VdsTab({ ym, userName, flash }) {
         <input type="number" className="input money" placeholder="Base amount" value={f.base_amount} onChange={(e) => setF({ ...f, base_amount: e.target.value })} />
         <input type="number" className="input money" placeholder="VDS rate %" value={f.vds_rate} onChange={(e) => setF({ ...f, vds_rate: e.target.value })} />
         <input className="input money" placeholder="Challan no" value={f.challan_no} onChange={(e) => setF({ ...f, challan_no: e.target.value })} />
-        <button className="btn-primary justify-center col-span-4" onClick={add}><Plus size={15} /> Add VDS certificate</button>
+        <input type="date" className="input" placeholder="Challan date" value={f.challan_date} onChange={(e) => setF({ ...f, challan_date: e.target.value })} />
+        <button className="btn-primary justify-center col-span-3" onClick={save}><Plus size={15} /> {editId ? 'Update certificate' : 'Add VDS certificate'}</button>
+        {editId && <button className="btn-ghost justify-center" onClick={() => { setF(blank); setEditId(null) }}>Cancel edit</button>}
       </div>
       <div className="card overflow-hidden">
         <table className="w-full">
-          <thead><tr><th className="th">Date</th><th className="th">Dir</th><th className="th">Cert</th><th className="th">Party</th><th className="th text-right">Base</th><th className="th text-right">Rate</th><th className="th text-right">VDS</th><th className="th">Challan</th></tr></thead>
+          <thead><tr><th className="th">Date</th><th className="th">Dir</th><th className="th">Cert</th><th className="th">Party</th><th className="th text-right">Base</th><th className="th text-right">Rate</th><th className="th text-right">VDS</th><th className="th">Challan</th><th className="th text-right">Actions</th></tr></thead>
           <tbody>
-            {rows.map((r) => (<tr key={r.id}><td className="td money text-xs">{fmtDate(r.cert_date)}</td><td className="td text-xs">{r.direction}</td><td className="td money text-xs">{r.cert_no || '—'}</td><td className="td text-sm">{r.party_name || '—'}</td><td className="td money text-right">{(+r.base_amount).toFixed(2)}</td><td className="td money text-right">{(+r.vds_rate).toFixed(1)}%</td><td className="td money text-right font-semibold">{(+r.vds_amount).toFixed(2)}</td><td className="td money text-xs">{r.challan_no || '—'}</td></tr>))}
-            {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={8}>No VDS certificates this month.</td></tr>}
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td className="td money text-xs">{fmtDate(r.cert_date)}</td>
+                <td className="td text-xs">{r.direction}</td>
+                <td className="td money text-xs">{r.cert_no || '—'}</td>
+                <td className="td text-sm">{r.party_name || '—'}</td>
+                <td className="td money text-right">{(+r.base_amount).toFixed(2)}</td>
+                <td className="td money text-right">{(+r.vds_rate).toFixed(1)}%</td>
+                <td className="td money text-right font-semibold">{(+r.vds_amount).toFixed(2)}</td>
+                <td className="td money text-xs">{r.challan_no || '—'}</td>
+                <td className="td">
+                  <div className="flex justify-end gap-1">
+                    <button className="btn-ghost !py-1" title="Print Mushak-6.6" onClick={() => onPrint(r)}><Printer size={13} /></button>
+                    <button className="btn-ghost !py-1" title="Edit" onClick={() => edit(r)}><Pencil size={13} /></button>
+                    <button className="btn-ghost !py-1 text-red-600" title="Delete" onClick={() => del(r.id)}><Trash2 size={13} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={9}>No VDS certificates this month.</td></tr>}
           </tbody>
         </table>
       </div>
