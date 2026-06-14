@@ -27,11 +27,7 @@ export default function AccountingHub({ userName, isAdmin }) {
         <p className="text-sm text-pine/60">Double-entry journals (IFRS), trial balance, chart of accounts and fixed-asset depreciation.</p>
       </div>
       {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
-      <div className="flex gap-1 justify-end items-center flex-wrap">
-                      <button className="btn-ghost !py-1" title="Print voucher (auto Dr/Cr/JV)" onClick={() => openVoucher(r, undefined)}><Printer size={13} /> Voucher</button>
-                      <button className="btn-ghost !py-1" title="Edit" onClick={() => edit(r)}><Pencil size={13} /></button>
-                      {isAdmin && <button className="btn-ghost !py-1 text-red-600" title="Delete" onClick={() => del(r.id)}><Trash2 size={13} /></button>}
-                    </div>
+      <div className="flex gap-1 border-b border-leaf flex-wrap">
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-semibold rounded-t-lg ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>{t}</button>
         ))}
@@ -44,13 +40,13 @@ export default function AccountingHub({ userName, isAdmin }) {
   )
 }
 
-/* ---------------- JOURNAL VOUCHERS (+ Debit / Credit voucher print) ---------------- */
+/* ---------------- JOURNAL VOUCHERS (+ auto Debit / Credit / Journal voucher print) ---------------- */
 function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
   const [rows, setRows] = useState([])
   const [head, setHead] = useState({ jv_date: todayISO(), narration: '' })
   const [lines, setLines] = useState([{ account_id: '', debit: '', credit: '', line_note: '' }, { account_id: '', debit: '', credit: '', line_note: '' }])
   const [editingId, setEditingId] = useState(null)
-  const [printV, setPrintV] = useState(null) // { entry, lines, type }
+  const [printV, setPrintV] = useState(null)
 
   const load = async () => {
     const { data } = await supabase.from('journal_entries').select('*, journal_lines(*, chart_of_accounts(code,name))').order('created_at', { ascending: false }).limit(60)
@@ -103,16 +99,16 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
     if (error) flash(error.message); else { if (editingId === id) resetForm(); load(); flash('Voucher deleted.') }
   }
 
-  const openVoucher = (r, type) => {
+  const openVoucher = (r) => {
     const vlines = (r.journal_lines || []).map((l) => ({ code: l.chart_of_accounts?.code, name: l.chart_of_accounts?.name, debit: l.debit, credit: l.credit, line_note: l.line_note }))
-    setPrintV({ entry: r, lines: vlines, type })
+    setPrintV({ entry: r, lines: vlines })
   }
 
   return (
     <div className="space-y-4">
       {printV && (
         <PrintPortal title={`Voucher — ${printV.entry.jv_no}`} onClose={() => setPrintV(null)}>
-          <VoucherDoc entry={printV.entry} lines={printV.lines} company={company} voucherType={printV.type} />
+          <VoucherDoc entry={printV.entry} lines={printV.lines} company={company} />
         </PrintPortal>
       )}
 
@@ -155,7 +151,7 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
                   <td className="td money text-right">{fmtBDT(amt)}</td>
                   <td className="td text-right">
                     <div className="flex gap-1 justify-end items-center flex-wrap">
-                      <button className="btn-ghost !py-1" title="Print voucher (auto Dr/Cr/JV)" onClick={() => openVoucher(r, undefined)}><Printer size={13} /> Voucher</button>
+                      <button className="btn-ghost !py-1" title="Print voucher (auto Dr/Cr/JV)" onClick={() => openVoucher(r)}><Printer size={13} /> Voucher</button>
                       <button className="btn-ghost !py-1" title="Edit" onClick={() => edit(r)}><Pencil size={13} /></button>
                       {isAdmin && <button className="btn-ghost !py-1 text-red-600" title="Delete" onClick={() => del(r.id)}><Trash2 size={13} /></button>}
                     </div>
