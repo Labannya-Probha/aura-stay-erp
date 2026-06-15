@@ -660,6 +660,33 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
   )
 }
 
+/* --- Agency & Shareholder Balance Management --- */
+function PartnerAccounts({ agency, shareholder, addAgencyDue, redeemShareholderBalance }) {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      {/* Agency Due Management */}
+      <div className="card p-4">
+        <h3 className="font-bold">Agency: {agency.name}</h3>
+        <p>Current Due: {fmtBDT(agency.due_balance)}</p>
+        <button onClick={addAgencyDue} className="btn-primary">Add Due</button>
+      </div>
+
+      {/* Shareholder Free Stay Redemption */}
+      <div className="card p-4">
+        <h3 className="font-bold">Shareholder: {shareholder.name}</h3>
+        <p className="text-forest">Redeemable Balance: {fmtBDT(shareholder.free_stay_balance)}</p>
+        <button 
+          onClick={() => redeemShareholderBalance(1000)} // উদাহরণ হিসেবে ১০০০ টাকা রিডিম
+          disabled={shareholder.free_stay_balance < 1000}
+          className="btn-amber"
+        >
+          Redeem for Room
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* ---------------- INVOICES & CHECK-OUT ---------------- */
 function InvoicesTab({ res, charges, totals, paid, due, invoices, company, reload, userName, setStatus, setPrintDoc, flash, isAdmin }) {
   const isCheckedOut = ['CHECKED_OUT', 'SETTLED'].includes(res.status);
