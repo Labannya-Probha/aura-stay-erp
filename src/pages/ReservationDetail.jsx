@@ -685,14 +685,13 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
 }
 
 /* ---------------- INVOICES & CHECK-OUT (req. 9) ---------------- */
-function InvoicesTab({ res, charges, totals, paid, due, company, reload, setStatus, setPrintDoc }) {
+function InvoicesTab({ res, charges, totals, paid, due, invoices, company, reload, userName, setStatus, setPrintDoc, flash, isAdmin }) {
   const canCheckout = res.status === 'CHECKED_IN';
-
-  // লাইভ ডাটা প্রিন্ট ফাংশন
+  
+  // Live Invoice Logic: সরাসরি Folio থেকে ডাটা পাঠানো হচ্ছে
   const printLiveInvoice = (type) => {
     setPrintDoc({ 
       type: type, 
-      // এখন আর 'invoices' টেবিলের ডাটা নয়, সরাসরি folio-র লাইভ ভেরিয়েবলগুলো পাঠানো হচ্ছে
       invoice: { 
         totals, 
         charges, 
@@ -706,10 +705,10 @@ function InvoicesTab({ res, charges, totals, paid, due, company, reload, setStat
 
   return (
     <div className="space-y-4">
-      <div className="card p-5 flex items-center justify-between">
+      <div className="card p-5 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h3 className="font-display font-semibold text-pine">Guest Billing (Live)</h3>
-          <p className="text-sm text-pine/60">System updates directly from Folio charges.</p>
+          <h3 className="font-display font-semibold text-pine">Check-out & Guest Billing</h3>
+          <p className="text-sm text-pine/60">Live billing system: invoices are generated instantly from Folio.</p>
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost" onClick={() => printLiveInvoice('BILL')}>
@@ -719,8 +718,12 @@ function InvoicesTab({ res, charges, totals, paid, due, company, reload, setStat
             <Receipt size={16} /> Mushak 6.3
           </button>
           {canCheckout && (
-            <button className="btn-amber" onClick={async () => { await setStatus('CHECKED_OUT'); await reload(); }}>
-              Check Out
+            <button className="btn-amber" onClick={async () => { 
+              await setStatus('CHECKED_OUT', { checked_out_at: new Date().toISOString() }); 
+              await reload(); 
+              flash('Check-out status updated.');
+            }}>
+              <CheckCircle2 size={16} /> Check Out
             </button>
           )}
         </div>
@@ -728,10 +731,28 @@ function InvoicesTab({ res, charges, totals, paid, due, company, reload, setStat
       
       {/* ব্যালেন্স কার্ড */}
       <div className="card p-5 text-sm money">
-        <div className="flex justify-between font-bold text-lg">
-          <span>Balance Due</span>
+        <div className="flex justify-between font-bold text-lg border-t pt-2">
+          <span>Balance Payable</span>
           <span className={due > 0 ? 'text-red-600' : 'text-forest'}>{fmtBDT(due)}</span>
         </div>
+      </div>
+
+      {/* পুরনো ইনভয়েস হিস্ট্রি দেখার জন্য */}
+      <div className="card overflow-hidden">
+        <div className="px-4 py-3 border-b border-leaf font-display font-semibold text-pine">Historical Invoices</div>
+        <table className="w-full">
+          <thead><tr><th className="th">Invoice No.</th><th className="th">Issued</th><th className="th text-right">Total</th></tr></thead>
+          <tbody>
+            {invoices.map((inv) => (
+              <tr key={inv.id} className={inv.is_void ? 'opacity-60' : ''}>
+                <td className="td money font-semibold">{inv.invoice_no}</td>
+                <td className="td money text-xs">{fmtDate(inv.issued_at)}</td>
+                <td className="td money text-right">{fmtBDT(inv.totals?.grand_total)}</td>
+              </tr>
+            ))}
+            {invoices.length === 0 && <tr><td className="td text-pine/50" colSpan={3}>No past invoices.</td></tr>}
+          </tbody>
+        </table>
       </div>
     </div>
   )
