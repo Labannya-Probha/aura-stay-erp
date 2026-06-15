@@ -11,8 +11,7 @@ import Mushak63 from '../components/print/Mushak63.jsx'
 import Quotation from '../components/print/Quotation.jsx'
 import { exportXLSX } from '../lib/helpers'
 import {
-  ArrowLeft, MessageCircle, Mail, CheckCircle2, LogIn, BedDouble,
-  Plus, Trash2, Printer, FileDown, Receipt, BadgeCheck, Ban, BadgePercent,
+  ArrowLeft, Plus, Trash2, Printer, FileDown, Receipt, BadgeCheck, Ban, BadgePercent,
 } from 'lucide-react'
 
 const TABS = ['Overview', 'Quotation', 'Check-In', 'Folio & Payments', 'Invoices']
@@ -58,6 +57,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
 
   const totals = useMemo(() => applyRounding(sumCharges(charges), company?.rounding_mode || 'NEAREST_1'), [charges, company])
   const paid = useMemo(() => payments.reduce((a, p) => a + Number(p.amount), 0), [payments])
+  const advance = useMemo(() => payments.filter((p) => p.payment_class === 'ADVANCE').reduce((a, p) => a + Number(p.amount), 0), [payments])
   const due = +(totals.grand_total - paid).toFixed(2)
   const nights = res ? nightsBetween(res.check_in, res.check_out) : 0
 
@@ -67,7 +67,6 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
   }
 
   if (!res) return <div className="text-pine/50">Loading…</div>
-
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
 
   return (
@@ -79,9 +78,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
             <h1 className="font-display text-2xl font-bold text-pine">{res.reservation_name || guest?.full_name}</h1>
             <span className={`status-chip ${STATUS_COLORS[res.status]}`}>{res.status.replace('_', ' ')}</span>
           </div>
-          <p className="text-sm text-pine/60 money mt-1">
-            {res.res_no} · {fmtDate(res.check_in)} → {fmtDate(res.check_out)} · {nights} night{nights !== 1 && 's'}
-          </p>
+          <p className="text-sm text-pine/60 money mt-1">{res.res_no} · {fmtDate(res.check_in)} → {fmtDate(res.check_out)} · {nights} night(s)</p>
         </div>
       </div>
       {msg && <div className="mb-4 px-4 py-2 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
@@ -93,7 +90,12 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
           </button>
         ))}
       </div>
-      {/* (বাকি ট্যাব কন্টেন্ট আপনার আগের মতো রাখুন) */}
+      {/* কম্পোনেন্টগুলো এখানে রেন্ডার হবে */}
+      {tab === 'Overview' && <div className="text-pine/60">Overview Content</div>}
+      {tab === 'Quotation' && <div className="text-pine/60">Quotation Content</div>}
+      {tab === 'Check-In' && <div className="text-pine/60">Check-In Content</div>}
+      {tab === 'Folio & Payments' && <div className="text-pine/60">Folio Content</div>}
+      {tab === 'Invoices' && <div className="text-pine/60">Invoices Content</div>}
     </div>
   )
 }
