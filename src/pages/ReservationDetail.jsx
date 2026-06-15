@@ -460,14 +460,24 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
   // overall reservation window.
   const buildRoomRows = () => {
     const rows = []
+    
     for (const rr of resRooms) {
       const ci = rr.from_date || res.check_in
       const co = rr.to_date || res.check_out
+      
       for (const night of eachNight(ci, co)) {
         const rate = rateFor(taxConfig, 'ROOM', night)
-        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Room ${rr.rooms?.room_no}${rr.rooms?.room_name ? ` (${rr.rooms.room_name})` : ''} — Night of ${fmtDate(night)}`, ...computeCharge(rr.rate, res.discount_pct, rate), created_by: userName })
+        rows.push({ 
+          reservation_id: res.id, 
+          charge_date: night, 
+          charge_type: 'ROOM', 
+          description: `Room ${rr.rooms?.room_no}${rr.rooms?.room_name ? ` (${rr.rooms.room_name})` : ''} — Night of ${fmtDate(night)}`, 
+          ...computeCharge(rr.rate, res.discount_pct, rate), 
+          created_by: userName 
+        })
       }
     }
+
     for (const night of eachNight(res.check_in, res.check_out)) {
       const rate = rateFor(taxConfig, 'ROOM', night)
       if (res.extra_pax > 0 && res.extra_pax_rate > 0)
