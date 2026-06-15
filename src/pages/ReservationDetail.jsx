@@ -15,8 +15,13 @@ import {
   Plus, Trash2, Printer, FileDown, Receipt, BadgeCheck, Ban, BadgePercent,
 } from 'lucide-react'
 
-// Updated TABS array (Merged Invoices and Folio & Payments)
 const TABS = ['Overview', 'Quotation', 'Check-In', 'Billings & Check-Out', 'Partners']
+
+// [6] Deterministic invoice number helper
+const generateInvoiceNo = (resNo) => {
+  const ts = Date.now().toString().slice(-6)
+  return `INV-${resNo}-${ts}`
+}
 
 export default function ReservationDetail({ id, back, userName, isAdmin }) {
   const [res, setRes] = useState(null)
@@ -34,7 +39,11 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
   const [msg, setMsg] = useState('')
 
   const loadAll = async () => {
-    const { data: r } = await supabase.from('reservations').select('*, agencies(*), shareholders(*)').eq('id', id).single()
+    const { data: r } = await supabase
+      .from('reservations')
+      .select('*, agencies(*), shareholders(*)')
+      .eq('id', id)
+      .single()
     setRes(r)
     if (r?.primary_guest_id) {
       const { data: g } = await supabase.from('guests').select('*').eq('id', r.primary_guest_id).single()
@@ -74,7 +83,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
   return (
     <div>
       <button className="btn-ghost mb-4" onClick={back}><ArrowLeft size={15} /> All reservations</button>
-      
+
       <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-pine">{res.reservation_name || guest?.full_name}</h1>
@@ -97,50 +106,86 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
         ))}
       </div>
 
-      {tab === 'Overview' && <Overview res={res} guest={guest} resRooms={resRooms} setStatus={setStatus} payments={payments} advance={paid} flash={flash} isAdmin={isAdmin} userName={userName} />}
-      {tab === 'Quotation' && <QuotationTab res={res} guest={guest} nights={nights} taxConfig={taxConfig} company={company} reload={loadAll} flash={flash} userName={userName} resRooms={resRooms} setPrintDoc={setPrintDoc} />}
-      {tab === 'Check-In' && <CheckInTab res={res} guest={guest} resGuests={resGuests} resRooms={resRooms} rooms={rooms} reload={loadAll} setStatus={setStatus} userName={userName} openCard={() => setPrintDoc({ type: 'REG' })} payments={payments} flash={flash} isAdmin={isAdmin} />}
-      {tab === 'Billings & Check-Out' && <BillingsAndCheckOutTab res={res} guest={guest} charges={charges} payments={payments} resRooms={resRooms} taxConfig={taxConfig} invoices={invoices} company={company} reload={loadAll} userName={userName} setStatus={setStatus} setPrintDoc={setPrintDoc} totals={totals} paid={paid} due={due} flash={flash} isAdmin={isAdmin} />}
-      {tab === 'Partners' && <PartnerAccounts res={res} reload={loadAll} flash={flash} />}
-      
+      {tab === 'Overview' && (
+        <Overview
+          res={res} guest={guest} resRooms={resRooms} setStatus={setStatus}
+          payments={payments} advance={paid} flash={flash} isAdmin={isAdmin} userName={userName}
+        />
+      )}
+      {tab === 'Quotation' && (
+        <QuotationTab
+          res={res} guest={guest} nights={nights} taxConfig={taxConfig} company={company}
+          reload={loadAll} flash={flash} userName={userName} resRooms={resRooms} setPrintDoc={setPrintDoc}
+        />
+      )}
+      {tab === 'Check-In' && (
+        <CheckInTab
+          res={res} guest={guest} resGuests={resGuests} resRooms={resRooms} rooms={rooms}
+          reload={loadAll} setStatus={setStatus} userName={userName}
+          openCard={() => setPrintDoc({ type: 'REG' })}
+          payments={payments} flash={flash} isAdmin={isAdmin}
+        />
+      )}
+      {tab === 'Billings & Check-Out' && (
+        <BillingsAndCheckOutTab
+          res={res} guest={guest} charges={charges} payments={payments} resRooms={resRooms}
+          taxConfig={taxConfig} invoices={invoices} company={company} reload={loadAll}
+          userName={userName} setStatus={setStatus} setPrintDoc={setPrintDoc}
+          totals={totals} paid={paid} due={due} flash={flash} isAdmin={isAdmin}
+        />
+      )}
+      {tab === 'Partners' && <PartnerAccounts res={res} reload={loadAll} flash={flash} userName={userName} />}
+
       {/* ---------------- PRINT PORTALS ---------------- */}
-      {printDoc?.type === 'REG' && <PrintPortal title="Registration Card" onClose={() => setPrintDoc(null)}><RegistrationCard res={res} guest={guest} resGuests={resGuests} resRooms={resRooms} payments={payments} company={company} /></PrintPortal>}
-      
+      {printDoc?.type === 'REG' && (
+        <PrintPortal title="Registration Card" onClose={() => setPrintDoc(null)}>
+          <RegistrationCard res={res} guest={guest} resGuests={resGuests} resRooms={resRooms} payments={payments} company={company} />
+        </PrintPortal>
+      )}
+
       {printDoc?.type === 'BILL' && (
         <PrintPortal title="Guest Bill" onClose={() => setPrintDoc(null)}>
-          <GuestBill 
-            charges={printDoc.invoiceData?.charges || charges} 
-            totals={printDoc.invoiceData?.totals || totals} 
-            paid={printDoc.invoiceData?.paid !== undefined ? printDoc.invoiceData.paid : paid} 
-            due={printDoc.invoiceData?.due !== undefined ? printDoc.invoiceData.due : due} 
-            res={res} guest={guest} company={company} 
-            invoice_no={printDoc.invoiceData?.invoice_no} 
+          <GuestBill
+            charges={printDoc.invoiceData?.charges?.length ? printDoc.invoiceData.charges : charges}
+            totals={printDoc.invoiceData?.totals ?? totals}
+            paid={printDoc.invoiceData?.paid ?? paid}
+            due={printDoc.invoiceData?.due ?? due}
+            res={res} guest={guest} company={company}
+            invoice_no={printDoc.invoiceData?.invoice_no}
             issued_at={printDoc.invoiceData?.issued_at}
           />
         </PrintPortal>
       )}
-      
+
       {printDoc?.type === 'MUSHAK' && (
         <PrintPortal title="Mushak-6.3" onClose={() => setPrintDoc(null)}>
-          <Mushak63 
-            charges={printDoc.invoiceData?.charges || charges} 
-            totals={printDoc.invoiceData?.totals || totals} 
-            res={res} company={company} 
-            invoice_no={printDoc.invoiceData?.invoice_no} 
+          <Mushak63
+            charges={printDoc.invoiceData?.charges?.length ? printDoc.invoiceData.charges : charges}
+            totals={printDoc.invoiceData?.totals ?? totals}
+            res={res} company={company}
+            invoice_no={printDoc.invoiceData?.invoice_no}
             issued_at={printDoc.invoiceData?.issued_at}
           />
         </PrintPortal>
       )}
-      
+
       {printDoc?.type === 'QUOTE' && (
         <PrintPortal title="Quotation" onClose={() => setPrintDoc(null)}>
-          <Quotation res={res} guest={guest} terms={printDoc.terms} roomRate={printDoc.roomRate} roomCount={printDoc.roomCount} discountPct={printDoc.discountPct} validDays={printDoc.validDays} taxConfig={taxConfig} company={company} resRooms={resRooms} />
+          <Quotation
+            res={res} guest={guest} terms={printDoc.terms}
+            roomRate={printDoc.roomRate} roomCount={printDoc.roomCount}
+            discountPct={printDoc.discountPct} validDays={printDoc.validDays}
+            taxConfig={taxConfig} company={company} resRooms={resRooms}
+          />
         </PrintPortal>
       )}
     </div>
   )
 }
 
+/* ------------------------------------------------------------------ */
+/*  OVERVIEW TAB                                                        */
+/* ------------------------------------------------------------------ */
 function Overview({ res, guest, resRooms, setStatus, payments, advance, flash, isAdmin, userName }) {
   const canConfirm = ['QUERY', 'QUOTED'].includes(res.status)
   return (
@@ -162,23 +207,33 @@ function Overview({ res, guest, resRooms, setStatus, payments, advance, flash, i
         <div className="space-y-2">
           {canConfirm && (
             <button className="btn-primary w-full justify-center" onClick={() => {
-              if (advance <= 0 && payments.length === 0) { flash('Record the advance payment first (Billings & Check-Out tab) — booking confirms on advance per your workflow.'); return }
-              setStatus('CONFIRMED'); flash('Booking confirmed.')
+              if (advance <= 0 && payments.length === 0) {
+                flash('Record the advance payment first (Billings & Check-Out tab) — booking confirms on advance per your workflow.')
+                return
+              }
+              setStatus('CONFIRMED')
+              flash('Booking confirmed.')
             }}>
               <CheckCircle2 size={16} /> Confirm booking
             </button>
           )}
           {['QUERY', 'QUOTED', 'CONFIRMED'].includes(res.status) && (
-            <button className="btn-ghost w-full justify-center text-red-600" onClick={() => setStatus('CANCELLED')}><Ban size={15} /> Cancel reservation</button>
+            <button className="btn-ghost w-full justify-center text-red-600" onClick={() => setStatus('CANCELLED')}>
+              <Ban size={15} /> Cancel reservation
+            </button>
           )}
           {['CHECKED_OUT', 'SETTLED'].includes(res.status) && (
             isAdmin ? (
               <button className="btn-amber w-full justify-center" onClick={async () => {
                 const reason = window.prompt('Re-check-in will VOID the issued invoices (new ones generate at next check-out). Reason:', 'Guest stay extended')
                 if (reason === null) return
-                await supabase.from('invoices').update({ is_void: true, void_reason: reason || 'Re-check-in', voided_by: userName, voided_at: new Date().toISOString() })
+                await supabase.from('invoices')
+                  .update({ is_void: true, void_reason: reason || 'Re-check-in', voided_by: userName, voided_at: new Date().toISOString() })
                   .eq('reservation_id', res.id).not('is_void', 'is', true)
-                await supabase.from('audit_log').insert({ actor: userName, action: 'RE_CHECKIN', entity: 'reservation', entity_id: res.res_no, details: { reason } })
+                await supabase.from('audit_log').insert({
+                  actor: userName, action: 'RE_CHECKIN', entity: 'reservation',
+                  entity_id: res.res_no, details: { reason },
+                })
                 await setStatus('CHECKED_IN', { checked_out_at: null })
                 flash('Guest re-checked-in. Previous invoices voided; folio is editable again.')
               }}>
@@ -197,6 +252,9 @@ function Overview({ res, guest, resRooms, setStatus, payments, advance, flash, i
   )
 }
 
+/* ------------------------------------------------------------------ */
+/*  QUOTATION TAB                                                       */
+/* ------------------------------------------------------------------ */
 function QuotationTab({ res, guest, nights, taxConfig, company, reload, flash, userName, resRooms = [], setPrintDoc }) {
   const [roomRate, setRoomRate] = useState(res.room_rate || resRooms[0]?.rate || resRooms[0]?.rooms?.base_rate || 0)
   const [roomCount, setRoomCount] = useState(resRooms.length || 1)
@@ -208,7 +266,10 @@ function QuotationTab({ res, guest, nights, taxConfig, company, reload, flash, u
 
   useEffect(() => { setTerms(res.terms_conditions || company?.terms_conditions || '') }, [res.id, company?.terms_conditions])
 
-  const saveTerms = async () => { await supabase.from('reservations').update({ terms_conditions: terms }).eq('id', res.id); flash('Terms & Conditions saved to this quotation.') }
+  const saveTerms = async () => {
+    await supabase.from('reservations').update({ terms_conditions: terms }).eq('id', res.id)
+    flash('Terms & Conditions saved to this quotation.')
+  }
   const printQuote = () => setPrintDoc && setPrintDoc({ type: 'QUOTE', terms, roomRate, roomCount, discountPct: disc, validDays })
 
   const saveDisc = async () => {
@@ -235,9 +296,12 @@ function QuotationTab({ res, guest, nights, taxConfig, company, reload, flash, u
       reservation_id: res.id, total_amount: total, valid_until: validUntil,
       status: 'SENT', sent_via: via, sent_at: new Date().toISOString(), message,
     })
-    if (['QUERY'].includes(res.status)) await supabase.from('reservations').update({ status: 'QUOTED', room_rate: roomRate, discount_pct: +disc || 0 }).eq('id', res.id)
-    else await supabase.from('reservations').update({ room_rate: roomRate, discount_pct: +disc || 0 }).eq('id', res.id)
-    await reload(); await loadQuotes(); flash(`Quotation recorded as sent via ${via}.`)
+    if (['QUERY'].includes(res.status))
+      await supabase.from('reservations').update({ status: 'QUOTED', room_rate: roomRate, discount_pct: +disc || 0 }).eq('id', res.id)
+    else
+      await supabase.from('reservations').update({ room_rate: roomRate, discount_pct: +disc || 0 }).eq('id', res.id)
+    await reload(); await loadQuotes()
+    flash(`Quotation recorded as sent via ${via}.`)
   }
 
   const sendWhatsApp = () => {
@@ -302,6 +366,9 @@ function QuotationTab({ res, guest, nights, taxConfig, company, reload, flash, u
 
 const Row = ({ k, v }) => <div className="flex justify-between"><span>{k}</span><span>{v}</span></div>
 
+/* ------------------------------------------------------------------ */
+/*  CHECK-IN TAB                                                        */
+/* ------------------------------------------------------------------ */
 function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus, userName, openCard, payments, flash, isAdmin }) {
   const locked = !isAdmin && ['CHECKED_IN', 'CHECKED_OUT', 'SETTLED'].includes(res.status)
   const [f, setF] = useState({
@@ -313,27 +380,34 @@ function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus,
   const [newGuest, setNewGuest] = useState('')
   const [roomSel, setRoomSel] = useState('')
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
-  useEffect(() => { if (guest) setF((p) => ({ ...p, id_type: guest.id_type || 'NID', id_number: guest.id_number || '' })) }, [guest])
+  useEffect(() => {
+    if (guest) setF((p) => ({ ...p, id_type: guest.id_type || 'NID', id_number: guest.id_number || '' }))
+  }, [guest])
 
   const assignRoom = async () => {
     if (locked) { flash('After check-in, only an administrator can change room assignment.'); return }
     if (!roomSel) return
     const room = rooms.find((r) => r.id === roomSel)
-    await supabase.from('reservation_rooms').insert({ reservation_id: res.id, room_id: room.id, rate: res.room_rate || room.base_rate, from_date: res.check_in, to_date: res.check_out })
+    await supabase.from('reservation_rooms').insert({
+      reservation_id: res.id, room_id: room.id,
+      rate: res.room_rate || room.base_rate, from_date: res.check_in, to_date: res.check_out,
+    })
     setRoomSel(''); await reload()
   }
-  const removeRoom = async (rrId) => { if (locked) { flash('Administrator access required after check-in.'); return } await supabase.from('reservation_rooms').delete().eq('id', rrId); await reload() }
+
+  const removeRoom = async (rrId) => {
+    if (locked) { flash('Administrator access required after check-in.'); return }
+    await supabase.from('reservation_rooms').delete().eq('id', rrId); await reload()
+  }
   const updateRoomRate = async (rrId, rate) => {
     if (locked) { flash('Administrator access required after check-in.'); return }
     if (rate === '' || isNaN(+rate)) return
-    await supabase.from('reservation_rooms').update({ rate: +rate }).eq('id', rrId)
-    await reload()
+    await supabase.from('reservation_rooms').update({ rate: +rate }).eq('id', rrId); await reload()
   }
   const updateRoomDates = async (rrId, field, val) => {
     if (locked) { flash('Administrator access required after check-in.'); return }
     if (!val) return
-    await supabase.from('reservation_rooms').update({ [field]: val }).eq('id', rrId)
-    await reload()
+    await supabase.from('reservation_rooms').update({ [field]: val }).eq('id', rrId); await reload()
   }
   const addGuest = async () => {
     if (locked) { flash('Administrator access required after check-in.'); return }
@@ -341,7 +415,10 @@ function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus,
     await supabase.from('reservation_guests').insert({ reservation_id: res.id, guest_name: newGuest.trim() })
     setNewGuest(''); await reload()
   }
-  const removeGuest = async (gid) => { if (locked) { flash('Administrator access required after check-in.'); return } await supabase.from('reservation_guests').delete().eq('id', gid); await reload() }
+  const removeGuest = async (gid) => {
+    if (locked) { flash('Administrator access required after check-in.'); return }
+    await supabase.from('reservation_guests').delete().eq('id', gid); await reload()
+  }
 
   const doCheckIn = async () => {
     if (resRooms.length === 0) { flash('Assign at least one room before check-in.'); return }
@@ -359,124 +436,181 @@ function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus,
 
   return (
     <>
-    {locked && <div className="mb-4 px-4 py-2 rounded-lg bg-amber/10 text-amber text-sm font-medium">This reservation is checked in — room assignment and guest details are locked. Only an administrator can change them.</div>}
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="card p-5 space-y-4">
-        <h3 className="font-display font-semibold text-pine">Room assignment</h3>
-        <div className="flex gap-2">
-          <select className="input flex-1" value={roomSel} onChange={(e) => setRoomSel(e.target.value)}>
-            <option value="">Select room…</option>
-            {rooms.filter((r) => !assignedIds.has(r.id)).map((r) => (
-              <option key={r.id} value={r.id}>{r.room_no}{r.room_name ? ` — ${r.room_name}` : ''} · {r.room_type} ({fmtBDT(r.base_rate)})</option>
-            ))}
-          </select>
-          <button className="btn-primary" onClick={assignRoom}><BedDouble size={15} /> Assign</button>
+      {locked && (
+        <div className="mb-4 px-4 py-2 rounded-lg bg-amber/10 text-amber text-sm font-medium">
+          This reservation is checked in — room assignment and guest details are locked. Only an administrator can change them.
         </div>
-        {resRooms.map((rr) => (
-          <div key={rr.id} className="text-sm border border-leaf rounded-lg px-3 py-2 space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="font-semibold">Room {rr.rooms?.room_no}{rr.rooms?.room_name ? ` · ${rr.rooms.room_name}` : ''} <span className="text-pine/50 font-normal">· {rr.rooms?.room_type}</span></span>
-              <span className="flex items-center gap-2 money">
+      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="card p-5 space-y-4">
+          <h3 className="font-display font-semibold text-pine">Room assignment</h3>
+          <div className="flex gap-2">
+            <select className="input flex-1" value={roomSel} onChange={(e) => setRoomSel(e.target.value)}>
+              <option value="">Select room…</option>
+              {rooms.filter((r) => !assignedIds.has(r.id)).map((r) => (
+                <option key={r.id} value={r.id}>{r.room_no}{r.room_name ? ` — ${r.room_name}` : ''} · {r.room_type} ({fmtBDT(r.base_rate)})</option>
+              ))}
+            </select>
+            <button className="btn-primary" onClick={assignRoom}><BedDouble size={15} /> Assign</button>
+          </div>
+          {resRooms.map((rr) => (
+            <div key={rr.id} className="text-sm border border-leaf rounded-lg px-3 py-2 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">
+                  Room {rr.rooms?.room_no}{rr.rooms?.room_name ? ` · ${rr.rooms.room_name}` : ''}
+                  <span className="text-pine/50 font-normal"> · {rr.rooms?.room_type}</span>
+                </span>
+                <span className="flex items-center gap-2 money">
+                  {locked ? (
+                    <>{fmtBDT(rr.rate)}/night</>
+                  ) : (
+                    <>
+                      <input type="number" defaultValue={rr.rate} onBlur={(e) => updateRoomRate(rr.id, e.target.value)} className="input !w-28 !py-1 money text-right" title="Edit rate — then Repost room charges in Folio" />/night
+                      <button onClick={() => removeRoom(rr.id)} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button>
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-pine/60">
+                <span>Stay:</span>
                 {locked ? (
-                  <>{fmtBDT(rr.rate)}/night</>
+                  <span className="money">{fmtDate(rr.from_date || res.check_in)} → {fmtDate(rr.to_date || res.check_out)}</span>
                 ) : (
-                  <><input type="number" defaultValue={rr.rate} onBlur={(e) => updateRoomRate(rr.id, e.target.value)} className="input !w-28 !py-1 money text-right" title="Edit rate — then Repost room charges in Folio" />/night
-                  <button onClick={() => removeRoom(rr.id)} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button></>
+                  <>
+                    <input type="date" defaultValue={rr.from_date || res.check_in} onBlur={(e) => updateRoomDates(rr.id, 'from_date', e.target.value)} className="input !py-1 !w-36" />
+                    <span>→</span>
+                    <input type="date" defaultValue={rr.to_date || res.check_out} onBlur={(e) => updateRoomDates(rr.id, 'to_date', e.target.value)} className="input !py-1 !w-36" />
+                  </>
                 )}
-              </span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-xs text-pine/60">
-              <span>Stay:</span>
-              {locked ? (
-                <span className="money">{fmtDate(rr.from_date || res.check_in)} → {fmtDate(rr.to_date || res.check_out)}</span>
-              ) : (
-                <>
-                  <input type="date" defaultValue={rr.from_date || res.check_in} onBlur={(e) => updateRoomDates(rr.id, 'from_date', e.target.value)} className="input !py-1 !w-36" />
-                  <span>→</span>
-                  <input type="date" defaultValue={rr.to_date || res.check_out} onBlur={(e) => updateRoomDates(rr.id, 'to_date', e.target.value)} className="input !py-1 !w-36" />
-                </>
-              )}
+          ))}
+          {rooms.length === 0 && <p className="text-xs text-amber">No rooms defined yet — add your room inventory in Settings → Rooms.</p>}
+
+          <h3 className="font-display font-semibold text-pine pt-2">All guest names (for Registration Card)</h3>
+          <div className="flex gap-2">
+            <input className="input flex-1" placeholder="Add accompanying guest name" value={newGuest} onChange={(e) => setNewGuest(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addGuest()} />
+            <button className="btn-ghost" onClick={addGuest}><Plus size={15} /></button>
+          </div>
+          {resGuests.map((g) => (
+            <div key={g.id} className="flex justify-between items-center text-sm px-3 py-1.5 border-b border-leaf/60">
+              <span>{g.guest_name} {g.is_primary && <span className="status-chip bg-forest/15 text-forest ml-2">Primary</span>}</span>
+              {!g.is_primary && <button onClick={() => removeGuest(g.id)} className="text-red-400 hover:text-red-600"><Trash2 size={13} /></button>}
+            </div>
+          ))}
+        </div>
+
+        <div className="card p-5 space-y-4">
+          <h3 className="font-display font-semibold text-pine">Check-in details</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Photo ID type</label>
+              <select className="input" value={f.id_type} onChange={(e) => set('id_type', e.target.value)}>
+                {['NID', 'Smart ID', 'Passport', 'Driving License', 'Birth Certificate'].map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div><label className="label">ID number</label><input className="input money" value={f.id_number} onChange={(e) => set('id_number', e.target.value)} /></div>
+            <div><label className="label">Extra pax</label><input type="number" min="0" className="input money" value={f.extra_pax} onChange={(e) => set('extra_pax', e.target.value)} /></div>
+            <div><label className="label">Extra pax rate / night</label><input type="number" className="input money" value={f.extra_pax_rate} onChange={(e) => set('extra_pax_rate', e.target.value)} /></div>
+            <div className="col-span-2 flex items-center gap-2 pt-1">
+              <input type="checkbox" id="drv" checked={f.driver_accommodation} onChange={(e) => set('driver_accommodation', e.target.checked)} />
+              <label htmlFor="drv" className="text-sm font-medium">Driver accommodation needed</label>
+            </div>
+            {f.driver_accommodation && (
+              <>
+                <div><label className="label">No. of drivers</label><input type="number" min="0" className="input money" value={f.driver_count} onChange={(e) => set('driver_count', e.target.value)} /></div>
+                <div><label className="label">Driver rate / night</label><input type="number" className="input money" value={f.driver_rate} onChange={(e) => set('driver_rate', e.target.value)} /></div>
+              </>
+            )}
+            <div className="col-span-2">
+              <label className="label">Notes / special instructions</label>
+              <textarea className="input" rows={2} value={f.special_instructions} onChange={(e) => set('special_instructions', e.target.value)} />
             </div>
           </div>
-        ))}
-        {rooms.length === 0 && <p className="text-xs text-amber">No rooms defined yet — add your room inventory in Settings → Rooms.</p>}
-
-        <h3 className="font-display font-semibold text-pine pt-2">All guest names (for Registration Card)</h3>
-        <div className="flex gap-2">
-          <input className="input flex-1" placeholder="Add accompanying guest name" value={newGuest} onChange={(e) => setNewGuest(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addGuest()} />
-          <button className="btn-ghost" onClick={addGuest}><Plus size={15} /></button>
-        </div>
-        {resGuests.map((g) => (
-          <div key={g.id} className="flex justify-between items-center text-sm px-3 py-1.5 border-b border-leaf/60">
-            <span>{g.guest_name} {g.is_primary && <span className="status-chip bg-forest/15 text-forest ml-2">Primary</span>}</span>
-            {!g.is_primary && <button onClick={() => removeGuest(g.id)} className="text-red-400 hover:text-red-600"><Trash2 size={13} /></button>}
+          <div className="flex gap-2 pt-1">
+            {res.status !== 'CHECKED_IN' && res.status !== 'CHECKED_OUT' && res.status !== 'SETTLED' ? (
+              <button className="btn-primary flex-1 justify-center" onClick={doCheckIn}><LogIn size={16} /> Check in guest</button>
+            ) : (
+              <div className="text-sm text-forest font-semibold flex items-center gap-2">
+                <BadgeCheck size={16} /> Checked in {res.checked_in_at && `· ${fmtDate(res.checked_in_at)}`} {res.checkin_by && `by ${res.checkin_by}`}
+              </div>
+            )}
+            <button className="btn-amber flex-1 justify-center" onClick={openCard}><Printer size={16} /> Registration Card</button>
           </div>
-        ))}
-      </div>
-
-      <div className="card p-5 space-y-4">
-        <h3 className="font-display font-semibold text-pine">Check-in details</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className="label">Photo ID type</label>
-            <select className="input" value={f.id_type} onChange={(e) => set('id_type', e.target.value)}>
-              {['NID', 'Smart ID', 'Passport', 'Driving License', 'Birth Certificate'].map((t) => <option key={t}>{t}</option>)}
-            </select></div>
-          <div><label className="label">ID number</label><input className="input money" value={f.id_number} onChange={(e) => set('id_number', e.target.value)} /></div>
-          <div><label className="label">Extra pax</label><input type="number" min="0" className="input money" value={f.extra_pax} onChange={(e) => set('extra_pax', e.target.value)} /></div>
-          <div><label className="label">Extra pax rate / night</label><input type="number" className="input money" value={f.extra_pax_rate} onChange={(e) => set('extra_pax_rate', e.target.value)} /></div>
-          <div className="col-span-2 flex items-center gap-2 pt-1">
-            <input type="checkbox" id="drv" checked={f.driver_accommodation} onChange={(e) => set('driver_accommodation', e.target.checked)} />
-            <label htmlFor="drv" className="text-sm font-medium">Driver accommodation needed</label>
-          </div>
-          {f.driver_accommodation && (<>
-            <div><label className="label">No. of drivers</label><input type="number" min="0" className="input money" value={f.driver_count} onChange={(e) => set('driver_count', e.target.value)} /></div>
-            <div><label className="label">Driver rate / night</label><input type="number" className="input money" value={f.driver_rate} onChange={(e) => set('driver_rate', e.target.value)} /></div>
-          </>)}
-          <div className="col-span-2"><label className="label">Notes / special instructions</label>
-            <textarea className="input" rows={2} value={f.special_instructions} onChange={(e) => set('special_instructions', e.target.value)} /></div>
+          <p className="text-xs text-pine/50">
+            Advance on record: <span className="money font-semibold">{fmtBDT(payments.filter((p) => p.payment_class === 'ADVANCE').reduce((a, p) => a + +p.amount, 0))}</span> — shown on the card.
+          </p>
         </div>
-        <div className="flex gap-2 pt-1">
-          {res.status !== 'CHECKED_IN' && res.status !== 'CHECKED_OUT' && res.status !== 'SETTLED' ? (
-            <button className="btn-primary flex-1 justify-center" onClick={doCheckIn}><LogIn size={16} /> Check in guest</button>
-          ) : (
-            <div className="text-sm text-forest font-semibold flex items-center gap-2"><BadgeCheck size={16} /> Checked in {res.checked_in_at && `· ${fmtDate(res.checked_in_at)}`} {res.checkin_by && `by ${res.checkin_by}`}</div>
-          )}
-          <button className="btn-amber flex-1 justify-center" onClick={openCard}><Printer size={16} /> Registration Card</button>
-        </div>
-        <p className="text-xs text-pine/50">Advance on record: <span className="money font-semibold">{fmtBDT(payments.filter((p) => p.payment_class === 'ADVANCE').reduce((a, p) => a + +p.amount, 0))}</span> — shown on the card.</p>
       </div>
-    </div>
     </>
   )
 }
 
-/* ---------------- BILLINGS & CHECK-OUT (Merged Tab) ---------------- */
+/* ------------------------------------------------------------------ */
+/*  BILLINGS & CHECK-OUT TAB                                            */
+/* ------------------------------------------------------------------ */
 function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxConfig, invoices, company, reload, userName, setStatus, setPrintDoc, totals, paid, due, flash, isAdmin }) {
   const isCheckedOut = ['CHECKED_OUT', 'SETTLED'].includes(res.status)
   const editable = isAdmin || !['CHECKED_OUT', 'SETTLED', 'CANCELLED'].includes(res.status)
-  
+
   const [c, setC] = useState({ charge_type: 'OTHER', description: '', base_amount: '', discount_pct: 0, charge_date: todayISO() })
   const [discAmt, setDiscAmt] = useState('')
   const [discReason, setDiscReason] = useState('')
   const [discType, setDiscType] = useState('ROOM')
   const [p, setP] = useState({ amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName })
 
-  // --- Printing Functions ---
+  // --- [4] Sync active invoice paid/due/status after post-checkout payments ---
+  // Uses fresh Supabase queries to avoid stale React state.
+  const syncInvoiceStatus = async () => {
+    const { data: freshPayments } = await supabase
+      .from('payments').select('amount').eq('reservation_id', res.id)
+
+    const { data: activeInv } = await supabase
+      .from('invoices').select('id, totals')
+      .eq('reservation_id', res.id).eq('is_void', false)
+      .order('created_at', { ascending: false }).limit(1).single()
+
+    if (!activeInv) return
+
+    const totalPaid = (freshPayments || []).reduce((a, p) => a + Number(p.amount), 0)
+    // Use snapshot grand_total from the invoice itself (not live folio)
+    const snapshotGrandTotal = activeInv.totals?.grand_total ?? totals.grand_total
+    const newDue = +(snapshotGrandTotal - totalPaid).toFixed(2)
+    const newStatus = newDue <= 0 ? 'PAID' : 'PARTIAL'
+
+    await supabase.from('invoices').update({ paid: totalPaid, due: newDue, status: newStatus }).eq('id', activeInv.id)
+
+    // [6] Auto-settle reservation when fully paid
+    if (newDue <= 0 && res.status === 'CHECKED_OUT') {
+      await supabase.from('reservations').update({ status: 'SETTLED' }).eq('id', res.id)
+      await reload()
+      flash('Balance cleared — reservation marked SETTLED.')
+    }
+  }
+
+  // --- Printing ---
   const printLiveInvoice = (type) => {
-    setPrintDoc({ 
-      type: type, 
-      invoiceData: { charges, totals, paid, due, invoice_no: `DRAFT-${res.res_no}`, issued_at: new Date().toISOString() } 
-    });
-  };
-
+    setPrintDoc({
+      type,
+      invoiceData: { charges, totals, paid, due, invoice_no: `DRAFT-${res.res_no}`, issued_at: new Date().toISOString() },
+    })
+  }
   const printHistoryInvoice = (inv, type) => {
-    setPrintDoc({ 
-      type: type, 
-      invoiceData: { charges: inv.charges, totals: inv.totals, paid: inv.paid, due: inv.due, invoice_no: inv.invoice_no, issued_at: inv.issued_at } 
-    });
-  };
+    setPrintDoc({
+      type,
+      invoiceData: {
+        // [Bug fix] Use ?.length guard so empty array [] doesn't bypass the fallback
+        charges: inv.charges?.length ? inv.charges : charges,
+        totals: inv.totals ?? totals,
+        paid: inv.paid ?? paid,
+        due: inv.due ?? due,
+        invoice_no: inv.invoice_no,
+        issued_at: inv.issued_at,
+      },
+    })
+  }
 
-  // --- Folio Actions ---
+  // --- Folio ---
   const buildRoomRows = () => {
     const rows = []
     for (const rr of resRooms) {
@@ -484,7 +618,11 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
       const co = rr.to_date || res.check_out
       for (const night of eachNight(ci, co)) {
         const rate = rateFor(taxConfig, 'ROOM', night)
-        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Room ${rr.rooms?.room_no}${rr.rooms?.room_name ? ` (${rr.rooms.room_name})` : ''} — Night of ${fmtDate(night)}`, ...computeCharge(rr.rate, res.discount_pct, rate), created_by: userName })
+        rows.push({
+          reservation_id: res.id, charge_date: night, charge_type: 'ROOM',
+          description: `Room ${rr.rooms?.room_no}${rr.rooms?.room_name ? ` (${rr.rooms.room_name})` : ''} — Night of ${fmtDate(night)}`,
+          ...computeCharge(rr.rate, res.discount_pct, rate), created_by: userName,
+        })
       }
     }
     for (const night of eachNight(res.check_in, res.check_out)) {
@@ -530,24 +668,26 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
     await supabase.from('folio_charges').update({ status: ch.status === 'PAID' ? 'DUE' : 'PAID' }).eq('id', ch.id)
     await reload()
   }
-  
   const delCharge = async (chId) => { await supabase.from('folio_charges').delete().eq('id', chId); await reload() }
 
-  // --- Payment Actions ---
+  // --- [5] Payments — calls syncInvoiceStatus when already checked out ---
   const addPayment = async () => {
     if (!p.amount || +p.amount <= 0) return
     const { error } = await supabase.from('payments').insert({ reservation_id: res.id, ...p, amount: +p.amount })
-    if (error) flash(error.message)
-    else { setP({ amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName }); await reload(); flash('Payment recorded — class set automatically.') }
+    if (error) { flash(error.message); return }
+    setP({ amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName })
+    await reload()
+    if (isCheckedOut) await syncInvoiceStatus()
+    flash('Payment recorded.')
   }
 
   const delPayment = async (pm) => {
     const { error } = await supabase.from('payments').delete().eq('id', pm.id)
     if (error) flash('Administrator access required to delete payments.')
-    else { await reload(); flash('Payment deleted — invoice Paid/Due re-synced automatically.') }
+    else { await reload(); flash('Payment deleted.') }
   }
 
-  // --- Discount Actions ---
+  // --- Discount ---
   const addDiscount = async () => {
     const amt = +discAmt
     if (!amt || amt <= 0) { flash('Enter a positive discount amount.'); return }
@@ -559,13 +699,56 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
       ...calc, created_by: userName,
     })
     if (error) { flash(error.message); return }
-    await supabase.from('audit_log').insert({ actor: userName, action: 'ADD_DISCOUNT', entity: 'reservation', entity_id: res.res_no, details: { amount: amt, type: discType, reason: discReason } })
-    setDiscAmt(''); setDiscReason(''); await reload(); flash(`Additional discount of ${fmtBDT(amt)} applied.`)
+    await supabase.from('audit_log').insert({
+      actor: userName, action: 'ADD_DISCOUNT', entity: 'reservation',
+      entity_id: res.res_no, details: { amount: amt, type: discType, reason: discReason },
+    })
+    setDiscAmt(''); setDiscReason('')
+    await reload()
+    flash(`Additional discount of ${fmtBDT(amt)} applied.`)
+  }
+
+  // --- [2] Checkout with invoice snapshot + partial payment warning ---
+  const handleCheckOut = async () => {
+    // Warn if balance outstanding — let staff confirm partial checkout
+    if (due > 0) {
+      const ok = window.confirm(
+        `Guest has an outstanding balance of ${fmtBDT(due)}.\n\nCheck out anyway? The invoice will be marked PARTIAL and can be settled later.`
+      )
+      if (!ok) return
+    }
+
+    const invoiceNo = generateInvoiceNo(res.res_no)
+    const issuedAt = new Date().toISOString()
+    const invoiceStatus = due <= 0 ? 'PAID' : 'PARTIAL'
+
+    // [2] Save full snapshot so historical print always works
+    const { error: invErr } = await supabase.from('invoices').insert({
+      reservation_id: res.id,
+      invoice_no: invoiceNo,
+      issued_at: issuedAt,
+      issued_by: userName,
+      charges: charges,       // full JSONB snapshot
+      totals: totals,         // computed totals object
+      paid: paid,
+      due: due,
+      status: invoiceStatus,
+      is_void: false,
+    })
+
+    if (invErr) { flash(`Failed to generate invoice: ${invErr.message}`); return }
+
+    await setStatus('CHECKED_OUT', { checked_out_at: issuedAt })
+    await reload()
+    flash(due > 0
+      ? `Checked out with ${fmtBDT(due)} outstanding. Invoice ${invoiceNo} marked PARTIAL.`
+      : `Checked out. Invoice ${invoiceNo} generated and fully paid.`
+    )
   }
 
   return (
     <div className="space-y-6">
-      
+
       {/* 1. Header & Check-out Actions */}
       <div className="card p-5 border-l-4 border-l-pine">
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -573,27 +756,32 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
             <h3 className="font-display font-semibold text-pine text-lg">Guest Billing & Check-out</h3>
             <p className="text-sm text-pine/60 mt-1">Preview live bill before check-out or manage historical invoices.</p>
           </div>
-          
           <div className="flex flex-wrap gap-2 items-center">
             <button className="btn-ghost" onClick={() => printLiveInvoice('BILL')}><Printer size={16} /> Preview Bill</button>
-            <button className="btn-ghost" onClick={() => printLiveInvoice('MUSHAK')}><Receipt size={16} /> Live Mushak</button>
-            
-            <div className="h-6 w-px bg-leaf/60 mx-2 hidden sm:block"></div>
+            {/* [8] Renamed from "Live Mushak" → "Mushak Print" */}
+            <button className="btn-ghost" onClick={() => printLiveInvoice('MUSHAK')}><Receipt size={16} /> Mushak Print</button>
+
+            <div className="h-6 w-px bg-leaf/60 mx-2 hidden sm:block" />
 
             {!isCheckedOut ? (
-              <button className="btn-primary" onClick={async () => { 
-                await setStatus('CHECKED_OUT', { checked_out_at: new Date().toISOString() }); 
-                await reload(); 
-                flash('Checked out successfully. A new invoice has been automatically generated.');
-              }}>
+              <button className="btn-primary" onClick={handleCheckOut}>
                 <CheckCircle2 size={16} /> Check Out
               </button>
             ) : (
               isAdmin && (
                 <button className="btn-amber" onClick={async () => {
-                  await setStatus('CHECKED_IN', { checked_out_at: null });
-                  await reload();
-                  flash('Re-checked-in successfully.');
+                  const reason = window.prompt('Re-check-in will VOID the issued invoices. Reason:', 'Guest stay extended')
+                  if (reason === null) return
+                  await supabase.from('invoices')
+                    .update({ is_void: true, void_reason: reason || 'Re-check-in', voided_by: userName, voided_at: new Date().toISOString() })
+                    .eq('reservation_id', res.id).not('is_void', 'is', true)
+                  await supabase.from('audit_log').insert({
+                    actor: userName, action: 'RE_CHECKIN', entity: 'reservation',
+                    entity_id: res.res_no, details: { reason },
+                  })
+                  await setStatus('CHECKED_IN', { checked_out_at: null })
+                  await reload()
+                  flash('Re-checked-in. Previous invoices voided; folio is editable again.')
                 }}>
                   <LogIn size={16} /> Re-check-in (Admin)
                 </button>
@@ -603,7 +791,7 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
         </div>
       </div>
 
-      {/* 2. Add Charges and Payments Panel */}
+      {/* 2. Add Charges and Payments */}
       {editable && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="card p-4 lg:col-span-2">
@@ -641,7 +829,7 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
         </div>
       )}
 
-      {/* 3. Admin Discount Options */}
+      {/* 3. Admin Discount */}
       {isAdmin && editable && (
         <div className="card p-4 border-amber/40 bg-amber/5">
           <h3 className="font-display font-semibold text-pine flex items-center gap-2 mb-3"><BadgePercent size={16} className="text-amber" /> Additional discount (admin)</h3>
@@ -656,7 +844,7 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
         </div>
       )}
 
-      {/* 4. Billing & Folio Summary Table */}
+      {/* 4. Billing / Folio Table */}
       <div className="card overflow-hidden">
         <div className="px-4 py-3 border-b border-leaf font-display font-semibold text-pine">Guest Total Billing History</div>
         <table className="w-full">
@@ -679,7 +867,10 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
                 <td className="td money text-right">{Number(ch.vat).toFixed(2)}</td>
                 <td className="td money text-right font-semibold">{Number(ch.total).toFixed(2)}</td>
                 <td className="td">
-                  <button onClick={() => editable ? toggleStatus(ch) : flash('Editing a checked-out folio requires administrator access.')} className={`status-chip ${ch.status === 'PAID' ? 'bg-forest/15 text-forest' : 'bg-red-100 text-red-600'} ${!editable ? 'opacity-60' : ''}`}>{ch.status}</button>
+                  <button
+                    onClick={() => editable ? toggleStatus(ch) : flash('Editing a checked-out folio requires administrator access.')}
+                    className={`status-chip ${ch.status === 'PAID' ? 'bg-forest/15 text-forest' : 'bg-red-100 text-red-600'} ${!editable ? 'opacity-60' : ''}`}
+                  >{ch.status}</button>
                 </td>
                 <td className="td">{editable && <button onClick={() => delCharge(ch.id)} className="text-red-300 hover:text-red-600"><Trash2 size={13} /></button>}</td>
               </tr>
@@ -703,7 +894,9 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
           <div className="px-4 py-3 border-t border-leaf flex justify-end">
             <div className="w-72 text-sm money space-y-1">
               <div className="flex justify-between text-pine/70"><span>Subtotal</span><span>{fmtBDT(totals.grand_total_raw ?? totals.grand_total)}</span></div>
-              {!!totals.rounding && <div className="flex justify-between text-pine/70"><span>Rounding adjustment</span><span>{totals.rounding > 0 ? '+ ' : '− '}{fmtBDT(Math.abs(totals.rounding))}</span></div>}
+              {!!totals.rounding && (
+                <div className="flex justify-between text-pine/70"><span>Rounding adjustment</span><span>{totals.rounding > 0 ? '+ ' : '− '}{fmtBDT(Math.abs(totals.rounding))}</span></div>
+              )}
               <div className="flex justify-between font-bold text-pine border-t border-leaf pt-1"><span>Grand total (payable)</span><span>{fmtBDT(totals.grand_total)}</span></div>
               <div className="flex justify-between text-forest"><span>Paid</span><span>{fmtBDT(paid)}</span></div>
               <div className={`flex justify-between font-bold text-lg border-t border-leaf pt-1 mt-1 ${due > 0 ? 'text-red-600' : 'text-forest'}`}><span>Balance due</span><span>{fmtBDT(due)}</span></div>
@@ -716,12 +909,22 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
       <div className="card overflow-hidden">
         <div className="px-4 py-3 border-b border-leaf font-display font-semibold text-pine">Payments History</div>
         <table className="w-full">
-          <thead><tr><th className="th">Date</th><th className="th">Class</th><th className="th">Method</th><th className="th">Reference</th><th className="th">Received by</th><th className="th text-right">Amount</th></tr></thead>
+          <thead><tr>
+            <th className="th">Date</th><th className="th">Class</th><th className="th">Method</th>
+            <th className="th">Reference</th><th className="th">Received by</th><th className="th text-right">Amount</th>
+          </tr></thead>
           <tbody>
             {payments.map((pm) => (
               <tr key={pm.id}>
-                <td className="td money text-xs">{fmtDate(pm.received_date)}{isAdmin && <button title="Delete payment (admin)" onClick={() => delPayment(pm)} className="ml-2 text-red-300 hover:text-red-600 align-middle"><Trash2 size={12} /></button>}</td>
-                <td className="td"><span className={`status-chip ${pm.payment_class === 'ADVANCE' ? 'bg-amber/20 text-amber' : 'bg-forest/15 text-forest'}`}>{pm.payment_class}</span></td>
+                <td className="td money text-xs">
+                  {fmtDate(pm.received_date)}
+                  {isAdmin && (
+                    <button title="Delete payment (admin)" onClick={() => delPayment(pm)} className="ml-2 text-red-300 hover:text-red-600 align-middle"><Trash2 size={12} /></button>
+                  )}
+                </td>
+                <td className="td">
+                  <span className={`status-chip ${pm.payment_class === 'ADVANCE' ? 'bg-amber/20 text-amber' : 'bg-forest/15 text-forest'}`}>{pm.payment_class}</span>
+                </td>
                 <td className="td text-sm">{pm.method}</td>
                 <td className="td text-xs">{pm.reference || '—'}</td>
                 <td className="td text-xs">{pm.received_by || '—'}</td>
@@ -733,27 +936,35 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
         </table>
       </div>
 
-      {/* 6. Historical Invoices List */}
+      {/* 6. Historical Invoices */}
       <div className="card overflow-hidden">
         <div className="px-4 py-3 border-b border-leaf font-display font-semibold text-pine">Historical Invoices</div>
         <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th">Invoice No.</th>
-              <th className="th">Issued Date</th>
-              <th className="th text-right">Grand Total</th>
-              <th className="th text-center">Status</th>
-              <th className="th text-right">Action</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th className="th">Invoice No.</th>
+            <th className="th">Issued Date</th>
+            <th className="th text-right">Grand Total</th>
+            <th className="th text-right">Paid</th>
+            <th className="th text-right">Due</th>
+            <th className="th text-center">Status</th>
+            <th className="th text-right">Action</th>
+          </tr></thead>
           <tbody>
             {invoices.map((inv) => (
               <tr key={inv.id} className={inv.is_void ? 'opacity-60 bg-red-50' : ''}>
                 <td className="td font-semibold">{inv.invoice_no}</td>
-                <td className="td text-xs">{fmtDate(inv.issued_at)}</td>
-                <td className="td text-right font-semibold">{fmtBDT(inv.totals?.grand_total || 0)}</td>
+                <td className="td text-xs money">{fmtDate(inv.issued_at)}</td>
+                <td className="td text-right money font-semibold">{fmtBDT(inv.totals?.grand_total || 0)}</td>
+                <td className="td text-right money text-forest">{fmtBDT(inv.paid || 0)}</td>
+                <td className={`td text-right money font-semibold ${(inv.due || 0) > 0 ? 'text-red-600' : 'text-forest'}`}>{fmtBDT(inv.due || 0)}</td>
                 <td className="td text-center">
-                  {inv.is_void ? <span className="status-chip bg-red-100 text-red-600">VOID</span> : <span className="status-chip bg-green-100 text-green-700">ACTIVE</span>}
+                  {/* [9] Three-state chip: VOID / PARTIAL / PAID */}
+                  {inv.is_void
+                    ? <span className="status-chip bg-red-100 text-red-600">VOID</span>
+                    : inv.status === 'PARTIAL'
+                      ? <span className="status-chip bg-amber/20 text-amber">PARTIAL</span>
+                      : <span className="status-chip bg-green-100 text-green-700">PAID</span>
+                  }
                 </td>
                 <td className="td text-right">
                   <button className="btn-ghost !py-1 !px-2 text-xs mr-2" onClick={() => printHistoryInvoice(inv, 'BILL')}><Printer size={13} /> Bill</button>
@@ -762,7 +973,7 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
               </tr>
             ))}
             {invoices.length === 0 && (
-              <tr><td className="td text-pine/50 text-center" colSpan={5}>No historical invoices found.</td></tr>
+              <tr><td className="td text-pine/50 text-center" colSpan={7}>No historical invoices found.</td></tr>
             )}
           </tbody>
         </table>
@@ -772,65 +983,49 @@ function BillingsAndCheckOutTab({ res, guest, charges, payments, resRooms, taxCo
   )
 }
 
-function PartnerAccounts({ res, reload, flash }) {
-  const agency = res.agencies;
-  const shareholder = res.shareholders;
+/* ------------------------------------------------------------------ */
+/*  PARTNER ACCOUNTS TAB                                                */
+/* ------------------------------------------------------------------ */
+function PartnerAccounts({ res, reload, flash, userName }) {
+  const agency = res.agencies
+  const shareholder = res.shareholders
+
+  // [7] Replaced document.getElementById anti-pattern with React controlled state
+  const [redeemAmt, setRedeemAmt] = useState('')
 
   const addAgencyDue = async () => {
-    const amt = prompt('Enter amount to add to Agency Due:');
-    if (!amt || isNaN(Number(amt))) return;
-    
+    const amt = prompt('Enter amount to add to Agency Due:')
+    if (!amt || isNaN(Number(amt))) return
     const { error } = await supabase.from('agencies')
       .update({ due_balance: (agency?.due_balance || 0) + Number(amt) })
-      .eq('id', res.agency_id);
-    
-    if (error) {
-      flash('Error updating agency due.');
-    } else {
-      reload();
-      flash('Agency due updated successfully.');
-    }
-  };
+      .eq('id', res.agency_id)
+    if (error) flash('Error updating agency due.')
+    else { reload(); flash('Agency due updated successfully.') }
+  }
 
   const redeemShareholderBalance = async () => {
-    const amt = document.getElementById('redeemAmt')?.value;
-    const redeemAmount = Number(amt);
+    const amount = Number(redeemAmt)
+    if (!amount || amount <= 0) { flash('Please enter a valid amount to redeem.'); return }
+    if ((shareholder?.free_stay_balance || 0) < amount) { flash('Insufficient shareholder balance.'); return }
 
-    if (!redeemAmount || redeemAmount <= 0) {
-      flash('Please enter a valid amount to redeem.');
-      return;
-    }
-    if ((shareholder?.free_stay_balance || 0) < redeemAmount) {
-      flash('Insufficient shareholder balance.');
-      return;
-    }
-    
     const { error: chErr } = await supabase.from('folio_charges').insert({
       reservation_id: res.id,
       charge_type: 'SHAREHOLDER_REDEEM',
-      description: `Redeemed ${fmtBDT(redeemAmount)} by ${shareholder?.name}`,
-      total: -redeemAmount,
+      description: `Redeemed ${fmtBDT(amount)} by ${shareholder?.name}`,
+      total: -amount,
       status: 'PAID',
       charge_date: todayISO(),
-      created_by: 'System'
-    });
-
-    if (chErr) {
-      flash('Error recording redemption charge.');
-      return;
-    }
+      created_by: userName || 'System',
+    })
+    if (chErr) { flash('Error recording redemption charge.'); return }
 
     const { error: shErr } = await supabase.from('shareholders')
-      .update({ free_stay_balance: shareholder.free_stay_balance - redeemAmount })
-      .eq('id', res.shareholder_id);
+      .update({ free_stay_balance: shareholder.free_stay_balance - amount })
+      .eq('id', res.shareholder_id)
 
-    if (shErr) {
-      flash('Error updating shareholder balance.');
-    } else {
-      reload();
-      flash(`Successfully redeemed ${fmtBDT(redeemAmount)}.`);
-    }
-  };
+    if (shErr) flash('Error updating shareholder balance.')
+    else { setRedeemAmt(''); reload(); flash(`Successfully redeemed ${fmtBDT(amount)}.`) }
+  }
 
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -847,17 +1042,18 @@ function PartnerAccounts({ res, reload, flash }) {
         <p className="text-sm text-forest mb-4">
           Redeemable Balance: <span className="font-bold">{fmtBDT(shareholder?.free_stay_balance || 0)}</span>
         </p>
-        
         <div className="space-y-3">
-          <input 
-            type="number" 
-            id="redeemAmt" 
-            className="input w-full" 
-            placeholder="Amount to redeem" 
+          {/* [7] Controlled input — no more document.getElementById */}
+          <input
+            type="number"
+            className="input w-full"
+            placeholder="Amount to redeem"
+            value={redeemAmt}
+            onChange={(e) => setRedeemAmt(e.target.value)}
             max={shareholder?.free_stay_balance || 0}
           />
-          <button 
-            onClick={redeemShareholderBalance} 
+          <button
+            onClick={redeemShareholderBalance}
             disabled={!shareholder || shareholder.free_stay_balance <= 0}
             className="btn-amber w-full"
           >
