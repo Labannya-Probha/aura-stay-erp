@@ -33,7 +33,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
   const [msg, setMsg] = useState('')
 
   const loadAll = async () => {
-    const { data: r } = await supabase.from('reservations').select('*').eq('id', id).single()
+    const { data: r } = await supabase.from('reservations').select('*, agencies(*), shareholders(*)').eq('id', id).single()
     setRes(r)
     if (r?.primary_guest_id) {
       const { data: g } = await supabase.from('guests').select('*').eq('id', r.primary_guest_id).single()
@@ -74,7 +74,6 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
     <div>
       <button className="btn-ghost mb-4" onClick={back}><ArrowLeft size={15} /> All reservations</button>
       
-      {/* (Reservation Header Section - unchanged) */}
       <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-pine">{res.reservation_name || guest?.full_name}</h1>
@@ -97,18 +96,17 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
         ))}
       </div>
 
-      {/* Tabs */}
-      {tab === 'Overview' && <Overview res={res} guest={guest} resRooms={resRooms} setStatus={setStatus} payments={payments} flash={flash} isAdmin={isAdmin} userName={userName} />}
+      {tab === 'Overview' && <Overview res={res} guest={guest} resRooms={resRooms} setStatus={setStatus} payments={payments} advance={paid} flash={flash} isAdmin={isAdmin} userName={userName} />}
       {tab === 'Quotation' && <QuotationTab res={res} guest={guest} nights={nights} taxConfig={taxConfig} company={company} reload={loadAll} flash={flash} userName={userName} resRooms={resRooms} setPrintDoc={setPrintDoc} />}
       {tab === 'Check-In' && <CheckInTab res={res} guest={guest} resGuests={resGuests} resRooms={resRooms} rooms={rooms} reload={loadAll} setStatus={setStatus} userName={userName} openCard={() => setPrintDoc({ type: 'REG' })} payments={payments} flash={flash} isAdmin={isAdmin} />}
       {tab === 'Folio & Payments' && <FolioTab res={res} charges={charges} payments={payments} resRooms={resRooms} taxConfig={taxConfig} reload={loadAll} userName={userName} totals={totals} paid={paid} due={due} flash={flash} isAdmin={isAdmin} />}
-      {tab === 'Invoices' && ( <InvoicesTab res={res} charges={charges} totals={totals} paid={paid} due={due} invoices={invoices} company={company} reload={loadAll} userName={userName} setStatus={setStatus} setPrintDoc={setPrintDoc} flash={flash} isAdmin={isAdmin} />)}
-      {tab === 'Partners' && ( <PartnerAccounts agency={agency} shareholder={shareholder} addAgencyDue={addAgencyDue} redeemShareholderBalance={redeemShareholderBalance} />)}
+      {tab === 'Invoices' && <InvoicesTab res={res} charges={charges} totals={totals} paid={paid} due={due} invoices={invoices} company={company} reload={loadAll} userName={userName} setStatus={setStatus} setPrintDoc={setPrintDoc} flash={flash} isAdmin={isAdmin} />}
+      {tab === 'Partners' && <PartnerAccounts res={res} reload={loadAll} flash={flash} />}
       
-      {/* Print Modals */}
       {printDoc?.type === 'REG' && <PrintPortal title="Registration Card" onClose={() => setPrintDoc(null)}><RegistrationCard res={res} guest={guest} resGuests={resGuests} resRooms={resRooms} payments={payments} company={company} /></PrintPortal>}
       {printDoc?.type === 'BILL' && <PrintPortal title="Guest Bill" onClose={() => setPrintDoc(null)}><GuestBill charges={charges} totals={totals} paid={paid} due={due} res={res} guest={guest} company={company} /></PrintPortal>}
       {printDoc?.type === 'MUSHAK' && <PrintPortal title="Mushak-6.3" onClose={() => setPrintDoc(null)}><Mushak63 charges={charges} totals={totals} res={res} company={company} /></PrintPortal>}
+      {printDoc?.type === 'QUOTE' && <PrintPortal title="Quotation" onClose={() => setPrintDoc(null)}><Quotation res={res} guest={guest} terms={printDoc.terms} roomRate={printDoc.roomRate} roomCount={printDoc.roomCount} discountPct={printDoc.discountPct} validDays={printDoc.validDays} taxConfig={taxConfig} company={company} resRooms={resRooms} /></PrintPortal>}
     </div>
   )
 }
@@ -170,109 +168,7 @@ function Overview({ res, guest, resRooms, setStatus, payments, advance, flash, i
   )
 }
 
-/* ---------------- PARTNER ACCOUNTS ---------------- */
-function PartnerAccounts({ res, reload, flash }) {
-  const agency = res.agencies;
-  const shareholder = res.shareholders;
-
-  const addAgencyDue = async () => {
-    const amt = prompt('Enter amount to add to Agency Due:');
-    if (!amt || isNaN(Number(amt))) return;
-    
-    const { error } = await supabase.from('agencies')
-      .update({ due_balance: (agency?.due_balance || 0) + Number(amt) })
-      .eq('id', res.agency_id);
-    
-    if (error) {
-      flash('Error updating agency due.');
-    } else {
-      reload();
-      flash('Agency due updated successfully.');
-    }
-  };
-
-  const redeemShareholderBalance = async () => {
-    const amt = document.getElementById('redeemAmt')?.value;
-    const redeemAmount = Number(amt);
-
-    if (!redeemAmount || redeemAmount <= 0) {
-      flash('Please enter a valid amount to redeem.');
-      return;
-    }
-    if ((shareholder?.free_stay_balance || 0) < redeemAmount) {
-      flash('Insufficient shareholder balance.');
-      return;
-    }
-    
-    // ১. Folio-তে চার্জ হিসেবে এন্ট্রি যোগ করা (নেগেটিভ ভ্যালু, কারণ এটি ডিসকাউন্ট/রিডিম)
-    const { error: chErr } = await supabase.from('folio_charges').insert({
-      reservation_id: res.id,
-      charge_type: 'SHAREHOLDER_REDEEM',
-      description: `Redeemed ${fmtBDT(redeemAmount)} by ${shareholder?.name}`,
-      total: -redeemAmount,
-      status: 'PAID',
-      charge_date: todayISO(),
-      created_by: 'System'
-    });
-
-    if (chErr) {
-      flash('Error recording redemption charge: ' + chErr.message);
-      return;
-    }
-
-    // ২. শেয়ারহোল্ডারের মেইন ব্যালেন্স থেকে টাকা কাটা
-    const { error: shErr } = await supabase.from('shareholders')
-      .update({ free_stay_balance: shareholder.free_stay_balance - redeemAmount })
-      .eq('id', res.shareholder_id);
-
-    if (shErr) {
-      flash('Error updating shareholder balance.');
-    } else {
-      reload();
-      flash(`Successfully redeemed ${fmtBDT(redeemAmount)}.`);
-    }
-  };
-
-  return (
-    <div className="grid grid-cols-2 gap-4">
-      {/* Agency Due Card */}
-      <div className="card p-5">
-        <h3 className="font-display font-semibold text-pine mb-3">Agency Due Management</h3>
-        <p className="text-lg font-bold">{agency?.name || 'No Agency Assigned'}</p>
-        <p className="text-sm text-pine/60 mb-4">Current Due: {fmtBDT(agency?.due_balance || 0)}</p>
-        <button onClick={addAgencyDue} className="btn-primary w-full" disabled={!agency}>Add Due</button>
-      </div>
-
-      {/* Shareholder Redemption Card */}
-      <div className="card p-5">
-        <h3 className="font-display font-semibold text-pine mb-3">Shareholder Redemption</h3>
-        <p className="text-lg font-bold">{shareholder?.name || 'No Shareholder Assigned'}</p>
-        <p className="text-sm text-forest mb-4">
-          Redeemable Balance: <span className="font-bold">{fmtBDT(shareholder?.free_stay_balance || 0)}</span>
-        </p>
-        
-        <div className="space-y-3">
-          <input 
-            type="number" 
-            id="redeemAmt" 
-            className="input w-full" 
-            placeholder="Amount to redeem" 
-            max={shareholder?.free_stay_balance || 0}
-          />
-          <button 
-            onClick={redeemShareholderBalance} 
-            disabled={!shareholder || shareholder.free_stay_balance <= 0}
-            className="btn-amber w-full"
-          >
-            Redeem for Room
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ---------------- QUOTATION (req. 2) ---------------- */
+/* ---------------- QUOTATION ---------------- */
 function QuotationTab({ res, guest, nights, taxConfig, company, reload, flash, userName, resRooms = [], setPrintDoc }) {
   const [roomRate, setRoomRate] = useState(res.room_rate || resRooms[0]?.rate || resRooms[0]?.rooms?.base_rate || 0)
   const [roomCount, setRoomCount] = useState(resRooms.length || 1)
@@ -378,10 +274,8 @@ function QuotationTab({ res, guest, nights, taxConfig, company, reload, flash, u
 
 const Row = ({ k, v }) => <div className="flex justify-between"><span>{k}</span><span>{v}</span></div>
 
-/* ---------------- CHECK-IN (req. 4) ---------------- */
+/* ---------------- CHECK-IN ---------------- */
 function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus, userName, openCard, payments, flash, isAdmin }) {
-  // req 5: after check-in only an administrator can change room assignment / guest info.
-  // req 7: rooms can still be added during QUERY→CONFIRMED (incl. after booking confirm).
   const locked = !isAdmin && ['CHECKED_IN', 'CHECKED_OUT', 'SETTLED'].includes(res.status)
   const [f, setF] = useState({
     id_type: guest?.id_type || 'NID', id_number: guest?.id_number || '',
@@ -529,7 +423,7 @@ function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus,
   )
 }
 
-/* ---------------- FOLIO & PAYMENTS (req. 5–8) ---------------- */
+/* ---------------- FOLIO & PAYMENTS ---------------- */
 function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userName, totals, paid, due, flash, isAdmin }) {
   const editable = isAdmin || ['QUERY', 'QUOTED', 'CONFIRMED'].includes(res.status)
   const [c, setC] = useState({ charge_type: 'OTHER', description: '', base_amount: '', discount_pct: 0, charge_date: todayISO() })
@@ -538,9 +432,6 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
   const [discType, setDiscType] = useState('ROOM')
   const [p, setP] = useState({ amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName })
 
-  // Build ROOM folio lines. Each room is billed over its OWN date range (from_date/to_date)
-  // when set, otherwise the whole reservation window. Extra-pax & driver charges follow the
-  // overall reservation window.
   const buildRoomRows = () => {
     const rows = []
     for (const rr of resRooms) {
@@ -569,7 +460,6 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
     if (error) flash(error.message); else { await reload(); flash(`${rows.length} room charge line(s) posted.`) }
   }
 
-  // Room bill stays editable from quotation until check-out: replace ROOM lines with current rates/discount
   const repostRoomCharges = async () => {
     if (!editable) { flash('Room bill can only be edited before check-out (administrator override available).'); return }
     if (resRooms.length === 0) { flash('Assign rooms first (Check-In tab).'); return }
@@ -610,8 +500,6 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
   }
   const delCharge = async (chId) => { await supabase.from('folio_charges').delete().eq('id', chId); await reload() }
 
-  // Additional / discretionary discount (admin) — recorded as a negative charge so SC, SD & VAT
-  // reverse proportionally at the chosen tax rate, keeping the Mushak 6.2 register consistent.
   const addDiscount = async () => {
     const amt = +discAmt
     if (!amt || amt <= 0) { flash('Enter a positive discount amount.'); return }
@@ -763,52 +651,71 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
   )
 }
 
-/* --- Agency & Shareholder Balance Management --- */
+/* ---------------- PARTNER ACCOUNTS ---------------- */
 function PartnerAccounts({ res, reload, flash }) {
   const agency = res.agencies;
   const shareholder = res.shareholders;
 
   const addAgencyDue = async () => {
     const amt = prompt('Enter amount to add to Agency Due:');
-    if (!amt || isNaN(amt)) return;
+    if (!amt || isNaN(Number(amt))) return;
     
     const { error } = await supabase.from('agencies')
       .update({ due_balance: (agency?.due_balance || 0) + Number(amt) })
       .eq('id', res.agency_id);
     
-    if (error) flash('Error updating agency due.');
-    else { reload(); flash('Agency due updated successfully.'); }
+    if (error) {
+      flash('Error updating agency due.');
+    } else {
+      reload();
+      flash('Agency due updated successfully.');
+    }
   };
 
-  const redeemShareholderBalance = async (amt) => {
-    if ((shareholder?.free_stay_balance || 0) < amt) { 
-      flash('Insufficient shareholder balance.'); 
-      return; 
+  const redeemShareholderBalance = async () => {
+    const amt = document.getElementById('redeemAmt')?.value;
+    const redeemAmount = Number(amt);
+
+    if (!redeemAmount || redeemAmount <= 0) {
+      flash('Please enter a valid amount to redeem.');
+      return;
+    }
+    if ((shareholder?.free_stay_balance || 0) < redeemAmount) {
+      flash('Insufficient shareholder balance.');
+      return;
     }
     
     const { error: chErr } = await supabase.from('folio_charges').insert({
       reservation_id: res.id,
       charge_type: 'SHAREHOLDER_REDEEM',
-      description: `Redeemed ${fmtBDT(amt)} by ${shareholder?.name}`,
-      total: -amt,
+      description: `Redeemed ${fmtBDT(redeemAmount)} by ${shareholder?.name}`,
+      total: -redeemAmount,
       status: 'PAID',
-      charge_date: todayISO()
+      charge_date: todayISO(),
+      created_by: 'System'
     });
 
-    if (chErr) { flash('Error recording redemption.'); return; }
+    if (chErr) {
+      flash('Error recording redemption charge.');
+      return;
+    }
 
-    await supabase.from('shareholders')
-      .update({ free_stay_balance: shareholder.free_stay_balance - amt })
+    const { error: shErr } = await supabase.from('shareholders')
+      .update({ free_stay_balance: shareholder.free_stay_balance - redeemAmount })
       .eq('id', res.shareholder_id);
 
-    reload();
-    flash('Balance redeemed successfully.');
+    if (shErr) {
+      flash('Error updating shareholder balance.');
+    } else {
+      reload();
+      flash(`Successfully redeemed ${fmtBDT(redeemAmount)}.`);
+    }
   };
 
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="card p-5">
-        <h3 className="font-display font-semibold text-pine mb-3">Agency Due</h3>
+        <h3 className="font-display font-semibold text-pine mb-3">Agency Due Management</h3>
         <p className="text-lg font-bold">{agency?.name || 'No Agency Assigned'}</p>
         <p className="text-sm text-pine/60 mb-4">Current Due: {fmtBDT(agency?.due_balance || 0)}</p>
         <button onClick={addAgencyDue} className="btn-primary w-full" disabled={!agency}>Add Due</button>
@@ -817,30 +724,25 @@ function PartnerAccounts({ res, reload, flash }) {
       <div className="card p-5">
         <h3 className="font-display font-semibold text-pine mb-3">Shareholder Redemption</h3>
         <p className="text-lg font-bold">{shareholder?.name || 'No Shareholder Assigned'}</p>
-        <p className="text-sm text-forest mb-4">Redeemable Balance: {fmtBDT(shareholder?.free_stay_balance || 0)}</p>
-        <button 
-          onClick={() => redeemShareholderBalance(1000)}
-          disabled={(shareholder?.free_stay_balance || 0) < 1000}
-          className="btn-amber w-full"
-        >
-          Redeem 1,000 BDT for Room
-        </button>
-      </div>
-    </div>
-  )
-}
-
-      {/* Shareholder Free Stay Redemption */}
-      <div className="card p-4">
-        <h3 className="font-bold">Shareholder: {shareholder.name}</h3>
-        <p className="text-forest">Redeemable Balance: {fmtBDT(shareholder.free_stay_balance)}</p>
-        <button 
-          onClick={() => redeemShareholderBalance(1000)} // উদাহরণ হিসেবে ১০০০ টাকা রিডিম
-          disabled={shareholder.free_stay_balance < 1000}
-          className="btn-amber"
-        >
-          Redeem for Room
-        </button>
+        <p className="text-sm text-forest mb-4">
+          Redeemable Balance: <span className="font-bold">{fmtBDT(shareholder?.free_stay_balance || 0)}</span>
+        </p>
+        
+        <div className="space-y-3">
+          <input 
+            type="number" 
+            id="redeemAmt" 
+            className="input w-full" 
+            placeholder="Amount to redeem" 
+            max={shareholder?.free_stay_balance || 0}
+          />
+          <button 
+            onClick={redeemShareholderBalance} 
+            disabled={!shareholder || shareholder.free_stay_balance <= 0}
+            className="btn-amber w-full"
+          >
+            Redeem for Room
+          </button>
         </div>
       </div>
     </div>
