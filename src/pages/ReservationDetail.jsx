@@ -829,6 +829,7 @@ function PartnerAccounts({ res, reload, flash }) {
     </div>
   )
 }
+
       {/* Shareholder Free Stay Redemption */}
       <div className="card p-4">
         <h3 className="font-bold">Shareholder: {shareholder.name}</h3>
