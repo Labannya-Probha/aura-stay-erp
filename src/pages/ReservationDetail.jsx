@@ -819,8 +819,8 @@ function PartnerAccounts({ res, reload, flash }) {
         <p className="text-lg font-bold">{shareholder?.name || 'No Shareholder Assigned'}</p>
         <p className="text-sm text-forest mb-4">Redeemable Balance: {fmtBDT(shareholder?.free_stay_balance || 0)}</p>
         <button 
-          onClick={() => redeemShareholderBalance(1000)} 
-          disabled={!shareholder || (shareholder?.free_stay_balance || 0) < 1000}
+          onClick={() => redeemShareholderBalance(1000)}
+          disabled={(shareholder?.free_stay_balance || 0) < 1000}
           className="btn-amber w-full"
         >
           Redeem 1,000 BDT for Room
