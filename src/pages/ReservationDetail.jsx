@@ -103,7 +103,6 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
       {tab === 'Invoices' && <InvoicesTab res={res} charges={charges} totals={totals} paid={paid} due={due} invoices={invoices} company={company} reload={loadAll} userName={userName} setStatus={setStatus} setPrintDoc={setPrintDoc} flash={flash} isAdmin={isAdmin} />}
       {tab === 'Partners' && <PartnerAccounts res={res} reload={loadAll} flash={flash} />}
       
-      {/* Print Modals */}
       {printDoc?.type === 'REG' && <PrintPortal title="Registration Card" onClose={() => setPrintDoc(null)}><RegistrationCard res={res} guest={guest} resGuests={resGuests} resRooms={resRooms} payments={payments} company={company} /></PrintPortal>}
       
       {printDoc?.type === 'BILL' && (
@@ -118,19 +117,25 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
         </PrintPortal>
       )}
       
-      {printDoc?.type === 'MUSHAK' && ( <PrintPortal title="Mushak-6.3" onClose={() => setPrintDoc(null)}> <Mushak63 charges={printDoc.invoiceData?.charges || charges} totals={printDoc.invoiceData?.totals || totals} res={res} company={company} invoice_no={printDoc.invoiceData?.invoice_no} />
+      {printDoc?.type === 'MUSHAK' && (
+        <PrintPortal title="Mushak-6.3" onClose={() => setPrintDoc(null)}>
+          <Mushak63 
+            charges={printDoc.invoiceData?.charges || charges} 
+            totals={printDoc.invoiceData?.totals || totals} 
+            res={res} company={company} invoice_no={printDoc.invoiceData?.invoice_no} 
+          />
         </PrintPortal>
       )}
       
-      {printDoc?.type === 'QUOTE' && <PrintPortal title="Quotation" onClose={() => setPrintDoc(null)}><Quotation res={res} guest={guest} terms={printDoc.terms} roomRate={printDoc.roomRate} roomCount={printDoc.roomCount} discountPct={printDoc.discountPct} validDays={printDoc.validDays} taxConfig={taxConfig} company={company} resRooms={resRooms} /></PrintPortal>}
-      {printDoc?.type === 'BILL' && <PrintPortal title="Guest Bill" onClose={() => setPrintDoc(null)}><GuestBill charges={charges} totals={totals} paid={paid} due={due} res={res} guest={guest} company={company} /></PrintPortal>}
-      {printDoc?.type === 'MUSHAK' && <PrintPortal title="Mushak-6.3" onClose={() => setPrintDoc(null)}><Mushak63 charges={charges} totals={totals} res={res} company={company} /></PrintPortal>}
-      {printDoc?.type === 'QUOTE' && <PrintPortal title="Quotation" onClose={() => setPrintDoc(null)}><Quotation res={res} guest={guest} terms={printDoc.terms} roomRate={printDoc.roomRate} roomCount={printDoc.roomCount} discountPct={printDoc.discountPct} validDays={printDoc.validDays} taxConfig={taxConfig} company={company} resRooms={resRooms} /></PrintPortal>}
+      {printDoc?.type === 'QUOTE' && (
+        <PrintPortal title="Quotation" onClose={() => setPrintDoc(null)}>
+          <Quotation res={res} guest={guest} terms={printDoc.terms} roomRate={printDoc.roomRate} roomCount={printDoc.roomCount} discountPct={printDoc.discountPct} validDays={printDoc.validDays} taxConfig={taxConfig} company={company} resRooms={resRooms} />
+        </PrintPortal>
+      )}
     </div>
   )
 }
 
-/* ---------------- OVERVIEW ---------------- */
 function Overview({ res, guest, resRooms, setStatus, payments, advance, flash, isAdmin, userName }) {
   const canConfirm = ['QUERY', 'QUOTED'].includes(res.status)
   return (
@@ -187,7 +192,6 @@ function Overview({ res, guest, resRooms, setStatus, payments, advance, flash, i
   )
 }
 
-/* ---------------- QUOTATION ---------------- */
 function QuotationTab({ res, guest, nights, taxConfig, company, reload, flash, userName, resRooms = [], setPrintDoc }) {
   const [roomRate, setRoomRate] = useState(res.room_rate || resRooms[0]?.rate || resRooms[0]?.rooms?.base_rate || 0)
   const [roomCount, setRoomCount] = useState(resRooms.length || 1)
@@ -293,7 +297,6 @@ function QuotationTab({ res, guest, nights, taxConfig, company, reload, flash, u
 
 const Row = ({ k, v }) => <div className="flex justify-between"><span>{k}</span><span>{v}</span></div>
 
-/* ---------------- CHECK-IN ---------------- */
 function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus, userName, openCard, payments, flash, isAdmin }) {
   const locked = !isAdmin && ['CHECKED_IN', 'CHECKED_OUT', 'SETTLED'].includes(res.status)
   const [f, setF] = useState({
@@ -442,7 +445,6 @@ function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus,
   )
 }
 
-/* ---------------- FOLIO & PAYMENTS ---------------- */
 function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userName, totals, paid, due, flash, isAdmin }) {
   const editable = isAdmin || ['QUERY', 'QUOTED', 'CONFIRMED'].includes(res.status)
   const [c, setC] = useState({ charge_type: 'OTHER', description: '', base_amount: '', discount_pct: 0, charge_date: todayISO() })
@@ -670,7 +672,6 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
   )
 }
 
-/* ---------------- PARTNER ACCOUNTS ---------------- */
 function PartnerAccounts({ res, reload, flash }) {
   const agency = res.agencies;
   const shareholder = res.shareholders;
@@ -768,19 +769,16 @@ function PartnerAccounts({ res, reload, flash }) {
   )
 }
 
-/* ---------------- INVOICES & CHECK-OUT ---------------- */
 function InvoicesTab({ res, charges, totals, paid, due, invoices, company, reload, userName, setStatus, setPrintDoc, flash, isAdmin }) {
   const isCheckedOut = ['CHECKED_OUT', 'SETTLED'].includes(res.status);
   
-  // Live Bill Print
   const printLiveInvoice = (type) => {
     setPrintDoc({ 
       type: type, 
-      invoiceData: { charges, totals, paid, due, invoice_no: `INV-${res.res_no}`, issued_at: new Date().toISOString() } 
+      invoiceData: { charges, totals, paid, due, invoice_no: `DRAFT-${res.res_no}`, issued_at: new Date().toISOString() } 
     });
   };
 
-  // History Bill Print
   const printHistoryInvoice = (inv, type) => {
     setPrintDoc({ 
       type: type, 
@@ -793,14 +791,14 @@ function InvoicesTab({ res, charges, totals, paid, due, invoices, company, reloa
       <div className="card p-5 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h3 className="font-display font-semibold text-pine">Guest Billing & Check-out</h3>
-          <p className="text-sm text-pine/60">Live billing: updates automatically from Folio.</p>
+          <p className="text-sm text-pine/60">Preview live bill before check-out.</p>
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost" onClick={() => printLiveInvoice('BILL')}>
-            <Printer size={16} /> Print Live Bill
+            <Printer size={16} /> Preview Bill
           </button>
           <button className="btn-primary" onClick={() => printLiveInvoice('MUSHAK')}>
-            <Receipt size={16} /> Print Live Mushak
+            <Receipt size={16} /> Live Mushak
           </button>
           
           {!isCheckedOut ? (
@@ -860,7 +858,9 @@ function InvoicesTab({ res, charges, totals, paid, due, invoices, company, reloa
               </tr>
             ))}
             {invoices.length === 0 && (
-              <tr><td className="td text-pine/50 text-center" colSpan={5}>No historical invoices found.</td></tr>
+              <tr>
+                <td className="td text-pine/50 text-center" colSpan={5}>No historical invoices found.</td>
+              </tr>
             )}
           </tbody>
         </table>
