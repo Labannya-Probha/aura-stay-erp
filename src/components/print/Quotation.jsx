@@ -3,14 +3,30 @@ import { fmtBDT, fmtDate, nightsBetween, computeCharge, rateFor, todayISO } from
 export default function Quotation({ res, guest, resRooms, company, taxConfig, terms, roomRate, roomCount, discountPct, validDays }) {
   const nights = nightsBetween(res.check_in, res.check_out)
   const rate = rateFor(taxConfig, 'ROOM', todayISO())
+  
   const lines = (resRooms && resRooms.length)
     ? resRooms.map((rr) => ({ label: `Room ${rr.rooms?.room_no}${rr.rooms?.room_name ? ` · ${rr.rooms.room_name}` : ''}`, calc: computeCharge(rr.rate, discountPct, rate) }))
     : [{ label: `${roomCount} room(s)`, calc: computeCharge(Number(roomRate) * Number(roomCount), discountPct, rate) }]
-  const sum = lines.reduce((a, l) => ({
-    base: a.base + l.calc.base_amount * nights, discount: a.discount + l.calc.discount * nights,
-    sc: a.sc + l.calc.service_charge * nights, sd: a.sd + l.calc.sd * nights,
-    vat: a.vat + l.calc.vat * nights, total: a.total + l.calc.total * nights,
-  }), { base: 0, discount: 0, sc: 0, sd: 0, vat: 0, total: 0 })
+  
+  const totals = lines.reduce((a, l) => {
+    const totalBase = l.calc.base_amount * nights
+    const totalDisc = l.calc.discount * nights
+    const netBase = totalBase - totalDisc
+    
+    const sc = (netBase * (rate.service_charge_pct || 0)) / 100
+    const sd = (netBase * (rate.sd_pct || 0)) / 100
+    const vat = ((netBase + sc + sd) * (rate.vat_pct || 0)) / 100
+
+    return {
+      base: a.base + totalBase,
+      discount: a.discount + totalDisc,
+      sc: a.sc + sc,
+      sd: a.sd + sd,
+      vat: a.vat + vat,
+      total: a.total + (netBase + sc + sd + vat)
+    }
+  }, { base: 0, discount: 0, sc: 0, sd: 0, vat: 0, total: 0 })
+
   const cell = { border: '1px solid #000', padding: '5px 8px' }
   const rt = { ...cell, textAlign: 'right' }
   const validUntil = new Date(Date.now() + (validDays || 7) * 86400000)
@@ -61,11 +77,11 @@ export default function Quotation({ res, guest, resRooms, company, taxConfig, te
           ))}
         </tbody>
         <tfoot>
-          {sum.discount > 0 && <tr><td style={cell} colSpan={3}>Discount {discountPct}%</td><td style={rt}>− {fmtBDT(sum.discount)}</td></tr>}
-          {sum.sc > 0 && <tr><td style={cell} colSpan={3}>Service charge {rate.service_charge_pct}%</td><td style={rt}>{fmtBDT(sum.sc)}</td></tr>}
-          {sum.sd > 0 && <tr><td style={cell} colSpan={3}>Supplementary duty {rate.sd_pct}%</td><td style={rt}>{fmtBDT(sum.sd)}</td></tr>}
-          <tr><td style={cell} colSpan={3}>VAT {rate.vat_pct}%</td><td style={rt}>{fmtBDT(sum.vat)}</td></tr>
-          <tr style={{ fontWeight: 700, background: '#f5f5f5' }}><td style={cell} colSpan={3}>GRAND TOTAL</td><td style={rt}>{fmtBDT(sum.total)}</td></tr>
+          {totals.discount > 0 && <tr><td style={cell} colSpan={3}>Discount {discountPct}%</td><td style={rt}>− {fmtBDT(totals.discount)}</td></tr>}
+          {totals.sc > 0 && <tr><td style={cell} colSpan={3}>Service charge {rate.service_charge_pct}%</td><td style={rt}>{fmtBDT(totals.sc)}</td></tr>}
+          {totals.sd > 0 && <tr><td style={cell} colSpan={3}>Supplementary duty {rate.sd_pct}%</td><td style={rt}>{fmtBDT(totals.sd)}</td></tr>}
+          <tr><td style={cell} colSpan={3}>VAT {rate.vat_pct}%</td><td style={rt}>{fmtBDT(totals.vat)}</td></tr>
+          <tr style={{ fontWeight: 700, background: '#f5f5f5' }}><td style={cell} colSpan={3}>GRAND TOTAL</td><td style={rt}>{fmtBDT(totals.total)}</td></tr>
         </tfoot>
       </table>
 
