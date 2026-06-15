@@ -144,7 +144,7 @@ export default function App() {
         {page === 'vat' && can(role, 'vat') && <VatCenter userName={userName} company={company} />}
         {page === 'accounting' && can(role, 'accounting') && <AccountingHub userName={userName} isAdmin={isAdmin} />}
         {page === 'hr' && can(role, 'hr') && <HrOffice userName={userName} role={role} isAdmin={isAdmin} company={company} />}
-        {page === 'reports' && can(role, 'reports') && <ReportsHub userName={userName} />}
+        {page === 'reports' && can(role, 'reports') && <ReportsHub userName={userName} role={role} />}
         {page === 'settings' && can(role, 'settings') && <Settings userName={userName} role={role} isAdmin={isAdmin} reloadCompany={loadCompany} />}
       </main>
     </div>
