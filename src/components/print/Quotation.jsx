@@ -26,49 +26,26 @@ export default function Quotation({ res, guest, resRooms, company, taxConfig, te
         </div>
       </div>
       <div style={{ textAlign: 'center', fontSize: 15, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>QUOTATION</div>
-
       <table style={{ width: '100%', fontSize: 12, marginBottom: 10 }}>
         <tbody>
-          <tr>
-            <td><b>Quotation Ref:</b> {res.res_no}</td>
-            <td style={{ textAlign: 'right' }}><b>Date:</b> {fmtDate(todayISO())}</td>
-          </tr>
-          <tr>
-            <td><b>Guest:</b> {guest?.full_name || res.reservation_name || '—'}{guest?.phone ? ` · ${guest.phone}` : ''}</td>
-            <td style={{ textAlign: 'right' }}><b>Valid until:</b> {fmtDate(validUntil)}</td>
-          </tr>
-          <tr>
-            <td><b>Check-in:</b> {fmtDate(res.check_in)}</td>
-            <td style={{ textAlign: 'right' }}><b>Check-out:</b> {fmtDate(res.check_out)} ({nights} night{nights !== 1 ? 's' : ''})</td>
-          </tr>
+          <tr><td><b>Quotation Ref:</b> {res.res_no}</td><td style={{ textAlign: 'right' }}><b>Date:</b> {fmtDate(todayISO())}</td></tr>
+          <tr><td><b>Guest:</b> {guest?.full_name || res.reservation_name || '—'}</td><td style={{ textAlign: 'right' }}><b>Valid until:</b> {fmtDate(validUntil)}</td></tr>
         </tbody>
       </table>
-
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-        <thead>
-          <tr style={{ background: '#eee' }}>
-            <th style={cell}>Description</th><th style={rt}>Tariff/night</th><th style={rt}>Nights</th><th style={rt}>Amount</th>
-          </tr>
-        </thead>
+        <thead><tr style={{ background: '#eee' }}><th style={cell}>Description</th><th style={rt}>Tariff/night</th><th style={rt}>Nights</th><th style={rt}>Amount</th></tr></thead>
         <tbody>
           {lines.map((l, i) => (
-            <tr key={i}>
-              <td style={cell}>{l.label}</td>
-              <td style={rt}>{fmtBDT(l.calc.base_amount)}</td>
-              <td style={rt}>{nights}</td>
-              <td style={rt}>{fmtBDT(l.calc.base_amount * nights)}</td>
-            </tr>
+            <tr key={i}><td style={cell}>{l.label}</td><td style={rt}>{fmtBDT(l.calc.base_amount)}</td><td style={rt}>{nights}</td><td style={rt}>{fmtBDT(l.calc.base_amount * nights)}</td></tr>
           ))}
         </tbody>
         <tfoot>
           {sum.discount > 0 && <tr><td style={cell} colSpan={3}>Discount {discountPct}%</td><td style={rt}>− {fmtBDT(sum.discount)}</td></tr>}
           {sum.sc > 0 && <tr><td style={cell} colSpan={3}>Service charge {rate.service_charge_pct}%</td><td style={rt}>{fmtBDT(sum.sc)}</td></tr>}
-          {sum.sd > 0 && <tr><td style={cell} colSpan={3}>Supplementary duty {rate.sd_pct}%</td><td style={rt}>{fmtBDT(sum.sd)}</td></tr>}
           <tr><td style={cell} colSpan={3}>VAT {rate.vat_pct}%</td><td style={rt}>{fmtBDT(sum.vat)}</td></tr>
           <tr style={{ fontWeight: 700, background: '#f5f5f5' }}><td style={cell} colSpan={3}>GRAND TOTAL</td><td style={rt}>{fmtBDT(sum.total)}</td></tr>
         </tfoot>
       </table>
-      {terms && <div style={{ marginTop: 14, fontSize: 10.5, lineHeight: 1.5, whiteSpace: 'pre-wrap', borderTop: '1px solid #999', paddingTop: 8 }}>{terms}</div>}
     </div>
   )
 }
