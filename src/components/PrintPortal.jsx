@@ -16,15 +16,15 @@ export default function PrintPortal({ title, onClose, children, type = 'A4' }) {
           #print-root .print-doc, #print-root .epos-receipt {
             display: flex !important;
             flex-direction: column !important;
-            min-height: ${type === 'thermal' ? 'auto' : '100vh'} !important;
+            min-height: ${type === 'thermal' ? '100vh' : '270mm'} !important;
             width: ${type === 'thermal' ? '72mm' : '186mm'} !important; 
             max-width: ${type === 'thermal' ? '72mm' : '186mm'} !important;
             margin: 0 auto !important; font-size: ${type === 'thermal' ? '11px' : '11px'}; color: #000 !important;
           }
 
-          #print-root .print-doc > div:first-child, 
-          #print-root .epos-receipt > div:first-child {
-            flex: 1 !important;
+          #print-root .print-doc > *:not(::after), 
+          #print-root .epos-receipt > *:not(::after) {
+            flex-grow: 1 !important;
           }
           
           #print-root .print-doc::after, #print-root .epos-receipt::after {
@@ -32,6 +32,7 @@ export default function PrintPortal({ title, onClose, children, type = 'A4' }) {
             display: block; text-align: center; font-size: 9px;
             margin-top: auto !important; border-top: 1px solid #ccc;
             padding-top: 5px; color: #666;
+            flex-shrink: 0 !important;
           }
 
           #print-root .print-doc * { box-sizing: border-box; }
