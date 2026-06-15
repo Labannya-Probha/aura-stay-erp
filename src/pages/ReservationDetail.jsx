@@ -172,31 +172,101 @@ function Overview({ res, guest, resRooms, setStatus, payments, advance, flash, i
 
 /* ---------------- PARTNER ACCOUNTS ---------------- */
 function PartnerAccounts({ res, reload, flash }) {
-  const addAgencyDue = async () => {
-    const amt = prompt('Enter amount to add:');
-    if (!amt) return;
-    await supabase.from('agencies').update({ due_balance: (res.agencies?.due_balance || 0) + Number(amt) }).eq('id', res.agency_id);
-    reload(); flash('Agency due updated.');
-  }
+  const agency = res.agencies;
+  const shareholder = res.shareholders;
 
-  const redeemShareholderBalance = async (amt) => {
-    if ((res.shareholders?.free_stay_balance || 0) < amt) { flash('Insufficient balance.'); return; }
-    await supabase.from('folio_charges').insert({ reservation_id: res.id, charge_type: 'SHAREHOLDER_REDEEM', description: 'Redeemed by Shareholder', total: -amt, status: 'PAID' });
-    await supabase.from('shareholders').update({ free_stay_balance: res.shareholders.free_stay_balance - amt }).eq('id', res.shareholder_id);
-    reload(); flash('Redeemed successfully.');
-  }
+  const addAgencyDue = async () => {
+    const amt = prompt('Enter amount to add to Agency Due:');
+    if (!amt || isNaN(Number(amt))) return;
+    
+    const { error } = await supabase.from('agencies')
+      .update({ due_balance: (agency?.due_balance || 0) + Number(amt) })
+      .eq('id', res.agency_id);
+    
+    if (error) {
+      flash('Error updating agency due.');
+    } else {
+      reload();
+      flash('Agency due updated successfully.');
+    }
+  };
+
+  const redeemShareholderBalance = async () => {
+    const amt = document.getElementById('redeemAmt')?.value;
+    const redeemAmount = Number(amt);
+
+    if (!redeemAmount || redeemAmount <= 0) {
+      flash('Please enter a valid amount to redeem.');
+      return;
+    }
+    if ((shareholder?.free_stay_balance || 0) < redeemAmount) {
+      flash('Insufficient shareholder balance.');
+      return;
+    }
+    
+    // ১. Folio-তে চার্জ হিসেবে এন্ট্রি যোগ করা (নেগেটিভ ভ্যালু, কারণ এটি ডিসকাউন্ট/রিডিম)
+    const { error: chErr } = await supabase.from('folio_charges').insert({
+      reservation_id: res.id,
+      charge_type: 'SHAREHOLDER_REDEEM',
+      description: `Redeemed ${fmtBDT(redeemAmount)} by ${shareholder?.name}`,
+      total: -redeemAmount,
+      status: 'PAID',
+      charge_date: todayISO(),
+      created_by: 'System'
+    });
+
+    if (chErr) {
+      flash('Error recording redemption charge: ' + chErr.message);
+      return;
+    }
+
+    // ২. শেয়ারহোল্ডারের মেইন ব্যালেন্স থেকে টাকা কাটা
+    const { error: shErr } = await supabase.from('shareholders')
+      .update({ free_stay_balance: shareholder.free_stay_balance - redeemAmount })
+      .eq('id', res.shareholder_id);
+
+    if (shErr) {
+      flash('Error updating shareholder balance.');
+    } else {
+      reload();
+      flash(`Successfully redeemed ${fmtBDT(redeemAmount)}.`);
+    }
+  };
 
   return (
     <div className="grid grid-cols-2 gap-4">
-      <div className="card p-4">
-        <h3 className="font-bold">Agency: {res.agencies?.name || 'N/A'}</h3>
-        <p>Due: {fmtBDT(res.agencies?.due_balance || 0)}</p>
-        <button onClick={addAgencyDue} className="btn-primary">Add Due</button>
+      {/* Agency Due Card */}
+      <div className="card p-5">
+        <h3 className="font-display font-semibold text-pine mb-3">Agency Due Management</h3>
+        <p className="text-lg font-bold">{agency?.name || 'No Agency Assigned'}</p>
+        <p className="text-sm text-pine/60 mb-4">Current Due: {fmtBDT(agency?.due_balance || 0)}</p>
+        <button onClick={addAgencyDue} className="btn-primary w-full" disabled={!agency}>Add Due</button>
       </div>
-      <div className="card p-4">
-        <h3 className="font-bold">Shareholder: {res.shareholders?.name || 'N/A'}</h3>
-        <p>Balance: {fmtBDT(res.shareholders?.free_stay_balance || 0)}</p>
-        <button onClick={() => redeemShareholderBalance(1000)} disabled={(res.shareholders?.free_stay_balance || 0) < 1000} className="btn-amber">Redeem 1000</button>
+
+      {/* Shareholder Redemption Card */}
+      <div className="card p-5">
+        <h3 className="font-display font-semibold text-pine mb-3">Shareholder Redemption</h3>
+        <p className="text-lg font-bold">{shareholder?.name || 'No Shareholder Assigned'}</p>
+        <p className="text-sm text-forest mb-4">
+          Redeemable Balance: <span className="font-bold">{fmtBDT(shareholder?.free_stay_balance || 0)}</span>
+        </p>
+        
+        <div className="space-y-3">
+          <input 
+            type="number" 
+            id="redeemAmt" 
+            className="input w-full" 
+            placeholder="Amount to redeem" 
+            max={shareholder?.free_stay_balance || 0}
+          />
+          <button 
+            onClick={redeemShareholderBalance} 
+            disabled={!shareholder || shareholder.free_stay_balance <= 0}
+            className="btn-amber w-full"
+          >
+            Redeem for Room
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -694,16 +764,71 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
 }
 
 /* --- Agency & Shareholder Balance Management --- */
-function PartnerAccounts({ agency, shareholder, addAgencyDue, redeemShareholderBalance }) {
+function PartnerAccounts({ res, reload, flash }) {
+  const agency = res.agencies;
+  const shareholder = res.shareholders;
+
+  const addAgencyDue = async () => {
+    const amt = prompt('Enter amount to add to Agency Due:');
+    if (!amt || isNaN(amt)) return;
+    
+    const { error } = await supabase.from('agencies')
+      .update({ due_balance: (agency?.due_balance || 0) + Number(amt) })
+      .eq('id', res.agency_id);
+    
+    if (error) flash('Error updating agency due.');
+    else { reload(); flash('Agency due updated successfully.'); }
+  };
+
+  const redeemShareholderBalance = async (amt) => {
+    if ((shareholder?.free_stay_balance || 0) < amt) { 
+      flash('Insufficient shareholder balance.'); 
+      return; 
+    }
+    
+    const { error: chErr } = await supabase.from('folio_charges').insert({
+      reservation_id: res.id,
+      charge_type: 'SHAREHOLDER_REDEEM',
+      description: `Redeemed ${fmtBDT(amt)} by ${shareholder?.name}`,
+      total: -amt,
+      status: 'PAID',
+      charge_date: todayISO()
+    });
+
+    if (chErr) { flash('Error recording redemption.'); return; }
+
+    await supabase.from('shareholders')
+      .update({ free_stay_balance: shareholder.free_stay_balance - amt })
+      .eq('id', res.shareholder_id);
+
+    reload();
+    flash('Balance redeemed successfully.');
+  };
+
   return (
     <div className="grid grid-cols-2 gap-4">
-      {/* Agency Due Management */}
-      <div className="card p-4">
-        <h3 className="font-bold">Agency: {agency.name}</h3>
-        <p>Current Due: {fmtBDT(agency.due_balance)}</p>
-        <button onClick={addAgencyDue} className="btn-primary">Add Due</button>
+      <div className="card p-5">
+        <h3 className="font-display font-semibold text-pine mb-3">Agency Due</h3>
+        <p className="text-lg font-bold">{agency?.name || 'No Agency Assigned'}</p>
+        <p className="text-sm text-pine/60 mb-4">Current Due: {fmtBDT(agency?.due_balance || 0)}</p>
+        <button onClick={addAgencyDue} className="btn-primary w-full" disabled={!agency}>Add Due</button>
       </div>
 
+      <div className="card p-5">
+        <h3 className="font-display font-semibold text-pine mb-3">Shareholder Redemption</h3>
+        <p className="text-lg font-bold">{shareholder?.name || 'No Shareholder Assigned'}</p>
+        <p className="text-sm text-forest mb-4">Redeemable Balance: {fmtBDT(shareholder?.free_stay_balance || 0)}</p>
+        <button 
+          onClick={() => redeemShareholderBalance(1000)} 
+          disabled={!shareholder || (shareholder?.free_stay_balance || 0) < 1000}
+          className="btn-amber w-full"
+        >
+          Redeem 1,000 BDT for Room
+        </button>
+      </div>
+    </div>
+  )
+}
       {/* Shareholder Free Stay Redemption */}
       <div className="card p-4">
         <h3 className="font-bold">Shareholder: {shareholder.name}</h3>
