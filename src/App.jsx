@@ -31,7 +31,6 @@ function BrandLogo({ url }) {
 const NAV_GROUPS = [
   { title: 'Front Office', items: [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'frontdesk', label: 'Front Desk', icon: LayoutGrid },
     { id: 'reservations', label: 'Reservations', icon: CalendarRange },
     { id: 'calendar', label: 'Booking Calendar', icon: CalendarDays },
     { id: 'nightaudit', label: 'Night Audit', icon: MoonStar },
@@ -132,7 +131,6 @@ export default function App() {
 
       <main className="flex-1 ml-60 p-6 lg:p-8 max-w-[1400px]">
         {page === 'dashboard' && <Dashboard openReservation={openReservation} userName={userName} />}
-        {page === 'frontdesk' && can(role, 'frontdesk') && <FrontDeskBoard role={role} />}
         {page === 'reservations' && <Reservations openReservation={openReservation} userName={userName} />}
         {page === 'calendar' && can(role, 'calendar') && <BookingCalendar openReservation={openReservation} />}
         {page === 'detail' && activeRes && (
