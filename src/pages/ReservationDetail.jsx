@@ -687,9 +687,8 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
       </div>
     </div>
   )
-}
 
-/* ---------------- INVOICES & CHECK-OUT (req. 9) ---------------- */
+
 function InvoicesTab({ res, guest, charges, totals, paid, due, invoices, company, reload, userName, setStatus, setPrintDoc, flash, isAdmin }) {
   const canCheckout = res.status === 'CHECKED_IN'
   const activeInvoices = invoices.filter((i) => !i.is_void)
