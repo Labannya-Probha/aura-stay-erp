@@ -49,6 +49,18 @@ body {
   .print-doc tr, .print-doc thead, .print-doc svg { page-break-inside: avoid; }
 
   .no-print { display: none !important; }
+
+  /* Footer for all print docs */
+  .print-doc::after, .epos-receipt::after {
+    content: "Powered by Aura Stay";
+    display: block;
+    text-align: center;
+    font-size: 9px;
+    margin-top: 20px;
+    border-top: 1px solid #ccc;
+    padding-top: 5px;
+    color: #666;
+  }
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
@@ -86,7 +98,6 @@ td {
 @media print {
   @page { size: 80mm auto; margin: 0; }
   
-  /* Thermal receipt container settings */
   .epos-receipt {
     width: 72mm !important;
     font-family: 'monospace' !important;
