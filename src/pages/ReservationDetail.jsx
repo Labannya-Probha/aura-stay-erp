@@ -477,15 +477,6 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
     }
     return rows
   }
-    for (const night of eachNight(res.check_in, res.check_out)) {
-      const rate = rateFor(taxConfig, 'ROOM', night)
-      if (res.extra_pax > 0 && res.extra_pax_rate > 0)
-        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Extra pax × ${res.extra_pax} — ${fmtDate(night)}`, ...computeCharge(res.extra_pax * res.extra_pax_rate, res.discount_pct, rate), created_by: userName })
-      if (res.driver_accommodation && res.driver_count > 0 && res.driver_rate > 0)
-        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Driver accommodation × ${res.driver_count} — ${fmtDate(night)}`, ...computeCharge(res.driver_count * res.driver_rate, res.discount_pct, rate), created_by: userName })
-    }
-    return rows
-  }
 
   const postRoomCharges = async () => {
     if (resRooms.length === 0) { flash('Assign rooms first (Check-In tab).'); return }
@@ -551,7 +542,7 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
     if (error) { flash(error.message); return }
     await supabase.from('audit_log').insert({ actor: userName, action: 'ADD_DISCOUNT', entity: 'reservation', entity_id: res.res_no, details: { amount: amt, type: discType, reason: discReason } })
     setDiscAmt(''); setDiscReason(''); await reload(); flash(`Additional discount of ${fmtBDT(amt)} applied.`)
-}
+  }
 
   return (
     <div className="space-y-4">
@@ -687,8 +678,9 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
       </div>
     </div>
   )
+}
 
-
+/* ---------------- INVOICES & CHECK-OUT (req. 9) ---------------- */
 function InvoicesTab({ res, guest, charges, totals, paid, due, invoices, company, reload, userName, setStatus, setPrintDoc, flash, isAdmin }) {
   const canCheckout = res.status === 'CHECKED_IN'
   const activeInvoices = invoices.filter((i) => !i.is_void)
