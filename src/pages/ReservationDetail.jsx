@@ -717,9 +717,9 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
 
 /* ---------------- INVOICES & CHECK-OUT (req. 9) ---------------- */
 function InvoicesTab({ res, charges, totals, paid, due, invoices, company, reload, userName, setStatus, setPrintDoc, flash, isAdmin }) {
-  const canCheckout = res.status === 'CHECKED_IN';
-  
-  // Live Invoice Logic: সরাসরি Folio থেকে ডাটা পাঠানো হচ্ছে
+  const isCheckedOut = ['CHECKED_OUT', 'SETTLED'].includes(res.status);
+
+  // Live Invoice Printing: Folio থেকে সরাসরি ডাটা পাঠানো হচ্ছে
   const printLiveInvoice = (type) => {
     setPrintDoc({ 
       type: type, 
@@ -734,33 +734,42 @@ function InvoicesTab({ res, charges, totals, paid, due, invoices, company, reloa
     });
   };
 
+  const reCheckIn = async () => {
+    // এখানে আপনার রুম অকুপেন্সি চেক লজিকটি বসান
+    await setStatus('CHECKED_IN', { checked_out_at: null });
+    await reload();
+    flash('Re-checked-in successfully.');
+  };
+
   return (
     <div className="space-y-4">
       <div className="card p-5 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h3 className="font-display font-semibold text-pine">Check-out & Guest Billing</h3>
-          <p className="text-sm text-pine/60">Live billing system: invoices are generated instantly from Folio.</p>
+          <p className="text-sm text-pine/60">Live billing: updates instantly from Folio.</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn-ghost" onClick={() => printLiveInvoice('BILL')}>
-            <Printer size={16} /> Guest Bill
-          </button>
-          <button className="btn-primary" onClick={() => printLiveInvoice('MUSHAK')}>
-            <Receipt size={16} /> Mushak 6.3
-          </button>
-          {canCheckout && (
+          <button className="btn-ghost" onClick={() => printLiveInvoice('BILL')}><Printer size={16} /> Guest Bill</button>
+          <button className="btn-primary" onClick={() => printLiveInvoice('MUSHAK')}><Receipt size={16} /> Mushak 6.3</button>
+          
+          {!isCheckedOut ? (
             <button className="btn-amber" onClick={async () => { 
               await setStatus('CHECKED_OUT', { checked_out_at: new Date().toISOString() }); 
               await reload(); 
-              flash('Check-out status updated.');
+              flash('Checked out.');
             }}>
               <CheckCircle2 size={16} /> Check Out
             </button>
+          ) : (
+            isAdmin && (
+              <button className="btn-primary" onClick={reCheckIn}>
+                <LogIn size={16} /> Re-check-in
+              </button>
+            )
           )}
         </div>
       </div>
       
-      {/* ব্যালেন্স কার্ড */}
       <div className="card p-5 text-sm money">
         <div className="flex justify-between font-bold text-lg border-t pt-2">
           <span>Balance Payable</span>
@@ -768,7 +777,6 @@ function InvoicesTab({ res, charges, totals, paid, due, invoices, company, reloa
         </div>
       </div>
 
-      {/* পুরনো ইনভয়েস হিস্ট্রি দেখার জন্য */}
       <div className="card overflow-hidden">
         <div className="px-4 py-3 border-b border-leaf font-display font-semibold text-pine">Historical Invoices</div>
         <table className="w-full">
