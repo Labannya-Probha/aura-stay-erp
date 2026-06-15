@@ -19,7 +19,7 @@ import ReportsHub from './pages/ReportsHub.jsx'
 import Settings from './pages/Settings.jsx'
 import {
   Leaf, LayoutDashboard, CalendarRange, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
-  FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut, BedDouble, LayoutGrid,
+  FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut, BedDouble,
 } from 'lucide-react'
 
 function BrandLogo({ url }) {
