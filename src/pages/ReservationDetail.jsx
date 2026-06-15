@@ -15,7 +15,7 @@ import {
   Plus, Trash2, Printer, FileDown, Receipt, BadgeCheck, Ban, BadgePercent,
 } from 'lucide-react'
 
-const TABS = ['Overview', 'Quotation', 'Check-In', 'Folio & Payments', 'Invoices']
+const TABS = ['Overview', 'Quotation', 'Check-In', 'Folio & Payments', 'Invoices', 'Partners']
 
 export default function ReservationDetail({ id, back, userName, isAdmin }) {
   const [res, setRes] = useState(null)
@@ -102,8 +102,9 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
       {tab === 'Quotation' && <QuotationTab res={res} guest={guest} nights={nights} taxConfig={taxConfig} company={company} reload={loadAll} flash={flash} userName={userName} resRooms={resRooms} setPrintDoc={setPrintDoc} />}
       {tab === 'Check-In' && <CheckInTab res={res} guest={guest} resGuests={resGuests} resRooms={resRooms} rooms={rooms} reload={loadAll} setStatus={setStatus} userName={userName} openCard={() => setPrintDoc({ type: 'REG' })} payments={payments} flash={flash} isAdmin={isAdmin} />}
       {tab === 'Folio & Payments' && <FolioTab res={res} charges={charges} payments={payments} resRooms={resRooms} taxConfig={taxConfig} reload={loadAll} userName={userName} totals={totals} paid={paid} due={due} flash={flash} isAdmin={isAdmin} />}
-      {tab === 'Invoices' && <InvoicesTab res={res} charges={charges} totals={totals} paid={paid} due={due} company={company} setPrintDoc={setPrintDoc} setStatus={setStatus} reload={loadAll} />}
-
+      {tab === 'Invoices' && ( <InvoicesTab res={res} charges={charges} totals={totals} paid={paid} due={due} invoices={invoices} company={company} reload={loadAll} userName={userName} setStatus={setStatus} setPrintDoc={setPrintDoc} flash={flash} isAdmin={isAdmin} />)}
+      {tab === 'Partners' && ( <PartnerAccounts agency={agency} shareholder={shareholder} addAgencyDue={addAgencyDue} redeemShareholderBalance={redeemShareholderBalance} />)}
+      
       {/* Print Modals */}
       {printDoc?.type === 'REG' && <PrintPortal title="Registration Card" onClose={() => setPrintDoc(null)}><RegistrationCard res={res} guest={guest} resGuests={resGuests} resRooms={resRooms} payments={payments} company={company} /></PrintPortal>}
       {printDoc?.type === 'BILL' && <PrintPortal title="Guest Bill" onClose={() => setPrintDoc(null)}><GuestBill charges={charges} totals={totals} paid={paid} due={due} res={res} guest={guest} company={company} /></PrintPortal>}
