@@ -16,7 +16,7 @@ export default function ChallanForm({ res }) {
           <a href="https://www.achallan.gov.bd/acs/v2/general/home" target="_blank" rel="noreferrer" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
             Fill-up A-Challan
           </a>
-          <a href="https://www.achallan.gov.bd/acs/v2/verify/chln" target="_blank" rel="noreferrer" className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
+          <a href="https://challanverification.finance.gov.bd/echalan/" target="_blank" rel="noreferrer" className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
             Verify Challan
           </a>
         </div>
