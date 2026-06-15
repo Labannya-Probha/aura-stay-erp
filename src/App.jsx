@@ -17,7 +17,6 @@ import HrOffice from './pages/HrOffice.jsx'
 import NightAudit from './pages/NightAudit.jsx'
 import ReportsHub from './pages/ReportsHub.jsx'
 import Settings from './pages/Settings.jsx'
-import FrontDeskBoard from './pages/FrontDeskBoard.jsx'
 import {
   Leaf, LayoutDashboard, CalendarRange, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
   FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut, BedDouble, LayoutGrid,
