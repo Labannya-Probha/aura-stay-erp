@@ -715,11 +715,11 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
   )
 }
 
-/* ---------------- INVOICES & CHECK-OUT (req. 9) ---------------- */
+/* ---------------- INVOICES & CHECK-OUT ---------------- */
 function InvoicesTab({ res, charges, totals, paid, due, invoices, company, reload, userName, setStatus, setPrintDoc, flash, isAdmin }) {
   const isCheckedOut = ['CHECKED_OUT', 'SETTLED'].includes(res.status);
-
-  // Live Invoice Printing: Folio থেকে সরাসরি ডাটা পাঠানো হচ্ছে
+  
+  // Live Invoice Printing: Folio থেকে সরাসরি ডাটা নিয়ে প্রিন্ট হবে
   const printLiveInvoice = (type) => {
     setPrintDoc({ 
       type: type, 
@@ -735,7 +735,6 @@ function InvoicesTab({ res, charges, totals, paid, due, invoices, company, reloa
   };
 
   const reCheckIn = async () => {
-    // এখানে আপনার রুম অকুপেন্সি চেক লজিকটি বসান
     await setStatus('CHECKED_IN', { checked_out_at: null });
     await reload();
     flash('Re-checked-in successfully.');
@@ -749,8 +748,12 @@ function InvoicesTab({ res, charges, totals, paid, due, invoices, company, reloa
           <p className="text-sm text-pine/60">Live billing: updates instantly from Folio.</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn-ghost" onClick={() => printLiveInvoice('BILL')}><Printer size={16} /> Guest Bill</button>
-          <button className="btn-primary" onClick={() => printLiveInvoice('MUSHAK')}><Receipt size={16} /> Mushak 6.3</button>
+          <button className="btn-ghost" onClick={() => printLiveInvoice('BILL')}>
+            <Printer size={16} /> Guest Bill
+          </button>
+          <button className="btn-primary" onClick={() => printLiveInvoice('MUSHAK')}>
+            <Receipt size={16} /> Mushak 6.3
+          </button>
           
           {!isCheckedOut ? (
             <button className="btn-amber" onClick={async () => { 
