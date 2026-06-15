@@ -551,7 +551,7 @@ function FolioTab({ res, charges, payments, resRooms, taxConfig, reload, userNam
     if (error) { flash(error.message); return }
     await supabase.from('audit_log').insert({ actor: userName, action: 'ADD_DISCOUNT', entity: 'reservation', entity_id: res.res_no, details: { amount: amt, type: discType, reason: discReason } })
     setDiscAmt(''); setDiscReason(''); await reload(); flash(`Additional discount of ${fmtBDT(amt)} applied.`)
-  }
+}
 
   return (
     <div className="space-y-4">
