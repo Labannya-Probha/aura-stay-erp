@@ -136,7 +136,8 @@ function ReportRunner({ def, company, back, canManage, onDeleted }) {
         <button className="btn-ghost" onClick={() => setPrinting(true)} disabled={!data}><Printer size={14} /> Print</button>
       </div>
       <div className="text-xs text-pine/50">Showing {fmtDate(from)} — {fmtDate(to)}</div>
-      <PrintPortal title={def.report_name} onClose={() => setPrinting(false)}>
+      {printing && (
+        <PrintPortal title={def.report_name} onClose={() => setPrinting(false)}>
           <ReportHead company={company} title={def.report_name.toUpperCase()} from={from} to={to} />
           <table style={{ width: '100%', borderCollapse: 'collapse', maxWidth: 720, margin: '0 auto' }}>
             <thead><tr style={{ background: '#eee' }}>{data.head.map((h, i) => <th key={i} style={{ border: '1px solid #000', padding: '4px 8px', fontSize: 10.5, textAlign: data.align && data.align[i] === 'r' ? 'right' : 'left' }}>{h}</th>)}</tr></thead>
