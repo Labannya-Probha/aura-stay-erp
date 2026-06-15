@@ -840,6 +840,7 @@ function PartnerAccounts({ res, reload, flash }) {
         >
           Redeem for Room
         </button>
+        </div>
       </div>
     </div>
   )
