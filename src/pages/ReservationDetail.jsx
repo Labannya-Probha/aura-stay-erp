@@ -782,6 +782,7 @@ function BillingsAndCheckOutTab({
       invoice_no:     invoiceNo,
       issued_at:      issuedAt,
       issued_by:      userName,
+      invoice_type:   'SALES',
       charges,                  // JSONB snapshot of folio_charges rows
       totals,                   // JSONB snapshot of computed totals
       paid,
