@@ -194,7 +194,7 @@ export default function GuestBill({
       {/* এখানে marginTop বাড়ালে লাইনটি নিচের দিকে নেমে আসবে */}
       <div style={{ 
         borderTop: `1px solid ${INK}`, 
-        marginTop: '40px',   // এই ভ্যালুটি যত বাড়াবেন, লাইনটি তত নিচে নামবে
+        marginTop: '50px',   // এই ভ্যালুটি যত বাড়াবেন, লাইনটি তত নিচে নামবে
         paddingTop: 5, 
         fontSize: 10.5, 
         color: MUTE 
@@ -208,11 +208,7 @@ export default function GuestBill({
       {/* ═══ 8. FOOTER ═══ */}
       <footer style={{ borderTop: `1px solid ${LINE}`, paddingTop: 9, textAlign: 'center', pageBreakInside: 'avoid' }}>
         <div style={{ fontSize: 11.5, fontWeight: 600, color: FOREST }}>Thank you for staying with {co.name}.</div>
-        <div style={{ fontSize: 9.5, color: MUTE, marginTop: 3 }}>
-          This is a computer-generated invoice.{(co.phone || co.email) ? ` For queries: ${[co.phone, co.email].filter(Boolean).join(' · ')}` : ''}
-        </div>
-        <div style={{ fontSize: 9, color: MUTE, marginTop: 10, letterSpacing: '0.04em' }}>
-          Powered by <span style={{ fontWeight: 700, color: PINE }}>{co.software}</span>
+        Powered by <span style={{ fontWeight: 700, color: PINE }}>{co.software}</span>
         </div>
       </footer>
     </div>
