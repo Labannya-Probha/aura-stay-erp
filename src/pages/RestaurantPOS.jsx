@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
-import { fmtBDT, fmtDate, todayISO, rateFor, computeCharge } from '../lib/helpers'
+import { fmtBDT, fmtDate, todayISO, rateFor, computeCharge, applyRounding } from '../lib/helpers' // applyRounding এখানে ইমপোর্ট করা হলো
 import PrintPortal from '../components/PrintPortal.jsx'
 import { PosReceipt, KitchenTicket } from '../components/print/PosDocs.jsx'
 import Mushak63 from '../components/print/Mushak63.jsx'
@@ -18,7 +18,7 @@ export default function RestaurantPOS({ userName, isAdmin }) {
   const [company, setCompany] = useState(null)
   const [cats, setCats] = useState([])
   const [items, setItems] = useState([])
-  const [editOrder, setEditOrder] = useState(null) // {order, items} when resuming an OPEN order
+  const [editOrder, setEditOrder] = useState(null)
   const [printDoc, setPrintDoc] = useState(null)
   const [msg, setMsg] = useState('')
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
@@ -87,7 +87,6 @@ export default function RestaurantPOS({ userName, isAdmin }) {
   )
 }
 
-/* ================= ORDER BUILDER ================= */
 function OrderBuilder({ cats, items, taxConfig, userName, existing, onDone, flash }) {
   const [cart, setCart] = useState(existing ? existing.items.map((i) => ({
     menu_item_id: i.menu_item_id, item_name: i.item_name, qty: Number(i.qty), unit_price: Number(i.unit_price),
@@ -107,8 +106,9 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, onDone, flas
 
   const rate = rateFor(taxConfig, 'RESTAURANT', todayISO())
   const subtotal = cart.reduce((a, c) => a + c.qty * c.unit_price, 0)
-  const t = computeCharge(subtotal, meta.discount_pct, rate)
 
+  const rawTotal = computeCharge(subtotal, meta.discount_pct, rate)
+  const t = applyRounding({ ...rawTotal, sd: 0 });
   const addItem = (mi) => {
     setCart((prev) => {
       const f = prev.find((c) => c.menu_item_id === mi.id)
