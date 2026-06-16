@@ -24,13 +24,16 @@ export default function PrintPortal({ title, onClose, children, type = 'A4' }) {
     <>
       <style>{`
         @media print {
-          /* "Fit to page" নিশ্চিত করতে এক্সট্রা মার্জিন ও প্যাডিং জিরো করা হলো এবং horizontal overflow বন্ধ করা হলো */
+          /* এক্সট্রা ব্ল্যাঙ্ক পেজ এবং ওভারফ্লো ঠেকানোর জন্য height এবং overflow ফিক্স */
           html, body { 
             width: 100% !important;
+            height: auto !important; 
+            min-height: auto !important;
             margin: 0 !important; 
             padding: 0 !important; 
             background: #fff !important; 
             overflow-x: hidden !important; 
+            overflow-y: visible !important; 
           }
           
           body * { visibility: hidden !important; }
@@ -65,10 +68,10 @@ export default function PrintPortal({ title, onClose, children, type = 'A4' }) {
           #print-root {
             display: block !important;
             width: 100% !important;
-            /* A4 এর প্রিন্টেবল এরিয়া (190mm) এবং থার্মালের (72mm) লিমিট সেট করে দেওয়া হলো যেন বাইরে না যায় */
+            /* A4 এর প্রিন্টেবল এরিয়া (190mm) এবং থার্মালের (72mm) লিমিট */
             max-width: ${type === 'thermal' ? '72mm' : '190mm'} !important; 
             margin: 0 auto !important;
-            padding: 0 !important;
+            padding: 0 !important; /* প্রিন্টের সময় প্যাডিং জিরো করা হলো যেন এক্সট্রা জায়গা না নেয় */
             font-size: ${type === 'thermal' ? '10px' : '11px'};
             color: #000 !important;
             box-sizing: border-box !important;
@@ -91,7 +94,7 @@ export default function PrintPortal({ title, onClose, children, type = 'A4' }) {
             break-inside: avoid; 
           }
 
-          /* Footer */
+          /* Footer: page-break-after avoid করা হয়েছে এক্সট্রা পেজ ঠেকানোর জন্য */
           #print-footer {
             display: block !important;
             position: ${type === 'thermal' ? 'relative' : 'fixed'} !important;
@@ -106,6 +109,8 @@ export default function PrintPortal({ title, onClose, children, type = 'A4' }) {
             margin-top: ${type === 'thermal' ? '15px' : '0'} !important;
             background: #fff !important;
             z-index: 9999 !important;
+            page-break-after: avoid !important; 
+            break-after: avoid !important;
           }
         }
       `}</style>
