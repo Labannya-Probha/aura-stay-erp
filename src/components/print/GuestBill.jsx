@@ -106,7 +106,7 @@ export default function GuestBill({
       {/* ═══ 2. CENTERED TITLE ═══ */}
       <section style={{ textAlign: 'center', margin: '12px 0 10px' }}>
         <div style={{ display: 'inline-block', fontSize: 18, fontWeight: 700, letterSpacing: '0.12em', color: PINE, padding: '3px 20px', borderTop: `2px solid ${GOLD}`, borderBottom: `2px solid ${GOLD}` }}>GUEST BILL</div>
-        <div style={{ fontSize: 10, color: MUTE, letterSpacing: '0.18em', marginTop: 4 }}>TAX INVOICE</div>
+        <div style={{ fontSize: 10, color: MUTE, letterSpacing: '0.18em', marginTop: 4 }}></div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 26, marginTop: 8, fontSize: 11.5 }}>
           <div>
             <span style={{ color: MUTE }}>Invoice No: </span>
@@ -189,12 +189,21 @@ export default function GuestBill({
 
       {/* ═══ 7. SIGNATURE LINES ═══ */}
       <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 36, marginBottom: 18, pageBreakInside: 'avoid' }}>
-        {['Prepared By', 'Authorized By', 'Guest Signature'].map((label) => (
-          <div key={label} style={{ textAlign: 'center' }}>
-            <div style={{ borderTop: `1px solid ${INK}`, paddingTop: 5, fontSize: 10.5, color: MUTE }}>{label}</div>
-          </div>
-        ))}
-      </section>
+  {['Prepared By', 'Authorized By', 'Guest Signature'].map((label) => (
+    <div key={label} style={{ textAlign: 'center' }}>
+      {/* এখানে marginTop বাড়ালে লাইনটি নিচের দিকে নেমে আসবে */}
+      <div style={{ 
+        borderTop: `1px solid ${INK}`, 
+        marginTop: '40px',   // এই ভ্যালুটি যত বাড়াবেন, লাইনটি তত নিচে নামবে
+        paddingTop: 5, 
+        fontSize: 10.5, 
+        color: MUTE 
+      }}>
+        {label}
+      </div>
+    </div>
+  ))}
+</section>
 
       {/* ═══ 8. FOOTER ═══ */}
       <footer style={{ borderTop: `1px solid ${LINE}`, paddingTop: 9, textAlign: 'center', pageBreakInside: 'avoid' }}>
@@ -202,7 +211,7 @@ export default function GuestBill({
         <div style={{ fontSize: 9.5, color: MUTE, marginTop: 3 }}>
           This is a computer-generated invoice.{(co.phone || co.email) ? ` For queries: ${[co.phone, co.email].filter(Boolean).join(' · ')}` : ''}
         </div>
-        <div style={{ fontSize: 9, color: MUTE, marginTop: 5, letterSpacing: '0.04em' }}>
+        <div style={{ fontSize: 9, color: MUTE, marginTop: 10, letterSpacing: '0.04em' }}>
           Powered by <span style={{ fontWeight: 700, color: PINE }}>{co.software}</span>
         </div>
       </footer>
