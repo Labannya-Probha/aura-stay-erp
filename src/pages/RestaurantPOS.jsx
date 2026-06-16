@@ -175,7 +175,8 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
     if (totalPaid > t.total) { flash(`Change: ${fmtBDT(totalPaid - t.total)}`); return }
     setBusy(true)
     try {
-      const settled = { status: 'SETTLED', payment_method: paidMethods.map(([m, a]) => `${m}:${a}`).join('; '), settled_at: new Date().toISOString() }
+      // Store only payment method names (not amounts) to satisfy DB constraint
+      const settled = { status: 'SETTLED', payment_method: paidMethods.map(([m]) => m).join(', '), settled_at: new Date().toISOString() }
       const { order, items: oi } = await persist(settled)
       let mushakNo = null
       if (order.reservation_id) {
@@ -379,7 +380,7 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
                 <td className="td text-right">
                   <div className="flex justify-end gap-2">
                     <button className="btn-ghost !py-1 !px-2 text-forest" onClick={() => printReceipt(o)} title="Print receipt"><Receipt size={14} /></button>
-                    {(o.status === 'OPEN' || o.status === 'CHARGED_TO_ROOM') && (<button className="btn-ghost !py-1 !px-2 text-amber" onClick={() => printKot(o)} title="Print KOT"><ChefHat size={14} /></button>)}
+                    {o.status !== 'CANCELLED' && (<button className="btn-ghost !py-1 !px-2 text-amber" onClick={() => printKot(o)} title="Print KOT"><ChefHat size={14} /></button>)}
                     {o.invoice_id && (<button className="btn-ghost !py-1 !px-2 text-pine" onClick={() => printMushak(o)} title="Print Mushak-6.3"><FileText size={14} /></button>)}
                     {canEdit(o) && (<button className="btn-ghost !py-1 !px-2 text-forest" onClick={() => resumeOrder(o)} title="Edit order">Edit</button>)}
                     {isAdmin && o.status === 'SETTLED' && (<button className="btn-ghost !py-1 !px-2 text-red-500" onClick={() => voidOrder(o)} title="Void order"><XCircle size={14} /></button>)}
