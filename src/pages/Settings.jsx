@@ -253,3 +253,36 @@ function StaffCard({ isAdmin }) {
     </div>
   )
 }
+function DataWipeCard({ isAdmin }) {
+  const [targetTable, setTargetTable] = useState('');
+  const [confirm, setConfirm] = useState(false);
+  const tables = ['reservations', 'restaurant_orders', 'journal_entries', 'inventory_transactions'];
+
+  const performWipe = async () => {
+    if (!confirm) return alert("Please confirm the action.");
+    
+    const { error } = await supabase.rpc('admin_wipe_table', { table_name: targetTable });
+    if (error) alert("Error: " + error.message);
+    else {
+      alert("Table wiped and numbering reset!");
+      setConfirm(false);
+    }
+  };
+
+  if (!isAdmin) return null;
+
+  return (
+    <div className="card p-5 border border-red-200 bg-red-50">
+      <h3 className="font-semibold text-red-600 mb-2">Danger Zone: Database Wipe</h3>
+      <select className="input mb-3" onChange={(e) => setTargetTable(e.target.value)}>
+        <option value="">Select Table to Wipe...</option>
+        {tables.map(t => <option key={t} value={t}>{t}</option>)}
+      </select>
+      <div className="flex items-center gap-2 mb-3">
+        <input type="checkbox" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />
+        <span className="text-xs">I understand this deletes ALL data and resets sequence numbers.</span>
+      </div>
+      <button className="btn-primary bg-red-600" onClick={performWipe}>Wipe Selected Data</button>
+    </div>
+  );
+}
