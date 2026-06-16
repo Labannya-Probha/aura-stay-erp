@@ -169,25 +169,50 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
 
 /* ---------------- TRIAL BALANCE ---------------- */
 function TrialBalance() {
-  const [rows, setRows] = useState([])
-  useEffect(() => { supabase.from('v_trial_balance').select('*').then(({ data }) => setRows(data || [])) }, [])
-  const tot = rows.reduce((a, r) => ({ d: a.d + +r.total_debit, c: a.c + +r.total_credit }), { d: 0, c: 0 })
-  const xls = () => exportXLSX('Trial_Balance.xlsx', [{ name: 'Trial Balance', rows: [['Trial Balance', '', fmtDate(todayISO())], [], ['Code', 'Account', 'Type', 'Debit', 'Credit', 'Balance'], ...rows.map((r) => [r.code, r.name, r.type, +r.total_debit, +r.total_credit, +r.balance]), [], ['', 'TOTAL', '', tot.d, tot.c, '']] }])
+  const [rows, setRows] = useState([]);
+
+  useEffect(() => {
+    const loadTB = async () => {
+      // Query lines directly and join with chart of accounts
+      const { data } = await supabase
+        .from('journal_lines')
+        .select('debit, credit, chart_of_accounts(code, name, type)');
+      
+      const summary = (data || []).reduce((acc, l) => {
+        const accInfo = l.chart_of_accounts;
+        if (!accInfo) return acc;
+        if (!acc[accInfo.code]) acc[accInfo.code] = { code: accInfo.code, name: accInfo.name, type: accInfo.type, dr: 0, cr: 0 };
+        acc[accInfo.code].dr += (+l.debit || 0);
+        acc[accInfo.code].cr += (+l.credit || 0);
+        return acc;
+      }, {});
+      setRows(Object.values(summary));
+    };
+    loadTB();
+  }, []);
+
+  const tot = rows.reduce((a, r) => ({ d: a.d + r.dr, c: a.c + r.cr }), { d: 0, c: 0 });
+
   return (
     <div className="card overflow-hidden">
-      <div className="px-4 py-3 border-b border-leaf flex items-center justify-between"><span className="font-display font-semibold text-pine">Trial Balance</span><button className="btn-ghost !py-1" onClick={xls}><FileDown size={14} /> Excel</button></div>
+      <div className="px-4 py-3 border-b border-leaf font-display font-semibold text-pine">Trial Balance</div>
       <table className="w-full">
-        <thead><tr><th className="th">Code</th><th className="th">Account</th><th className="th">Type</th><th className="th text-right">Debit</th><th className="th text-right">Credit</th><th className="th text-right">Balance</th></tr></thead>
+        <thead><tr><th className="th">Code</th><th className="th">Account</th><th className="th text-right">Debit</th><th className="th text-right">Credit</th></tr></thead>
         <tbody>
-          {rows.map((r) => (<tr key={r.code}><td className="td money text-xs">{r.code}</td><td className="td text-sm">{r.name}</td><td className="td text-xs">{r.type}</td><td className="td money text-right">{(+r.total_debit).toFixed(2)}</td><td className="td money text-right">{(+r.total_credit).toFixed(2)}</td><td className="td money text-right font-semibold">{(+r.balance).toFixed(2)}</td></tr>))}
-          {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={6}>No postings yet.</td></tr>}
+          {rows.map((r) => (
+            <tr key={r.code}>
+              <td className="td money text-xs">{r.code}</td>
+              <td className="td text-sm">{r.name}</td>
+              <td className="td money text-right">{r.dr.toFixed(2)}</td>
+              <td className="td money text-right">{r.cr.toFixed(2)}</td>
+            </tr>
+          ))}
         </tbody>
-        <tfoot><tr className="bg-leaf/40 font-bold money"><td className="td" colSpan={3}>TOTAL</td><td className="td text-right">{tot.d.toFixed(2)}</td><td className="td text-right">{tot.c.toFixed(2)}</td><td className="td"></td></tr></tfoot>
+        <tfoot><tr className="bg-leaf/40 font-bold money"><td className="td" colSpan={2}>TOTAL</td><td className="td text-right">{tot.d.toFixed(2)}</td><td className="td text-right">{tot.c.toFixed(2)}</td></tr></tfoot>
       </table>
     </div>
-  )
+  );
 }
-
 /* ---------------- CHART OF ACCOUNTS ---------------- */
 function CoaTab({ accounts, reload, flash, isAdmin }) {
   const [f, setF] = useState({ code: '', name: '', type: 'EXPENSE' })
