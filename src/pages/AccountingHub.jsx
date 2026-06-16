@@ -173,34 +173,54 @@ function TrialBalance() {
 
   useEffect(() => {
     const loadTB = async () => {
+  // 1. Explicitly fetch the data
   const { data, error } = await supabase
     .from('journal_lines')
-    .select('debit, credit, chart_of_accounts(code, name, type)');
-  
-  if (error) { console.error("Error loading TB:", error); return; }
+    .select(`
+      debit, 
+      credit, 
+      chart_of_accounts (
+        code, 
+        name, 
+        type
+      )
+    `);
 
-  const summary = (data || []).reduce((acc, l) => {
+  if (error) {
+    console.error("Supabase Query Error:", error);
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    console.warn("No journal line data found.");
+    setRows([]);
+    return;
+  }
+
+  // 2. Aggregate data
+  const summary = data.reduce((acc, l) => {
+    // Safety check: ensure account info exists
     const accInfo = l.chart_of_accounts;
     if (!accInfo) return acc;
-    if (!acc[accInfo.code]) acc[accInfo.code] = { code: accInfo.code, name: accInfo.name, type: accInfo.type, dr: 0, cr: 0 };
-    acc[accInfo.code].dr += (+l.debit || 0);
-    acc[accInfo.code].cr += (+l.credit || 0);
+
+    const code = accInfo.code;
+    if (!acc[code]) {
+      acc[code] = { 
+        code: code, 
+        name: accInfo.name, 
+        type: accInfo.type, 
+        dr: 0, 
+        cr: 0 
+      };
+    }
+    acc[code].dr += Number(l.debit || 0);
+    acc[code].cr += Number(l.credit || 0);
     return acc;
   }, {});
+
+  // 3. Set the state
   setRows(Object.values(summary));
 };
-      
-      // 2. Aggregate totals by Account Code
-      const summary = (data || []).reduce((acc, l) => {
-        const accInfo = l.chart_of_accounts;
-        if (!accInfo) return acc;
-        if (!acc[accInfo.code]) acc[accInfo.code] = { code: accInfo.code, name: accInfo.name, type: accInfo.type, dr: 0, cr: 0 };
-        acc[accInfo.code].dr += (+l.debit || 0);
-        acc[accInfo.code].cr += (+l.credit || 0);
-        return acc;
-      }, {});
-      setRows(Object.values(summary));
-    };
     loadTB();
   }, []);
 
