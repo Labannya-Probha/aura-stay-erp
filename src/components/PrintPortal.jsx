@@ -33,6 +33,8 @@ export default function PrintPortal({ title, onClose, children, type = 'A4' }) {
           font-size: 11px !important;
           line-height: 1.4 !important;
           color: #111 !important;
+          /* শ্যাডো রিমুভ করা হয়েছে */
+          box-shadow: none !important;
         }
 
         #print-footer {
@@ -56,34 +58,39 @@ export default function PrintPortal({ title, onClose, children, type = 'A4' }) {
   }, [type])
 
   const handleExportPDF = () => {
+    // সরাসরি PDF হিসেবে ডাউনলোড প্রম্পট করার জন্য ব্রাউজার নেটিভ প্রিন্ট উইন্ডো ব্যবহার
     window.print();
   }
 
   if (!portalNode) return null
 
   return createPortal(
-    <div id="print-modal-overlay" className="fixed inset-0 bg-black/60 z-[9999] flex items-start justify-center overflow-auto p-6 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full my-4 relative overflow-hidden border border-white/20">
+    <div id="print-modal-overlay" className="fixed inset-0 bg-black/60 z-[9999] flex items-start justify-center overflow-auto p-6">
+      {/* এখানেও শ্যাডো সরিয়ে ফ্ল্যাট বর্ডার দেওয়া হয়েছে */}
+      <div className="bg-white max-w-3xl w-full my-4 relative overflow-hidden border border-gray-300">
         
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur-md rounded-t-xl z-10 no-print">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-300 sticky top-0 bg-white z-10 no-print">
           <h3 className="font-semibold text-gray-800">{title}</h3>
           <div className="flex gap-2">
-            <button className="flex items-center gap-1 btn-primary bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700" onClick={handleExportPDF}>
+            <button className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700" onClick={handleExportPDF}>
               <Download size={14} /> Export PDF
             </button>
-            <button className="flex items-center gap-1 btn-primary px-3 py-1.5 rounded text-sm bg-gray-800 text-white hover:bg-black" onClick={() => window.print()}>
+            <button className="flex items-center gap-1 bg-gray-800 text-white px-3 py-1.5 rounded text-sm hover:bg-black" onClick={() => window.print()}>
               <Printer size={14} /> Print
             </button>
-            <button className="btn-ghost px-3 py-1.5 rounded text-sm border border-gray-200" onClick={onClose}>
+            <button className="px-3 py-1.5 rounded text-sm border border-gray-300 hover:bg-gray-100" onClick={onClose}>
               <X size={14} /> Close
             </button>
           </div>
         </div>
 
+        {/* Print Content Wrapper */}
         <div id="print-root" className={`p-8 ${type === 'thermal' ? 'epos-receipt' : 'print-doc'}`}>
           {children}
         </div>
 
+        {/* Footer */}
         <div id="print-footer" className="hidden print:block">
           Powered by Aura Stay
         </div>
