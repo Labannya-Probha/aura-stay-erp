@@ -2,11 +2,9 @@ import { fmtBDT, fmtDate, nightsBetween } from '../../lib/helpers'
 
 /* ════════════════════════════════════════════════════════════════════
    NOVEM ECO RESORT — GUEST BILL  (compact / A4-fitted)
-   ─────────────────────────────────────────────────────────────────────
    • SD removed everywhere · auto invoice_no (locked) · 8-section layout
    • Tightened vertical rhythm so header → signatures → footer all sit on
-     ONE A4 page (was overflowing to page 2, dropping the signatures/footer)
-   • Footer carries "Powered by Aura Stay"
+     ONE A4 page · footer carries "Powered by Aura Stay"
    ════════════════════════════════════════════════════════════════════ */
 
 /* ---------- Amount-in-words (Bangladeshi / Indian numbering) ---------- */
