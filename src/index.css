@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,6 +10,10 @@
    ============================================================ */
 
 @layer base {
+  :root {
+    --brand-color: #2E7D32;
+    --card-bg: rgba(255, 255, 255, 0.74);
+  }
   body {
     @apply text-ink font-body antialiased;
     background: #eef4ee;
@@ -18,6 +24,7 @@
       linear-gradient(160deg, #f1f7f1 0%, #e8f1ea 50%, #eef4ee 100%);
     background-attachment: fixed;
     min-height: 100vh;
+   font-family: 'Inter', sans-serif;
     font-size: 14px;
     line-height: 1.5;
   }
