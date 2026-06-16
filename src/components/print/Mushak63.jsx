@@ -23,9 +23,9 @@ export default function Mushak63({
   const bBin = invoice?.buyer_bin || buyer_bin || '—'
   const creator = invoice?.created_by || created_by || '________________'
 
-  const b = { border: '1px solid #000', padding: '4px 6px', fontSize: 10.5, verticalAlign: 'top' }
-  const bc = { ...b, textAlign: 'center' }
-  const br = { ...b, textAlign: 'right', fontFamily: '"IBM Plex Mono", monospace' }
+  const b = { border: 'none', borderBottom: '1px solid #000', padding: '4px 6px', fontSize: 10.5, verticalAlign: 'top', fontFamily: 'Inter, sans-serif' };
+  const bc = { ...b, textAlign: 'center' };
+  const br = { ...b, textAlign: 'right', fontFamily: 'Inter, sans-serif' };
 
   const lineValue = (l) => +(Number(l.base_amount) - Number(l.discount) + Number(l.service_charge)).toFixed(2)
   const totalValue = lines.reduce((a, l) => a + lineValue(l), 0)
