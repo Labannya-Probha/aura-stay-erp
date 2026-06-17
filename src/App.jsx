@@ -58,7 +58,6 @@ const NAV_GROUPS = [
     { id: 'settings', label: 'Settings', icon: Settings2 },
   ]},
 ]
-
 export default function App() {
   const [session, setSession] = useState(undefined)
   const [profile, setProfile] = useState(null)
