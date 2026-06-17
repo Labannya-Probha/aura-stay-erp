@@ -5,9 +5,10 @@ import { CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const monthDays = (ym) => { const [y, m] = ym.split('-').map(Number); const n = new Date(y, m, 0).getDate(); return Array.from({ length: n }, (_, i) => `${ym}-${String(i + 1).padStart(2, '0')}`) }
 const shiftMonth = (ym, d) => { const [y, m] = ym.split('-').map(Number); const dt = new Date(y, m - 1 + d, 1); return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}` }
+const nextDay = (d) => { const dt = new Date(d + 'T00:00:00'); dt.setDate(dt.getDate() + 1); return dt.toISOString().slice(0, 10) }
 const STATUS_BG = { CONFIRMED: '#fcd9a6', CHECKED_IN: '#2E7D32', CHECKED_OUT: '#c7d6cb', SETTLED: '#bfe3c4', QUOTED: '#e7d9b0' }
 
-export default function BookingCalendar({ openReservation }) {
+export default function BookingCalendar({ openReservation, onNewReservation }) {
   const [ym, setYm] = useState(todayISO().slice(0, 7))
   const [rooms, setRooms] = useState([])
   const [cells, setCells] = useState({}) // `${room_id}|${day}` -> reservation
@@ -43,8 +44,7 @@ export default function BookingCalendar({ openReservation }) {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2"><CalendarRange className="text-forest" /> Booking Calendar</h1>
-          <p className="text-sm text-pine/60">Property occupancy at a glance — each cell is a room-night. Click an occupied cell to open the reservation.</p>
+          <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2"><CalendarRange className="text-forest" /> Booking Calendar</h1>          
         </div>
         <div className="flex items-center gap-2">
           <button className="btn-ghost !px-2" onClick={() => setYm(shiftMonth(ym, -1))}><ChevronLeft size={16} /></button>
@@ -76,7 +76,10 @@ export default function BookingCalendar({ openReservation }) {
                     <td key={d} className="border border-leaf/60 p-0" style={{ minWidth: 30, height: 34 }}>
                       {res
                         ? <button onClick={() => openReservation(res.id)} title={`${res.res_no} — ${res.reservation_name || ''} (${res.status})`} className="w-full h-full" style={{ background: STATUS_BG[res.status] || '#ddd' }} />
-                        : <div className="w-full h-full" />}
+                        : : <button
+            onClick={() => onNewReservation?.({ room_id: r.id, from_date: d, to_date: nextDay(d) })}
+            title={`New reservation — Room ${r.room_no}, ${d}`}
+            className="w-full h-full hover:bg-forest/15 transition-colors"/>}
                     </td>) })}
                 </tr>
               ))}
