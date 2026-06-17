@@ -32,7 +32,6 @@ export const getReservationGuests = (resId) =>
   supabase.from('reservation_guests').select('*').eq('reservation_id', resId).order('is_primary', { ascending: false })
 export const addReservationGuest    = (row) => supabase.from('reservation_guests').insert(row)
 export const removeReservationGuest = (id)  => supabase.from('reservation_guests').delete().eq('id', id)
-export const removeReservationRoom = (id)         => supabase.from('reservation_rooms').delete().eq('id', id)
 
 /* ---------- Move / shift bookings (calendar drag) ---------- */
 // Move or resize one room booking. rrId = reservation_rooms.id
