@@ -20,7 +20,7 @@ export default function BookingCalendar({ openReservation, onNewReservation }) {
     const start = days[0], end = days[days.length - 1]
     const [{ data: rm }, { data: rr }] = await Promise.all([
       supabase.from('rooms').select('*').eq('is_active', true).order('room_no'),
-      supabase.from('reservation_rooms').select('room_id, from_date, to_date, reservations!inner(id, res_no, reservation_name, status, check_in, check_out)')
+      supabase.from('reservation_rooms').select('room_id, from_date, to_date, reservations!inner(id, res_no, reservation_name, status, check_in, check_out, source, guests:primary_guest_id(full_name, phone))')
         .in('reservations.status', ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'SETTLED', 'QUOTED'])
         .lte('reservations.check_in', end).gte('reservations.check_out', start),
     ])
@@ -71,16 +71,13 @@ export default function BookingCalendar({ openReservation, onNewReservation }) {
             <tbody>
               {rooms.map((r) => (
                 <tr key={r.id}>
-                  <td className="td sticky left-0 bg-white z-10 font-medium text-sm" style={{ minWidth: 150 }}>{r.room_no}{r.room_name ? ` · ${r.room_name}` : ''}<div className="text-[10px] text-pine/50 money">{fmtBDT(r.base_rate)}</div></td>
+                  <td className="td sticky left-0 bg-white z-10 font-medium text-sm" ...>...</td>
                   {days.map((d) => { const res = cells[`${r.id}|${d}`]; return (
-                    <td key={d} className="border border-leaf/60 p-0" style={{ minWidth: 30, height: 34 }}>
+                    <td key={d} ...>
                       {res
-                        ? <button onClick={() => openReservation(res.id)} title={`${res.res_no} — ${res.reservation_name || ''} (${res.status})`} className="w-full h-full" style={{ background: STATUS_BG[res.status] || '#ddd' }} />
-                        : <button
-                            onClick={() => onNewReservation?.({ room_id: r.id, from_date: d, to_date: nextDay(d) })}
-                            title={`New reservation — Room ${r.room_no}, ${d}`}
-                            className="w-full h-full hover:bg-forest/15 transition-colors"/>}
-                    </td>) })}
+                        ? <button onClick={() => openReservation(res.id)} ... />
+                        : <button onClick={() => onNewReservation?.(...)} ... />}
+                  </td>) })}
                 </tr>
               ))}
               {rooms.length === 0 && <tr><td className="td text-pine/40" colSpan={days.length + 1}>No active rooms — add rooms in Settings.</td></tr>}
