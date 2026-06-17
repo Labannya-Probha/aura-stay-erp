@@ -29,23 +29,28 @@ function BrandLogo({ url }) {
 }
 
 const NAV_GROUPS = [
+   { title: 'Front Office', items: [
+    { id: 'calendar', label: 'Booking Calendar', icon: CalendarDays }, 
+    { id: 'reservations', label: 'Reservations', icon: CalendarRange }, 
   { title: 'Front Office', items: [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'reservations', label: 'Reservations', icon: CalendarRange },
-    { id: 'calendar', label: 'Booking Calendar', icon: CalendarDays },
     { id: 'nightaudit', label: 'Night Audit', icon: MoonStar },
-  ]},
-  { title: 'Sales', items: [
-    { id: 'pos', label: 'Restaurant POS', icon: UtensilsCrossed },
-    { id: 'facilities', label: 'Facilities', icon: ShoppingBasket },
     { id: 'housekeeping', label: 'Housekeeping', icon: BedDouble },
+    { id: 'facilities', label: 'Facilities', icon: ShoppingBasket },
   ]},
-  { title: 'Back Office', items: [
-    { id: 'inventory', label: 'Inventory', icon: Boxes },
-    { id: 'vat', label: 'VAT Center', icon: FileSpreadsheet },
+  { title: 'Restaurant POS', items: [
+    { id: 'pos', label: 'Restaurant POS', icon: UtensilsCrossed },
+  ]},
+  { title: 'Accounting', items: [
     { id: 'accounting', label: 'Accounting', icon: Calculator },
-    { id: 'hr', label: 'HR & Office', icon: Users },
+    { id: 'vat', label: 'VAT Center', icon: FileSpreadsheet },
   ]},
+  { title: 'Inventory', items: [
+    { id: 'inventory', label: 'Inventory', icon: Boxes },
+  ]},
+  { title: 'HR & Admin', items: [
+    { id: 'hr', label: 'HR & Office', icon: Users },
+  ]},   
   { title: 'Insight', items: [
     { id: 'reports', label: 'Reports', icon: BarChart3 },
   ]},
