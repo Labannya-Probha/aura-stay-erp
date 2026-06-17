@@ -29,7 +29,7 @@ function BrandLogo({ url }) {
 }
 
 const NAV_GROUPS = [
-   { title: 'Front Office', items: [
+   { title: 'Sales & Reservation', items: [
     { id: 'calendar', label: 'Booking Calendar', icon: CalendarDays }, 
     { id: 'reservations', label: 'Reservations', icon: CalendarRange },
   ]},    
