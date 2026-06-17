@@ -37,8 +37,8 @@ export default function BookingCalendar({ openReservation, onNewReservation }) {
     const map = {}
     for (const row of rr || []) {
       const res = row.reservations
-      const ci = row.from_date || res.check_in
-      const co = row.to_date || res.check_out
+      const ci = new Date(row.from_date || res.check_in).toISOString().split('T')[0];
+      const co = new Date(row.to_date || res.check_out).toISOString().split('T')[0];
       const cell = { ...res, rrId: row.id, rr_ci: ci, rr_co: co }
       for (const day of days) if (day >= ci && day < co) map[`${row.room_id}|${day}`] = cell
     }
