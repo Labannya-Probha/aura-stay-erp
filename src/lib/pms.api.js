@@ -1,16 +1,3 @@
-// src/modules/pms/pms.api.js
-// ────────────────────────────────────────────────────────────────────────────
-// PMS DATA LAYER — the ONLY place PMS talks to the database.
-// Pages (Reservations, ReservationDetail, BookingCalendar, Housekeeping) import
-// from here and never call supabase.from(...) directly. Each function is a thin
-// wrapper that returns the usual { data, error } shape, so swapping is mechanical:
-//
-//   const { data: r } = await supabase.from('reservations')...   // BEFORE
-//   const { data: r } = await pms.getReservation(id)             // AFTER
-//
-// Behaviour is identical to the original inline queries — this is a move, not a
-// rewrite. Test each screen after swapping.
-// ────────────────────────────────────────────────────────────────────────────
 import { supabase } from '../supabase'   // file lives at src/lib/pms.api.js; supabase.js is at src/supabase.js
 
 /* ---------- Company / config ---------- */
@@ -45,7 +32,46 @@ export const getReservationGuests = (resId) =>
   supabase.from('reservation_guests').select('*').eq('reservation_id', resId).order('is_primary', { ascending: false })
 export const addReservationGuest    = (row) => supabase.from('reservation_guests').insert(row)
 export const removeReservationGuest = (id)  => supabase.from('reservation_guests').delete().eq('id', id)
+export const removeReservationRoom = (id)         => supabase.from('reservation_rooms').delete().eq('id', id)
 
+/* ---------- Move / shift bookings (calendar drag) ---------- */
+// Move or resize one room booking. rrId = reservation_rooms.id
+export const moveBooking = ({ rrId, room_id, from_date, to_date }) => {
+  const patch = {}
+  if (room_id   !== undefined) patch.room_id   = room_id
+  if (from_date !== undefined) patch.from_date = from_date
+  if (to_date   !== undefined) patch.to_date   = to_date
+  return supabase.from('reservation_rooms')
+    .update(patch).eq('id', rrId)
+    .select('*, rooms(*)').single()
+}
+
+// Is the target room free for that window? Excludes the row being moved.
+export const isRoomFree = async ({ room_id, from_date, to_date, exclude_rr_id }) => {
+  const { data, error } = await supabase
+    .from('reservation_rooms')
+    .select('id, from_date, to_date, reservations!inner(check_in,check_out,status)')
+    .eq('room_id', room_id)
+    .in('reservations.status', ['CONFIRMED', 'CHECKED_IN'])
+  if (error) return { free: false, error }
+  const clash = (data || []).some((b) => {
+    if (b.id === exclude_rr_id) return false
+    const ci = b.from_date || b.reservations.check_in
+    const co = b.to_date   || b.reservations.check_out
+    return ci < to_date && co > from_date
+  })
+  return { free: !clash, error: null }
+}
+
+// Recompute reservations.check_in/out from its room rows after a move
+export const syncReservationWindow = async (reservation_id) => {
+  const { data } = await supabase.from('reservation_rooms')
+    .select('from_date,to_date').eq('reservation_id', reservation_id)
+  if (!data?.length) return
+  const ci = data.reduce((m, r) => (r.from_date < m ? r.from_date : m), data[0].from_date)
+  const co = data.reduce((m, r) => (r.to_date   > m ? r.to_date   : m), data[0].to_date)
+  await supabase.from('reservations').update({ check_in: ci, check_out: co }).eq('id', reservation_id)
+}
 /* ---------- Rooms & availability ---------- */
 export const getActiveRooms = () =>
   supabase.from('rooms').select('*').eq('is_active', true).order('room_no')
