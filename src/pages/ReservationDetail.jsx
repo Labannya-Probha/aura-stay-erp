@@ -482,7 +482,7 @@ function Overview({ res, guest, resRooms, resGuests = [], setStatus, payments, a
                       <div className="text-pine/50">{nights} night{nights !== 1 ? 's' : ''}</div>
                     </td>
                     <td className="td text-center money">{q.room_count ?? resRooms.length}</td>
-                    <td className="td text-center money">{resGuests.length || '—'}</td>
+                    <td className="td text-center money">{((res.pax_adults || 0) + (res.pax_children || 0)) || resGuests.length || '—'}</td>
                     <td className="td text-sm">{res.source || '—'}</td>
                     <td className="td text-right money font-semibold text-forest">{fmtBDT(q.total_amount)}</td>
                     <td className="td text-right text-xs text-pine/60 whitespace-nowrap">{fmtDate(q.valid_until)}</td>
@@ -497,7 +497,7 @@ function Overview({ res, guest, resRooms, resGuests = [], setStatus, payments, a
                         </button>
                         <button
                           className="btn-ghost !py-1 !px-2 text-xs"
-                          onClick={() => { setEditingQuoteId(q.id); printQuote() }}
+                          onClick={() => printQuote()}
                           title="Print quotation"
                         >
                           <Printer size={12} /> Print
@@ -514,101 +514,138 @@ function Overview({ res, guest, resRooms, resGuests = [], setStatus, payments, a
 
       {/* ---- QUOTATION EDIT MODAL ---- */}
       {quoteEditorOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pine/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-leaf">
-              <h2 className="font-display font-bold text-pine text-lg">
-                {editingQuoteId ? 'Update Quotation' : 'New Quotation'}
-              </h2>
-              <button onClick={cancelQuoteEdit} className="text-pine/40 hover:text-pine text-xl leading-none">✕</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pine/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col">
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-leaf shrink-0">
+              <div>
+                <h2 className="font-display font-bold text-pine text-xl">
+                  {editingQuoteId ? 'Update Quotation' : 'New Quotation'}
+                </h2>
+                <p className="text-xs text-pine/50 mt-0.5">{res.res_no} · {guest?.full_name || res.reservation_name}</p>
+              </div>
+              <button onClick={cancelQuoteEdit} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-leaf text-pine/40 hover:text-pine text-lg">✕</button>
             </div>
 
-            <div className="p-6 space-y-5">
-              {/* Reservation summary strip */}
-              <div className="bg-leaf/30 rounded-xl px-4 py-3 text-sm grid grid-cols-2 gap-2">
-                <div><span className="text-pine/50">Guest:</span> <span className="font-medium">{guest?.full_name || res.reservation_name || '—'}</span></div>
-                <div><span className="text-pine/50">Res No:</span> <span className="font-mono font-medium">{res.res_no}</span></div>
-                <div><span className="text-pine/50">Stay:</span> {fmtDate(res.check_in)} → {fmtDate(res.check_out)} ({nights} nights)</div>
-                <div><span className="text-pine/50">Rooms:</span> {resRooms.length} · <span className="text-pine/50">Pax:</span> {resGuests.length || '—'} · <span className="text-pine/50">Source:</span> {res.source || '—'}</div>
+            {/* Scrollable body */}
+            <div className="overflow-y-auto flex-1 p-6 space-y-5">
+
+              {/* Reservation info strip — like Query form header */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-leaf/30 rounded-xl px-4 py-3 text-sm">
+                <div>
+                  <div className="text-[10px] text-pine/50 uppercase tracking-wide mb-0.5">Guest</div>
+                  <div className="font-semibold text-pine">{guest?.full_name || res.reservation_name || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-pine/50 uppercase tracking-wide mb-0.5">Stay</div>
+                  <div className="font-medium">{fmtDate(res.check_in)} → {fmtDate(res.check_out)}</div>
+                  <div className="text-xs text-pine/50">{nights} night{nights !== 1 ? 's' : ''}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-pine/50 uppercase tracking-wide mb-0.5">Rooms · Pax</div>
+                  <div className="font-medium">{resRooms.length} room{resRooms.length !== 1 ? 's' : ''} · {((res.pax_adults || 0) + (res.pax_children || 0)) || resGuests.length || '—'} pax</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-pine/50 uppercase tracking-wide mb-0.5">Source</div>
+                  <div className="font-medium">{res.source || '—'}</div>
+                </div>
               </div>
 
               {editingQuoteId && (
-                <div className="px-3 py-2 rounded-lg bg-amber/10 text-amber text-sm font-medium">
-                  Editing a previously sent quotation — click Update Quotation to save changes.
+                <div className="px-3 py-2 rounded-lg bg-amber/10 border border-amber/20 text-amber text-sm font-medium">
+                  Editing a previously sent quotation — click <strong>Update Quotation</strong> to save.
                 </div>
               )}
 
-              {/* Rate inputs */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="label">Rate / room / night (৳)</label>
-                  <input type="number" className="input money" value={roomRate} onChange={(e) => setRoomRate(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label">No. of rooms</label>
-                  <input type="number" min="1" className="input money" value={roomCount} onChange={(e) => setRoomCount(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label">Discount %</label>
-                  <input type="number" min="0" max="100" className="input money" value={disc} onChange={(e) => setDisc(e.target.value)} onBlur={saveDisc} />
-                </div>
-                <div>
-                  <label className="label">Valid for (days)</label>
-                  <input type="number" min="1" className="input money" value={validDays} onChange={(e) => setValidDays(e.target.value)} />
+              {/* Rate & validity inputs — 4 column grid like Query form */}
+              <div>
+                <h4 className="label mb-3">Quotation details</h4>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="label">Rate / room / night (৳)</label>
+                    <input type="number" className="input money" value={roomRate} onChange={(e) => setRoomRate(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">No. of rooms</label>
+                    <input type="number" min="1" className="input money" value={roomCount} onChange={(e) => setRoomCount(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Discount %</label>
+                    <input type="number" min="0" max="100" className="input money" value={disc} onChange={(e) => setDisc(e.target.value)} onBlur={saveDisc} />
+                  </div>
+                  <div>
+                    <label className="label">Valid for (days)</label>
+                    <input type="number" min="1" className="input money" value={validDays} onChange={(e) => setValidDays(e.target.value)} />
+                  </div>
                 </div>
               </div>
 
               {/* Charge breakdown */}
               <div className="bg-leaf/40 rounded-xl p-4 text-sm space-y-1.5 money">
-                <Row k={`Room charge × ${nights} night(s)`} v={fmtBDT(quotePerNight.base_amount * (nights || 0))} />
+                <Row k={`Room charge (${roomCount} room × ${nights} night${nights !== 1 ? 's' : ''})`} v={fmtBDT(quotePerNight.base_amount * (nights || 0))} />
                 {disc > 0 && <Row k={`Discount ${disc}%`} v={'− ' + fmtBDT(quotePerNight.discount * (nights || 0))} />}
                 <Row k={`Service charge ${quoteRate.service_charge_pct}%`} v={fmtBDT(quotePerNight.service_charge * (nights || 0))} />
                 <Row k={`VAT ${quoteRate.vat_pct}%`} v={fmtBDT(quotePerNight.vat * (nights || 0))} />
-                <div className="border-t border-pine/20 pt-2 font-bold text-base"><Row k="Total" v={fmtBDT(quoteTotal)} /></div>
-              </div>
-
-              {/* Terms & Conditions */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="label !mb-0">Terms &amp; Conditions</label>
-                  <button className="btn-ghost !py-1 text-xs" onClick={saveTerms}>Save T&amp;C</button>
+                <div className="border-t border-pine/20 pt-2 font-bold text-base flex justify-between">
+                  <span>Total</span><span className="text-forest">{fmtBDT(quoteTotal)}</span>
                 </div>
-                <textarea className="input" rows={4} value={terms} onChange={(e) => setTerms(e.target.value)} placeholder="Enter terms & conditions for this quotation…" />
-                <p className="text-xs text-pine/50 mt-1">Changes here apply to this reservation only.</p>
               </div>
 
-              {/* Message preview */}
-              <div>
-                <label className="label">Message preview</label>
-                <pre className="text-xs whitespace-pre-wrap bg-paper border border-leaf rounded-xl p-3 max-h-40 overflow-y-auto">{quoteMessage}</pre>
+              {/* Two-column lower section: Terms + Message preview */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="label !mb-0">Terms &amp; Conditions</label>
+                    <button className="btn-ghost !py-1 text-xs" onClick={saveTerms}>Save T&amp;C</button>
+                  </div>
+                  <textarea
+                    className="input"
+                    rows={6}
+                    value={terms}
+                    onChange={(e) => setTerms(e.target.value)}
+                    placeholder="Enter terms & conditions printed on the quotation PDF…"
+                  />
+                  <p className="text-xs text-pine/50 mt-1">Default comes from Settings → Branding. Changes here apply to this reservation only.</p>
+                </div>
+                <div>
+                  <label className="label">Message preview (WhatsApp / Email)</label>
+                  <pre className="text-xs whitespace-pre-wrap bg-paper border border-leaf rounded-xl p-3 h-[148px] overflow-y-auto">{quoteMessage}</pre>
+                </div>
               </div>
 
-              {/* Action buttons */}
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-leaf">
-                <button
-                  className="btn-primary flex-1 justify-center"
-                  onClick={() => editingQuoteId ? recordQuote('Updated') : sendQuoteWhatsApp()}
-                  disabled={!guest?.phone && !editingQuoteId}
-                >
-                  {editingQuoteId
-                    ? <><Save size={15} /> Update Quotation</>
-                    : <><MessageCircle size={15} /> Send via WhatsApp</>
-                  }
-                </button>
-                {!editingQuoteId && (
+            </div>
+
+            {/* Sticky footer with action buttons */}
+            <div className="shrink-0 border-t border-leaf px-6 py-4 flex flex-wrap gap-2 bg-white rounded-b-2xl">
+              {editingQuoteId ? (
+                <>
+                  <button className="btn-primary flex-1 justify-center" onClick={() => recordQuote('Updated')}>
+                    <Save size={15} /> Update Quotation
+                  </button>
+                  <button className="btn-ghost justify-center" onClick={sendQuoteWhatsApp} disabled={!guest?.phone}>
+                    <MessageCircle size={15} /> Re-send WhatsApp
+                  </button>
+                  <button className="btn-ghost justify-center" onClick={sendQuoteEmail}>
+                    <Mail size={15} /> Re-send Email
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="btn-primary flex-1 justify-center" onClick={sendQuoteWhatsApp} disabled={!guest?.phone}>
+                    <MessageCircle size={15} /> Send via WhatsApp
+                  </button>
                   <button className="btn-ghost flex-1 justify-center" onClick={sendQuoteEmail}>
                     <Mail size={15} /> Send via Email
                   </button>
-                )}
-                <button className="btn-ghost justify-center" onClick={printQuote}>
-                  <Printer size={15} /> Print PDF
-                </button>
-                <button className="btn-ghost justify-center" onClick={cancelQuoteEdit}>Cancel</button>
-              </div>
-              {!guest?.phone && !editingQuoteId && (
-                <p className="text-xs text-amber">Add the guest's phone number to enable WhatsApp sending.</p>
+                </>
               )}
+              <button className="btn-ghost justify-center" onClick={printQuote}>
+                <Printer size={15} /> Print PDF
+              </button>
+              <button className="btn-ghost justify-center" onClick={cancelQuoteEdit}>Cancel</button>
             </div>
+
           </div>
         </div>
       )}
