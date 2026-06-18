@@ -118,7 +118,7 @@ function NewReservation({ close, openReservation, userName }) {
   const [f, setF] = useState({
     salutation: 'Mr.', guest_type: 'Individual',
     guest_name: '', phone: '', email: '', address: '', reservation_name: '',
-    use_reservation_name_only: false, link_names: false, company_id: '',
+    link_names: false, company_id: '',
     check_in: t, check_out: tomorrow(t), pax_adults: 2, pax_children: 0, source: 'Phone', notes: '', discount_pct: 0,
     discount_type: 'percentage', discount_val: 0,
     commission_pct: 0, vat_vds_pct: 0, tax_tds_pct: 0,
@@ -192,8 +192,8 @@ function NewReservation({ close, openReservation, userName }) {
   const save = async () => {
     setBusy(true); setErr('')
     try {
-      if (!f.guest_name) throw new Error('Guest name is required')
-      if (f.guest_type === 'Company' && !f.reservation_name) throw new Error('Reservation/Company name is required for Company & OTA bookings')
+      if (!f.reservation_name) throw new Error('Reservation Name is required')
+      if (!f.guest_name) throw new Error('Guest Name is required')
       if (validRows.length === 0) {
         if (f.check_out <= f.check_in) throw new Error('Check-out must be after check-in')
       }
@@ -208,7 +208,6 @@ function NewReservation({ close, openReservation, userName }) {
       const firstRoom = validRows.length ? rooms.find((r) => r.id === validRows[0].room_id) : null
       const { data: r, error: re } = await supabase.from('reservations').insert({
         salutation: f.salutation, guest_type: f.guest_type,
-        use_reservation_name_only: f.use_reservation_name_only,
         reservation_name: f.reservation_name || f.guest_name,
         company_id: f.guest_type === 'Company' ? (f.company_id || null) : null,
         primary_guest_id: g.id, check_in: overallCI, check_out: overallCO,
@@ -269,8 +268,14 @@ function NewReservation({ close, openReservation, userName }) {
             </div>
           </div>
           <div className="col-span-2">
+            <label className="label">{f.guest_type === 'Company' ? 'Reservation / Company Name *' : 'Reservation Name *'}</label>
+            <input className="input" value={f.reservation_name} onChange={(e) => setReservationName(e.target.value)} placeholder={f.guest_type === 'Company' ? 'e.g. Acme Corporation' : ''} />
+          </div>
+          <div><label className="label">Phone (WhatsApp)</label><input className="input" placeholder="01XXXXXXXXX" value={f.phone} onChange={(e) => set('phone', e.target.value)} /></div>
+          <div><label className="label">Email</label><input className="input" value={f.email} onChange={(e) => set('email', e.target.value)} /></div>
+          <div className="col-span-2">
             <div className="flex items-center justify-between mb-1">
-              <label className="label !mb-0">Guest name *</label>
+              <label className="label !mb-0">Guest Name *</label>
               <label className="flex items-center gap-1.5 text-xs text-pine/70 cursor-pointer">
                 <input type="checkbox" checked={f.link_names} onChange={(e) => toggleLinkNames(e.target.checked)} />
                 Same as Reservation Name
@@ -278,19 +283,7 @@ function NewReservation({ close, openReservation, userName }) {
             </div>
             <input className="input" value={f.guest_name} disabled={f.link_names}
               onChange={(e) => set('guest_name', e.target.value)}
-              placeholder={f.link_names ? 'Pulled from Reservation Name below' : ''} />
-          </div>
-          <div><label className="label">Phone (WhatsApp)</label><input className="input" placeholder="01XXXXXXXXX" value={f.phone} onChange={(e) => set('phone', e.target.value)} /></div>
-          <div><label className="label">Email</label><input className="input" value={f.email} onChange={(e) => set('email', e.target.value)} /></div>
-          <div className="col-span-2">
-            <div className="flex items-center justify-between mb-1">
-              <label className="label !mb-0">{f.guest_type === 'Company' ? 'Reservation / Company name *' : 'Reservation name (if different)'}</label>
-              <label className="flex items-center gap-1.5 text-xs text-pine/70 cursor-pointer">
-                <input type="checkbox" checked={f.use_reservation_name_only} onChange={(e) => set('use_reservation_name_only', e.target.checked)} />
-                Use reservation name everywhere (instead of guest name)
-              </label>
-            </div>
-            <input className="input" value={f.reservation_name} onChange={(e) => setReservationName(e.target.value)} placeholder={f.guest_type === 'Company' ? 'e.g. Acme Corporation' : ''} />
+              placeholder={f.link_names ? 'Pulled from Reservation Name above' : ''} />
           </div>
 
           {f.guest_type === 'Company' && (
