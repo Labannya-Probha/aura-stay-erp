@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabase'
 import {
   fmtBDT, fmtDate, todayISO, nightsBetween, eachNight,
@@ -19,6 +20,15 @@ const TABS = ['Overview', 'Quotation', 'Check-In', 'Billings & Check-Out', 'Part
 
 const generateInvoiceNo = (resNo) => `INV-${resNo}-${Date.now().toString().slice(-6)}`
 
+// Builds the discount argument computeCharge() expects, based on how this
+// reservation's discount was set up (Sales Query: Percentage or Fixed ৳).
+// Falls back to plain discount_pct for older reservations saved before
+// discount_type/discount_val existed.
+const resDiscount = (res) =>
+  res.discount_type === 'fixed'
+    ? { type: 'fixed', value: Number(res.discount_val) || 0 }
+    : (Number(res.discount_pct) || 0)
+
 export default function ReservationDetail({ id, back, userName, isAdmin }) {
   const [res, setRes] = useState(null)
   const [guest, setGuest] = useState(null)
@@ -31,7 +41,9 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
   const [addons, setAddons] = useState([])
   const [taxConfig, setTaxConfig] = useState([])
   const [company, setCompany] = useState(null)
-  const [tab, setTab] = useState('Overview')
+  const [searchParams] = useSearchParams()
+  const initialTab = TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'Overview'
+  const [tab, setTab] = useState(initialTab)
   const [printDoc, setPrintDoc] = useState(null)
   const [msg, setMsg] = useState('')
 
@@ -281,7 +293,11 @@ function Overview({ res, guest, resRooms, setStatus, payments, advance, flash, i
           <div><dt className="label">Source</dt><dd>{res.source}</dd></div>
           <div><dt className="label">Guest type</dt><dd>{res.guest_type || 'Individual'}</dd></div>
           <div><dt className="label">Reservation name</dt><dd>{res.reservation_name || '—'}{res.use_reservation_name_only && <span className="text-xs text-pine/50"> (used everywhere)</span>}</dd></div>
-          <div><dt className="label">Discount</dt><dd>{Number(res.discount_pct) > 0 ? `${res.discount_pct}% — applied on room charges` : '—'}</dd></div>
+          <div><dt className="label">Discount</dt><dd>{
+            res.discount_type === 'fixed'
+              ? (Number(res.discount_val) > 0 ? `${fmtBDT(res.discount_val)} fixed — applied on room charges` : '—')
+              : (Number(res.discount_pct) > 0 ? `${res.discount_pct}% — applied on room charges` : '—')
+          }</dd></div>
           <div><dt className="label">Rooms assigned</dt><dd>{resRooms.length ? resRooms.map((r) => r.rooms?.room_no).join(', ') : 'Not yet assigned'}</dd></div>
           <div className="col-span-2"><dt className="label">Notes</dt><dd>{res.notes || '—'}</dd></div>
         </dl>
@@ -761,6 +777,20 @@ function BillingsAndCheckOutTab({
   // ----------------------------------------------------------------
   const buildRoomRows = () => {
     const rows = []
+    const discDescriptor = resDiscount(res)
+    // A fixed ৳ discount must total to the entered value across the whole stay,
+    // not be re-applied in full on every night — so split it evenly per room-night.
+    // A percentage discount doesn't need splitting: 10% off each night already
+    // equals 10% off the total, so it's applied as-is per night.
+    const totalRoomNights = resRooms.reduce((sum, rr) => {
+      const ci = rr.from_date || res.check_in
+      const co = rr.to_date   || res.check_out
+      return sum + eachNight(ci, co).length
+    }, 0)
+    const perNightDiscount = discDescriptor && typeof discDescriptor === 'object' && totalRoomNights > 0
+      ? { type: 'fixed', value: discDescriptor.value / totalRoomNights }
+      : discDescriptor
+
     for (const rr of resRooms) {
       const ci = rr.from_date || res.check_in
       const co = rr.to_date   || res.check_out
@@ -769,16 +799,20 @@ function BillingsAndCheckOutTab({
         rows.push({
           reservation_id: res.id, charge_date: night, charge_type: 'ROOM',
           description: `Room ${rr.rooms?.room_no}${rr.rooms?.room_name ? ` (${rr.rooms.room_name})` : ''} — Night of ${fmtDate(night)}`,
-          ...computeCharge(rr.rate, res.discount_pct, rate), created_by: userName,
+          ...computeCharge(rr.rate, perNightDiscount, rate), created_by: userName,
         })
       }
     }
+    // Extra pax / driver accommodation are separate add-on lines, not part of the
+    // room rate the discount was quoted against — they keep using the plain
+    // percentage (or no discount) rather than a further slice of a fixed amount.
+    const addonDiscount = discDescriptor && typeof discDescriptor === 'object' ? 0 : discDescriptor
     for (const night of eachNight(res.check_in, res.check_out)) {
       const rate = rateFor(taxConfig, 'ROOM', night)
       if (res.extra_pax > 0 && res.extra_pax_rate > 0)
-        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Extra pax × ${res.extra_pax} — ${fmtDate(night)}`, ...computeCharge(res.extra_pax * res.extra_pax_rate, res.discount_pct, rate), created_by: userName })
+        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Extra pax × ${res.extra_pax} — ${fmtDate(night)}`, ...computeCharge(res.extra_pax * res.extra_pax_rate, addonDiscount, rate), created_by: userName })
       if (res.driver_accommodation && res.driver_count > 0 && res.driver_rate > 0)
-        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Driver accommodation × ${res.driver_count} — ${fmtDate(night)}`, ...computeCharge(res.driver_count * res.driver_rate, res.discount_pct, rate), created_by: userName })
+        rows.push({ reservation_id: res.id, charge_date: night, charge_type: 'ROOM', description: `Driver accommodation × ${res.driver_count} — ${fmtDate(night)}`, ...computeCharge(res.driver_count * res.driver_rate, addonDiscount, rate), created_by: userName })
     }
     return rows
   }
