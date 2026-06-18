@@ -124,31 +124,30 @@ function BrandingCard({ reloadCompany }) {
 
 function TaxCard() {
   const [rows, setRows] = useState([])
-  const [f, setF] = useState({ charge_type: 'ROOM', vat_pct: '', sd_pct: 0, service_charge_pct: 0, effective_from: todayISO() })
+  const [f, setF] = useState({ charge_type: 'ROOM', vat_pct: '', service_charge_pct: 0, effective_from: todayISO() })
   const [msg, setMsg] = useState('')
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
   const load = async () => { const { data } = await supabase.from('tax_config').select('*').order('charge_type').order('effective_from', { ascending: false }); setRows(data || []) }
   useEffect(() => { load() }, [])
   const add = async () => {
-    const { error } = await supabase.from('tax_config').insert({ ...f, vat_pct: +f.vat_pct || 0, sd_pct: +f.sd_pct || 0, service_charge_pct: +f.service_charge_pct || 0 })
-    if (error) flash(error.message); else { setF({ charge_type: 'ROOM', vat_pct: '', sd_pct: 0, service_charge_pct: 0, effective_from: todayISO() }); load() }
+    const { error } = await supabase.from('tax_config').insert({ ...f, vat_pct: +f.vat_pct || 0, service_charge_pct: +f.service_charge_pct || 0 })
+    if (error) flash(error.message); else { setF({ charge_type: 'ROOM', vat_pct: '', service_charge_pct: 0, effective_from: todayISO() }); load() }
   }
   return (
     <div className="card p-5">
       <h2 className="font-display font-semibold text-pine flex items-center gap-2 mb-4"><Percent size={18} className="text-forest" /> Tax rates</h2>
       {msg && <div className="mb-3 px-3 py-2 rounded-lg bg-red-50 text-red-600 text-sm">{msg}</div>}
-      <div className="grid grid-cols-6 gap-2 mb-4">
+      <div className="grid grid-cols-5 gap-2 mb-4">
         <select className="input" value={f.charge_type} onChange={(e) => setF({ ...f, charge_type: e.target.value })}>{['ROOM', 'RESTAURANT', 'LAUNDRY', 'TEA', 'PICKLE', 'SPORTS', 'OTHER'].map((t) => <option key={t}>{t}</option>)}</select>
         <input type="number" className="input money" placeholder="VAT %" value={f.vat_pct} onChange={(e) => setF({ ...f, vat_pct: e.target.value })} />
-        <input type="number" className="input money" placeholder="SD %" value={f.sd_pct} onChange={(e) => setF({ ...f, sd_pct: e.target.value })} />
         <input type="number" className="input money" placeholder="SC %" value={f.service_charge_pct} onChange={(e) => setF({ ...f, service_charge_pct: e.target.value })} />
         <input type="date" className="input" value={f.effective_from} onChange={(e) => setF({ ...f, effective_from: e.target.value })} />
         <button className="btn-primary justify-center" onClick={add}><Plus size={15} /> Add</button>
       </div>
       <table className="w-full">
-        <thead><tr><th className="th">Type</th><th className="th text-right">VAT</th><th className="th text-right">SD</th><th className="th text-right">SC</th><th className="th">From</th></tr></thead>
+        <thead><tr><th className="th">Type</th><th className="th text-right">VAT</th><th className="th text-right">SC</th><th className="th">From</th></tr></thead>
         <tbody>
-          {rows.map((r) => (<tr key={r.id}><td className="td text-sm font-medium">{r.charge_type}</td><td className="td money text-right">{r.vat_pct}</td><td className="td money text-right">{r.sd_pct}</td><td className="td money text-right">{r.service_charge_pct}</td><td className="td money text-xs">{r.effective_from}</td></tr>))}
+          {rows.map((r) => (<tr key={r.id}><td className="td text-sm font-medium">{r.charge_type}</td><td className="td money text-right">{r.vat_pct}</td><td className="td money text-right">{r.service_charge_pct}</td><td className="td money text-xs">{r.effective_from}</td></tr>))}
         </tbody>
       </table>
     </div>

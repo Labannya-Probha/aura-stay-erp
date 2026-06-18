@@ -48,21 +48,21 @@ export default function NightAudit({ userName, isAdmin }) {
       supabase.from('facility_sales').select('*').eq('status', 'SETTLED').is('reservation_id', null).eq('sale_date', auditDate),
     ])
     const revenue = {}
-    const add = (type, net, sc, sd, vat, total) => {
-      const r = revenue[type] || { net: 0, sc: 0, sd: 0, vat: 0, total: 0 }
-      r.net += net; r.sc += sc; r.sd += sd; r.vat += vat; r.total += total
+    const add = (type, net, sc, vat, total) => {
+      const r = revenue[type] || { net: 0, sc: 0, vat: 0, total: 0 }
+      r.net += net; r.sc += sc; r.vat += vat; r.total += total
       revenue[type] = r
     }
-    for (const c of fc.data || []) add(c.charge_type, +c.base_amount - +c.discount, +c.service_charge, +c.sd, +c.vat, +c.total)
-    for (const o of posWalk.data || []) add('RESTAURANT', +o.base_amount - +o.discount, +o.service_charge, +o.sd, +o.vat, +o.total)
-    for (const f of facWalk.data || []) add(f.item_name?.toUpperCase().includes('TEA') ? 'TEA' : 'OTHER FACILITY', +f.base_amount - +f.discount, +f.service_charge, +f.sd, +f.vat, +f.total)
+    for (const c of fc.data || []) add(c.charge_type, +c.base_amount - +c.discount, +c.service_charge, +c.vat, +c.total)
+    for (const o of posWalk.data || []) add('RESTAURANT', +o.base_amount - +o.discount, +o.service_charge, +o.vat, +o.total)
+    for (const f of facWalk.data || []) add(f.item_name?.toUpperCase().includes('TEA') ? 'TEA' : 'OTHER FACILITY', +f.base_amount - +f.discount, +f.service_charge, +f.vat, +f.total)
 
     const receipts = {}
     for (const p of pay.data || []) receipts[p.method] = (receipts[p.method] || 0) + +p.amount
     for (const o of posWalk.data || []) receipts[o.payment_method || 'CASH'] = (receipts[o.payment_method || 'CASH'] || 0) + +o.total
     for (const f of facWalk.data || []) receipts[f.payment_method || 'CASH'] = (receipts[f.payment_method || 'CASH'] || 0) + +f.total
 
-    const tot = Object.values(revenue).reduce((a, r) => ({ net: a.net + r.net, sc: a.sc + r.sc, sd: a.sd + r.sd, vat: a.vat + r.vat, total: a.total + r.total }), { net: 0, sc: 0, sd: 0, vat: 0, total: 0 })
+    const tot = Object.values(revenue).reduce((a, r) => ({ net: a.net + r.net, sc: a.sc + r.sc, vat: a.vat + r.vat, total: a.total + r.total }), { net: 0, sc: 0, vat: 0, total: 0 })
     const recTotal = Object.values(receipts).reduce((a, v) => a + v, 0)
     setSummary({ revenue, totals: tot, receipts, recTotal, inHouseCount: inHouse.length })
   }
@@ -117,7 +117,6 @@ export default function NightAudit({ userName, isAdmin }) {
         for (const [t, r] of Object.entries(summary.revenue))
           if (r.net > 0 && acc[REV_ACC[t] || '4400']) lines.push({ account_id: acc[REV_ACC[t] || '4400'], debit: 0, credit: +r.net.toFixed(2), line_note: `Revenue — ${t}` })
         if (summary.totals.vat > 0) lines.push({ account_id: acc['2200'], debit: 0, credit: +summary.totals.vat.toFixed(2), line_note: 'VAT payable' })
-        if (summary.totals.sd > 0) lines.push({ account_id: acc['2210'], debit: 0, credit: +summary.totals.sd.toFixed(2), line_note: 'SD payable' })
         if (summary.totals.sc > 0) lines.push({ account_id: acc['2300'], debit: 0, credit: +summary.totals.sc.toFixed(2), line_note: 'Service charge payable' })
         const dr = lines.reduce((a, l) => a + l.debit, 0), cr = lines.reduce((a, l) => a + l.credit, 0)
         const diff = +(cr - dr).toFixed(2)
@@ -147,9 +146,9 @@ export default function NightAudit({ userName, isAdmin }) {
     if (!summary) return
     const rows = [
       [`Night Audit — ${fmtDate(auditDate)}`], [`Performed by: ${userName}`], [],
-      ['REVENUE (accrual)'], ['Type', 'Net', 'Service Charge', 'SD', 'VAT', 'Total'],
-      ...Object.entries(summary.revenue).map(([t, r]) => [t, r.net, r.sc, r.sd, r.vat, r.total]),
-      ['TOTAL', summary.totals.net, summary.totals.sc, summary.totals.sd, summary.totals.vat, summary.totals.total], [],
+      ['REVENUE (accrual)'], ['Type', 'Net', 'Service Charge', 'VAT', 'Total'],
+      ...Object.entries(summary.revenue).map(([t, r]) => [t, r.net, r.sc, r.vat, r.total]),
+      ['TOTAL', summary.totals.net, summary.totals.sc, summary.totals.vat, summary.totals.total], [],
       ['RECEIPTS (cash basis)'], ['Method', 'Amount'],
       ...Object.entries(summary.receipts).map(([m, v]) => [m, v]),
       ['TOTAL', summary.recTotal],
@@ -218,14 +217,14 @@ export default function NightAudit({ userName, isAdmin }) {
             <div>
               <div className="label">Revenue posted today (accrual)</div>
               <table className="w-full">
-                <thead><tr><th className="th">Type</th><th className="th text-right">Net</th><th className="th text-right">SC</th><th className="th text-right">SD</th><th className="th text-right">VAT</th><th className="th text-right">Total</th></tr></thead>
+                <thead><tr><th className="th">Type</th><th className="th text-right">Net</th><th className="th text-right">SC</th><th className="th text-right">VAT</th><th className="th text-right">Total</th></tr></thead>
                 <tbody>
                   {Object.entries(summary.revenue).map(([t, r]) => (
-                    <tr key={t}><td className="td">{t}</td><td className="td money text-right">{r.net.toFixed(2)}</td><td className="td money text-right">{r.sc.toFixed(2)}</td><td className="td money text-right">{r.sd.toFixed(2)}</td><td className="td money text-right">{r.vat.toFixed(2)}</td><td className="td money text-right font-semibold">{r.total.toFixed(2)}</td></tr>
+                    <tr key={t}><td className="td">{t}</td><td className="td money text-right">{r.net.toFixed(2)}</td><td className="td money text-right">{r.sc.toFixed(2)}</td><td className="td money text-right">{r.vat.toFixed(2)}</td><td className="td money text-right font-semibold">{r.total.toFixed(2)}</td></tr>
                   ))}
-                  {Object.keys(summary.revenue).length === 0 && <tr><td className="td text-pine/40" colSpan={6}>No charges posted on this date.</td></tr>}
+                  {Object.keys(summary.revenue).length === 0 && <tr><td className="td text-pine/40" colSpan={5}>No charges posted on this date.</td></tr>}
                 </tbody>
-                <tfoot><tr className="bg-leaf/40 font-bold money"><td className="td">TOTAL</td><td className="td text-right">{summary.totals.net.toFixed(2)}</td><td className="td text-right">{summary.totals.sc.toFixed(2)}</td><td className="td text-right">{summary.totals.sd.toFixed(2)}</td><td className="td text-right">{summary.totals.vat.toFixed(2)}</td><td className="td text-right">{summary.totals.total.toFixed(2)}</td></tr></tfoot>
+                <tfoot><tr className="bg-leaf/40 font-bold money"><td className="td">TOTAL</td><td className="td text-right">{summary.totals.net.toFixed(2)}</td><td className="td text-right">{summary.totals.sc.toFixed(2)}</td><td className="td text-right">{summary.totals.vat.toFixed(2)}</td><td className="td text-right">{summary.totals.total.toFixed(2)}</td></tr></tfoot>
               </table>
             </div>
             <div>
@@ -276,7 +275,7 @@ function NightAuditReport({ audit, company }) {
   const s = audit?.summary || {}
   const revenue = s.revenue || {}
   const receipts = s.receipts || {}
-  const totals = s.totals || { net: 0, sc: 0, sd: 0, vat: 0, total: 0 }
+  const totals = s.totals || { net: 0, sc: 0, vat: 0, total: 0 }
   const recTotal = s.recTotal != null ? s.recTotal : Object.values(receipts).reduce((a, v) => a + (+v || 0), 0)
   const cell = { border: '1px solid #000', padding: '5px 8px', fontSize: 11 }
   const rt = { ...cell, textAlign: 'right', fontFamily: '"IBM Plex Mono", monospace' }
@@ -302,16 +301,16 @@ function NightAuditReport({ audit, company }) {
       <div style={{ fontSize: 12, fontWeight: 700, margin: '6px 0 4px' }}>A · Revenue posted (accrual)</div>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead><tr style={{ background: '#eee' }}>
-          <th style={cell}>Revenue head</th><th style={{ ...cell, textAlign: 'right' }}>Net</th><th style={{ ...cell, textAlign: 'right' }}>Service charge</th><th style={{ ...cell, textAlign: 'right' }}>SD</th><th style={{ ...cell, textAlign: 'right' }}>VAT</th><th style={{ ...cell, textAlign: 'right' }}>Total</th>
+          <th style={cell}>Revenue head</th><th style={{ ...cell, textAlign: 'right' }}>Net</th><th style={{ ...cell, textAlign: 'right' }}>Service charge</th><th style={{ ...cell, textAlign: 'right' }}>VAT</th><th style={{ ...cell, textAlign: 'right' }}>Total</th>
         </tr></thead>
         <tbody>
           {Object.entries(revenue).map(([k, r]) => (
-            <tr key={k}><td style={cell}>{k}</td><td style={rt}>{fmtBDT(r.net)}</td><td style={rt}>{fmtBDT(r.sc)}</td><td style={rt}>{fmtBDT(r.sd)}</td><td style={rt}>{fmtBDT(r.vat)}</td><td style={rt}>{fmtBDT(r.total)}</td></tr>
+            <tr key={k}><td style={cell}>{k}</td><td style={rt}>{fmtBDT(r.net)}</td><td style={rt}>{fmtBDT(r.sc)}</td><td style={rt}>{fmtBDT(r.vat)}</td><td style={rt}>{fmtBDT(r.total)}</td></tr>
           ))}
-          {Object.keys(revenue).length === 0 && <tr><td style={cell} colSpan={6}>No revenue posted on this date.</td></tr>}
+          {Object.keys(revenue).length === 0 && <tr><td style={cell} colSpan={5}>No revenue posted on this date.</td></tr>}
         </tbody>
         <tfoot><tr style={{ fontWeight: 700, background: '#f5f5f5' }}>
-          <td style={cell}>TOTAL</td><td style={rt}>{fmtBDT(totals.net)}</td><td style={rt}>{fmtBDT(totals.sc)}</td><td style={rt}>{fmtBDT(totals.sd)}</td><td style={rt}>{fmtBDT(totals.vat)}</td><td style={rt}>{fmtBDT(totals.total)}</td>
+          <td style={cell}>TOTAL</td><td style={rt}>{fmtBDT(totals.net)}</td><td style={rt}>{fmtBDT(totals.sc)}</td><td style={rt}>{fmtBDT(totals.vat)}</td><td style={rt}>{fmtBDT(totals.total)}</td>
         </tr></tfoot>
       </table>
 

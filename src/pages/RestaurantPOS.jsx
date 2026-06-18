@@ -103,9 +103,9 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
 
   // Calculate totals with proper rounding
   const rawTotal = computeCharge(subtotal, discountPct, rate)
-  const subtotalAfterTax = rawTotal.base_amount - rawTotal.discount + rawTotal.service_charge + rawTotal.sd + rawTotal.vat
+  const subtotalAfterTax = rawTotal.base_amount - rawTotal.discount + rawTotal.service_charge + rawTotal.vat
   const { rounded: finalTotal, rounding: roundingAmount } = applyCashRounding(subtotalAfterTax)
-  const t = { base_amount: rawTotal.base_amount, discount: discountAmount, service_charge: rawTotal.service_charge, sd: rawTotal.sd, vat: rawTotal.vat, total: finalTotal, rounding: roundingAmount }
+  const t = { base_amount: rawTotal.base_amount, discount: discountAmount, service_charge: rawTotal.service_charge, vat: rawTotal.vat, total: finalTotal, rounding: roundingAmount }
 
   const addItem = (mi) => {
     setCart((prev) => {
@@ -120,7 +120,7 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
 
   const allocate = () => {
     const lines = cart.map((c) => ({ ...c, line_total: +(c.qty * c.unit_price).toFixed(2) }))
-    const keys = ['discount', 'service_charge', 'sd', 'vat']
+    const keys = ['discount', 'service_charge', 'vat']
     const out = lines.map((l) => {
       const ratio = subtotal > 0 ? l.line_total / subtotal : 0
       const o = { charge_date: todayISO(), charge_type: 'RESTAURANT', description: `${l.item_name} × ${l.qty}`, base_amount: l.line_total, status: 'PAID' }
@@ -133,12 +133,12 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
         out[out.length - 1][k] = +(out[out.length - 1][k] + (t[k] - sum)).toFixed(2)
       })
     }
-    out.forEach((o) => { o.total = +(o.base_amount - o.discount + o.service_charge + o.sd + o.vat).toFixed(2) })
+    out.forEach((o) => { o.total = +(o.base_amount - o.discount + o.service_charge + o.vat).toFixed(2) })
     return out
   }
 
   const persist = async (statusFields) => {
-    const payload = { order_type: meta.order_type, table_no: meta.table_no || null, notes: meta.notes || null, reservation_id: link.reservation_id, guest_name: link.guest_name || null, room_no: link.room_no || null, discount_pct: discountPct, base_amount: t.base_amount, discount: discountAmount, service_charge: t.service_charge, sd: t.sd, vat: t.vat, total: t.total, created_by: userName, ...statusFields }
+    const payload = { order_type: meta.order_type, table_no: meta.table_no || null, notes: meta.notes || null, reservation_id: link.reservation_id, guest_name: link.guest_name || null, room_no: link.room_no || null, discount_pct: discountPct, base_amount: t.base_amount, discount: discountAmount, service_charge: t.service_charge, vat: t.vat, total: t.total, created_by: userName, ...statusFields }
     let order
     if (existing) {
       const { data, error } = await supabase.from('pos_orders').update(payload).eq('id', existing.order.id).select().single()
@@ -180,7 +180,7 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
       const { order, items: oi } = await persist(settled)
       let mushakNo = null
       if (order.reservation_id) {
-        const { data: fc, error: fe } = await supabase.from('folio_charges').insert({ reservation_id: order.reservation_id, charge_date: todayISO(), charge_type: 'RESTAURANT', description: `Restaurant ${order.order_no}${order.table_no ? ' · Table ' + order.table_no : ''}`, base_amount: t.base_amount, discount: discountAmount, service_charge: t.service_charge, sd: t.sd, vat: t.vat, total: t.total, status: 'PAID', created_by: userName }).select().single()
+        const { data: fc, error: fe } = await supabase.from('folio_charges').insert({ reservation_id: order.reservation_id, charge_date: todayISO(), charge_type: 'RESTAURANT', description: `Restaurant ${order.order_no}${order.table_no ? ' · Table ' + order.table_no : ''}`, base_amount: t.base_amount, discount: discountAmount, service_charge: t.service_charge, vat: t.vat, total: t.total, status: 'PAID', created_by: userName }).select().single()
         if (fe) throw fe
         const { error: pe } = await supabase.from('payments').insert({ reservation_id: order.reservation_id, received_date: todayISO(), amount: t.total, method: paidMethods.map(([m]) => m).join(', '), reference: order.order_no, received_by: userName, notes: 'Restaurant POS' })
         if (pe) throw pe
@@ -208,7 +208,6 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
       base_amount: t.base_amount, 
       discount: discountAmount, 
       service_charge: t.service_charge, 
-      sd: t.sd, 
       vat: t.vat, 
       total: t.total, 
       status: 'DUE', 
@@ -293,7 +292,6 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
               <span>− {discountAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between"><span>Service charge {rate.service_charge_pct}%</span><span>{t.service_charge.toFixed(2)}</span></div>
-            {rate.sd_pct > 0 && <div className="flex justify-between"><span>SD {rate.sd_pct}%</span><span>{t.sd.toFixed(2)}</span></div>}
             <div className="flex justify-between"><span>VAT {rate.vat_pct}%</span><span>{t.vat.toFixed(2)}</span></div>
             {t.rounding !== undefined && t.rounding !== 0 && (<div className="flex justify-between text-xs text-pine/60"><span>Cash rounding {t.rounding > 0 ? '(+)' : '(−)'}</span><span>{t.rounding > 0 ? '+' : ''}{t.rounding.toFixed(2)}</span></div>)}
             <div className="flex justify-between font-bold text-base border-t border-pine/20 pt-1"><span>Total</span><span>{fmtBDT(t.total)}</span></div>

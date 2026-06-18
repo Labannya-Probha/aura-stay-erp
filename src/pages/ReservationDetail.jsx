@@ -100,7 +100,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
   // [P5] invoiceData shape used by both live and historical print paths:
   // {
   //   charges    : ChargeRow[]   — folio charge array snapshot (JSONB from DB or live state)
-  //   totals     : TotalsObject  — { base, discount, service_charge, sd, vat, grand_total, ... }
+  //   totals     : TotalsObject  — { base, discount, service_charge, vat, grand_total, ... }
   //   paid       : number        — total payments received
   //   due        : number        — outstanding balance (may be 0)
   //   invoice_no : string | undefined — undefined for live/draft previews
@@ -506,7 +506,6 @@ function QuotationTab({ res, guest, nights, taxConfig, company, reload, flash, u
           <Row k={`Room charge × ${nights} night(s)`} v={fmtBDT(perNight.base_amount * nights)} />
           {disc > 0 && <Row k={`Discount ${disc}%`} v={'− ' + fmtBDT(perNight.discount * nights)} />}
           <Row k={`Service charge ${rate.service_charge_pct}%`} v={fmtBDT(perNight.service_charge * nights)} />
-          {rate.sd_pct > 0 && <Row k={`SD ${rate.sd_pct}%`} v={fmtBDT(perNight.sd * nights)} />}
           <Row k={`VAT ${rate.vat_pct}%`} v={fmtBDT(perNight.vat * nights)} />
           <div className="border-t border-pine/20 pt-1 font-bold"><Row k="Total" v={fmtBDT(total)} /></div>
         </div>
@@ -1069,7 +1068,7 @@ function BillingsAndCheckOutTab({
           <thead><tr>
             <th className="th">Date</th><th className="th">Type</th><th className="th">Description</th>
             <th className="th text-right">Base</th><th className="th text-right">Disc.</th><th className="th text-right">SC</th>
-            <th className="th text-right">SD</th><th className="th text-right">VAT</th><th className="th text-right">Total</th>
+            <th className="th text-right">VAT</th><th className="th text-right">Total</th>
             <th className="th">Status</th><th className="th"></th>
           </tr></thead>
           <tbody>
@@ -1081,7 +1080,6 @@ function BillingsAndCheckOutTab({
                 <td className="td money text-right">{Number(ch.base_amount).toFixed(2)}</td>
                 <td className="td money text-right">{Number(ch.discount).toFixed(2)}</td>
                 <td className="td money text-right">{Number(ch.service_charge).toFixed(2)}</td>
-                <td className="td money text-right">{Number(ch.sd).toFixed(2)}</td>
                 <td className="td money text-right">{Number(ch.vat).toFixed(2)}</td>
                 <td className="td money text-right font-semibold">{Number(ch.total).toFixed(2)}</td>
                 <td className="td">
@@ -1093,7 +1091,7 @@ function BillingsAndCheckOutTab({
                 <td className="td">{editable && <button onClick={() => delCharge(ch.id)} className="text-red-300 hover:text-red-600"><Trash2 size={13} /></button>}</td>
               </tr>
             ))}
-            {charges.length === 0 && <tr><td className="td text-pine/50" colSpan={11}>No charges yet.</td></tr>}
+            {charges.length === 0 && <tr><td className="td text-pine/50" colSpan={10}>No charges yet.</td></tr>}
           </tbody>
           {charges.length > 0 && (
             <tfoot><tr className="bg-leaf/40 font-bold money">
@@ -1101,7 +1099,6 @@ function BillingsAndCheckOutTab({
               <td className="td text-right">{totals.base.toFixed(2)}</td>
               <td className="td text-right">{totals.discount.toFixed(2)}</td>
               <td className="td text-right">{totals.service_charge.toFixed(2)}</td>
-              <td className="td text-right">{totals.sd.toFixed(2)}</td>
               <td className="td text-right">{totals.vat.toFixed(2)}</td>
               <td className="td text-right">{(totals.grand_total_raw ?? totals.grand_total).toFixed(2)}</td>
               <td className="td" colSpan={2}></td>

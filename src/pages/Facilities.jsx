@@ -104,7 +104,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
       outlet: catMeta.outlet, order_type: 'TAKEAWAY', table_no: null,
       reservation_id: link.reservation_id, guest_name: link.guest_name || null, room_no: link.room_no || null,
       discount_pct: 0, base_amount: t.base_amount, discount: t.discount,
-      service_charge: t.service_charge, sd: t.sd, vat: t.vat, total: t.total,
+      service_charge: t.service_charge, vat: t.vat, total: t.total,
       created_by: userName, ...statusFields,
     }
     const { data: order, error } = await supabase.from('pos_orders').insert(payload).select().single()
@@ -120,7 +120,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
 
   const snapshot = () => {
     const lines = cart.map((c) => ({ ...c, line_total: +(c.qty * c.unit_price).toFixed(2) }))
-    const keys = ['discount', 'service_charge', 'sd', 'vat']
+    const keys = ['discount', 'service_charge', 'vat']
     const out = lines.map((l) => {
       const ratio = subtotal > 0 ? l.line_total / subtotal : 0
       const o = { charge_date: todayISO(), charge_type: cat, description: `${l.item_name} × ${l.qty}`, base_amount: l.line_total, status: 'PAID' }
@@ -131,7 +131,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
       const sum = out.reduce((a, o) => a + o[k], 0)
       out[out.length - 1][k] = +(out[out.length - 1][k] + (t[k] - sum)).toFixed(2)
     })
-    out.forEach((o) => { o.total = +(o.base_amount - o.discount + o.service_charge + o.sd + o.vat).toFixed(2) })
+    out.forEach((o) => { o.total = +(o.base_amount - o.discount + o.service_charge + o.vat).toFixed(2) })
     return out
   }
 
@@ -146,7 +146,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
           reservation_id: order.reservation_id, charge_date: todayISO(), charge_type: cat,
           description: `${catMeta.outlet} ${order.order_no}`,
           base_amount: t.base_amount, discount: t.discount, service_charge: t.service_charge,
-          sd: t.sd, vat: t.vat, total: t.total, status: 'PAID', created_by: userName,
+          vat: t.vat, total: t.total, status: 'PAID', created_by: userName,
         }).select().single()
         if (fe) throw fe
         await supabase.from('payments').insert({
@@ -158,7 +158,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
         const { data: inv, error: ve } = await supabase.from('invoices').insert({
           invoice_type: 'MUSHAK_63', pos_order_id: order.id,
           buyer_name: order.guest_name || 'Walk-in Customer', buyer_address: '', buyer_bin: '',
-          totals: { base: t.base_amount, discount: t.discount, taxable_value: +(t.base_amount - t.discount).toFixed(2), service_charge: t.service_charge, sd: t.sd, vat: t.vat, grand_total: t.total, paid: t.total, due: 0 },
+          totals: { base: t.base_amount, discount: t.discount, taxable_value: +(t.base_amount - t.discount).toFixed(2), service_charge: t.service_charge, vat: t.vat, grand_total: t.total, paid: t.total, due: 0 },
           line_snapshot: snapshot(), created_by: userName,
         }).select().single()
         if (ve) throw ve
@@ -182,7 +182,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
         reservation_id: order.reservation_id, charge_date: todayISO(), charge_type: cat,
         description: `${catMeta.outlet} ${order.order_no}`,
         base_amount: t.base_amount, discount: t.discount, service_charge: t.service_charge,
-        sd: t.sd, vat: t.vat, total: t.total, status: 'DUE', created_by: userName,
+        vat: t.vat, total: t.total, status: 'DUE', created_by: userName,
       }).select().single()
       if (fe) throw fe
       await supabase.from('pos_orders').update({ folio_charge_id: fc.id }).eq('id', order.id)
@@ -219,7 +219,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
           </button>
         </div>
         {rateFor(taxConfig, cat, todayISO()) && (
-          <p className="text-xs text-pine/50 mt-3">Applied rates for {catMeta.label}: VAT {rate.vat_pct}% · SD {rate.sd_pct}% · SC {rate.service_charge_pct}% (Settings → Tax configuration)</p>
+          <p className="text-xs text-pine/50 mt-3">Applied rates for {catMeta.label}: VAT {rate.vat_pct}% · SC {rate.service_charge_pct}% (Settings → Tax configuration)</p>
         )}
       </div>
 
@@ -259,7 +259,6 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
           <div className="border-t border-leaf mt-2 pt-2 text-sm space-y-1 money">
             <div className="flex justify-between"><span>Subtotal</span><span>{t.base_amount.toFixed(2)}</span></div>
             {rate.service_charge_pct > 0 && <div className="flex justify-between"><span>Service charge {rate.service_charge_pct}%</span><span>{t.service_charge.toFixed(2)}</span></div>}
-            {rate.sd_pct > 0 && <div className="flex justify-between"><span>SD {rate.sd_pct}%</span><span>{t.sd.toFixed(2)}</span></div>}
             <div className="flex justify-between"><span>VAT {rate.vat_pct}%</span><span>{t.vat.toFixed(2)}</span></div>
             <div className="flex justify-between font-bold text-base border-t border-pine/20 pt-1"><span>Total</span><span>{fmtBDT(t.total)}</span></div>
           </div>
