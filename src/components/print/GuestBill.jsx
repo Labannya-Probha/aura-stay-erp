@@ -1,3 +1,4 @@
+import React from 'react'
 import { fmtBDT, fmtDate, nightsBetween } from '../../lib/helpers'
 
 /* ---------- Amount-in-words (Bangladeshi / Indian numbering) ---------- */
@@ -38,6 +39,32 @@ const INK = '#1f2937'
 const MUTE = '#6b7280'
 const LINE = 'rgba(27,77,46,0.18)'
 
+/* ---------- category grouping for "Total Billing History" breakdown ---------- */
+const CATEGORY_ORDER = ['ROOM', 'RESTAURANT', 'LAUNDRY', 'TEA', 'PICKLE', 'SPORTS', 'OTHER', 'DISCOUNT', 'SHAREHOLDER_REDEEM']
+const CATEGORY_LABELS = {
+  ROOM: 'Room', RESTAURANT: 'Restaurant', LAUNDRY: 'Laundry', TEA: 'Tea',
+  PICKLE: 'Pickle', SPORTS: 'Sports', OTHER: 'Other',
+  DISCOUNT: 'Discount', SHAREHOLDER_REDEEM: 'Shareholder Redemption',
+}
+function groupChargesByCategory(charges) {
+  const byType = {}
+  for (const ch of charges) {
+    const key = ch.charge_type || 'OTHER'
+    if (!byType[key]) byType[key] = []
+    byType[key].push(ch)
+  }
+  // Known categories first in fixed order, then any unexpected ones alphabetically, so
+  // new charge_type values added later still show up instead of silently vanishing.
+  const knownKeys = CATEGORY_ORDER.filter((k) => byType[k]?.length)
+  const extraKeys = Object.keys(byType).filter((k) => !CATEGORY_ORDER.includes(k)).sort()
+  return [...knownKeys, ...extraKeys].map((key) => ({
+    key,
+    label: CATEGORY_LABELS[key] || key,
+    items: byType[key],
+    subtotal: byType[key].reduce((s, ch) => s + Number(ch.total || 0), 0),
+  }))
+}
+
 export default function GuestBill({
   charges = [], totals = {}, paid = 0, due = 0,
   res, guest, company, invoice_no, issued_at,
@@ -68,6 +95,7 @@ export default function GuestBill({
   const balanceDue = Number(due ?? grandTotal - paid)
   const statusLabel = balanceDue <= 0 ? 'PAID' : Number(paid) > 0 ? 'PARTIALLY PAID' : 'UNPAID'
   const statusColor = balanceDue <= 0 ? FOREST : '#b91c1c'
+  const categoryGroups = groupChargesByCategory(charges)
 
   const sectionTitle = { fontSize: 9.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: FOREST, marginBottom: 4 }
   const th = { textAlign: 'left', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase', color: '#fff', padding: '6px 9px', background: PINE }
@@ -162,6 +190,46 @@ export default function GuestBill({
           </tbody>
         </table>
       </section>
+
+      {/* ═══ 4B. GUEST TOTAL BILLING HISTORY — charges grouped by category, with a subtotal per category ═══ */}
+      {charges.length > 0 && (
+        <section style={{ marginTop: 14 }}>
+          <div style={sectionTitle}>Guest Total Billing History</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', border: `1px solid ${LINE}` }}>
+            <thead>
+              <tr>
+                <th style={{ ...th, width: 88 }}>Date</th>
+                <th style={th}>Description</th>
+                <th style={{ ...th, width: 110, textAlign: 'right' }}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categoryGroups.map((grp) => (
+                <React.Fragment key={grp.key}>
+                  <tr>
+                    <td colSpan={3} style={{
+                      fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
+                      color: PINE, background: 'rgba(46,125,50,0.07)', padding: '4px 9px',
+                      borderBottom: `1px solid ${LINE}`,
+                    }}>{grp.label}</td>
+                  </tr>
+                  {grp.items.map((ch, i) => (
+                    <tr key={ch.id || `${grp.key}-${i}`}>
+                      <td style={{ ...td, whiteSpace: 'nowrap', fontSize: 10.5 }}>{fmtDate(ch.charge_date)}</td>
+                      <td style={td}>{ch.description}</td>
+                      <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.total).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td colSpan={2} style={{ ...td, textAlign: 'right', fontWeight: 700, color: MUTE, borderBottom: `2px solid ${LINE}` }}>Subtotal — {grp.label}</td>
+                    <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: `2px solid ${LINE}` }}>{grp.subtotal.toFixed(2)}</td>
+                  </tr>
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {/* ═══ 5. FINANCIAL SUMMARY ═══ */}
       <section style={{ display: 'flex', justifyContent: 'flex-end', margin: '10px 0' }}>
