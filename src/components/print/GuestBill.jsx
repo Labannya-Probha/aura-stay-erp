@@ -1,4 +1,3 @@
-import React from 'react'
 import { fmtBDT, fmtDate, nightsBetween } from '../../lib/helpers'
 
 /* ---------- Amount-in-words (Bangladeshi / Indian numbering) ---------- */
@@ -39,32 +38,6 @@ const INK = '#1f2937'
 const MUTE = '#6b7280'
 const LINE = 'rgba(27,77,46,0.18)'
 
-/* ---------- category grouping for "Total Billing History" breakdown ---------- */
-const CATEGORY_ORDER = ['ROOM', 'RESTAURANT', 'LAUNDRY', 'TEA', 'PICKLE', 'SPORTS', 'OTHER', 'DISCOUNT', 'SHAREHOLDER_REDEEM']
-const CATEGORY_LABELS = {
-  ROOM: 'Room', RESTAURANT: 'Restaurant', LAUNDRY: 'Laundry', TEA: 'Tea',
-  PICKLE: 'Pickle', SPORTS: 'Sports', OTHER: 'Other',
-  DISCOUNT: 'Discount', SHAREHOLDER_REDEEM: 'Shareholder Redemption',
-}
-function groupChargesByCategory(charges) {
-  const byType = {}
-  for (const ch of charges) {
-    const key = ch.charge_type || 'OTHER'
-    if (!byType[key]) byType[key] = []
-    byType[key].push(ch)
-  }
-  // Known categories first in fixed order, then any unexpected ones alphabetically, so
-  // new charge_type values added later still show up instead of silently vanishing.
-  const knownKeys = CATEGORY_ORDER.filter((k) => byType[k]?.length)
-  const extraKeys = Object.keys(byType).filter((k) => !CATEGORY_ORDER.includes(k)).sort()
-  return [...knownKeys, ...extraKeys].map((key) => ({
-    key,
-    label: CATEGORY_LABELS[key] || key,
-    items: byType[key],
-    subtotal: byType[key].reduce((s, ch) => s + Number(ch.total || 0), 0),
-  }))
-}
-
 export default function GuestBill({
   charges = [], totals = {}, paid = 0, due = 0,
   res, guest, company, invoice_no, issued_at,
@@ -86,16 +59,24 @@ export default function GuestBill({
   const nights = res?.check_in && res?.check_out ? nightsBetween(res.check_in, res.check_out) : 0
   const pax = (Number(res?.pax_adults) || 0) + (Number(res?.pax_children) || 0)
 
-  const subtotal = Number(totals.base || 0)
+  const subtotal = Number(totals.grand_total_raw ?? totals.grand_total ?? 0)
   const discount = Number(totals.discount || 0)
   const serviceCharge = Number(totals.service_charge || 0)
+  const sd = Number(totals.sd || 0)
   const vat = Number(totals.vat || 0)
   const rounding = Number(totals.rounding || 0)
-  const grandTotal = Number(totals.grand_total ?? subtotal - discount + serviceCharge + vat + rounding)
+  const grandTotal = Number(totals.grand_total ?? subtotal + rounding)
   const balanceDue = Number(due ?? grandTotal - paid)
   const statusLabel = balanceDue <= 0 ? 'PAID' : Number(paid) > 0 ? 'PARTIALLY PAID' : 'UNPAID'
   const statusColor = balanceDue <= 0 ? FOREST : '#b91c1c'
-  const categoryGroups = groupChargesByCategory(charges)
+  const chargeTotals = {
+    base: Number(totals.base || 0),
+    discount,
+    service_charge: serviceCharge,
+    sd,
+    vat,
+    grand_total_raw: subtotal,
+  }
 
   const sectionTitle = { fontSize: 9.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: FOREST, marginBottom: 4 }
   const th = { textAlign: 'left', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase', color: '#fff', padding: '6px 9px', background: PINE }
@@ -166,81 +147,72 @@ export default function GuestBill({
         </div>
       </section>
 
-      {/* ═══ 4. CHARGES TABLE ═══ */}
+      {/* ═══ 4. GUEST TOTAL BILLING HISTORY — matches the on-screen folio table exactly ═══ */}
       <section>
+        <div style={sectionTitle}>Guest Total Billing History</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', border: `1px solid ${LINE}` }}>
           <thead>
             <tr>
-              <th style={{ ...th, width: 30, textAlign: 'center' }}>#</th>
-              <th style={{ ...th, width: 88 }}>Date</th>
+              <th style={{ ...th, width: 78 }}>Date</th>
+              <th style={{ ...th, width: 76 }}>Type</th>
               <th style={th}>Description</th>
-              <th style={{ ...th, width: 110, textAlign: 'right' }}>Amount</th>
+              <th style={{ ...th, width: 68, textAlign: 'right' }}>Base</th>
+              <th style={{ ...th, width: 68, textAlign: 'right' }}>Disc.</th>
+              <th style={{ ...th, width: 56, textAlign: 'right' }}>SC</th>
+              <th style={{ ...th, width: 56, textAlign: 'right' }}>SD</th>
+              <th style={{ ...th, width: 64, textAlign: 'right' }}>VAT</th>
+              <th style={{ ...th, width: 76, textAlign: 'right' }}>Total</th>
+              <th style={{ ...th, width: 70, textAlign: 'center' }}>Status</th>
             </tr>
           </thead>
           <tbody>
-            {charges.length === 0 && <tr><td style={{ ...td, textAlign: 'center', color: MUTE }} colSpan={4}>No charges recorded.</td></tr>}
+            {charges.length === 0 && <tr><td style={{ ...td, textAlign: 'center', color: MUTE }} colSpan={10}>No charges recorded.</td></tr>}
             {charges.map((ch, i) => (
               <tr key={ch.id || i}>
-                <td style={{ ...td, textAlign: 'center', color: MUTE }}>{i + 1}</td>
                 <td style={{ ...td, whiteSpace: 'nowrap', fontSize: 10.5 }}>{fmtDate(ch.charge_date)}</td>
+                <td style={{ ...td, fontSize: 10.5 }}>{ch.charge_type}</td>
                 <td style={td}>{ch.description}</td>
-                <td style={{ ...td, textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{Number(ch.total).toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.base_amount || 0).toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.discount || 0).toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.service_charge || 0).toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.sd || 0).toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.vat || 0).toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{Number(ch.total || 0).toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'center' }}>
+                  <span style={{
+                    display: 'inline-block', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.03em',
+                    padding: '2px 9px', borderRadius: 999,
+                    background: ch.status === 'PAID' ? 'rgba(46,125,50,0.12)' : 'rgba(185,28,28,0.1)',
+                    color: ch.status === 'PAID' ? FOREST : '#b91c1c',
+                  }}>{ch.status || 'DUE'}</span>
+                </td>
               </tr>
             ))}
           </tbody>
+          {charges.length > 0 && (
+            <tfoot>
+              <tr style={{ background: 'rgba(46,125,50,0.07)' }}>
+                <td style={{ ...td, fontWeight: 700, borderBottom: 'none' }} colSpan={3}>Totals</td>
+                <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.base.toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.discount.toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.service_charge.toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.sd.toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.vat.toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.grand_total_raw.toFixed(2)}</td>
+                <td style={{ ...td, borderBottom: 'none' }}></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </section>
-
-      {/* ═══ 4B. GUEST TOTAL BILLING HISTORY — charges grouped by category, with a subtotal per category ═══ */}
-      {charges.length > 0 && (
-        <section style={{ marginTop: 14 }}>
-          <div style={sectionTitle}>Guest Total Billing History</div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', border: `1px solid ${LINE}` }}>
-            <thead>
-              <tr>
-                <th style={{ ...th, width: 88 }}>Date</th>
-                <th style={th}>Description</th>
-                <th style={{ ...th, width: 110, textAlign: 'right' }}>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categoryGroups.map((grp) => (
-                <React.Fragment key={grp.key}>
-                  <tr>
-                    <td colSpan={3} style={{
-                      fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
-                      color: PINE, background: 'rgba(46,125,50,0.07)', padding: '4px 9px',
-                      borderBottom: `1px solid ${LINE}`,
-                    }}>{grp.label}</td>
-                  </tr>
-                  {grp.items.map((ch, i) => (
-                    <tr key={ch.id || `${grp.key}-${i}`}>
-                      <td style={{ ...td, whiteSpace: 'nowrap', fontSize: 10.5 }}>{fmtDate(ch.charge_date)}</td>
-                      <td style={td}>{ch.description}</td>
-                      <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.total).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td colSpan={2} style={{ ...td, textAlign: 'right', fontWeight: 700, color: MUTE, borderBottom: `2px solid ${LINE}` }}>Subtotal — {grp.label}</td>
-                    <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: `2px solid ${LINE}` }}>{grp.subtotal.toFixed(2)}</td>
-                  </tr>
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
 
       {/* ═══ 5. FINANCIAL SUMMARY ═══ */}
       <section style={{ display: 'flex', justifyContent: 'flex-end', margin: '10px 0' }}>
         <div style={{ width: 310, fontVariantNumeric: 'tabular-nums' }}>
           <div style={sumRow}><span style={{ color: MUTE }}>Subtotal</span><span>{fmtBDT(subtotal)}</span></div>
-          {discount > 0 && <div style={sumRow}><span style={{ color: MUTE }}>Discount</span><span>− {fmtBDT(discount)}</span></div>}
-          <div style={sumRow}><span style={{ color: MUTE }}>Service Charge</span><span>{fmtBDT(serviceCharge)}</span></div>
-          <div style={sumRow}><span style={{ color: MUTE }}>VAT</span><span>{fmtBDT(vat)}</span></div>
-          {Math.abs(rounding) > 0.0001 && <div style={sumRow}><span style={{ color: MUTE }}>Rounding</span><span>{rounding > 0 ? '+ ' : '− '}{fmtBDT(Math.abs(rounding))}</span></div>}
+          {Math.abs(rounding) > 0.0001 && <div style={sumRow}><span style={{ color: MUTE }}>Rounding adjustment</span><span>{rounding > 0 ? '+ ' : '− '}{fmtBDT(Math.abs(rounding))}</span></div>}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700, color: '#fff', background: FOREST, padding: '7px 11px', borderRadius: 6, margin: '6px 0' }}>
-            <span>Grand Total</span><span>{fmtBDT(grandTotal)}</span>
+            <span>Grand Total (Payable)</span><span>{fmtBDT(grandTotal)}</span>
           </div>
           <div style={sumRow}><span style={{ color: MUTE }}>Paid</span><span style={{ color: FOREST }}>{fmtBDT(paid)}</span></div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, fontWeight: 700, color: statusColor, borderTop: `2px solid ${LINE}`, paddingTop: 5, marginTop: 2 }}>
@@ -248,6 +220,7 @@ export default function GuestBill({
           </div>
         </div>
       </section>
+
 
       {/* ═══ 6. AMOUNT IN WORDS ═══ */}
       <section style={{ border: `1px solid ${LINE}`, borderLeft: `4px solid ${GOLD}`, borderRadius: 6, padding: '7px 12px', marginBottom: 22, background: 'rgba(212,160,23,0.05)' }}>
