@@ -159,11 +159,10 @@ export default function GuestBill({
               <th style={{ ...th, width: 60, textAlign: 'right' }}>SC</th>
               <th style={{ ...th, width: 72, textAlign: 'right' }}>VAT</th>
               <th style={{ ...th, width: 76, textAlign: 'right' }}>Total</th>
-              <th style={{ ...th, width: 70, textAlign: 'center' }}>Status</th>
             </tr>
           </thead>
           <tbody>
-            {charges.length === 0 && <tr><td style={{ ...td, textAlign: 'center', color: MUTE }} colSpan={9}>No charges recorded.</td></tr>}
+            {charges.length === 0 && <tr><td style={{ ...td, textAlign: 'center', color: MUTE }} colSpan={8}>No charges recorded.</td></tr>}
             {charges.map((ch, i) => (
               <tr key={ch.id || i}>
                 <td style={{ ...td, whiteSpace: 'nowrap', fontSize: 10.5 }}>{fmtDate(ch.charge_date)}</td>
@@ -174,14 +173,6 @@ export default function GuestBill({
                 <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.service_charge || 0).toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.vat || 0).toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{Number(ch.total || 0).toFixed(2)}</td>
-                <td style={{ ...td, textAlign: 'center' }}>
-                  <span style={{
-                    display: 'inline-block', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.03em',
-                    padding: '2px 9px', borderRadius: 999,
-                    background: ch.status === 'PAID' ? 'rgba(46,125,50,0.12)' : 'rgba(185,28,28,0.1)',
-                    color: ch.status === 'PAID' ? FOREST : '#b91c1c',
-                  }}>{ch.status || 'DUE'}</span>
-                </td>
               </tr>
             ))}
           </tbody>
@@ -194,7 +185,6 @@ export default function GuestBill({
                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.service_charge.toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.vat.toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.grand_total_raw.toFixed(2)}</td>
-                <td style={{ ...td, borderBottom: 'none' }}></td>
               </tr>
             </tfoot>
           )}
