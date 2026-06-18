@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+import {
+  BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation,
+} from 'react-router-dom'
 import { supabase } from './supabase'
 import { setCurrency } from './lib/helpers'
 import { can, ROLE_LABELS } from './lib/roles'
@@ -60,43 +63,27 @@ const NAV_GROUPS = [
   ]},
 ]
 
-  export default function App() {
-  const [session, setSession] = useState(undefined)
-  const [profile, setProfile] = useState(null)
-  const [company, setCompany] = useState(null)
-  const [page, setPage] = useState('dashboard')
-  const [activeRes, setActiveRes] = useState(null)
-  const [resPrefill, setResPrefill] = useState(null)
+// Flat ordered list of every nav id — used to find "the first page this role can access"
+const ALL_NAV_IDS = NAV_GROUPS.flatMap((g) => g.items.map((n) => n.id))
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
-    return () => sub.subscription.unsubscribe()
-  }, [])
-
-  const loadCompany = async () => {
-    const { data } = await supabase.from('company_settings').select('*').limit(1).single()
-    if (data) { setCompany(data); setCurrency(data.currency || '৳') }
+// 'dashboard' has no role gate in can(); every role can always land there.
+const firstAccessiblePath = (role) => {
+  for (const id of ALL_NAV_IDS) {
+    if (id === 'dashboard' || can(role, id)) return `/${id}`
   }
-
-  useEffect(() => {
-    if (!session) return
-    loadCompany()
-    supabase.from('app_users').select('*').eq('id', session.user.id).maybeSingle()
-      .then(({ data }) => setProfile(data || { role: 'FRONT_OFFICE', full_name: session.user.email?.split('@')[0] }))
-  }, [session?.user?.id])
-
-  if (session === undefined) return <div className="min-h-screen flex items-center justify-center text-pine/60">Loading…</div>
-  if (!session) return <Login />
-
-  const role = profile?.role || 'FRONT_OFFICE'
-  const isAdmin = role === 'ADMIN'
-  const userName = profile?.full_name || session.user?.email?.split('@')[0] || 'User'
-  const openReservation = (id) => { setActiveRes(id); setPage('detail') }
-  const startReservation = (prefill = null) => {
-  setResPrefill(prefill)
-  setPage('reservations')
+  return '/dashboard'
 }
+
+function AppShell({ company, role, isAdmin, userName, loadCompany }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Active nav id derived from the current URL, e.g. /reservations/abc -> 'reservations'
+  const currentTopId = location.pathname.split('/').filter(Boolean)[0] || 'dashboard'
+
+  const openReservation = (id) => navigate(`/reservations/${id}`)
+  const startReservation = (prefill = null) => navigate('/reservations', { state: { prefill } })
+
   const softwareName = company?.software_name || 'Aura Stay'
 
   return (
@@ -119,8 +106,8 @@ const NAV_GROUPS = [
                 <div className="space-y-0.5">
                   {items.map((n) => (
                     <button key={n.id}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${page === n.id || (n.id === 'reservations' && page === 'detail') ? 'bg-forest text-white' : 'text-white/70 hover:bg-white/10'}`}
-                      onClick={() => { setPage(n.id); if (n.id !== 'reservations') setActiveRes(null) }}>
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentTopId === n.id ? 'bg-forest text-white' : 'text-white/70 hover:bg-white/10'}`}
+                      onClick={() => navigate(`/${n.id}`)}>
                       <n.icon size={17} /> {n.label}
                     </button>
                   ))}
@@ -148,22 +135,146 @@ const NAV_GROUPS = [
             ⚠ Maintenance mode — posting & edits are locked while accounts reconcile.
           </div>
         )}
-        
-        {page === 'dashboard' && <Dashboard openReservation={openReservation} userName={userName} />}
-        {page === 'reservations' && ( <Reservations openReservation={openReservation} userName={userName} prefill={resPrefill} clearPrefill={() => setResPrefill(null)} />)}
-        {page === 'calendar' && ( <BookingCalendar openReservation={openReservation} onNewReservation={startReservation} />)}
-        {page === 'detail' && activeRes && ( <ReservationDetail id={activeRes} back={() => setPage('reservations')} userName={userName} role={role} isAdmin={isAdmin} />)}
-        {page === 'nightaudit' && can(role, 'nightaudit') && <NightAudit userName={userName} isAdmin={isAdmin} />}
-        {page === 'housekeeping' && can(role, 'housekeeping') && <HousekeepingHub userName={userName} role={role} isAdmin={isAdmin} />}
-        {page === 'pos' && can(role, 'pos') && <RestaurantPOS userName={userName} role={role} isAdmin={isAdmin} />}
-        {page === 'facilities' && can(role, 'facilities') && <Facilities userName={userName} isAdmin={isAdmin} />}
-        {page === 'inventory' && can(role, 'inventory') && <InventoryHub userName={userName} role={role} isAdmin={isAdmin} />}
-        {page === 'vat' && can(role, 'vat') && <VatCenter userName={userName} company={company} />}
-        {page === 'accounting' && can(role, 'accounting') && <AccountingHub userName={userName} isAdmin={isAdmin} />}
-        {page === 'hr' && can(role, 'hr') && <HrOffice userName={userName} role={role} isAdmin={isAdmin} company={company} />}
-        {page === 'reports' && can(role, 'reports') && <ReportsHub userName={userName} role={role} />}
-        {page === 'settings' && can(role, 'settings') && <Settings userName={userName} role={role} isAdmin={isAdmin} reloadCompany={loadCompany} />}
+
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard openReservation={openReservation} userName={userName} />} />
+
+          <Route path="/reservations" element={
+            <GuardedRoute role={role} navId="reservations">
+              <ReservationsRoute openReservation={openReservation} userName={userName} />
+            </GuardedRoute>
+          } />
+          <Route path="/reservations/:id" element={
+            <GuardedRoute role={role} navId="reservations">
+              <ReservationDetailRoute userName={userName} role={role} isAdmin={isAdmin} />
+            </GuardedRoute>
+          } />
+
+          <Route path="/calendar" element={
+            <GuardedRoute role={role} navId="calendar">
+              <BookingCalendar openReservation={openReservation} onNewReservation={startReservation} />
+            </GuardedRoute>
+          } />
+
+          <Route path="/nightaudit" element={
+            <GuardedRoute role={role} navId="nightaudit">
+              <NightAudit userName={userName} isAdmin={isAdmin} />
+            </GuardedRoute>
+          } />
+          <Route path="/housekeeping" element={
+            <GuardedRoute role={role} navId="housekeeping">
+              <HousekeepingHub userName={userName} role={role} isAdmin={isAdmin} />
+            </GuardedRoute>
+          } />
+          <Route path="/pos" element={
+            <GuardedRoute role={role} navId="pos">
+              <RestaurantPOS userName={userName} role={role} isAdmin={isAdmin} />
+            </GuardedRoute>
+          } />
+          <Route path="/facilities" element={
+            <GuardedRoute role={role} navId="facilities">
+              <Facilities userName={userName} isAdmin={isAdmin} />
+            </GuardedRoute>
+          } />
+          <Route path="/inventory" element={
+            <GuardedRoute role={role} navId="inventory">
+              <InventoryHub userName={userName} role={role} isAdmin={isAdmin} />
+            </GuardedRoute>
+          } />
+          <Route path="/vat" element={
+            <GuardedRoute role={role} navId="vat">
+              <VatCenter userName={userName} company={company} />
+            </GuardedRoute>
+          } />
+          <Route path="/accounting" element={
+            <GuardedRoute role={role} navId="accounting">
+              <AccountingHub userName={userName} isAdmin={isAdmin} />
+            </GuardedRoute>
+          } />
+          <Route path="/hr" element={
+            <GuardedRoute role={role} navId="hr">
+              <HrOffice userName={userName} role={role} isAdmin={isAdmin} company={company} />
+            </GuardedRoute>
+          } />
+          <Route path="/reports" element={
+            <GuardedRoute role={role} navId="reports">
+              <ReportsHub userName={userName} role={role} />
+            </GuardedRoute>
+          } />
+          <Route path="/settings" element={
+            <GuardedRoute role={role} navId="settings">
+              <Settings userName={userName} role={role} isAdmin={isAdmin} reloadCompany={loadCompany} />
+            </GuardedRoute>
+          } />
+
+          {/* Unknown path (typo, stale bookmark, etc.) — send to the first page this role can access */}
+          <Route path="*" element={<Navigate to={firstAccessiblePath(role)} replace />} />
+        </Routes>
       </main>
     </div>
+  )
+}
+
+// Wraps a route's content; if the current role can't access navId, redirect to
+// the first page this role IS allowed to see, instead of rendering blank.
+function GuardedRoute({ role, navId, children }) {
+  if (!can(role, navId)) return <Navigate to={firstAccessiblePath(role)} replace />
+  return children
+}
+
+// Thin wrapper so Reservations (which expects prefill/clearPrefill props from
+// the old page-state model) still works — prefill now arrives via router state
+// from startReservation() instead of App-level useState.
+function ReservationsRoute({ openReservation, userName }) {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const prefill = location.state?.prefill || null
+  const clearPrefill = () => navigate(location.pathname, { replace: true, state: {} })
+  return <Reservations openReservation={openReservation} userName={userName} prefill={prefill} clearPrefill={clearPrefill} />
+}
+
+// Thin wrapper so ReservationDetail (which expects id/back as plain props)
+// still works unchanged — id now comes from the URL param, back() goes to the list.
+function ReservationDetailRoute({ userName, role, isAdmin }) {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  return <ReservationDetail id={id} back={() => navigate('/reservations')} userName={userName} role={role} isAdmin={isAdmin} />
+}
+
+export default function App() {
+  const [session, setSession] = useState(undefined)
+  const [profile, setProfile] = useState(null)
+  const [company, setCompany] = useState(null)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    return () => sub.subscription.unsubscribe()
+  }, [])
+
+  const loadCompany = async () => {
+    const { data } = await supabase.from('company_settings').select('*').limit(1).single()
+    if (data) { setCompany(data); setCurrency(data.currency || '৳') }
+  }
+
+  useEffect(() => {
+    if (!session) return
+    loadCompany()
+    supabase.from('app_users').select('*').eq('id', session.user.id).maybeSingle()
+      .then(({ data }) => setProfile(data || { role: 'FRONT_OFFICE', full_name: session.user.email?.split('@')[0] }))
+  }, [session?.user?.id])
+
+  if (session === undefined) return <div className="min-h-screen flex items-center justify-center text-pine/60">Loading…</div>
+  if (!session) return <Login />
+
+  const role = profile?.role || 'FRONT_OFFICE'
+  const isAdmin = role === 'ADMIN'
+  const userName = profile?.full_name || session.user?.email?.split('@')[0] || 'User'
+
+  return (
+    <BrowserRouter>
+      <AppShell company={company} role={role} isAdmin={isAdmin} userName={userName} loadCompany={loadCompany} />
+    </BrowserRouter>
   )
 }
