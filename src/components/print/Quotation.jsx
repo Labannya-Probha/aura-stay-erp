@@ -22,10 +22,9 @@ export default function Quotation({ res, guest, resRooms, company, taxConfig, te
     base: a.base + l.calc.base_amount * l.nights,
     discount: a.discount + l.calc.discount * l.nights,
     sc: a.sc + l.calc.service_charge * l.nights, 
-    sd: a.sd + l.calc.sd * l.nights,
     vat: a.vat + l.calc.vat * l.nights, 
     total: a.total + (l.calc.base_amount - l.calc.discount) * l.nights,
-  }), { base: 0, discount: 0, sc: 0, sd: 0, vat: 0, total: 0 })
+  }), { base: 0, discount: 0, sc: 0, vat: 0, total: 0 })
 
   const cell = { border: '1px solid #000', padding: '5px 8px' }
   const rt = { ...cell, textAlign: 'right' }
@@ -77,9 +76,8 @@ export default function Quotation({ res, guest, resRooms, company, taxConfig, te
         </tbody>
         <tfoot>
           {sum.sc > 0 && <tr><td style={cell} colSpan={6}>Service charge {rate.service_charge_pct}%</td><td style={rt}>{fmtBDT(sum.sc)}</td></tr>}
-          {sum.sd > 0 && <tr><td style={cell} colSpan={6}>Supplementary duty {rate.sd_pct}%</td><td style={rt}>{fmtBDT(sum.sd)}</td></tr>}
           <tr><td style={cell} colSpan={6}>VAT {rate.vat_pct}%</td><td style={rt}>{fmtBDT(sum.vat)}</td></tr>
-          <tr style={{ fontWeight: 700, background: '#f5f5f5' }}><td style={cell} colSpan={6}>GRAND TOTAL</td><td style={rt}>{fmtBDT(sum.total + sum.sc + sum.sd + sum.vat)}</td></tr>
+          <tr style={{ fontWeight: 700, background: '#f5f5f5' }}><td style={cell} colSpan={6}>GRAND TOTAL</td><td style={rt}>{fmtBDT(sum.total + sum.sc + sum.vat)}</td></tr>
         </tfoot>
       </table>
 

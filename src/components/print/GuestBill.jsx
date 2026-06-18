@@ -62,7 +62,6 @@ export default function GuestBill({
   const subtotal = Number(totals.grand_total_raw ?? totals.grand_total ?? 0)
   const discount = Number(totals.discount || 0)
   const serviceCharge = Number(totals.service_charge || 0)
-  const sd = Number(totals.sd || 0)
   const vat = Number(totals.vat || 0)
   const rounding = Number(totals.rounding || 0)
   const grandTotal = Number(totals.grand_total ?? subtotal + rounding)
@@ -73,7 +72,6 @@ export default function GuestBill({
     base: Number(totals.base || 0),
     discount,
     service_charge: serviceCharge,
-    sd,
     vat,
     grand_total_raw: subtotal,
   }
@@ -158,15 +156,14 @@ export default function GuestBill({
               <th style={th}>Description</th>
               <th style={{ ...th, width: 68, textAlign: 'right' }}>Base</th>
               <th style={{ ...th, width: 68, textAlign: 'right' }}>Disc.</th>
-              <th style={{ ...th, width: 56, textAlign: 'right' }}>SC</th>
-              <th style={{ ...th, width: 56, textAlign: 'right' }}>SD</th>
-              <th style={{ ...th, width: 64, textAlign: 'right' }}>VAT</th>
+              <th style={{ ...th, width: 60, textAlign: 'right' }}>SC</th>
+              <th style={{ ...th, width: 72, textAlign: 'right' }}>VAT</th>
               <th style={{ ...th, width: 76, textAlign: 'right' }}>Total</th>
               <th style={{ ...th, width: 70, textAlign: 'center' }}>Status</th>
             </tr>
           </thead>
           <tbody>
-            {charges.length === 0 && <tr><td style={{ ...td, textAlign: 'center', color: MUTE }} colSpan={10}>No charges recorded.</td></tr>}
+            {charges.length === 0 && <tr><td style={{ ...td, textAlign: 'center', color: MUTE }} colSpan={9}>No charges recorded.</td></tr>}
             {charges.map((ch, i) => (
               <tr key={ch.id || i}>
                 <td style={{ ...td, whiteSpace: 'nowrap', fontSize: 10.5 }}>{fmtDate(ch.charge_date)}</td>
@@ -175,7 +172,6 @@ export default function GuestBill({
                 <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.base_amount || 0).toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.discount || 0).toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.service_charge || 0).toFixed(2)}</td>
-                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.sd || 0).toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.vat || 0).toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{Number(ch.total || 0).toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'center' }}>
@@ -196,7 +192,6 @@ export default function GuestBill({
                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.base.toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.discount.toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.service_charge.toFixed(2)}</td>
-                <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.sd.toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.vat.toFixed(2)}</td>
                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', borderBottom: 'none' }}>{chargeTotals.grand_total_raw.toFixed(2)}</td>
                 <td style={{ ...td, borderBottom: 'none' }}></td>

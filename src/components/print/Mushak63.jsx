@@ -96,7 +96,7 @@ export default function Mushak63({
         <tbody>
           {lines.map((l, i) => {
             const val = lineValue(l)
-            const vatPct = val > 0 ? ((Number(l.vat) / (val + Number(l.sd))) * 100).toFixed(1).replace(/\.0$/, '') : '—'
+            const vatPct = val > 0 ? ((Number(l.vat) / val) * 100).toFixed(1).replace(/\.0$/, '') : '—'
             return (
               <tr key={i}>
                 <td style={bc}>{i + 1}</td>
@@ -104,7 +104,7 @@ export default function Mushak63({
                 <td style={bc}>{l.charge_type === 'ROOM' ? 'Night' : 'Service'}</td>
                 <td style={bc}>1</td>
                 <td style={br}>{val.toFixed(2)}</td>
-                <td style={br}>{Number(l.sd).toFixed(2)}</td>
+                <td style={br}>{(0).toFixed(2)}</td>
                 <td style={bc}>{vatPct}%</td>
                 <td style={br}>{Number(l.vat).toFixed(2)}</td>
                 <td style={br}>{Number(l.total).toFixed(2)}</td>
@@ -114,7 +114,7 @@ export default function Mushak63({
           <tr>
             <td style={{ ...b, fontWeight: 700 }} colSpan={4}>সর্বমোট (Total)</td>
             <td style={{ ...br, fontWeight: 700 }}>{totalValue.toFixed(2)}</td>
-            <td style={{ ...br, fontWeight: 700 }}>{Number(t.sd || 0).toFixed(2)}</td>
+            <td style={{ ...br, fontWeight: 700 }}>{(0).toFixed(2)}</td>
             <td style={bc}>—</td>
             <td style={{ ...br, fontWeight: 700 }}>{Number(t.vat || 0).toFixed(2)}</td>
             <td style={{ ...br, fontWeight: 700 }}>{Number(t.grand_total_raw ?? t.grand_total ?? 0).toFixed(2)}</td>
