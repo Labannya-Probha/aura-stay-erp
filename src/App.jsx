@@ -211,6 +211,11 @@ function AppShell({ company, role, isAdmin, userName, loadCompany }) {
           {/* Unknown path (typo, stale bookmark, etc.) — send to the first page this role can access */}
           <Route path="*" element={<Navigate to={firstAccessiblePath(role)} replace />} />
         </Routes>
+
+        <footer className="no-print mt-10 pt-4 border-t border-pine/10 flex items-center justify-between text-xs text-pine/40">
+          <div>© {new Date().getFullYear()} Aura Stay</div>
+          <div>Powered by <span className="font-semibold text-pine/60">Aura Stay</span></div>
+        </footer>
       </main>
     </div>
   )
