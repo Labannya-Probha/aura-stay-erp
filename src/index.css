@@ -169,10 +169,10 @@
 
   /* ---- Global tuning variables ---------------------------------- */
   :root {
-    --aura-enter-duration: 0.45s;          /* entry transitions */
+    --aura-enter-duration: 0.60s;          /* entry transitions */
     --aura-enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
     --aura-stagger-step: 70ms;             /* gap between staggered children */
-    --aura-loader-duration: 3s;            /* << page loader = 3 seconds */
+    --aura-loader-duration: 20s;            /* << page loader = 3 seconds */
     --aura-brand: #2E7D32;
     --aura-brand-soft: rgba(46, 125, 50, 0.18);
   }
@@ -333,6 +333,6 @@
     }
     .aura-spinner,
     .btn-spinner,
-    .skeleton { animation-duration: 2s; }
+    .skeleton { animation-duration: 10s; }
   }
 }
