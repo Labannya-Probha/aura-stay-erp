@@ -40,10 +40,10 @@ export const rateFor = (taxConfig, chargeType, onDate) => {
   const rows = (taxConfig || [])
     .filter((t) => t.charge_type === chargeType && t.effective_from <= (onDate || todayISO()))
     .sort((a, b) => (a.effective_from < b.effective_from ? 1 : -1))
-  return rows[0] || { vat_pct: 0, sd_pct: 0, service_charge_pct: 0 }
+  return rows[0] || { vat_pct: 0, service_charge_pct: 0 }
 }
 
-// Hotel practice: discount on base → SC & SD on net → VAT on (net + SC + SD)
+// Hotel practice: discount on base → SC on net → VAT on (net + SC)
 // `discount` accepts either:
 //   - a plain number (legacy/default) — treated as a PERCENTAGE, e.g. 10 = 10%
 //   - { type: 'fixed', value }        — a flat amount subtracted from base (capped at base)
@@ -60,10 +60,9 @@ export const computeCharge = (base, discount, rate) => {
   const disc = +discountAmt.toFixed(2)
   const net = +(b - disc).toFixed(2)
   const service_charge = +(net * (Number(rate.service_charge_pct) || 0) / 100).toFixed(2)
-  const sd = +(net * (Number(rate.sd_pct) || 0) / 100).toFixed(2)
-  const vat = +((net + service_charge + sd) * (Number(rate.vat_pct) || 0) / 100).toFixed(2)
-  const total = +(net + service_charge + sd + vat).toFixed(2)
-  return { base_amount: b, discount: disc, service_charge, sd, vat, total }
+  const vat = +((net + service_charge) * (Number(rate.vat_pct) || 0) / 100).toFixed(2)
+  const total = +(net + service_charge + vat).toFixed(2)
+  return { base_amount: b, discount: disc, service_charge, vat, total }
 }
 
 export const sumCharges = (charges) =>
@@ -73,11 +72,10 @@ export const sumCharges = (charges) =>
       discount: a.discount + Number(c.discount),
       taxable_value: a.taxable_value + Number(c.base_amount) - Number(c.discount),
       service_charge: a.service_charge + Number(c.service_charge),
-      sd: a.sd + Number(c.sd),
       vat: a.vat + Number(c.vat),
       grand_total: a.grand_total + Number(c.total),
     }),
-    { base: 0, discount: 0, taxable_value: 0, service_charge: 0, sd: 0, vat: 0, grand_total: 0 }
+    { base: 0, discount: 0, taxable_value: 0, service_charge: 0, vat: 0, grand_total: 0 }
   )
 
 // Amount in words — Taka
