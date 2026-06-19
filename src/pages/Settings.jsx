@@ -5,7 +5,7 @@ import { ROLES, ROLE_LABELS } from '../lib/roles'
 import {
   Save, Plus, BedDouble, Percent, Building2, Trash2, Users, ShieldCheck,
   Upload, Image, Bold, List, AlignLeft, AlignCenter, KeyRound, AlertTriangle,
-  Eye, EyeOff, ChevronDown, ChevronUp, FileUp, FileDown, CheckCircle2, XCircle, TableProperties,
+  Eye, EyeOff, ChevronDown, ChevronUp, FileUp, FileDown, CheckCircle2, XCircle, TableProperties, Pencil,
 } from 'lucide-react'
 
 /* ------------------------------------------------------------------ */
@@ -213,20 +213,29 @@ function BrandingCard({ reloadCompany }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  TAX CONFIG — unchanged                                              */
+/*  TAX CONFIG — with inline edit                                       */
 /* ------------------------------------------------------------------ */
 function TaxCard() {
-  const [rows, setRows] = useState([])
-  const [msg, setMsg]   = useState('')
+  const [rows, setRows]   = useState([])
+  const [msg, setMsg]     = useState('')
+  const [editId, setEditId] = useState(null)
+  const [editF, setEditF] = useState({})
   const [f, setF] = useState({ charge_type: 'ROOM', vat_pct: 15, service_charge_pct: 10, effective_from: todayISO() })
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
   const load  = async () => { const { data } = await supabase.from('tax_config').select('*').order('effective_from', { ascending: false }); setRows(data || []) }
   useEffect(() => { load() }, [])
+
   const add = async () => {
     const { error } = await supabase.from('tax_config').insert({ charge_type: f.charge_type, vat_pct: +f.vat_pct || 0, service_charge_pct: +f.service_charge_pct || 0, effective_from: f.effective_from })
     if (error) flash(error.message); else { load(); flash('Added.') }
   }
+  const startEdit = (r) => { setEditId(r.id); setEditF({ charge_type: r.charge_type, vat_pct: r.vat_pct, service_charge_pct: r.service_charge_pct, effective_from: r.effective_from }) }
+  const saveEdit  = async () => {
+    const { error } = await supabase.from('tax_config').update({ charge_type: editF.charge_type, vat_pct: +editF.vat_pct || 0, service_charge_pct: +editF.service_charge_pct || 0, effective_from: editF.effective_from }).eq('id', editId)
+    if (error) flash(error.message); else { setEditId(null); load(); flash('Updated.') }
+  }
   const del = async (id) => { await supabase.from('tax_config').delete().eq('id', id); load() }
+
   return (
     <div className="card p-5">
       <h2 className="font-display font-semibold text-pine flex items-center gap-2 mb-4"><Percent size={18} className="text-forest" /> NBR tax rates</h2>
@@ -243,13 +252,35 @@ function TaxCard() {
       <table className="w-full">
         <thead><tr><th className="th">Type</th><th className="th text-right">VAT %</th><th className="th text-right">SC %</th><th className="th">From</th><th className="th"></th></tr></thead>
         <tbody>
-          {rows.map((r) => (
+          {rows.map((r) => editId === r.id ? (
+            <tr key={r.id} className="bg-leaf/20">
+              <td className="td">
+                <select className="input !py-1 !w-28" value={editF.charge_type} onChange={(e) => setEditF({ ...editF, charge_type: e.target.value })}>
+                  {['ROOM', 'FOOD', 'OTHER'].map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </td>
+              <td className="td"><input type="number" className="input money !py-1 !w-20 text-right" value={editF.vat_pct} onChange={(e) => setEditF({ ...editF, vat_pct: e.target.value })} /></td>
+              <td className="td"><input type="number" className="input money !py-1 !w-20 text-right" value={editF.service_charge_pct} onChange={(e) => setEditF({ ...editF, service_charge_pct: e.target.value })} /></td>
+              <td className="td"><input type="date" className="input !py-1" value={editF.effective_from} onChange={(e) => setEditF({ ...editF, effective_from: e.target.value })} /></td>
+              <td className="td">
+                <div className="flex gap-1">
+                  <button onClick={saveEdit} className="w-7 h-7 flex items-center justify-center rounded-lg bg-forest/15 hover:bg-forest/30 text-forest" title="Save"><Save size={13} /></button>
+                  <button onClick={() => setEditId(null)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-leaf text-pine/40" title="Cancel">✕</button>
+                </div>
+              </td>
+            </tr>
+          ) : (
             <tr key={r.id}>
               <td className="td">{r.charge_type}</td>
               <td className="td money text-right">{r.vat_pct}%</td>
               <td className="td money text-right">{r.service_charge_pct}%</td>
               <td className="td text-sm">{r.effective_from}</td>
-              <td className="td"><button onClick={() => del(r.id)} className="text-red-300 hover:text-red-600"><Trash2 size={13} /></button></td>
+              <td className="td">
+                <div className="flex gap-1">
+                  <button onClick={() => startEdit(r)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-leaf text-pine/40 hover:text-forest" title="Edit"><Pencil size={13} /></button>
+                  <button onClick={() => del(r.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-300 hover:text-red-600" title="Delete"><Trash2 size={13} /></button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -259,18 +290,27 @@ function TaxCard() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  ROOMS — unchanged                                                   */
+/*  ROOMS — with inline edit                                            */
 /* ------------------------------------------------------------------ */
 function RoomsCard() {
-  const [rows, setRows] = useState([])
-  const [msg, setMsg]   = useState('')
+  const [rows, setRows]     = useState([])
+  const [msg, setMsg]       = useState('')
+  const [editId, setEditId] = useState(null)
+  const [editF, setEditF]   = useState({})
   const [f, setF] = useState({ room_no: '', room_name: '', room_type: '', base_rate: '' })
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
   const load  = async () => { const { data } = await supabase.from('rooms').select('*').order('room_no'); setRows(data || []) }
   useEffect(() => { load() }, [])
+
   const add    = async () => { if (!f.room_no) return; const { error } = await supabase.from('rooms').insert({ ...f, base_rate: +f.base_rate || 0 }); if (error) flash(error.message); else { setF({ room_no: '', room_name: '', room_type: '', base_rate: '' }); load() } }
   const toggle = async (r) => { await supabase.from('rooms').update({ is_active: !r.is_active }).eq('id', r.id); load() }
   const del    = async (id) => { const { error } = await supabase.from('rooms').delete().eq('id', id); if (error) flash('Room is in use and cannot be deleted.'); else load() }
+  const startEdit = (r) => { setEditId(r.id); setEditF({ room_no: r.room_no, room_name: r.room_name || '', room_type: r.room_type || '', base_rate: r.base_rate }) }
+  const saveEdit  = async () => {
+    const { error } = await supabase.from('rooms').update({ room_no: editF.room_no, room_name: editF.room_name || null, room_type: editF.room_type || 'Standard', base_rate: +editF.base_rate || 0 }).eq('id', editId)
+    if (error) flash(error.message); else { setEditId(null); load(); flash('Room updated.') }
+  }
+
   return (
     <div className="card p-5">
       <h2 className="font-display font-semibold text-pine flex items-center gap-2 mb-4"><BedDouble size={18} className="text-forest" /> Rooms</h2>
@@ -285,14 +325,33 @@ function RoomsCard() {
       <table className="w-full">
         <thead><tr><th className="th">Room no</th><th className="th">Name</th><th className="th">Type</th><th className="th text-right">Rate</th><th className="th">Status</th><th className="th"></th></tr></thead>
         <tbody>
-          {rows.map((r) => (
+          {rows.map((r) => editId === r.id ? (
+            <tr key={r.id} className="bg-leaf/20">
+              <td className="td"><input className="input !py-1 !w-20 money" value={editF.room_no} onChange={(e) => setEditF({ ...editF, room_no: e.target.value })} /></td>
+              <td className="td"><input className="input !py-1" value={editF.room_name} onChange={(e) => setEditF({ ...editF, room_name: e.target.value })} placeholder="Room name" /></td>
+              <td className="td"><input className="input !py-1" value={editF.room_type} onChange={(e) => setEditF({ ...editF, room_type: e.target.value })} placeholder="Type" /></td>
+              <td className="td"><input type="number" className="input money !py-1 !w-28 text-right" value={editF.base_rate} onChange={(e) => setEditF({ ...editF, base_rate: e.target.value })} /></td>
+              <td className="td"><span className="text-xs text-pine/40">—</span></td>
+              <td className="td">
+                <div className="flex gap-1">
+                  <button onClick={saveEdit} className="w-7 h-7 flex items-center justify-center rounded-lg bg-forest/15 hover:bg-forest/30 text-forest" title="Save"><Save size={13} /></button>
+                  <button onClick={() => setEditId(null)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-leaf text-pine/40" title="Cancel">✕</button>
+                </div>
+              </td>
+            </tr>
+          ) : (
             <tr key={r.id} className={!r.is_active ? 'opacity-50' : ''}>
               <td className="td money font-semibold">{r.room_no}</td>
               <td className="td text-sm">{r.room_name || '—'}</td>
               <td className="td text-sm">{r.room_type || '—'}</td>
               <td className="td money text-right">{fmtBDT(r.base_rate)}</td>
               <td className="td"><button onClick={() => toggle(r)} className={`status-chip ${r.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'}`}>{r.is_active ? 'Active' : 'Inactive'}</button></td>
-              <td className="td"><button onClick={() => del(r.id)} className="text-red-300 hover:text-red-600"><Trash2 size={13} /></button></td>
+              <td className="td">
+                <div className="flex gap-1">
+                  <button onClick={() => startEdit(r)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-leaf text-pine/40 hover:text-forest" title="Edit"><Pencil size={13} /></button>
+                  <button onClick={() => del(r.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-300 hover:text-red-600" title="Delete"><Trash2 size={13} /></button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -302,26 +361,38 @@ function RoomsCard() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  STAFF — roles, status, add, password reset for others              */
+/*  STAFF — inline edit, password reset, fixed to use app_users        */
 /* ------------------------------------------------------------------ */
 function StaffCard({ isAdminPlus, isSuperuser, currentUserName }) {
-  const [rows, setRows]         = useState([])
-  const [msg, setMsg]           = useState('')
-  const [busy, setBusy]         = useState(false)
-  const [nu, setNu]             = useState({ full_name: '', username: '', password: '', role: 'FRONT_OFFICE' })
-  const [resetTarget, setResetTarget] = useState(null)   // { id, name } of user being reset
-  const [newPwd, setNewPwd]     = useState('')
-  const [showPwd, setShowPwd]   = useState(false)
+  const [rows, setRows]           = useState([])
+  const [msg, setMsg]             = useState('')
+  const [busy, setBusy]           = useState(false)
+  const [nu, setNu]               = useState({ full_name: '', username: '', password: '', role: 'FRONT_OFFICE' })
+  const [editId, setEditId]       = useState(null)
+  const [editF, setEditF]         = useState({})
+  const [resetTarget, setResetTarget] = useState(null)  // { id, name, email }
+  const [newPwd, setNewPwd]       = useState('')
+  const [showPwd, setShowPwd]     = useState(false)
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 6000) }
-  const load  = async () => { const { data } = await supabase.from('v_staff').select('*').order('created_at'); setRows(data || []) }
+
+  // Fixed: query app_users directly, no v_staff view
+  const load = async () => {
+    const { data } = await supabase
+      .from('app_users')
+      .select('id, email, full_name, username, role, is_active, created_at')
+      .order('created_at')
+    setRows(data || [])
+  }
   useEffect(() => { load() }, [])
 
   const LOGIN_DOMAIN = 'aura-stay.local'
+  const availableRoles = isSuperuser ? ROLES : ROLES.filter((r) => r !== 'SUPERUSER')
 
+  // ── Add new staff ──
   const addStaff = async () => {
     const uname = nu.username.trim().toLowerCase()
     if (!nu.full_name.trim() || !uname || nu.password.length < 6) { flash('Enter name, username and a password of at least 6 characters.'); return }
-    if (/[^a-z0-9._-]/.test(uname)) { flash('Username can use letters, numbers, dot, dash and underscore only.'); return }
+    if (/[^a-z0-9._-]/.test(uname)) { flash('Username may only use letters, numbers, dot, dash and underscore.'); return }
     setBusy(true)
     try {
       const { createClient } = await import('@supabase/supabase-js')
@@ -334,24 +405,27 @@ function StaffCard({ isAdminPlus, isSuperuser, currentUserName }) {
       await tmp.auth.signOut()
       setNu({ full_name: '', username: '', password: '', role: 'FRONT_OFFICE' })
       await load()
-      flash(`Staff "${uname}" created.`)
+      flash(`Staff "${uname}" created successfully.`)
     } catch (e) { flash(e.message?.includes('already registered') ? 'Username already taken.' : e.message) }
     setBusy(false)
   }
 
-  // Admin/Superuser reset another user's password
-  // Uses signInWithPassword on a throwaway client to get a session for that user,
-  // then calls updateUser — limited to @aura-stay.local accounts created via addStaff
+  // ── Inline edit ──
+  const startEdit = (u) => { setEditId(u.id); setEditF({ full_name: u.full_name || '', username: u.username || '', role: u.role }) }
+  const saveEdit  = async () => {
+    const { error } = await supabase.from('app_users').update({ full_name: editF.full_name, username: editF.username, role: editF.role }).eq('id', editId)
+    if (error) flash(error.message); else { setEditId(null); load(); flash('Staff updated.') }
+  }
+
+  // ── Active/Inactive toggle ──
+  const toggle = async (u) => { await supabase.from('app_users').update({ is_active: !u.is_active }).eq('id', u.id); load() }
+
+  // ── Password reset for other users (Admin/Superuser) ──
+  // Calls the existing wipe-nonuser-data Edge Function with action: reset_password
   const resetPassword = async () => {
     if (!resetTarget || newPwd.length < 6) { flash('New password must be at least 6 characters.'); return }
     setBusy(true)
     try {
-      const targetUser = rows.find((r) => r.id === resetTarget.id)
-      if (!targetUser) throw new Error('User not found.')
-      const email = targetUser.email || `${targetUser.username}@${LOGIN_DOMAIN}`
-      // We use a service-role–equivalent flow: fetch the user's current password
-      // from a signed admin session is not possible client-side; instead we
-      // invoke the dedicated Edge Function that handles this securely
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/wipe-nonuser-data`, {
         method: 'POST',
@@ -360,28 +434,23 @@ function StaffCard({ isAdminPlus, isSuperuser, currentUserName }) {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || json.message || 'Reset failed.')
-      flash(`Password reset for ${resetTarget.name}.`, true)
+      flash(`Password reset for ${resetTarget.name}.`)
       setResetTarget(null); setNewPwd('')
-    } catch (e) { flash(e.message) }
+    } catch (e) { flash(`Password reset failed: ${e.message}`) }
     setBusy(false)
   }
-
-  const setRole   = async (id, role) => { const { error } = await supabase.from('app_users').update({ role }).eq('id', id); if (!error) load() }
-  const toggle    = async (u) => { const { error } = await supabase.from('app_users').update({ is_active: !u.is_active }).eq('id', u.id); if (!error) load() }
-
-  // Roles available in the dropdown depend on who's editing
-  const availableRoles = isSuperuser ? ROLES : ROLES.filter((r) => r !== 'SUPERUSER')
 
   return (
     <div className="card p-5">
       <h2 className="font-display font-semibold text-pine flex items-center gap-2 mb-2"><Users size={18} className="text-forest" /> Staff</h2>
       {msg && <div className="mb-3 px-3 py-2 rounded-lg bg-forest/10 text-forest text-sm">{msg}</div>}
 
+      {/* Add new staff row */}
       {isAdminPlus && (
         <div className="grid grid-cols-5 gap-2 mb-4">
           <input className="input" placeholder="Full name" value={nu.full_name} onChange={(e) => setNu({ ...nu, full_name: e.target.value })} />
           <input className="input" placeholder="Username" value={nu.username} onChange={(e) => setNu({ ...nu, username: e.target.value })} />
-          <input className="input" placeholder="Password (min 6)" value={nu.password} onChange={(e) => setNu({ ...nu, password: e.target.value })} />
+          <input type="password" className="input" placeholder="Password (min 6)" value={nu.password} onChange={(e) => setNu({ ...nu, password: e.target.value })} />
           <select className="input" value={nu.role} onChange={(e) => setNu({ ...nu, role: e.target.value })}>
             {availableRoles.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
           </select>
@@ -392,68 +461,99 @@ function StaffCard({ isAdminPlus, isSuperuser, currentUserName }) {
       {/* Password reset panel */}
       {resetTarget && (
         <div className="mb-4 p-4 rounded-xl border border-amber/30 bg-amber/5">
-          <p className="text-sm font-medium text-pine mb-2">Reset password for <span className="font-bold">{resetTarget.name}</span></p>
-          <div className="flex gap-2 items-center">
+          <p className="text-sm font-semibold text-pine mb-2 flex items-center gap-2">
+            <KeyRound size={15} className="text-amber-600" />
+            Reset password for <span className="font-bold">{resetTarget.name}</span>
+          </p>
+          <div className="flex gap-2 items-center flex-wrap">
             <div className="relative flex-1 max-w-xs">
               <input
                 type={showPwd ? 'text' : 'password'}
                 className="input pr-9"
                 value={newPwd}
                 onChange={(e) => setNewPwd(e.target.value)}
-                placeholder="New password (min 6)"
+                placeholder="New password (min 6 characters)"
               />
               <button type="button" onClick={() => setShowPwd((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-pine/40 hover:text-pine">
                 {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
             <button className="btn-primary" onClick={resetPassword} disabled={busy || newPwd.length < 6}>
-              <KeyRound size={14} /> {busy ? 'Saving…' : 'Set password'}
+              <KeyRound size={14} /> {busy ? 'Saving…' : 'Set new password'}
             </button>
             <button className="btn-ghost" onClick={() => { setResetTarget(null); setNewPwd('') }}>Cancel</button>
           </div>
-          <p className="text-xs text-pine/50 mt-2">This resets the password immediately. The user will need to use the new password on their next login.</p>
+          <p className="text-xs text-pine/50 mt-2">The user will need to use this password on their next login.</p>
         </div>
       )}
 
+      {/* Staff table */}
       <table className="w-full">
         <thead>
           <tr>
-            <th className="th">Name</th>
+            <th className="th">Full name</th>
             <th className="th">Username</th>
             <th className="th">Role</th>
             <th className="th">Status</th>
-            {isAdminPlus && <th className="th">Password</th>}
+            {isAdminPlus && <th className="th text-center">Actions</th>}
           </tr>
         </thead>
         <tbody>
-          {rows.map((u) => (
+          {rows.map((u) => editId === u.id ? (
+            <tr key={u.id} className="bg-leaf/20">
+              <td className="td"><input className="input !py-1" value={editF.full_name} onChange={(e) => setEditF({ ...editF, full_name: e.target.value })} /></td>
+              <td className="td"><input className="input !py-1 money" value={editF.username} onChange={(e) => setEditF({ ...editF, username: e.target.value })} /></td>
+              <td className="td">
+                <select className="input !py-1 !w-44" value={editF.role} onChange={(e) => setEditF({ ...editF, role: e.target.value })}>
+                  {availableRoles.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                </select>
+              </td>
+              <td className="td"><span className="text-xs text-pine/40">—</span></td>
+              <td className="td">
+                <div className="flex gap-1 justify-center">
+                  <button onClick={saveEdit} className="w-7 h-7 flex items-center justify-center rounded-lg bg-forest/15 hover:bg-forest/30 text-forest" title="Save"><Save size={13} /></button>
+                  <button onClick={() => setEditId(null)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-leaf text-pine/40" title="Cancel">✕</button>
+                </div>
+              </td>
+            </tr>
+          ) : (
             <tr key={u.id} className={!u.is_active ? 'opacity-50' : ''}>
-              <td className="td text-sm">{u.full_name || '—'}</td>
+              <td className="td text-sm font-medium">{u.full_name || '—'}</td>
               <td className="td text-sm money">{u.username || '—'}</td>
               <td className="td">
-                {isAdminPlus
-                  ? <select className="input !py-1 !w-44" value={u.role} onChange={(e) => setRole(u.id, e.target.value)}>
-                      {availableRoles.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-                    </select>
-                  : ROLE_LABELS[u.role]}
+                <span className={`status-chip text-xs ${u.role === 'SUPERUSER' ? 'bg-purple-100 text-purple-700' : u.role === 'ADMIN' ? 'bg-forest/15 text-forest' : 'bg-leaf/50 text-pine'}`}>
+                  {ROLE_LABELS[u.role] || u.role}
+                </span>
               </td>
               <td className="td">
                 <button
                   onClick={() => toggle(u)}
                   disabled={!isAdminPlus}
-                  className={`status-chip ${u.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'} ${!isAdminPlus ? 'opacity-50 cursor-default' : ''}`}
+                  className={`status-chip ${u.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-500'} ${!isAdminPlus ? 'cursor-default opacity-60' : ''}`}
                 >
                   {u.is_active ? 'Active' : 'Disabled'}
                 </button>
               </td>
               {isAdminPlus && (
                 <td className="td">
-                  <button
-                    className="btn-ghost !py-1 text-xs"
-                    onClick={() => { setResetTarget({ id: u.id, name: u.full_name || u.username }); setNewPwd('') }}
-                  >
-                    <KeyRound size={12} /> Reset
-                  </button>
+                  <div className="flex gap-1 justify-center">
+                    {/* Edit name/username/role */}
+                    <button
+                      onClick={() => startEdit(u)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-leaf text-pine/40 hover:text-forest"
+                      title="Edit staff"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    {/* Password reset */}
+                    <button
+                      onClick={() => { setResetTarget({ id: u.id, name: u.full_name || u.username }); setNewPwd(''); setShowPwd(false) }}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-amber/10 text-pine/40 hover:text-amber-600"
+                      title="Reset password"
+                    >
+                      <KeyRound size={13} />
+                    </button>
+                  </div>
                 </td>
               )}
             </tr>
@@ -463,6 +563,7 @@ function StaffCard({ isAdminPlus, isSuperuser, currentUserName }) {
     </div>
   )
 }
+
 
 /* ------------------------------------------------------------------ */
 /*  DATA WIPE — Superuser only                                          */
