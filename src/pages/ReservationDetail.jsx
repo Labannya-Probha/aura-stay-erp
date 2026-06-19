@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabase'
 import {
@@ -17,6 +17,85 @@ import {
 } from 'lucide-react'
 
 const TABS = ['Overview', 'Check-In', 'Billings & Check-Out', 'Partners']
+
+/* ------------------------------------------------------------------ */
+/*  SEARCHABLE SELECT — reusable, no external lib                       */
+/* ------------------------------------------------------------------ */
+function SearchableSelect({ value, onChange, options, placeholder = 'Select…', disabled = false, className = '' }) {
+  // options: [{ value, label }] or plain strings
+  const normalised = options.map(o =>
+    typeof o === 'string' ? { value: o, label: o } : o
+  )
+  const [open, setOpen]     = useState(false)
+  const [query, setQuery]   = useState('')
+  const containerRef        = useRef(null)
+  const inputRef            = useRef(null)
+
+  const selected = normalised.find(o => o.value === value)
+  const filtered = query
+    ? normalised.filter(o => o.label.toLowerCase().includes(query.toLowerCase()))
+    : normalised
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => { if (containerRef.current && !containerRef.current.contains(e.target)) { setOpen(false); setQuery('') } }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Focus search when opened
+  useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 30) }, [open])
+
+  const select = (opt) => { onChange(opt.value); setOpen(false); setQuery('') }
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen(v => !v)}
+        className={`input w-full text-left flex items-center justify-between gap-2 ${disabled ? 'opacity-50 cursor-default' : 'cursor-pointer'}`}
+      >
+        <span className={selected ? 'text-pine' : 'text-pine/40'}>{selected?.label || placeholder}</span>
+        <svg className={`w-4 h-4 text-pine/40 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-leaf rounded-xl shadow-lg overflow-hidden">
+          {/* Search input */}
+          <div className="p-2 border-b border-leaf">
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search…"
+              className="w-full text-sm px-2 py-1.5 rounded-lg border border-leaf focus:outline-none focus:ring-2 focus:ring-forest/30"
+              onKeyDown={e => {
+                if (e.key === 'Escape') { setOpen(false); setQuery('') }
+                if (e.key === 'Enter' && filtered.length === 1) select(filtered[0])
+              }}
+            />
+          </div>
+          {/* Options */}
+          <div className="max-h-48 overflow-y-auto">
+            {filtered.length === 0 && <div className="px-3 py-2 text-sm text-pine/40">No results</div>}
+            {filtered.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => select(opt)}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-leaf/40 transition-colors ${opt.value === value ? 'bg-forest/10 text-forest font-semibold' : 'text-pine'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const generateInvoiceNo = (resNo) => `INV-${resNo}-${Date.now().toString().slice(-6)}`
 
@@ -709,9 +788,12 @@ function Overview({
               <legend className="text-xs font-bold text-pine/60 px-2 uppercase tracking-wide">Primary Guest</legend>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="label">Salutation</label>
-                  <select className="input" value={editForm.salutation} onChange={e => setEditForm({...editForm, salutation: e.target.value})}>
-                    {['', 'Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.'].map(s => <option key={s} value={s}>{s || '—'}</option>)}
-                  </select>
+                  <SearchableSelect
+                    value={editForm.salutation}
+                    onChange={v => setEditForm({...editForm, salutation: v})}
+                    options={['', 'Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.'].map(s => ({ value: s, label: s || '—' }))}
+                    placeholder="Select…"
+                  />
                 </div>
                 <div><label className="label">Full Name *</label>
                   <input className="input" value={editForm.full_name} onChange={e => setEditForm({...editForm, full_name: e.target.value})} />
@@ -754,9 +836,12 @@ function Overview({
                   </div>
                 </div>
                 <div><label className="label">Source</label>
-                  <select className="input" value={editForm.source} onChange={e => setEditForm({...editForm, source: e.target.value})}>
-                    {['Phone', 'Walk-in', 'Email', 'Website', 'OTA', 'Agent', 'Corporate', 'Other'].map(s => <option key={s}>{s}</option>)}
-                  </select>
+                  <SearchableSelect
+                    value={editForm.source}
+                    onChange={v => setEditForm({...editForm, source: v})}
+                    options={['Phone', 'Walk-in', 'Email', 'Website', 'OTA', 'Agent', 'Corporate', 'Other']}
+                    placeholder="Select source…"
+                  />
                 </div>
                 <div className="col-span-2"><label className="label">Reservation Name</label>
                   <input className="input" value={editForm.reservation_name} onChange={e => setEditForm({...editForm, reservation_name: e.target.value})} />
@@ -775,16 +860,18 @@ function Overview({
             <fieldset className="border border-leaf rounded-xl p-4 mb-4">
               <legend className="text-xs font-bold text-pine/60 px-2 uppercase tracking-wide">Rooms — Pick from dropdown, each with its own dates</legend>
               <div className="flex gap-2 mb-3">
-                <select className="input flex-1" onChange={(e) => {
-                  const room = roomsAll.find(r => r.id === e.target.value)
-                  if (room) assignRoomInModal(room)
-                  e.target.value = ''
-                }}>
-                  <option value="">+ Add room</option>
-                  {roomsAll.filter(r => !roomList.some(rl => rl.room_id === r.id)).map(r => (
-                    <option key={r.id} value={r.id}>{r.room_no}{r.room_name ? ` - ${r.room_name}` : ''} ({r.room_type})</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  className="flex-1"
+                  value=""
+                  onChange={(roomId) => {
+                    const room = roomsAll.find(r => r.id === roomId)
+                    if (room) assignRoomInModal(room)
+                  }}
+                  options={roomsAll
+                    .filter(r => !roomList.some(rl => rl.room_id === r.id))
+                    .map(r => ({ value: r.id, label: `${r.room_no}${r.room_name ? ` - ${r.room_name}` : ''} (${r.room_type})` }))}
+                  placeholder="+ Add room"
+                />
               </div>
               {roomList.length === 0 && <p className="text-xs text-pine/50">No rooms added yet — click "+ Add room". You can add the same or different rooms with different date ranges.</p>}
               {roomList.map((rm, idx) => (
@@ -989,9 +1076,12 @@ function GuestIdManager({ reservationId, resGuests, guestIds, locked, reload, fl
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label !text-xs">ID type *</label>
-              <select className="input" value={form.id_type} onChange={(e) => setForm((p) => ({ ...p, id_type: e.target.value }))}>
-                {ID_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <SearchableSelect
+                value={form.id_type}
+                onChange={v => setForm((p) => ({ ...p, id_type: v }))}
+                options={ID_TYPES}
+                placeholder="Select ID type…"
+              />
             </div>
             <div>
               <label className="label !text-xs">ID number *</label>
@@ -1113,12 +1203,16 @@ function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus,
         <div className="card p-5 space-y-4">
           <h3 className="font-display font-semibold text-pine">Room assignment</h3>
           <div className="flex gap-2">
-            <select className="input flex-1" value={roomSel} onChange={(e) => setRoomSel(e.target.value)}>
-              <option value="">Select room…</option>
-              {rooms.filter((r) => !assignedIds.has(r.id)).map((r) => (
-                <option key={r.id} value={r.id}>{r.room_no}{r.room_name ? ` — ${r.room_name}` : ''} · {r.room_type} ({fmtBDT(r.base_rate)})</option>
-              ))}
-            </select>
+            <SearchableSelect
+              className="flex-1"
+              value={roomSel}
+              onChange={setRoomSel}
+              options={rooms.filter((r) => !assignedIds.has(r.id)).map((r) => ({
+                value: r.id,
+                label: `${r.room_no}${r.room_name ? ` — ${r.room_name}` : ''} · ${r.room_type} (${fmtBDT(r.base_rate)})`
+              }))}
+              placeholder="Select room…"
+            />
             <button className="btn-primary" onClick={assignRoom}><BedDouble size={15} /> Assign</button>
           </div>
           {resRooms.map((rr) => (
@@ -1519,9 +1613,12 @@ function BillingsAndCheckOutTab({
               </div>
             </div>
             <div className="grid grid-cols-6 gap-2">
-              <select className="input" value={c.charge_type} onChange={(e) => setC({ ...c, charge_type: e.target.value })}>
-                {['ROOM', 'RESTAURANT', 'LAUNDRY', 'TEA', 'PICKLE', 'SPORTS', 'OTHER'].map((t) => <option key={t}>{t}</option>)}
-              </select>
+              <SearchableSelect
+                value={c.charge_type}
+                onChange={v => setC({ ...c, charge_type: v })}
+                options={['ROOM', 'RESTAURANT', 'LAUNDRY', 'TEA', 'PICKLE', 'SPORTS', 'OTHER']}
+                placeholder="Type…"
+              />
               <input className="input col-span-2" placeholder="Description" value={c.description} onChange={(e) => setC({ ...c, description: e.target.value })} />
               <input type="number" className="input money" placeholder="Base ৳" value={c.base_amount} onChange={(e) => setC({ ...c, base_amount: e.target.value })} />
               <input type="number" min="0" max="100" className="input money" placeholder="Disc %" value={c.discount_pct} onChange={(e) => setC({ ...c, discount_pct: e.target.value })} />
@@ -1532,9 +1629,12 @@ function BillingsAndCheckOutTab({
             <h3 className="font-display font-semibold text-pine mb-3">Record payment</h3>
             <div className="grid grid-cols-2 gap-2">
               <input type="number" className="input money" placeholder="Amount ৳" value={p.amount} onChange={(e) => setP({ ...p, amount: e.target.value })} />
-              <select className="input" value={p.method} onChange={(e) => setP({ ...p, method: e.target.value })}>
-                {['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER'].map((m) => <option key={m}>{m}</option>)}
-              </select>
+              <SearchableSelect
+                value={p.method}
+                onChange={v => setP({ ...p, method: v })}
+                options={['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER']}
+                placeholder="Method…"
+              />
               <input type="date" className="input" value={p.received_date} onChange={(e) => setP({ ...p, received_date: e.target.value })} />
               <input className="input" placeholder="Reference" value={p.reference} onChange={(e) => setP({ ...p, reference: e.target.value })} />
             </div>
@@ -1549,9 +1649,12 @@ function BillingsAndCheckOutTab({
           <h3 className="font-display font-semibold text-pine flex items-center gap-2 mb-3"><BadgePercent size={16} className="text-amber" /> Additional discount (admin)</h3>
           <div className="grid grid-cols-6 gap-2">
             <input type="number" min="0" className="input money" placeholder="Discount ৳" value={discAmt} onChange={(e) => setDiscAmt(e.target.value)} />
-            <select className="input" value={discType} onChange={(e) => setDiscType(e.target.value)} title="Tax category the discount applies against">
-              {['ROOM', 'RESTAURANT', 'LAUNDRY', 'TEA', 'PICKLE', 'SPORTS', 'OTHER'].map((t) => <option key={t}>{t}</option>)}
-            </select>
+            <SearchableSelect
+              value={discType}
+              onChange={setDiscType}
+              options={['ROOM', 'RESTAURANT', 'LAUNDRY', 'TEA', 'PICKLE', 'SPORTS', 'OTHER']}
+              placeholder="Type…"
+            />
             <input className="input col-span-2" placeholder="Reason (loyal guest, goodwill...)" value={discReason} onChange={(e) => setDiscReason(e.target.value)} />
             <button className="btn-amber justify-center col-span-2" onClick={addDiscount}><BadgePercent size={15} /> Apply discount</button>
           </div>
