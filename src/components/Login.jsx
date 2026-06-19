@@ -2,21 +2,39 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import { LogIn } from 'lucide-react'
 
+// Fallback logo in case storage URL fails — use inline SVG so no network request needed
+function FallbackLogo({ name }) {
+  return (
+    <div className="w-20 h-20 rounded-2xl bg-forest flex items-center justify-center mb-4 shadow-md">
+      <span className="text-3xl font-bold text-white select-none">
+        {(name || 'A').charAt(0).toUpperCase()}
+      </span>
+    </div>
+  )
+}
+
 export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [err, setErr]           = useState('')
   const [busy, setBusy]         = useState(false)
   const [company, setCompany]   = useState(null)
+  const [logoErr, setLogoErr]   = useState(false)
+  const [logoLoaded, setLogoLoaded] = useState(false)
 
-  // Fetch company branding (logo + property name) — no auth required
   useEffect(() => {
     supabase
       .from('company_settings')
       .select('logo_url, name, software_name')
       .eq('id', 1)
       .single()
-      .then(({ data }) => { if (data) setCompany(data) })
+      .then(({ data }) => {
+        if (data) {
+          setCompany(data)
+          setLogoErr(false)   // reset error state when new data arrives
+          setLogoLoaded(false) // reset loaded state
+        }
+      })
   }, [])
 
   const signIn = async () => {
@@ -39,32 +57,43 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-pine relative overflow-hidden">
-      {/* Subtle grid background */}
       <div
         className="absolute inset-0 opacity-[0.06]"
         style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 27px, #fff 28px)' }}
       />
 
       <div className="card w-full max-w-sm p-8 relative shadow-2xl">
+
         {/* Logo + Branding */}
         <div className="flex flex-col items-center text-center mb-7">
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt={propertyName}
-              className="w-20 h-20 object-contain mb-4 rounded-xl"
-              onError={(e) => { e.target.style.display = 'none' }}
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-xl bg-forest/20 flex items-center justify-center mb-4">
-              <span className="text-3xl font-bold text-forest">{propertyName.charAt(0)}</span>
+
+          {/* Logo — show image if URL exists and hasn't errored */}
+          {logoUrl && !logoErr ? (
+            <div className="relative w-20 h-20 mb-4">
+              {/* Show placeholder until image actually loads */}
+              {!logoLoaded && (
+                <div className="absolute inset-0 rounded-2xl bg-forest/20 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-forest">{propertyName.charAt(0)}</span>
+                </div>
+              )}
+              <img
+                key={logoUrl}
+                src={logoUrl}
+                alt={propertyName}
+                crossOrigin="anonymous"
+                className={`w-20 h-20 rounded-2xl object-contain bg-white shadow-md p-1 transition-opacity duration-300 ${logoLoaded ? 'opacity-100' : 'opacity-0'}`}
+                onLoad={() => setLogoLoaded(true)}
+                onError={() => { setLogoErr(true); setLogoLoaded(false) }}
+              />
             </div>
+          ) : (
+            <FallbackLogo name={propertyName} />
           )}
+
           <h1 className="font-display text-2xl font-bold text-pine leading-tight">{softwareName}</h1>
           <p className="text-sm text-pine/60 mt-1">Welcome to {propertyName}</p>
         </div>
 
-        {/* Divider */}
         <div className="border-t border-leaf mb-6" />
 
         {/* Form */}
