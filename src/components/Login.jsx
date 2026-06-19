@@ -1,12 +1,36 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { Leaf, LogIn } from 'lucide-react'
+import { TENANT_ID } from '../lib/tenant'
 
 export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // Tenant-aware branding
+  const [brandTitle, setBrandTitle] = useState('Aura Stay ERP')
+  const [brandSubtitle, setBrandSubtitle] = useState('Welcome')
+
+  useEffect(() => {
+    const loadBranding = async () => {
+      if (!TENANT_ID) return
+      const { data, error } = await supabase
+        .from('company_settings')
+        .select('property_name, name')
+        .eq('tenant_id', TENANT_ID)
+        .limit(1)
+        .maybeSingle()
+
+      if (!error && data) {
+        const property = data.property_name || data.name || 'Aura Stay'
+        setBrandTitle(`${property} ERP`)
+        setBrandSubtitle(property)
+      }
+    }
+    loadBranding()
+  }, [])
 
   const signIn = async () => {
     setBusy(true); setErr('')
@@ -31,8 +55,8 @@ export default function Login() {
             <Leaf size={20} />
           </div>
           <div>
-            <h1 className="font-display text-xl font-bold text-pine leading-tight">Aura Stay ERP</h1>
-            <p className="text-xs text-pine/60">Novem Eco Resort</p>
+            <h1 className="font-display text-xl font-bold text-pine leading-tight">{brandTitle}</h1>
+            <p className="text-xs text-pine/60">{brandSubtitle}</p>
           </div>
         </div>
         <div className="mt-6 space-y-4">
