@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import {
   BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation,
 } from 'react-router-dom'
-import { Analytics } from '@vercel/analytics/react'
 import { supabase } from './supabase'
 import { setCurrency } from './lib/helpers'
 import { can, ROLE_LABELS } from './lib/roles'
@@ -249,6 +248,15 @@ function ReservationDetailRoute({ userName, role, isAdmin }) {
 }
 
 export default function App() {
+  return (
+    <BrowserRouter>
+      <AppRoot />
+    </BrowserRouter>
+  )
+}
+
+function AppRoot() {
+  const location = useLocation()
   const [session, setSession] = useState(undefined)
   const [profile, setProfile] = useState(null)
   const [company, setCompany] = useState(null)
@@ -272,16 +280,19 @@ export default function App() {
   }, [session?.user?.id])
 
   if (session === undefined) return <div className="min-h-screen flex items-center justify-center text-pine/60">Loading…</div>
+
+  // /novemecoresort — named login path
+  // If not logged in: show Login; if already logged in: redirect to dashboard
+  if (location.pathname === '/novemecoresort') {
+    if (!session) return <Login />
+    return <Navigate to="/dashboard" replace />
+  }
+
   if (!session) return <Login />
 
-  const role = profile?.role || 'FRONT_OFFICE'
-  const isAdmin = role === 'ADMIN'
+  const role     = profile?.role || 'FRONT_OFFICE'
+  const isAdmin  = role === 'ADMIN'
   const userName = profile?.full_name || session.user?.email?.split('@')[0] || 'User'
 
-  return (
-    <BrowserRouter>
-      <AppShell company={company} role={role} isAdmin={isAdmin} userName={userName} loadCompany={loadCompany} />
-      <Analytics />
-    </BrowserRouter>
-  )
+  return <AppShell company={company} role={role} isAdmin={isAdmin} userName={userName} loadCompany={loadCompany} />
 }
