@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtBDT, fmtDate, todayISO, exportXLSX } from '../lib/helpers'
-import { Boxes, Plus, Trash2, Check, X, Truck, PackageCheck, ArrowLeftRight, Undo2, FileDown } from 'lucide-react'
+import { Boxes, Plus, Trash2, Check, X, Truck, PackageCheck, ArrowLeftRight, Undo2, FileDown, Minus } from 'lucide-react'
 
-const TABS = ['Items & Stock', 'Vendors', 'Requisitions', 'Purchase Orders', 'Goods Receipt', 'Transfers', 'Returns']
+const TABS = ['Items & Stock', 'Vendors', 'Requisitions', 'Purchase Orders', 'Goods Receipt', 'Transfers', 'Consumption', 'Returns']
 
 export default function InventoryHub({ userName, role, isAdmin }) {
   const [tab, setTab] = useState('Items & Stock')
@@ -29,6 +29,7 @@ export default function InventoryHub({ userName, role, isAdmin }) {
       {tab === 'Purchase Orders' && <POTab flash={flash} userName={userName} />}
       {tab === 'Goods Receipt' && <GRNTab flash={flash} userName={userName} />}
       {tab === 'Transfers' && <TransfersTab flash={flash} userName={userName} />}
+      {tab === 'Consumption' && <ConsumptionTab flash={flash} userName={userName} />}
       {tab === 'Returns' && <ReturnsTab flash={flash} userName={userName} />}
     </div>
   )
@@ -326,6 +327,65 @@ function TransfersTab({ flash, userName }) {
           <tbody>
             {rows.map((t) => (<tr key={t.id}><td className="td money font-semibold">{t.trf_no}</td><td className="td money text-xs">{fmtDate(t.trf_date)}</td><td className="td text-sm">{t.from_location} → {t.to_location}</td><td className="td text-xs">{(t.transfer_items || []).map((x) => `${x.item_name}×${x.qty}`).join(', ')}</td></tr>))}
             {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={4}>No transfers.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// Consumption entry — reuses stock_transfers/transfer_items with a fixed
+// to_location = 'CONSUMED' sink. v_stock_balance treats every transfer_items
+// row as stock-out regardless of destination, so this reduces on_hand at
+// from_location exactly like a real consumption entry, with zero schema changes.
+function ConsumptionTab({ flash, userName }) {
+  const [items, setItems] = useState([])
+  const [rows, setRows] = useState([])
+  const [fromLocation, setFromLocation] = useState('KITCHEN')
+  const [lines, setLines] = useState([])
+
+  const load = async () => {
+    const [{ data: it }, { data: tr }] = await Promise.all([
+      supabase.from('inv_items').select('*').order('name'),
+      supabase.from('stock_transfers').select('*, transfer_items(*)').eq('to_location', 'CONSUMED').order('created_at', { ascending: false }),
+    ])
+    setItems(it || []); setRows(tr || [])
+  }
+  useEffect(() => { load() }, [])
+
+  const create = async () => {
+    if (lines.length === 0) { flash('Add at least one line.'); return }
+    const { data: tr, error } = await supabase.from('stock_transfers')
+      .insert({ from_location: fromLocation, to_location: 'CONSUMED', created_by: userName }).select().single()
+    if (error) { flash(error.message); return }
+    const { error: le } = await supabase.from('transfer_items').insert(
+      lines.map((l) => ({ transfer_id: tr.id, item_id: l.item_id || null, item_name: l.item_name, qty: +l.qty }))
+    )
+    if (le) flash(le.message); else { setLines([]); load(); flash(`${tr.trf_no} posted — ${fromLocation} stock reduced.`) }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="card p-4 space-y-3">
+        <div><label className="label">Consumed from (store / warehouse)</label>
+          <input className="input !w-64" value={fromLocation} onChange={(e) => setFromLocation(e.target.value)} placeholder="e.g. KITCHEN, BAR, HOUSEKEEPING STORE" />
+        </div>
+        <LineEditor items={items} lines={lines} setLines={setLines} withCost={false} />
+        <button className="btn-primary" onClick={create}><Minus size={15} /> Post consumption</button>
+      </div>
+      <div className="card overflow-hidden">
+        <table className="w-full">
+          <thead><tr><th className="th">TRF No</th><th className="th">Date</th><th className="th">Consumed from</th><th className="th">Items</th></tr></thead>
+          <tbody>
+            {rows.map((t) => (
+              <tr key={t.id}>
+                <td className="td money font-semibold">{t.trf_no}</td>
+                <td className="td money text-xs">{fmtDate(t.trf_date)}</td>
+                <td className="td text-sm">{t.from_location}</td>
+                <td className="td text-xs">{(t.transfer_items || []).map((x) => `${x.item_name}×${x.qty}`).join(', ')}</td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={4}>No consumption entries yet.</td></tr>}
           </tbody>
         </table>
       </div>
