@@ -124,7 +124,11 @@ function AppShell({ company, role, isAdmin, userName, loadCompany }) {
               <div className="truncate font-semibold text-white/80">{userName}</div>
               <div className="text-[10px] text-white/40">{ROLE_LABELS[role] || role}</div>
             </div>
-            <button title="Sign out" onClick={() => supabase.auth.signOut()} className="hover:text-white shrink-0"><LogOut size={15} /></button>
+            <button title="Sign out" onClick={async () => {
+              const slug = company?.slug
+              await supabase.auth.signOut()
+              window.location.href = slug ? `/${slug}/login` : '/login'
+            }} className="hover:text-white shrink-0"><LogOut size={15} /></button>
           </div>
         </div>
       </aside>
@@ -274,9 +278,14 @@ function AppRoot() {
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  const loadCompany = async () => {
+    const loadCompany = async () => {
     const { data } = await supabase.from('company_settings').select('*').limit(1).single()
-    if (data) { setCompany(data); setCurrency(data.currency || '৳') }
+    if (data) {
+      setCurrency(data.currency || '৳')
+      // Pull slug from properties (company_settings has no slug column) — needed for logout redirect
+      const { data: prop } = await supabase.from('properties').select('slug').limit(1).maybeSingle()
+      setCompany({ ...data, slug: prop?.slug || null })
+    }
   }
 
   useEffect(() => {
