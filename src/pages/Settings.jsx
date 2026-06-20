@@ -274,7 +274,7 @@ function BrandingCard({ reloadCompany }) {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg]   = useState('')
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
-  const load  = async () => { const { data } = await supabase.from('company_settings').select('*').eq('id', 1).single(); setC(data) }
+  const load  = async () => { const { data } = await supabase.from('company_settings').select('*').single(); setC(data) }
   useEffect(() => { load() }, [])
   if (!c) return <div className="card p-5 text-pine/50">Loading…</div>
   const set = (k, v) => setC((p) => ({ ...p, [k]: v }))
@@ -288,7 +288,7 @@ function BrandingCard({ reloadCompany }) {
     if (error) { flash(error.message); setBusy(false); return }
     const { data: pub } = supabase.storage.from('branding').getPublicUrl(path)
     set('logo_url', pub.publicUrl)
-    await supabase.from('company_settings').update({ logo_url: pub.publicUrl }).eq('id', 1)
+    await supabase.from('company_settings').update({ logo_url: pub.publicUrl }).eq('id', c.id)
     setBusy(false); flash('Logo uploaded.'); reloadCompany?.()
   }
 
@@ -300,7 +300,7 @@ function BrandingCard({ reloadCompany }) {
       short_code: c.short_code, software_name: c.software_name, currency: c.currency,
       mushak610_threshold: +c.mushak610_threshold || 0,
       updated_at: new Date().toISOString(),
-    }).eq('id', 1)
+    }).eq('id', c.id)
     setBusy(false)
     if (error) flash(error.message)
     else { setCurrency(c.currency || '৳'); flash('Saved.'); reloadCompany?.() }
@@ -342,7 +342,7 @@ function BrandingCard({ reloadCompany }) {
           onSave={async (html) => {
             const { error } = await supabase.from('company_settings').update({
               terms_conditions: html, updated_at: new Date().toISOString(),
-            }).eq('id', 1)
+            }).eq('id', c.id)
             if (error) flash(error.message)
             else { flash('Terms & Conditions saved.'); reloadCompany?.() }
           }}
