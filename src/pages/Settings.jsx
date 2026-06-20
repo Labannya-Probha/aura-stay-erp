@@ -713,44 +713,68 @@ const WIPE_MODULES = [
   {
     id: 'reservations',
     label: 'Reservations & Billing',
-    description: 'Reservations, guests, folio charges, payments, invoices, quotations, VAT sales register',
-    tables: ['folio_charges', 'payments', 'invoices', 'quotations', 'reservation_addons', 'reservation_guests', 'reservation_rooms', 'reservations', 'guests', 'vat_sales_register'],
-    sequences: ['res_no_seq', 'quote_no_seq', 'guest_bill_seq', 'mushak_serial_seq'],
+    description: 'Reservations, guests, folio charges, payments, invoices, quotations, VAT sales register, night audits, guest IDs, loyalty ledger, companies',
+    tables: ['folio_charges', 'payments', 'invoices', 'quotations', 'reservation_addons', 'reservation_guests', 'reservation_rooms', 'reservations', 'guests', 'vat_sales_register', 'night_audits', 'guest_ids', 'loyalty_ledger', 'companies'],
+    // Each sequence only resets if ALL of its dependsOn tables are still checked —
+    // resetting a number sequence while related rows are kept would cause duplicate/clashing numbers.
+    sequences: [
+      { id: 'res_no_seq',        dependsOn: ['reservations'] },
+      { id: 'quote_no_seq',      dependsOn: ['quotations'] },
+      { id: 'guest_bill_seq',    dependsOn: ['invoices'] },
+      { id: 'mushak_serial_seq', dependsOn: ['vat_sales_register'] },
+    ],
   },
   {
     id: 'pos',
     label: 'Restaurant POS',
     description: 'POS orders and order items',
     tables: ['pos_order_items', 'pos_orders'],
-    sequences: ['pos_no_seq'],
+    sequences: [
+      { id: 'pos_no_seq', dependsOn: ['pos_orders'] },
+    ],
   },
   {
     id: 'facilities',
     label: 'Facilities',
     description: 'Facility sales (tea, pickle, sports, etc.)',
     tables: ['facility_sales'],
-    sequences: ['fac_no_seq'],
+    sequences: [
+      { id: 'fac_no_seq', dependsOn: ['facility_sales'] },
+    ],
   },
   {
     id: 'hr',
     label: 'HR & Attendance',
-    description: 'Employees, attendance records, leave applications, compensatory leave register',
-    tables: ['comp_leave_register', 'leave_applications', 'attendance_records', 'employees'],
-    sequences: ['emp_no_seq'],
+    description: 'Employees, attendance records, leave applications, compensatory leave register, incident register',
+    tables: ['comp_leave_register', 'leave_applications', 'attendance_records', 'employees', 'incident_register'],
+    sequences: [
+      { id: 'emp_no_seq', dependsOn: ['employees'] },
+    ],
   },
   {
     id: 'inventory',
     label: 'Inventory & Procurement',
-    description: 'Requisitions, purchase orders, goods receipts, stock transfers, stock returns, VAT purchase register',
-    tables: ['return_items', 'stock_returns', 'transfer_items', 'stock_transfers', 'grn_items', 'goods_receipts', 'po_items', 'purchase_orders', 'requisition_items', 'requisitions', 'vat_purchase_register'],
-    sequences: ['req_no_seq', 'po_no_seq', 'grn_no_seq', 'trf_no_seq', 'rtn_no_seq'],
+    description: 'Requisitions, purchase orders, goods receipts, stock transfers, stock returns, VAT purchase register, vendors, inventory stock items',
+    tables: ['return_items', 'stock_returns', 'transfer_items', 'stock_transfers', 'grn_items', 'goods_receipts', 'po_items', 'purchase_orders', 'requisition_items', 'requisitions', 'vat_purchase_register', 'vendors', 'inv_items'],
+    sequences: [
+      { id: 'req_no_seq', dependsOn: ['requisitions'] },
+      { id: 'po_no_seq',  dependsOn: ['purchase_orders'] },
+      { id: 'grn_no_seq', dependsOn: ['goods_receipts'] },
+      { id: 'trf_no_seq', dependsOn: ['stock_transfers'] },
+      { id: 'rtn_no_seq', dependsOn: ['stock_returns'] },
+    ],
   },
   {
     id: 'accounting',
     label: 'Accounting',
-    description: 'Journal entries, journal lines, VAT sales register, VAT purchase register',
-    tables: ['journal_lines', 'journal_entries', 'vat_sales_register', 'vat_purchase_register'],
-    sequences: ['jv_no_seq'],
+    description: 'Journal entries, journal lines, VAT registers, document register, fixed assets, depreciation, VDS certificates',
+    tables: ['journal_lines', 'journal_entries', 'vat_sales_register', 'vat_purchase_register', 'doc_register', 'fixed_assets', 'asset_depreciation', 'vds_certificates'],
+    sequences: [
+      { id: 'jv_no_seq',  dependsOn: ['journal_entries'] },
+      { id: 'doc_no_seq', dependsOn: ['doc_register'] },
+      { id: 'fa_no_seq',  dependsOn: ['fixed_assets'] },
+      { id: 'vds_certificates_id_seq', dependsOn: ['vds_certificates'] },
+    ],
   },
 ]
 
@@ -761,19 +785,27 @@ const STEP_DONE    = 'done'
 const STEP_ERROR   = 'error'
 
 function DataWipeCard() {
-  const [selected, setSelected]   = useState(null)
-  const [confirm, setConfirm]     = useState('')
-  const [expanded, setExpanded]   = useState(false)
-  const [phase, setPhase]         = useState('idle') // idle | confirm | wiping | done | error
-  const [steps, setSteps]         = useState([])     // [{ label, type:'table'|'sequence', state, detail }]
-  const [result, setResult]       = useState(null)   // final RPC result
-  const [errMsg, setErrMsg]       = useState('')
+  const [selected, setSelected]           = useState(null)
+  const [checkedTables, setCheckedTables] = useState(new Set()) // tables staged for wipe within the selected module
+  const [confirm, setConfirm]             = useState('')
+  const [expanded, setExpanded]           = useState(false)
+  const [phase, setPhase]                 = useState('idle') // idle | wiping | done | error
+  const [steps, setSteps]                 = useState([])     // [{ id, label, type:'table'|'sequence', state, detail }]
+  const [result, setResult]               = useState(null)   // final RPC result
+  const [errMsg, setErrMsg]               = useState('')
 
   const module = WIPE_MODULES.find((m) => m.id === selected)
 
   const selectModule = (id) => {
     if (phase === 'wiping') return
-    setSelected(selected === id ? null : id)
+    if (selected === id) {
+      setSelected(null)
+      setCheckedTables(new Set())
+    } else {
+      const m = WIPE_MODULES.find((mm) => mm.id === id)
+      setSelected(id)
+      setCheckedTables(new Set(m.tables)) // default: every table in the module is checked
+    }
     setConfirm('')
     setPhase('idle')
     setSteps([])
@@ -781,19 +813,37 @@ function DataWipeCard() {
     setErrMsg('')
   }
 
+  const toggleTable = (t) => {
+    if (phase === 'wiping') return
+    setCheckedTables((prev) => {
+      const next = new Set(prev)
+      next.has(t) ? next.delete(t) : next.add(t)
+      return next
+    })
+  }
+  const selectAllTables   = () => module && setCheckedTables(new Set(module.tables))
+  const deselectAllTables = () => setCheckedTables(new Set())
+
+  // Tables actually staged for wipe, kept in module order
+  const tablesToWipe = module ? module.tables.filter((t) => checkedTables.has(t)) : []
+  // A sequence only resets if every table it depends on is still checked —
+  // resetting a number sequence while related rows survive would cause clashing/duplicate numbers
+  const eligibleSequences = module ? module.sequences.filter((s) => s.dependsOn.every((t) => checkedTables.has(t))) : []
+  const skippedSequences  = module ? module.sequences.filter((s) => !s.dependsOn.every((t) => checkedTables.has(t))) : []
+
   const startWipe = () => {
-    if (!module || confirm.trim().toUpperCase() !== 'WIPE') return
+    if (!module || confirm.trim().toUpperCase() !== 'WIPE' || tablesToWipe.length === 0) return
     // Build step list for animation
     const allSteps = [
-      ...module.tables.map((t) => ({ id: t, label: t, type: 'table', state: STEP_IDLE, detail: '' })),
-      ...module.sequences.map((s) => ({ id: s, label: s, type: 'sequence', state: STEP_IDLE, detail: '' })),
+      ...tablesToWipe.map((t) => ({ id: t, label: t, type: 'table', state: STEP_IDLE, detail: '' })),
+      ...eligibleSequences.map((s) => ({ id: s.id, label: s.id, type: 'sequence', state: STEP_IDLE, detail: '' })),
     ]
     setSteps(allSteps)
     setPhase('wiping')
-    runWipe(allSteps)
+    runWipe(allSteps, tablesToWipe, eligibleSequences.map((s) => s.id))
   }
 
-  const runWipe = async (initialSteps) => {
+  const runWipe = async (initialSteps, tables, sequences) => {
     // Animate steps one by one with a small delay so user sees progress
     // then call the RPC which does the real work atomically
     const animated = [...initialSteps]
@@ -805,11 +855,11 @@ function DataWipeCard() {
       await new Promise((r) => setTimeout(r, 120 + Math.random() * 80))
     }
 
-    // Now do the actual RPC call
+    // Now do the actual RPC call — only the checked tables / eligible sequences
     try {
       const { data, error } = await supabase.rpc('wipe_module', {
-        tables:    module.tables,
-        sequences: module.sequences,
+        tables,
+        sequences,
       })
 
       if (error) throw new Error(error.message)
@@ -853,7 +903,7 @@ function DataWipeCard() {
   }
 
   const reset = () => {
-    setSelected(null); setConfirm(''); setPhase('idle')
+    setSelected(null); setCheckedTables(new Set()); setConfirm(''); setPhase('idle')
     setSteps([]); setResult(null); setErrMsg('')
   }
 
@@ -869,7 +919,7 @@ function DataWipeCard() {
       {expanded && (
         <div className="mt-4 space-y-4">
           <p className="text-sm text-pine/70">
-            Permanently delete all data in a module and reset reference number sequences to 1.
+            Permanently delete selected data and reset its reference number sequences to 1.
             This <span className="font-semibold text-red-600">cannot be undone.</span>
           </p>
 
@@ -892,15 +942,46 @@ function DataWipeCard() {
             ))}
           </div>
 
-          {/* Confirm + trigger — only shown when a module is selected and not yet wiping */}
+          {/* Table picker + confirm — only shown when a module is selected and not yet wiping */}
           {selected && module && phase === 'idle' && (
             <div className="p-4 rounded-xl border border-red-300 bg-red-50 space-y-3">
-              <p className="text-sm font-semibold text-red-700">
-                Wipe: <span className="underline">{module.label}</span>
-              </p>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <p className="text-sm font-semibold text-red-700">
+                  Wipe: <span className="underline">{module.label}</span>
+                </p>
+                <div className="flex gap-2 text-xs">
+                  <button onClick={selectAllTables} className="text-red-600 underline hover:text-red-700">Select all</button>
+                  <span className="text-red-300">·</span>
+                  <button onClick={deselectAllTables} className="text-red-600 underline hover:text-red-700">Deselect all</button>
+                </div>
+              </div>
+
+              {/* Per-table checkboxes — uncheck any table to keep it out of this wipe */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 max-h-56 overflow-y-auto pr-1">
+                {module.tables.map((t) => (
+                  <label key={t} className="flex items-center gap-2 text-xs text-pine cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="accent-red-600 w-3.5 h-3.5"
+                      checked={checkedTables.has(t)}
+                      onChange={() => toggleTable(t)}
+                    />
+                    <span className="font-mono">{t}</span>
+                  </label>
+                ))}
+              </div>
+
               <p className="text-xs text-red-500">
-                {module.tables.length} tables · {module.sequences.length} sequences to reset
+                {tablesToWipe.length} of {module.tables.length} tables selected · {eligibleSequences.length} of {module.sequences.length} sequences will reset
               </p>
+
+              {/* Sequences skipped because a table they depend on is unchecked */}
+              {skippedSequences.length > 0 && (
+                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                  Not resetting: {skippedSequences.map((s) => `${s.id} (needs ${s.dependsOn.join(', ')} checked)`).join(' · ')}
+                </p>
+              )}
+
               <div>
                 <label className="label text-red-700 !text-xs">Type <span className="font-mono font-bold">WIPE</span> to confirm</label>
                 <input
@@ -915,9 +996,9 @@ function DataWipeCard() {
               <button
                 className="btn-primary !bg-red-600 hover:!bg-red-700"
                 onClick={startWipe}
-                disabled={confirm.trim().toUpperCase() !== 'WIPE'}
+                disabled={confirm.trim().toUpperCase() !== 'WIPE' || tablesToWipe.length === 0}
               >
-                <AlertTriangle size={15} /> Start Wipe
+                <AlertTriangle size={15} /> Start Wipe{tablesToWipe.length < module.tables.length ? ' (partial)' : ''}
               </button>
             </div>
           )}
@@ -994,6 +1075,9 @@ function DataWipeCard() {
                         </div>
                       </div>
                     ))}
+                    {steps.filter((s) => s.type === 'sequence').length === 0 && (
+                      <div className="text-xs text-pine/40 italic">None eligible this run.</div>
+                    )}
                   </div>
                 </div>
               </div>
