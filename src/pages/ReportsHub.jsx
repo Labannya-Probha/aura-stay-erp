@@ -407,6 +407,91 @@ async function fetchReport(def, from, to) {
       return { head: ['Res No', 'Guest', 'Status', 'Charged', 'Paid', 'Due'], align: ['l', 'l', 'l', 'r', 'r', 'r'], rows, foot: ['', '', '', '', 'TOTAL DUE', money(tot)] }
     }
 
+    /* ---------- GUEST RELATIONS ---------- */
+    case 'gst_new_vs_repeat': {
+      const { data: allRes } = await supabase.from('reservations').select('primary_guest_id, check_in').not('primary_guest_id', 'is', null)
+      const firstStay = {}
+      for (const r of allRes || []) {
+        if (!firstStay[r.primary_guest_id] || r.check_in < firstStay[r.primary_guest_id]) firstStay[r.primary_guest_id] = r.check_in
+      }
+      const { data: periodRes } = await supabase.from('reservations').select('primary_guest_id, check_in').not('primary_guest_id', 'is', null).gte('check_in', from).lte('check_in', to)
+      const seen = new Set()
+      let newG = 0, repeatG = 0
+      for (const r of periodRes || []) {
+        if (seen.has(r.primary_guest_id)) continue
+        seen.add(r.primary_guest_id)
+        const fs = firstStay[r.primary_guest_id]
+        if (fs >= from && fs <= to) newG++; else repeatG++
+      }
+      return { head: ['Segment', 'Guests'], align: ['l', 'r'], rows: [['New', String(newG)], ['Repeat', String(repeatG)]], foot: ['TOTAL', String(newG + repeatG)] }
+    }
+    case 'gst_top_spenders': {
+      const { data: res } = await supabase.from('reservations').select('id, primary_guest_id, check_in, guests(full_name, phone)').not('primary_guest_id', 'is', null).gte('check_in', from).lte('check_in', to)
+      const resIds = (res || []).map((r) => r.id)
+      const { data: pay } = resIds.length ? await supabase.from('payments').select('reservation_id, amount').in('reservation_id', resIds) : { data: [] }
+      const paidByRes = {}
+      for (const p of pay || []) paidByRes[p.reservation_id] = (paidByRes[p.reservation_id] || 0) + +p.amount
+      const agg = {}
+      for (const r of res || []) {
+        const gid = r.primary_guest_id
+        agg[gid] = agg[gid] || { name: (r.guests && r.guests.full_name) || '—', phone: (r.guests && r.guests.phone) || '—', resCount: 0, paid: 0 }
+        agg[gid].resCount += 1
+        agg[gid].paid += paidByRes[r.id] || 0
+      }
+      const list = Object.values(agg).sort((a, b) => b.paid - a.paid)
+      const rows = list.map((g) => [g.name, g.phone, String(g.resCount), money(g.paid)])
+      const t = list.reduce((a, g) => a + g.paid, 0)
+      return { head: ['Guest', 'Phone', 'Reservations', 'Total Paid'], align: ['l', 'l', 'r', 'r'], rows, foot: ['', '', 'TOTAL', money(t)] }
+    }
+    case 'gst_loyalty_points': {
+      const { data } = await supabase.from('guests').select('full_name, phone, loyalty_points').gt('loyalty_points', 0).order('loyalty_points', { ascending: false })
+      const rows = (data || []).map((g) => [g.full_name, g.phone || '—', String(g.loyalty_points)])
+      const t = (data || []).reduce((a, g) => a + (+g.loyalty_points || 0), 0)
+      return { head: ['Guest', 'Phone', 'Loyalty Points'], align: ['l', 'l', 'r'], rows, foot: ['', 'TOTAL', String(t)] }
+    }
+    case 'gst_booking_source': {
+      const { data } = await supabase.from('reservations').select('source').gte('check_in', from).lte('check_in', to)
+      const agg = {}
+      for (const r of data || []) { const k = r.source || 'Unknown'; agg[k] = (agg[k] || 0) + 1 }
+      const rows = Object.entries(agg).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, String(v)])
+      return { head: ['Source', 'Bookings'], align: ['l', 'r'], rows, foot: ['TOTAL', String((data || []).length)] }
+    }
+
+    /* ---------- PHASE 1 GAP-ANALYSIS REPORTS ---------- */
+    case 'sal_today_arrivals': {
+      const { data } = await supabase.from('reservations').select('res_no, reservation_name, check_in, check_out, pax_adults, pax_children, source, reservation_rooms(rooms(room_no))').in('status', ['CONFIRMED', 'QUOTED']).gte('check_in', from).lte('check_in', to).order('check_in')
+      const rows = (data || []).map((r) => [r.res_no, r.reservation_name || '—', (r.reservation_rooms || []).map((x) => x.rooms && x.rooms.room_no).filter(Boolean).join(', ') || '—', fmtDate(r.check_in), fmtDate(r.check_out), `${r.pax_adults || 0}+${r.pax_children || 0}`, r.source || '—'])
+      return { head: ['Res No', 'Guest', 'Room(s)', 'Arrival', 'Departure', 'Pax', 'Source'], align: ['l', 'l', 'l', 'l', 'l', 'l', 'l'], rows, foot: ['', '', '', '', '', '', `Expected: ${rows.length}`] }
+    }
+    case 'sal_today_departures': {
+      const { data } = await supabase.from('reservations').select('res_no, reservation_name, check_in, check_out, pax_adults, pax_children, reservation_rooms(rooms(room_no))').eq('status', 'CHECKED_IN').gte('check_out', from).lte('check_out', to).order('check_out')
+      const rows = (data || []).map((r) => [r.res_no, r.reservation_name || '—', (r.reservation_rooms || []).map((x) => x.rooms && x.rooms.room_no).filter(Boolean).join(', ') || '—', fmtDate(r.check_in), fmtDate(r.check_out), `${r.pax_adults || 0}+${r.pax_children || 0}`])
+      return { head: ['Res No', 'Guest', 'Room(s)', 'Arrival', 'Departure', 'Pax'], align: ['l', 'l', 'l', 'l', 'l', 'l'], rows, foot: ['', '', '', '', '', `Expected: ${rows.length}`] }
+    }
+    case 'sal_discount_void': {
+      const { data: fc } = await supabase.from('folio_charges').select('charge_date, charge_type, description, discount, created_by').gt('discount', 0).gte('charge_date', from).lte('charge_date', to).order('charge_date')
+      const { data: posVoid } = await supabase.from('pos_orders').select('created_at, order_no, total, created_by').eq('status', 'CANCELLED').gte('created_at', from + 'T00:00:00').lte('created_at', to + 'T23:59:59').order('created_at')
+      const { data: invVoid } = await supabase.from('invoices').select('issued_at, invoice_no, totals, void_reason, voided_by').eq('is_void', true).gte('issued_at', from + 'T00:00:00').lte('issued_at', to + 'T23:59:59').order('issued_at')
+      const items = []
+      for (const r of fc || []) items.push({ date: r.charge_date, type: 'Discount', particulars: `${r.charge_type}${r.description ? ' — ' + r.description : ''}`, by: r.created_by || '—', amt: +r.discount })
+      for (const r of posVoid || []) items.push({ date: r.created_at.slice(0, 10), type: 'POS Void', particulars: r.order_no, by: r.created_by || '—', amt: +r.total })
+      for (const r of invVoid || []) items.push({ date: r.issued_at.slice(0, 10), type: 'Invoice Void', particulars: `${r.invoice_no}${r.void_reason ? ' — ' + r.void_reason : ''}`, by: r.voided_by || '—', amt: +((r.totals && r.totals.total) || 0) })
+      items.sort((a, b) => (a.date < b.date ? -1 : 1))
+      const rows = items.map((it) => [fmtDate(it.date), it.type, it.particulars, it.by, money(it.amt)])
+      const t = items.reduce((a, it) => a + it.amt, 0)
+      return { head: ['Date', 'Type', 'Particulars', 'By', 'Amount'], align: ['l', 'l', 'l', 'l', 'r'], rows, foot: ['', '', '', 'TOTAL', money(t)] }
+    }
+    case 'hk_room_status_live': {
+      const { data } = await supabase.from('rooms').select('room_no, room_type, status, hk_status').eq('is_active', true).order('room_no')
+      const rows = (data || []).map((r) => [r.room_no, r.room_type || '—', r.status || '—', r.hk_status || '—'])
+      return { head: ['Room', 'Type', 'Room Status', 'Housekeeping Status'], align: ['l', 'l', 'l', 'l'], rows, foot: ['', '', '', `Total: ${rows.length}`] }
+    }
+    case 'adm_audit_trail': {
+      const { data } = await supabase.from('audit_log').select('at, actor, action, entity, entity_id').gte('at', from + 'T00:00:00').lte('at', to + 'T23:59:59').order('at', { ascending: false })
+      const rows = (data || []).map((r) => [fmtDate(r.at), r.actor || '—', r.action || '—', r.entity || '—', r.entity_id || '—'])
+      return { head: ['Date/Time', 'User', 'Action', 'Entity', 'Entity ID'], align: ['l', 'l', 'l', 'l', 'l'], rows, foot: ['', '', '', 'Total', String(rows.length)] }
+    }
+
     default:
       return { head: ['Info'], align: ['l'], rows: [['This report is not wired yet.']], foot: null }
   }
