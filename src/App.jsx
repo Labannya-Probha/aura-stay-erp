@@ -20,10 +20,10 @@ import HrOffice from './pages/HrOffice.jsx'
 import NightAudit from './pages/NightAudit.jsx'
 import ReportsHub from './pages/ReportsHub.jsx'
 import Settings from './pages/Settings.jsx'
+import CmsPortal from './pages/CmsPortal.jsx'
 import {
-  Leaf, LayoutDashboard, CalendarRange, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
-  FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut, BedDouble,
-} from 'lucide-react'
+  FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut, BedDouble, Building2,
+ } from 'lucide-react'
 
 function BrandLogo({ url }) {
   const [ok, setOk] = useState(true)
@@ -59,6 +59,7 @@ const NAV_GROUPS = [
     { id: 'reports', label: 'Reports', icon: BarChart3 },
   ]},
   { title: 'System', items: [
+    { id: 'cms', label: 'Client Management', icon: Building2 },
     { id: 'settings', label: 'Settings', icon: Settings2 },
   ]},
 ]
@@ -98,7 +99,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany }) {
         </div>
         <nav className="flex-1 py-3 px-3 space-y-3">
           {NAV_GROUPS.map((g) => {
-            const items = g.items.filter((n) => can(role, n.id))
+            const items = g.items.filter((n) => n.id === 'cms' ? (isAdmin || role === 'SUPERUSER') : can(role, n.id))
             if (items.length === 0) return null
             return (
               <div key={g.title}>
@@ -202,6 +203,11 @@ function AppShell({ company, role, isAdmin, userName, loadCompany }) {
               <ReportsHub userName={userName} role={role} />
             </GuardedRoute>
           } />
+          <Route path="/cms" element={
++            (isAdmin || role === 'SUPERUSER')
++              ? <CmsPortal role={role} isAdmin={isAdmin} />
++              : <Navigate to={firstAccessiblePath(role)} replace />
++          } />
           <Route path="/settings" element={
             <GuardedRoute role={role} navId="settings">
               <Settings userName={userName} role={role} isAdmin={isAdmin} reloadCompany={loadCompany} />
