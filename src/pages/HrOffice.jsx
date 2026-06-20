@@ -194,11 +194,18 @@ function CompLeaveTab({ flash }) {
 /* ------------------------------------------------------------------ */
 /*  PAYROLL TAB — generate a monthly run, review/edit payslips, print  */
 /* ------------------------------------------------------------------ */
-// Salary-head split mirrors the gazette-compliant structure used for
-// Novem's salary workbook: Basic 60% / House Rent 25% / Medical 10% /
-// Conveyance 5% of gross. This is a sensible default split, not a legal
-// requirement — adjust the percentages below if your structure differs.
-const SPLIT = { basic: 0.60, house_rent: 0.25, medical: 0.10, conveyance: 0.05 }
+// Labour-law compliant salary structure:
+//   Basic              = Gross × 48%
+//   House Rent         = Basic × 50%
+//   Transportation     = Basic × 35%
+//   Medical Allowance  = Basic × 20%
+//   Internet/Telephone = Fixed amount, looked up per designation from
+//                         allowance_config (falls back to the 'DEFAULT' row).
+// Internet allowance is a component already accounted for within Gross —
+// it does not add to or subtract from Net Payable; it's shown on the
+// payslip purely as a labelled breakdown line for compliance/reporting.
+const BASIC_PCT_OF_GROSS = 0.48
+const SPLIT_OF_BASIC = { house_rent: 0.50, conveyance: 0.35, medical: 0.20 }
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
 function PayrollTab({ flash, userName, canApprove, isAdmin, company }) {
@@ -225,8 +232,8 @@ function PayrollTab({ flash, userName, canApprove, isAdmin, company }) {
 
   // Builds payslip snapshots for every ACTIVE employee for the chosen month,
   // pulling absent-day counts from attendance_records to apply a simple
-  // per-day deduction (gross / 30 per absent day beyond what's already
-  // reflected as unpaid leave).
+  // per-day deduction, and the Internet/Telephone allowance amount from
+  // allowance_config (matched by designation, falling back to 'DEFAULT').
   const generateRun = async () => {
     setBusy(true)
     try {
@@ -238,7 +245,11 @@ function PayrollTab({ flash, userName, canApprove, isAdmin, company }) {
         .select().single()
       if (re) throw re
 
-      const { data: emps } = await supabase.from('employees').select('*').eq('status', 'ACTIVE')
+      const [{ data: emps }, { data: allowances }] = await Promise.all([
+        supabase.from('employees').select('*').eq('status', 'ACTIVE'),
+        supabase.from('allowance_config').select('*').eq('is_active', true).eq('allowance_name', 'Internet/Telephone Allowance'),
+      ])
+      const allowanceMap = Object.fromEntries((allowances || []).map((a) => [a.designation, +a.amount]))
       const periodStart = `${year}-${String(month).padStart(2, '0')}-01`
       const periodEnd = `${year}-${String(month).padStart(2, '0')}-31`
 
@@ -248,18 +259,21 @@ function PayrollTab({ flash, userName, canApprove, isAdmin, company }) {
           .eq('employee_id', e.id).eq('status', 'A').gte('att_date', periodStart).lte('att_date', periodEnd)
         const absentDays = count || 0
         const gross = +e.gross_salary || 0
-        const basic = +(gross * SPLIT.basic).toFixed(2)
-        const houseRent = +(gross * SPLIT.house_rent).toFixed(2)
-        const medical = +(gross * SPLIT.medical).toFixed(2)
-        const conveyance = +(gross * SPLIT.conveyance).toFixed(2)
+        const basic = +(gross * BASIC_PCT_OF_GROSS).toFixed(2)
+        const houseRent = +(basic * SPLIT_OF_BASIC.house_rent).toFixed(2)
+        const conveyance = +(basic * SPLIT_OF_BASIC.conveyance).toFixed(2)
+        const medical = +(basic * SPLIT_OF_BASIC.medical).toFixed(2)
+        const internetAllowance = allowanceMap[e.designation] ?? allowanceMap['DEFAULT'] ?? 0
         const perDay = gross / 30
         const absentDeduction = +(perDay * absentDays).toFixed(2)
+        // Internet allowance is already part of gross — it does not change net payable.
         const netPayable = +(gross - absentDeduction).toFixed(2)
 
         slipsToInsert.push({
           payroll_run_id: run.id, employee_id: e.id,
           emp_code: e.emp_code, full_name: e.full_name, designation: e.designation, department: e.department,
-          gross_salary: gross, basic, house_rent: houseRent, medical, conveyance, other_allowance: 0,
+          gross_salary: gross, basic, house_rent: houseRent, medical, conveyance,
+          internet_allowance: internetAllowance, other_allowance: 0,
           absent_days: absentDays, absent_deduction: absentDeduction, advance_deduction: 0, other_deduction: 0,
           net_payable: netPayable,
         })
@@ -323,8 +337,12 @@ function PayrollTab({ flash, userName, canApprove, isAdmin, company }) {
         <div className="card overflow-hidden">
           <table className="w-full">
             <thead><tr>
-              <th className="th">Employee</th><th className="th text-right">Gross</th><th className="th text-right">Absent days</th>
-              <th className="th text-right">Absent ded.</th><th className="th text-right">Advance ded.</th><th className="th text-right">Other ded.</th>
+              <th className="th">Employee</th><th className="th text-right">Gross</th>
+              <th className="th text-right">Basic</th><th className="th text-right">House Rent</th>
+              <th className="th text-right">Transport</th><th className="th text-right">Medical</th>
+              <th className="th text-right">Internet</th>
+              <th className="th text-right">Absent days</th><th className="th text-right">Absent ded.</th>
+              <th className="th text-right">Advance ded.</th><th className="th text-right">Other ded.</th>
               <th className="th text-right">Net payable</th><th className="th text-right">Print</th>
             </tr></thead>
             <tbody>
@@ -332,6 +350,11 @@ function PayrollTab({ flash, userName, canApprove, isAdmin, company }) {
                 <tr key={s.id}>
                   <td className="td text-sm font-medium">{s.full_name}<div className="text-xs text-pine/40">{s.emp_code} · {s.designation}</div></td>
                   <td className="td money text-right">{fmtBDT(s.gross_salary)}</td>
+                  <td className="td money text-right">{fmtBDT(s.basic)}</td>
+                  <td className="td money text-right">{fmtBDT(s.house_rent)}</td>
+                  <td className="td money text-right">{fmtBDT(s.conveyance)}</td>
+                  <td className="td money text-right">{fmtBDT(s.medical)}</td>
+                  <td className="td money text-right">{fmtBDT(s.internet_allowance)}</td>
                   <td className="td money text-right">{s.absent_days}</td>
                   <td className="td money text-right">{fmtBDT(s.absent_deduction)}</td>
                   <td className="td text-right">
@@ -350,10 +373,10 @@ function PayrollTab({ flash, userName, canApprove, isAdmin, company }) {
                   <td className="td text-right"><button className="btn-ghost !py-1" onClick={() => setPrintSlip(s)}><Printer size={13} /></button></td>
                 </tr>
               ))}
-              {slips.length === 0 && <tr><td className="td text-pine/40" colSpan={8}>No payslips in this run.</td></tr>}
+              {slips.length === 0 && <tr><td className="td text-pine/40" colSpan={13}>No payslips in this run.</td></tr>}
             </tbody>
             {slips.length > 0 && (
-              <tfoot><tr className="bg-leaf/40 font-bold money"><td className="td" colSpan={6}>Total net payable</td><td className="td text-right">{fmtBDT(totalNet)}</td><td className="td"></td></tr></tfoot>
+              <tfoot><tr className="bg-leaf/40 font-bold money"><td className="td" colSpan={11}>Total net payable</td><td className="td text-right">{fmtBDT(totalNet)}</td><td className="td"></td></tr></tfoot>
             )}
           </table>
         </div>
@@ -381,7 +404,7 @@ function PayrollTab({ flash, userName, canApprove, isAdmin, company }) {
         </div>
         {canApprove && <button className="btn-primary" disabled={busy} onClick={generateRun}><Wallet size={15} /> {busy ? 'Generating…' : 'Generate payroll'}</button>}
       </div>
-      <p className="text-xs text-pine/50">Generates a payslip for every active employee using gross salary split into Basic 60% / House Rent 25% / Medical 10% / Conveyance 5%, with absent-day deductions pulled automatically from Attendance. Existing months won't be regenerated — open the run below to edit instead.</p>
+      <p className="text-xs text-pine/50">Generates a payslip for every active employee using the labour-law structure: Basic = Gross × 48%, House Rent = Basic × 50%, Transportation = Basic × 35%, Medical = Basic × 20%, plus a designation-wise Internet/Telephone allowance (configured in Settings → Allowances). Absent-day deductions are pulled automatically from Attendance. Existing months won't be regenerated — open the run below to edit instead.</p>
       <div className="card overflow-hidden">
         <table className="w-full">
           <thead><tr><th className="th">Period</th><th className="th">Status</th><th className="th">Generated by</th><th className="th text-right">Open</th></tr></thead>
@@ -425,12 +448,13 @@ function PayslipDoc({ slip, run, company }) {
         </tbody>
       </table>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead><tr style={{ background: '#eee' }}><th style={cell}>Earnings</th><th style={{ ...cell, textAlign: 'right' }}>Amount</th><th style={cell}>Deductions</th><th style={{ ...cell, textAlign: 'right' }}>Amount</th></tr></thead>
+        <thead><tr style={{ background: '#eee' }}><th style={cell}>Salary Breakdown</th><th style={{ ...cell, textAlign: 'right' }}>Amount</th><th style={cell}>Deductions</th><th style={{ ...cell, textAlign: 'right' }}>Amount</th></tr></thead>
         <tbody>
           <tr><td style={cell}>Basic</td><td style={rt}>{fmtBDT(slip.basic)}</td><td style={cell}>Absent ({slip.absent_days} day(s))</td><td style={rt}>{fmtBDT(slip.absent_deduction)}</td></tr>
           <tr><td style={cell}>House Rent</td><td style={rt}>{fmtBDT(slip.house_rent)}</td><td style={cell}>Advance</td><td style={rt}>{fmtBDT(slip.advance_deduction)}</td></tr>
-          <tr><td style={cell}>Medical</td><td style={rt}>{fmtBDT(slip.medical)}</td><td style={cell}>Other</td><td style={rt}>{fmtBDT(slip.other_deduction)}</td></tr>
-          <tr><td style={cell}>Conveyance</td><td style={rt}>{fmtBDT(slip.conveyance)}</td><td style={cell}></td><td style={rt}></td></tr>
+          <tr><td style={cell}>Transportation</td><td style={rt}>{fmtBDT(slip.conveyance)}</td><td style={cell}>Other</td><td style={rt}>{fmtBDT(slip.other_deduction)}</td></tr>
+          <tr><td style={cell}>Medical Allowance</td><td style={rt}>{fmtBDT(slip.medical)}</td><td style={cell}></td><td style={rt}></td></tr>
+          <tr><td style={cell}>Internet/Telephone Allowance</td><td style={rt}>{fmtBDT(slip.internet_allowance)}</td><td style={cell}></td><td style={rt}></td></tr>
           {+slip.other_allowance > 0 && <tr><td style={cell}>Other allowance</td><td style={rt}>{fmtBDT(slip.other_allowance)}</td><td style={cell}></td><td style={rt}></td></tr>}
         </tbody>
         <tfoot>
