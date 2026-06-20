@@ -2,47 +2,77 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import { LogIn } from 'lucide-react'
 
-// Hardcoded fallback — used if company_settings query fails for any reason
+// Hardcoded fallback — used if the slug lookup fails or no slug is given
 const FALLBACK_LOGO = 'https://gwllsoembqacolzfrquu.supabase.co/storage/v1/object/public/branding/logo_1781457117977.png'
 const FALLBACK_NAME = 'Novem Eco Resort'
 const FALLBACK_SOFTWARE = 'Aura Stay ERP'
 
-export default function Login() {
+export default function Login({ slug }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [err, setErr]           = useState('')
   const [busy, setBusy]         = useState(false)
   const [company, setCompany]   = useState(null)
+  const [property, setProperty] = useState(null)
+  const [notFound, setNotFound] = useState(false)
   const [imgFailed, setImgFailed] = useState(false)
 
   useEffect(() => {
-    // Use anon key — RLS now allows anonymous read on company_settings
-    supabase
-      .from('company_settings')
-      .select('logo_url, name, software_name')
-      .eq('id', 1)
-      .single()
-      .then(({ data, error }) => {
-        if (data) setCompany(data)
-        // If query fails, fallback constants above will be used
-      })
-  }, [])
+    setImgFailed(false)
+    if (slug) {
+      // Resolve slug -> property -> branding, all pre-auth (RLS allows public read on both)
+      supabase
+        .from('properties')
+        .select('id, slug, name, is_active')
+        .eq('slug', slug)
+        .maybeSingle()
+        .then(({ data: prop }) => {
+          if (!prop || !prop.is_active) { setNotFound(true); return }
+          setProperty(prop)
+          return supabase
+            .from('company_settings')
+            .select('logo_url, name, software_name')
+            .eq('tenant_id', prop.id)
+            .maybeSingle()
+        })
+        .then((res) => { if (res?.data) setCompany(res.data) })
+    } else {
+      // No slug in the URL — fall back to the single default property lookup
+      supabase
+        .from('company_settings')
+        .select('logo_url, name, software_name')
+        .eq('id', 1)
+        .single()
+        .then(({ data }) => { if (data) setCompany(data) })
+    }
+  }, [slug])
 
   const signIn = async () => {
-    setBusy(true); setErr('')
-    try {
-      const uname = username.trim()
-      if (!uname) throw new Error('Enter your username')
-      const { data: email, error: re } = await supabase.rpc('email_for_username', { p_username: uname })
-      if (re) throw re
-      if (!email) throw new Error('No active account found for this username')
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw new Error('Wrong username or password')
-    } catch (e) { setErr(e.message) }
-    setBusy(false)
+  setBusy(true); setErr('')
+  try {
+    const uname = username.trim()
+    if (!uname) throw new Error('Enter your username')
+    const { data: email, error: re } = await supabase.rpc('email_for_username', { p_username: uname, p_slug: slug || null })  // <-- this line
+    if (re) throw re
+    if (!email) throw new Error('No active account found for this username')
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw new Error('Wrong username or password')
+  } catch (e) { setErr(e.message) }
+  setBusy(false)
+}
+
+  if (slug && notFound) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-pine">
+        <div className="card w-full max-w-sm p-8 text-center">
+          <h1 className="font-display text-xl font-bold text-pine mb-2">Property not found</h1>
+          <p className="text-sm text-pine/60">No active property matches this link. Please check the URL or contact your administrator.</p>
+        </div>
+      </div>
+    )
   }
 
-  const propertyName = company?.name || FALLBACK_NAME
+  const propertyName = company?.name || property?.name || FALLBACK_NAME
   const softwareName = company?.software_name
     ? `${company.software_name} ERP`
     : FALLBACK_SOFTWARE
