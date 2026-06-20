@@ -100,7 +100,7 @@ export default function Login({ slug }) {
             ) : (
               <span className="text-3xl font-bold text-forest select-none px-2">
                 {propertyName.charAt(0).toUpperCase()}
-              </span>
+              </span>  
             )}
           </div>
           <h1 className="font-display text-2xl font-bold text-pine leading-tight">{softwareName}</h1>
