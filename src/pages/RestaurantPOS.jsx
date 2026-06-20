@@ -86,7 +86,7 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
   const [payments, setPayments] = useState(PAYMENT_METHODS.reduce((acc, m) => ({ ...acc, [m]: '' }), {}))
   const [showPicker, setShowPicker] = useState(false)
   const [busy, setBusy] = useState(false)
-
+  const [itemSearch, setItemSearch] = useState('')
   const rate = rateFor(taxConfig, 'RESTAURANT', todayISO())
   const subtotal = cart.reduce((a, c) => a + c.qty * c.unit_price, 0)
   
@@ -116,7 +116,7 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
   }
   const bump = (idx, d) => setCart((prev) => prev.map((c, i) => (i === idx ? { ...c, qty: Math.max(0, c.qty + d) } : c)).filter((c) => c.qty > 0))
   const removeLine = (idx) => setCart((prev) => prev.filter((_, i) => i !== idx))
-  const visible = items.filter((i) => i.is_active && (activeCat === 'ALL' || i.category_id === activeCat))
+  const visible = items.filter((i) =>  i.is_active &&  (activeCat === 'ALL' || i.category_id === activeCat) &&  (!itemSearch || i.name.toLowerCase().includes(itemSearch.toLowerCase())))
 
   const allocate = () => {
     const lines = cart.map((c) => ({ ...c, line_total: +(c.qty * c.unit_price).toFixed(2) }))
@@ -225,7 +225,13 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
   return (
     <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
       <div className="xl:col-span-3">
-        <div className="flex gap-2 mb-3 flex-wrap">
+          <input
+            className="input mb-3"
+            placeholder="Search menu items…"
+            value={itemSearch}
+            onChange={(e) => setItemSearch(e.target.value)}
+          />
+          <div className="flex gap-2 mb-3 flex-wrap">
           <button onClick={() => setActiveCat('ALL')} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${activeCat === 'ALL' ? 'bg-pine text-white' : 'bg-white border border-leaf text-pine/70'}`}>All</button>
           {cats.filter((c) => c.is_active).map((c) => (
             <button key={c.id} onClick={() => setActiveCat(c.id)} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${activeCat === c.id ? 'bg-pine text-white' : 'bg-white border border-leaf text-pine/70'}`}>{c.name}</button>
