@@ -204,10 +204,10 @@ function AppShell({ company, role, isAdmin, userName, loadCompany }) {
             </GuardedRoute>
           } />
           <Route path="/cms" element={
-+            (isAdmin || role === 'SUPERUSER')
-+              ? <CmsPortal role={role} isAdmin={isAdmin} />
-+              : <Navigate to={firstAccessiblePath(role)} replace />
-+          } />
+              (isAdmin || role === 'SUPERUSER')
+                ? <CmsPortal role={role} isAdmin={isAdmin} />
+                : <Navigate to={firstAccessiblePath(role)} replace />
+          } />
           <Route path="/settings" element={
             <GuardedRoute role={role} navId="settings">
               <Settings userName={userName} role={role} isAdmin={isAdmin} reloadCompany={loadCompany} />
