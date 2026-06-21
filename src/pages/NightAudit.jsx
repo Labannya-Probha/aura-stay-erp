@@ -24,7 +24,7 @@ export default function NightAudit({ userName, isAdmin, role }) {
   const [msg, setMsg] = useState('')
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 6000) }
 
-   useEffect(() => { supabase.from('company_settings').select('*').limit(1).maybeSingle().then(({ data }) => setCompany(data)) }, []), [])
+  useEffect(() => { supabase.from('company_settings').select('*').limit(1).maybeSingle().then(({ data }) => setCompany(data)) }, [])
 
   const loadAll = async () => {
     const [ih, ns, fc, tc, na, ex] = await Promise.all([
