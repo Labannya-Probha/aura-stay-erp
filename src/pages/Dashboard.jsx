@@ -167,7 +167,6 @@ export default function Dashboard({ openReservation }) {
           </div>
         </div>
       ))}
-      <p className="text-[11px] text-pine/40">Tip: tap a housekeeping badge to cycle Clean → Dirty → Inspected → Out of Order.</p>
     </div>
   )
 }
