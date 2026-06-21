@@ -93,7 +93,7 @@ export default function Login({ slug }) {
       ) : (
         <div
           className="absolute inset-0 opacity-[0.06]"
-          style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 27px, #fff 28px)' }}
+          style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 15px, #fff 28px)' }}
         />
       )}
 
