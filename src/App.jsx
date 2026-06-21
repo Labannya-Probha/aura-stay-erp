@@ -69,14 +69,14 @@ const NAV_GROUPS = [
 const ALL_NAV_IDS = NAV_GROUPS.flatMap((g) => g.items.map((n) => n.id))
 
 // 'dashboard' has no role gate in can(); every role can always land there.
-const firstAccessiblePath = (role) => {
+const firstAccessiblePath = (role, privileges) => {
   for (const id of ALL_NAV_IDS) {
-    if (id === 'dashboard' || can(role, id)) return `/${id}`
+    if (id === 'dashboard' || can(role, id, privileges)) return `/${id}`
   }
   return '/dashboard'
 }
 
-function AppShell({ company, role, isAdmin, userName, loadCompany }) {
+function AppShell({ company, role, isAdmin, userName, loadCompany, privileges }) {
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -100,7 +100,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany }) {
         </div>
         <nav className="flex-1 py-3 px-3 space-y-3">
           {NAV_GROUPS.map((g) => {
-            const items = g.items.filter((n) => n.id === 'cms' ? (isAdmin || role === 'SUPERUSER') : can(role, n.id))
+            const items = g.items.filter((n) => n.id === 'cms' ? (isAdmin || role === 'SUPERUSER') : can(role, n.id, privileges))
             if (items.length === 0) return null
             return (
               <div key={g.title}>
@@ -147,79 +147,80 @@ function AppShell({ company, role, isAdmin, userName, loadCompany }) {
           <Route path="/dashboard" element={<Dashboard openReservation={openReservation} userName={userName} />} />
 
           <Route path="/reservations" element={
-            <GuardedRoute role={role} navId="reservations">
+            <GuardedRoute role={role} navId="reservations" privileges={privileges}>
               <ReservationsRoute openReservation={openReservation} userName={userName} />
             </GuardedRoute>
           } />
           <Route path="/reservations/:id" element={
-            <GuardedRoute role={role} navId="reservations">
+            <GuardedRoute role={role} navId="reservations" privileges={privileges}>
               <ReservationDetailRoute userName={userName} role={role} isAdmin={isAdmin} />
             </GuardedRoute>
           } />
 
           <Route path="/calendar" element={
-            <GuardedRoute role={role} navId="calendar">
+            <GuardedRoute role={role} navId="calendar" privileges={privileges}>
               <BookingCalendar openReservation={openReservation} onNewReservation={startReservation} />
             </GuardedRoute>
           } />
+
           <Route path="/nightaudit" element={
-            <GuardedRoute role={role} navId="nightaudit">
+            <GuardedRoute role={role} navId="nightaudit" privileges={privileges}>
               <NightAudit userName={userName} isAdmin={isAdmin} role={role} />
             </GuardedRoute>
-          } />          
+          } />
           <Route path="/housekeeping" element={
-            <GuardedRoute role={role} navId="housekeeping">
+            <GuardedRoute role={role} navId="housekeeping" privileges={privileges}>
               <HousekeepingHub userName={userName} role={role} isAdmin={isAdmin} />
             </GuardedRoute>
           } />
           <Route path="/pos" element={
-            <GuardedRoute role={role} navId="pos">
+            <GuardedRoute role={role} navId="pos" privileges={privileges}>
               <RestaurantPOS userName={userName} role={role} isAdmin={isAdmin} />
             </GuardedRoute>
           } />
           <Route path="/facilities" element={
-            <GuardedRoute role={role} navId="facilities">
+            <GuardedRoute role={role} navId="facilities" privileges={privileges}>
               <Facilities userName={userName} isAdmin={isAdmin} />
             </GuardedRoute>
           } />
           <Route path="/inventory" element={
-            <GuardedRoute role={role} navId="inventory">
+            <GuardedRoute role={role} navId="inventory" privileges={privileges}>
               <InventoryHub userName={userName} role={role} isAdmin={isAdmin} />
             </GuardedRoute>
           } />
           <Route path="/vat" element={
-            <GuardedRoute role={role} navId="vat">
+            <GuardedRoute role={role} navId="vat" privileges={privileges}>
               <VatCenter userName={userName} company={company} />
             </GuardedRoute>
           } />
           <Route path="/accounting" element={
-            <GuardedRoute role={role} navId="accounting">
+            <GuardedRoute role={role} navId="accounting" privileges={privileges}>
               <AccountingHub userName={userName} isAdmin={isAdmin} />
             </GuardedRoute>
           } />
           <Route path="/hr" element={
-            <GuardedRoute role={role} navId="hr">
+            <GuardedRoute role={role} navId="hr" privileges={privileges}>
               <HrOffice userName={userName} role={role} isAdmin={isAdmin} company={company} />
             </GuardedRoute>
           } />
           <Route path="/reports" element={
-            <GuardedRoute role={role} navId="reports">
+            <GuardedRoute role={role} navId="reports" privileges={privileges}>
               <ReportsHub userName={userName} role={role} />
             </GuardedRoute>
           } />
           <Route path="/cms" element={
               (isAdmin || role === 'SUPERUSER')
                 ? <CmsPortal role={role} isAdmin={isAdmin} />
-                : <Navigate to={firstAccessiblePath(role)} replace />
+                : <Navigate to={firstAccessiblePath(role, privileges)} replace />
           } />
           <Route path="/settings" element={
-            <GuardedRoute role={role} navId="settings">
+            <GuardedRoute role={role} navId="settings" privileges={privileges}>
               <Settings userName={userName} role={role} isAdmin={isAdmin} reloadCompany={loadCompany} />
             </GuardedRoute>
           } />
 
           {/* Unknown path (typo, stale bookmark, etc.) — send to the first page this role can access */}
-          <Route path="*" element={<Navigate to={firstAccessiblePath(role)} replace />} />
+          <Route path="*" element={<Navigate to={firstAccessiblePath(role, privileges)} replace />} />
         </Routes>
 
         <footer className="no-print mt-10 pt-4 border-t border-pine/10 flex items-center justify-between text-xs text-pine/40">
@@ -233,8 +234,8 @@ function AppShell({ company, role, isAdmin, userName, loadCompany }) {
 
 // Wraps a route's content; if the current role can't access navId, redirect to
 // the first page this role IS allowed to see, instead of rendering blank.
-function GuardedRoute({ role, navId, children }) {
-  if (!can(role, navId)) return <Navigate to={firstAccessiblePath(role)} replace />
+function GuardedRoute({ role, navId, privileges, children }) {
+  if (!can(role, navId, privileges)) return <Navigate to={firstAccessiblePath(role, privileges)} replace />
   return children
 }
 
@@ -270,6 +271,7 @@ function AppRoot() {
   const [session, setSession] = useState(undefined)
   const [profile, setProfile] = useState(null)
   const [company, setCompany] = useState(null)
+  const [privileges, setPrivileges] = useState(null) // null = not loaded yet; array once loaded
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -294,6 +296,16 @@ function AppRoot() {
       .then(({ data }) => setProfile(data || { role: 'FRONT_OFFICE', full_name: session.user.email?.split('@')[0] }))
   }, [session?.user?.id])
 
+  // Load this role's privilege matrix once we know the role. SUPERUSER/ADMIN
+  // don't strictly need it (can() always returns true for them) but we fetch
+  // anyway so Settings → Role Permissions can show their row too if ever needed.
+  useEffect(() => {
+    const role = profile?.role
+    if (!role) return
+    supabase.from('role_privileges').select('module, can_create, can_view, can_edit, can_delete').eq('role', role)
+      .then(({ data }) => setPrivileges(data || []))
+  }, [profile?.role])
+
   if (session === undefined) return <div className="min-h-screen flex items-center justify-center text-pine/60">Loading…</div>
 
   // /{slug}/login — per-property login path
@@ -311,5 +323,5 @@ function AppRoot() {
   const isAdmin  = role === 'ADMIN' || role === 'SUPERUSER'
   const userName = profile?.full_name || session.user?.email?.split('@')[0] || 'User'
 
-  return <AppShell company={company} role={role} isAdmin={isAdmin} userName={userName} loadCompany={loadCompany} />
+  return <AppShell company={company} role={role} isAdmin={isAdmin} userName={userName} loadCompany={loadCompany} privileges={privileges} />
 }
