@@ -45,8 +45,7 @@ export default function Reservations({ openReservation, userName, prefill, clear
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="font-display text-2xl font-bold text-pine">Reservations</h1>
-          <p className="text-sm text-pine/60">Query → Quotation → Confirmation → Check-in → Check-out</p>
+          <h1 className="font-display text-2xl font-bold text-pine">Reservations</h1>          
         </div>
         <button className="btn-primary" onClick={() => setShowNew(true)}><Plus size={16} /> New reservation query</button>
       </div>
