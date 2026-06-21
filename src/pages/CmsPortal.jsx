@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtBDT } from '../lib/helpers'
 import SearchableSelect from '../components/SearchableSelect.jsx'
 import {
-  Plus, Pencil, Trash2, Save, ShieldCheck,
+  Plus, Pencil, Trash2, Save, ShieldCheck, Search, X,
   Building2, Truck, Package, FolderTree, UtensilsCrossed, Sparkles, Calculator, Handshake, Users, BedDouble,
 } from 'lucide-react'
 
@@ -127,6 +127,7 @@ function EntityManager({ entity }) {
   const [editF, setEditF]       = useState({})
   const [f, setF]               = useState(() => emptyForm(entity))
   const [fkOptions, setFkOptions] = useState({})
+  const [recordQuery, setRecordQuery] = useState('') // record-level search within this entity's table
   // Distinct values already used in any "searchable" (non-FK) text field — e.g. room_type —
   // so SearchableSelect can offer them as suggestions, same as a free-text autocomplete.
   const [searchOptions, setSearchOptions] = useState({})
@@ -155,7 +156,7 @@ function EntityManager({ entity }) {
     }
     setFkOptions(next)
   }
-  useEffect(() => { load(); loadFkOptions() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); loadFkOptions(); setRecordQuery('') }, [entity.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const buildPayload = (state) => {
     const payload = {}
@@ -257,12 +258,46 @@ function EntityManager({ entity }) {
 
   const colSpan = entity.fields.length + (entity.hasIsActive ? 2 : 1)
 
+  // Record-level search — matches the query against every non-FK, non-checkbox
+  // field's displayed value (case-insensitive substring). FK select fields are
+  // matched against their resolved label (e.g. menu_items.category_id -> category name)
+  // so searching "Beverages" finds menu items in that category too.
+  const filteredRows = useMemo(() => {
+    const q = recordQuery.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter((r) =>
+      entity.fields.some((fld) => {
+        if (fld.type === 'checkbox') return false
+        const display = fld.type === 'select' && fld.fkTable ? fkLabelFor(fld, r[fld.key]) : r[fld.key]
+        return String(display ?? '').toLowerCase().includes(q)
+      })
+    )
+  }, [rows, recordQuery, entity.fields, fkOptions]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="card p-5">
-      <h2 className="font-display font-semibold text-pine flex items-center gap-2 mb-1">
-        <entity.icon size={18} className="text-forest" /> {entity.label}
-      </h2>
-      <p className="text-xs text-pine/50 mb-4">{rows.length} record{rows.length !== 1 ? 's' : ''}</p>
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
+        <h2 className="font-display font-semibold text-pine flex items-center gap-2">
+          <entity.icon size={18} className="text-forest" /> {entity.label}
+        </h2>
+        <div className="relative w-56">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-pine/30" />
+          <input
+            className="input !pl-8 !pr-7 !py-1.5 !text-sm"
+            placeholder={`Search ${entity.label.toLowerCase()}…`}
+            value={recordQuery}
+            onChange={(e) => setRecordQuery(e.target.value)}
+          />
+          {recordQuery && (
+            <button onClick={() => setRecordQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-pine/30 hover:text-pine">
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+      <p className="text-xs text-pine/50 mb-4">
+        {recordQuery ? `${filteredRows.length} of ${rows.length} record${rows.length !== 1 ? 's' : ''} match` : `${rows.length} record${rows.length !== 1 ? 's' : ''}`}
+      </p>
       {msg && <div className="mb-3 px-3 py-2 rounded-lg bg-forest/10 text-forest text-sm">{msg}</div>}
 
       <div className="flex flex-wrap gap-2 mb-4 items-end p-3 bg-leaf/20 rounded-xl">
@@ -287,7 +322,7 @@ function EntityManager({ entity }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => editId === r.id ? (
+            {filteredRows.map((r) => editId === r.id ? (
               <tr key={r.id} className="bg-leaf/20">
                 {entity.fields.map((fld) => (
                   <td key={fld.key} className="td !py-1.5">{renderInput(fld, editF, (v) => setEditF((p) => ({ ...p, [fld.key]: v })))}</td>
@@ -323,6 +358,9 @@ function EntityManager({ entity }) {
             {rows.length === 0 && (
               <tr><td className="td text-center text-pine/40 text-sm py-6" colSpan={colSpan}>No records yet.</td></tr>
             )}
+            {rows.length > 0 && filteredRows.length === 0 && (
+              <tr><td className="td text-center text-pine/40 text-sm py-6" colSpan={colSpan}>No records match "{recordQuery}".</td></tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -337,6 +375,7 @@ export default function CmsPortal({ role, isAdmin }) {
   const isSuperuser = role === 'SUPERUSER'
   const isAdminPlus = isSuperuser || isAdmin
   const [selectedId, setSelectedId] = useState(CMS_ENTITIES[0].id)
+  const [entityQuery, setEntityQuery] = useState('') // search-first: filters the entity switcher itself
 
   if (!isAdminPlus) {
     return (
@@ -344,30 +383,55 @@ export default function CmsPortal({ role, isAdmin }) {
         <h1 className="font-display text-xl font-bold text-pine mb-2 flex items-center gap-2">
           <ShieldCheck size={20} /> Access restricted
         </h1>
-        <p className="text-sm text-pine/60">Client Management can only be accessed by administrators.</p>
+        <p className="text-sm text-pine/60">Configuration can only be accessed by administrators.</p>
       </div>
     )
   }
 
-  const entity = CMS_ENTITIES.find((e) => e.id === selectedId)
+  const visibleEntities = CMS_ENTITIES.filter((e) => e.label.toLowerCase().includes(entityQuery.trim().toLowerCase()))
+  // If the current search hides the selected entity, fall back to the first visible one
+  // so the right panel never shows a manager for a section not in the filtered list.
+  const entity = CMS_ENTITIES.find((e) => e.id === selectedId && visibleEntities.some((v) => v.id === selectedId))
+    || visibleEntities[0]
+    || CMS_ENTITIES[0]
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-pine mb-1">Client Management</h1>
+      <h1 className="font-display text-2xl font-bold text-pine mb-1">Configuration</h1>
       <p className="text-sm text-pine/60 mb-6">Create and edit master records used across Reservations, POS, Inventory and Accounting.</p>
       <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-5 items-start">
-        <div className="card p-3 space-y-1 lg:sticky lg:top-6">
-          {CMS_ENTITIES.map((e) => (
-            <button
-              key={e.id}
-              onClick={() => setSelectedId(e.id)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
-                selectedId === e.id ? 'bg-forest/15 text-forest' : 'text-pine/70 hover:bg-leaf/40'
-              }`}
-            >
-              <e.icon size={16} /> {e.label}
-            </button>
-          ))}
+        <div className="lg:sticky lg:top-6 space-y-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-pine/30" />
+            <input
+              className="input !pl-8 !pr-7 !py-1.5 !text-sm"
+              placeholder="Find a section…"
+              value={entityQuery}
+              onChange={(e) => setEntityQuery(e.target.value)}
+              autoFocus
+            />
+            {entityQuery && (
+              <button onClick={() => setEntityQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-pine/30 hover:text-pine">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <div className="card p-3 space-y-1">
+            {visibleEntities.map((e) => (
+              <button
+                key={e.id}
+                onClick={() => setSelectedId(e.id)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
+                  entity.id === e.id ? 'bg-forest/15 text-forest' : 'text-pine/70 hover:bg-leaf/40'
+                }`}
+              >
+                <e.icon size={16} /> {e.label}
+              </button>
+            ))}
+            {visibleEntities.length === 0 && (
+              <p className="px-3 py-2 text-xs text-pine/40">No sections match "{entityQuery}".</p>
+            )}
+          </div>
         </div>
         <EntityManager key={entity.id} entity={entity} />
       </div>
