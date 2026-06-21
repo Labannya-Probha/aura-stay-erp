@@ -690,10 +690,10 @@ function StaffCard({ isAdminPlus, isSuperuser, currentUserName }) {
     setBusy(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/wipe-nonuser-data`, {
+      const res = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/admin-reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ action: 'reset_password', user_id: resetTarget.id, new_password: newPwd }),
+        body: JSON.stringify({ user_id: resetTarget.id, new_password: newPwd }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || json.message || 'Reset failed.')
