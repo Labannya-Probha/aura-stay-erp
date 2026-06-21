@@ -643,16 +643,25 @@ function StaffCard({ isAdminPlus, isSuperuser, currentUserName }) {
   const availableRoles = isSuperuser ? ROLES : ROLES.filter((r) => r !== 'SUPERUSER')
 
   // ── Add new staff ──
+  // ── Add new staff ──
   const addStaff = async () => {
     const uname = nu.username.trim().toLowerCase()
     if (!nu.full_name.trim() || !uname || nu.password.length < 6) { flash('Enter name, username and a password of at least 6 characters.'); return }
     if (/[^a-z0-9._-]/.test(uname)) { flash('Username may only use letters, numbers, dot, dash and underscore.'); return }
     setBusy(true)
     try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: myRow, error: myRowErr } = await supabase
+        .from('app_users').select('tenant_id').eq('id', currentUser?.id).single()
+      if (myRowErr || !myRow?.tenant_id) { flash('Could not determine your company — please sign out and back in, then try again.'); setBusy(false); return }
+
       const { createClient } = await import('@supabase/supabase-js')
       const tmp = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
       const email = `${uname}@${LOGIN_DOMAIN}`
-      const { data, error } = await tmp.auth.signUp({ email, password: nu.password, options: { data: { username: uname, full_name: nu.full_name.trim() } } })
+      const { data, error } = await tmp.auth.signUp({
+        email, password: nu.password,
+        options: { data: { username: uname, full_name: nu.full_name.trim(), tenant_id: myRow.tenant_id } },
+      })
       if (error) throw error
       const newId = data?.user?.id
       if (newId) await supabase.from('app_users').update({ role: nu.role, full_name: nu.full_name.trim(), username: uname }).eq('id', newId)
