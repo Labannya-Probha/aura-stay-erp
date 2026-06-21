@@ -97,7 +97,11 @@ export default function Login({ slug }) {
         />
       )}
 
-      <div className="card w-full max-w-sm p-8 relative shadow-2xl" style={{ backgroundColor: '#ffffff', opacity: 1 }}>
+      <div className={`w-full max-w-sm p-8 relative shadow-2xl rounded-2xl ${
+        company?.login_background_video_url
+          ? 'bg-white/20 backdrop-blur-xl border border-white/30'
+          : 'card'
+      }`}>
 
         {/* Logo */}
         <div className="flex flex-col items-center text-center mb-7">
