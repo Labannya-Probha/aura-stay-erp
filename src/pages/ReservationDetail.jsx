@@ -1842,8 +1842,7 @@ function BillingsAndCheckOutTab({
       <div className="card p-5 border-l-4 border-l-pine">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h3 className="font-display font-semibold text-pine text-lg">Guest Billing & Check-out</h3>
-            <p className="text-sm text-pine/60 mt-1">Preview live bill before check-out or manage historical invoices.</p>
+            <h3 className="font-display font-semibold text-pine text-lg">Guest Billing & Check-out</h3>            
           </div>
           <div className="flex flex-wrap gap-2 items-center">
             <button className="btn-ghost" onClick={() => printLiveInvoice('BILL')}><Printer size={16} /> Preview Bill</button>
