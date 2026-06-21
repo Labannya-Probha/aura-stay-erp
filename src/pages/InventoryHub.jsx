@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtBDT, fmtDate, todayISO, exportXLSX } from '../lib/helpers'
 import { Boxes, Plus, Trash2, Check, X, Truck, PackageCheck, ArrowLeftRight, Undo2, FileDown, Minus } from 'lucide-react'
+import VendorPaymentTab from '../components/VendorPaymentTab.jsx'
 
-const TABS = ['Items & Stock', 'Vendors', 'Requisitions', 'Purchase Orders', 'Goods Receipt', 'Transfers', 'Consumption', 'Returns']
+const TABS = ['Items & Stock', 'Vendors', 'Requisitions', 'Purchase Orders', 'Goods Receipt', 'Transfers', 'Consumption', 'Returns', 'Vendor Payments']
 
 export default function InventoryHub({ userName, role, isAdmin }) {
   const [tab, setTab] = useState('Items & Stock')
@@ -31,6 +32,7 @@ export default function InventoryHub({ userName, role, isAdmin }) {
       {tab === 'Transfers' && <TransfersTab flash={flash} userName={userName} />}
       {tab === 'Consumption' && <ConsumptionTab flash={flash} userName={userName} />}
       {tab === 'Returns' && <ReturnsTab flash={flash} userName={userName} />}
+      {tab === 'Vendor Payments' && <VendorPaymentTab role={role} />}
     </div>
   )
 }
