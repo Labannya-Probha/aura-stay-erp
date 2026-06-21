@@ -41,6 +41,7 @@ const NAV_GROUPS = [
   ]},
   { title: 'Tasks', items: [
     { id: 'tasks', label: 'Task Management', icon: ListChecks },
+  ]},
   { title: 'Front Office', items: [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'nightaudit', label: 'Night Audit', icon: MoonStar },
