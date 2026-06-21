@@ -21,10 +21,11 @@ import NightAudit from './pages/NightAudit.jsx'
 import ReportsHub from './pages/ReportsHub.jsx'
 import Settings from './pages/Settings.jsx'
 import CmsPortal from './pages/CmsPortal.jsx'
+import TaskManagement from './pages/TaskManagement.jsx'
 import {
   Leaf, LayoutDashboard, CalendarRange, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
   FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut, BedDouble, Building2,
-  Menu, X,
+  Menu, X, ListChecks,
 } from 'lucide-react'
 
 function BrandLogo({ url }) {
@@ -37,7 +38,9 @@ const NAV_GROUPS = [
    { title: 'Sales & Reservation', items: [
     { id: 'calendar', label: 'Booking Calendar', icon: CalendarDays }, 
     { id: 'reservations', label: 'Reservations', icon: CalendarRange },
-  ]},    
+  ]},
+  { title: 'Tasks', items: [
+    { id: 'tasks', label: 'Task Management', icon: ListChecks },
   { title: 'Front Office', items: [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'nightaudit', label: 'Night Audit', icon: MoonStar },
@@ -179,7 +182,6 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard openReservation={openReservation} userName={userName} />} />
-
           <Route path="/reservations" element={
             <GuardedRoute role={role} navId="reservations" privileges={privileges}>
               <ReservationsRoute openReservation={openReservation} userName={userName} />
@@ -240,6 +242,11 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
           <Route path="/reports" element={
             <GuardedRoute role={role} navId="reports" privileges={privileges}>
               <ReportsHub userName={userName} role={role} />
+            </GuardedRoute>
+          } />
+          <Route path="/tasks" element={
+            <GuardedRoute role={role} navId="tasks" privileges={privileges}>
+              <TaskManagement userName={userName} role={role} isAdmin={isAdmin} />
             </GuardedRoute>
           } />
           <Route path="/cms" element={
