@@ -1,4 +1,5 @@
 import { fmtBDT, fmtDate, nightsBetween } from '../../lib/helpers'
+import { normalizeInvoiceItems, normalizeInvoiceTotals, resolveBuyerInfo } from '../../lib/invoiceFormat'
 
 /* ---------- Amount-in-words (Bangladeshi / Indian numbering) ---------- */
 const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
@@ -39,8 +40,9 @@ const MUTE = '#6b7280'
 const LINE = 'rgba(27,77,46,0.18)'
 
 export default function GuestBill({
-  charges = [], totals = {}, paid = 0, due = 0,
-  res, guest, company, invoice_no, issued_at,
+  charges = [], line_snapshot = [], totals = {}, paid = 0, due = 0,
+  res, guest, company, guestCompany, invoice_no, issued_at,
+  buyer_name, buyer_address, buyer_bin,
 }) {
   const co = {
     name: company?.name || 'Novem Eco Resort',
@@ -53,33 +55,37 @@ export default function GuestBill({
     software: company?.software_name || 'Aura Stay',
   }
 
+  const { items: chargeItems, isLegacy } = normalizeInvoiceItems(charges, line_snapshot)
+  const chargeTotals = normalizeInvoiceTotals(totals)
+  const buyer = resolveBuyerInfo({ res, guest, guestCompany, buyer_name, buyer_address, buyer_bin })
+
   const isDraft = !invoice_no
   const invoiceNumber = invoice_no || `INV-${res?.res_no || 'DRAFT'}`
   const issueDate = fmtDate(issued_at || new Date().toISOString())
   const nights = res?.check_in && res?.check_out ? nightsBetween(res.check_in, res.check_out) : 0
   const pax = (Number(res?.pax_adults) || 0) + (Number(res?.pax_children) || 0)
 
-  const subtotal = Number(totals.grand_total_raw ?? totals.grand_total ?? 0)
-  const discount = Number(totals.discount || 0)
-  const serviceCharge = Number(totals.service_charge || 0)
-  const vat = Number(totals.vat || 0)
-  const rounding = Number(totals.rounding || 0)
-  const grandTotal = Number(totals.grand_total ?? subtotal + rounding)
+  const subtotal = chargeTotals.grand_total_raw
+  const rounding = chargeTotals.rounding
+  const grandTotal = chargeTotals.grand_total
   const balanceDue = Number(due ?? grandTotal - paid)
   const statusLabel = balanceDue <= 0 ? 'PAID' : Number(paid) > 0 ? 'PARTIALLY PAID' : 'UNPAID'
   const statusColor = balanceDue <= 0 ? FOREST : '#b91c1c'
-  const chargeTotals = {
-    base: Number(totals.base || 0),
-    discount,
-    service_charge: serviceCharge,
-    vat,
-    grand_total_raw: subtotal,
-  }
 
   const sectionTitle = { fontSize: 9.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: FOREST, marginBottom: 4 }
   const th = { textAlign: 'left', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase', color: '#fff', padding: '6px 9px', background: PINE }
   const td = { fontSize: 11.5, padding: '5px 9px', borderBottom: `1px solid ${LINE}`, color: INK, verticalAlign: 'top' }
   const sumRow = { display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '2.5px 0', color: INK }
+
+  // Cosmetic-only formatter for line-item cells: legacy items don't have a
+  // real per-line discount/SC/VAT breakdown, so show "—" instead of a
+  // fabricated 0.00. The footer totals always come from chargeTotals
+  // (the invoice-level totals object), never summed from items, so the
+  // overall numbers stay correct either way.
+  const cell = (item, field) => {
+    if (item._legacy && (field === 'discount' || field === 'service_charge' || field === 'vat')) return '—'
+    return Number(item[field] || 0).toFixed(2)
+  }
 
   return (
     <div className="gb-wrap" style={{
@@ -129,11 +135,13 @@ export default function GuestBill({
       <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: `1px solid ${LINE}`, borderRadius: 8, overflow: 'hidden', marginBottom: 11 }}>
         <div style={{ padding: '9px 14px', borderRight: `1px solid ${LINE}`, background: 'rgba(46,125,50,0.03)' }}>
           <div style={sectionTitle}>Billed To</div>
-          <Field k="Guest" v={guest?.full_name || res?.reservation_name || '—'} strong />
+          <Field k={buyer.isCompany ? 'Company' : 'Guest'} v={buyer.name} strong />
+          {buyer.isCompany && <Field k="Guest" v={guest?.full_name || res?.reservation_name || '—'} />}
           <Field k="Phone" v={guest?.phone || '—'} />
           {guest?.email && <Field k="Email" v={guest.email} />}
-          {guest?.address && <Field k="Address" v={guest.address} />}
-          {guest?.id_number && <Field k={guest?.id_type || 'ID'} v={guest.id_number} />}
+          {buyer.address !== '—' && <Field k="Address" v={buyer.address} />}
+          {buyer.bin && <Field k="BIN" v={buyer.bin} />}
+          {!buyer.isCompany && guest?.id_number && <Field k={guest?.id_type || 'ID'} v={guest.id_number} />}
         </div>
         <div style={{ padding: '9px 14px', background: 'rgba(46,125,50,0.03)' }}>
           <div style={sectionTitle}>Stay Details</div>
@@ -162,21 +170,21 @@ export default function GuestBill({
             </tr>
           </thead>
           <tbody>
-            {charges.length === 0 && <tr><td style={{ ...td, textAlign: 'center', color: MUTE }} colSpan={8}>No charges recorded.</td></tr>}
-            {charges.map((ch, i) => (
+            {chargeItems.length === 0 && <tr><td style={{ ...td, textAlign: 'center', color: MUTE }} colSpan={8}>No charges recorded.</td></tr>}
+            {chargeItems.map((ch, i) => (
               <tr key={ch.id || i}>
-                <td style={{ ...td, whiteSpace: 'nowrap', fontSize: 10.5 }}>{fmtDate(ch.charge_date)}</td>
-                <td style={{ ...td, fontSize: 10.5 }}>{ch.charge_type}</td>
+                <td style={{ ...td, whiteSpace: 'nowrap', fontSize: 10.5 }}>{ch.charge_date ? fmtDate(ch.charge_date) : '—'}</td>
+                <td style={{ ...td, fontSize: 10.5 }}>{ch.charge_type || '—'}</td>
                 <td style={td}>{ch.description}</td>
                 <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.base_amount || 0).toFixed(2)}</td>
-                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.discount || 0).toFixed(2)}</td>
-                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.service_charge || 0).toFixed(2)}</td>
-                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(ch.vat || 0).toFixed(2)}</td>
+                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{cell(ch, 'discount')}</td>
+                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{cell(ch, 'service_charge')}</td>
+                <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{cell(ch, 'vat')}</td>
                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{Number(ch.total || 0).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
-          {charges.length > 0 && (
+          {chargeItems.length > 0 && (
             <tfoot>
               <tr style={{ background: 'rgba(46,125,50,0.07)' }}>
                 <td style={{ ...td, fontWeight: 700, borderBottom: 'none' }} colSpan={3}>Totals</td>
@@ -189,6 +197,11 @@ export default function GuestBill({
             </tfoot>
           )}
         </table>
+        {isLegacy && (
+          <div style={{ fontSize: 9.5, color: MUTE, marginTop: 4, fontStyle: 'italic' }}>
+            This invoice was issued before itemized line-level breakdown was recorded — per-line Disc./SC/VAT are shown as "—". The Subtotal/VAT/Grand Total in the summary below reflect the actual figures issued.
+          </div>
+        )}
       </section>
 
       {/* ═══ 5. FINANCIAL SUMMARY ═══ */}
