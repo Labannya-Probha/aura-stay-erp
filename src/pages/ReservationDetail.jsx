@@ -150,7 +150,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
       supabase.from('invoices').select('*').eq('reservation_id', id).order('created_at', { ascending: false }),
       supabase.from('reservation_addons').select('*').eq('reservation_id', id).order('created_at'),
       supabase.from('tax_config').select('*'),
-      supabase.from('company_settings').select('*').eq('id', 1).single(),
+      supabase.from('company_settings').select('*').limit(1).maybeSingle(),
       supabase.from('guest_ids').select('*').eq('reservation_id', id).order('created_at'),
     ])
     setResGuests(rg || []); setResRooms(rr || []); setRooms(rm || [])
