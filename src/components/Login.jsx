@@ -99,7 +99,7 @@ export default function Login({ slug }) {
 
       <div className={`w-full max-w-sm p-8 relative shadow-2xl rounded-2xl ${
         company?.login_background_video_url
-          ? 'bg-white/20 backdrop-blur-xl border border-white/30'
+          ? 'bg-white/20 backdrop-blur-x5 border border-white/30'
           : 'card'
       }`}>
 
