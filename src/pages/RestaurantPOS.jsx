@@ -6,7 +6,7 @@ import { PosReceipt, KitchenTicket } from '../components/print/PosDocs.jsx'
 import Mushak63 from '../components/print/Mushak63.jsx'
 import GuestPicker from '../components/GuestPicker.jsx'
 import { Plus, Minus, Trash2, Printer, ChefHat, Banknote, BedDouble, Search, Save, XCircle, RotateCcw, Receipt, Clock, FileText } from 'lucide-react'
-
+import KPICards from '../components/KPICards.jsx'
 const TABS = ['New Order', 'Orders', 'Day Close']
 const PAYMENT_METHODS = ['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER']
 
