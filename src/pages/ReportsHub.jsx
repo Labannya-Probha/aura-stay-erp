@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtBDT, fmtDate, todayISO, exportXLSX } from '../lib/helpers'
-import { BarChart3, FileDown, Printer, CalendarRange, ChevronLeft, Lock, Search, Plus, Trash2 } from 'lucide-react'
+import { BarChart3, FileDown, Printer, CalendarRange, ChevronLeft, Lock, Search, Plus, Trash2, Settings2, GripVertical, EyeOff, Eye, X } from 'lucide-react'
 import PrintPortal from '../components/PrintPortal.jsx'
 
 const CYCLES = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Half-Yearly', 'Yearly', 'Date Range']
@@ -35,7 +35,7 @@ export default function ReportsHub({ userName, role }) {
     supabase.from('company_settings').select('*').eq('id', 1).single().then(({ data }) => setCompany(data))
   }, [])
 
-  if (active) return <ReportRunner def={active} company={company} canManage={canManage} back={() => setActive(null)} onDeleted={() => { setActive(null); loadDefs() }} />
+  if (active) return <ReportRunner def={active} company={company} canManage={canManage} back={() => { setActive(null); loadDefs() }} onDeleted={() => { setActive(null); loadDefs() }} />
 
   const filtered = defs.filter((d) => (d.report_name + ' ' + d.department).toLowerCase().includes(q.toLowerCase()))
   const groups = filtered.reduce((acc, d) => { (acc[d.department] = acc[d.department] || []).push(d); return acc }, {})
@@ -78,7 +78,153 @@ export default function ReportsHub({ userName, role }) {
   )
 }
 
-function ReportRunner({ def, company, back, canManage, onDeleted }) {
+/* ── Column Customizer Panel (Admin/Superuser only) ─────────────────────── */
+const FIELD_TYPES = [
+  { value: 'text',  label: 'Text' },
+  { value: 'money', label: 'Money (৳)' },
+  { value: 'date',  label: 'Date' },
+  { value: 'num',   label: 'Number' },
+]
+
+function ColumnCustomizer({ def, existingHead, onSaved, onClose }) {
+  // Load saved overrides
+  const saved = def.column_overrides || {}
+  const [extraCols, setExtraCols] = useState(saved.extra_columns || []) // [{field, label, type}]
+  const [hiddenCols, setHiddenCols] = useState(saved.hidden_columns || []) // [field/label strings]
+  const [newField, setNewField] = useState('')
+  const [newLabel, setNewLabel] = useState('')
+  const [newType, setNewType] = useState('text')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const addExtra = () => {
+    if (!newField.trim() || !newLabel.trim()) { setMsg('Field name আর Label দিন।'); return }
+    if (extraCols.some(c => c.field === newField.trim())) { setMsg('এই field আগেই যোগ আছে।'); return }
+    setExtraCols(prev => [...prev, { field: newField.trim(), label: newLabel.trim(), type: newType }])
+    setNewField(''); setNewLabel(''); setNewType('text'); setMsg('')
+  }
+
+  const removeExtra = (field) => setExtraCols(prev => prev.filter(c => c.field !== field))
+
+  const toggleHide = (label) => {
+    setHiddenCols(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label])
+  }
+
+  const save = async () => {
+    setBusy(true)
+    const overrides = {
+      extra_columns: extraCols,
+      hidden_columns: hiddenCols,
+    }
+    const { error } = await supabase.from('report_definitions')
+      .update({ column_overrides: overrides })
+      .eq('id', def.id)
+    setBusy(false)
+    if (error) { setMsg(error.message); return }
+    onSaved()
+    onClose()
+  }
+
+  const reset = async () => {
+    if (!window.confirm('সব customization মুছে default-এ ফিরে যাবে। Confirm?')) return
+    setBusy(true)
+    await supabase.from('report_definitions').update({ column_overrides: null }).eq('id', def.id)
+    setBusy(false)
+    onSaved()
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/60 z-50 flex items-start justify-center overflow-auto p-4 sm:p-8">
+      <div className="card max-w-2xl w-full p-5 my-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-lg font-bold text-pine flex items-center gap-2">
+            <Settings2 size={18} /> Column Customization
+          </h2>
+          <button onClick={onClose} className="text-pine/30 hover:text-pine"><X size={18} /></button>
+        </div>
+        <p className="text-xs text-pine/50 mb-4">
+          এই settings শুধু এই property-র Admin/Superuser-দের জন্য। Extra column যোগ করলে report run করার সময় ওই DB field-টা সেই row-তে দেখাবে (যদি source-এ থাকে)।
+        </p>
+        {msg && <div className="mb-3 px-3 py-2 rounded-lg bg-red-50 text-red-600 text-sm">{msg}</div>}
+
+        {/* Hide existing columns */}
+        {existingHead.length > 0 && (
+          <div className="mb-5">
+            <h3 className="text-sm font-semibold text-pine mb-2">বিদ্যমান columns দেখাবে / লুকাবে</h3>
+            <div className="flex flex-wrap gap-2">
+              {existingHead.map((h) => {
+                const hidden = hiddenCols.includes(h)
+                return (
+                  <button key={h} onClick={() => toggleHide(h)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${hidden ? 'bg-stone-100 text-stone-400 border-stone-200 line-through' : 'bg-white border-leaf text-pine hover:border-forest'}`}>
+                    {hidden ? <EyeOff size={11} /> : <Eye size={11} />} {h}
+                  </button>
+                )
+              })}
+            </div>
+            {hiddenCols.length > 0 && <p className="text-xs text-pine/40 mt-1">{hiddenCols.length} column লুকানো থাকবে।</p>}
+          </div>
+        )}
+
+        {/* Add extra columns */}
+        <div className="mb-5">
+          <h3 className="text-sm font-semibold text-pine mb-2">নতুন column যোগ করুন</h3>
+          <p className="text-xs text-pine/40 mb-2">DB field name দিন — report-এর data source table-এ যা আছে। যদি field না থাকে তাহলে "—" দেখাবে।</p>
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            <div>
+              <label className="label">DB field name</label>
+              <input className="input text-sm" placeholder="e.g. created_by" value={newField} onChange={e => setNewField(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Column label</label>
+              <input className="input text-sm" placeholder="e.g. Created By" value={newLabel} onChange={e => setNewLabel(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Type</label>
+              <select className="input text-sm" value={newType} onChange={e => setNewType(e.target.value)}>
+                {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <button className="btn-ghost !py-1.5 text-sm" onClick={addExtra}><Plus size={14} /> Add column</button>
+        </div>
+
+        {/* Extra columns list */}
+        {extraCols.length > 0 && (
+          <div className="mb-5">
+            <h3 className="text-sm font-semibold text-pine mb-2">যোগ করা columns ({extraCols.length})</h3>
+            <div className="space-y-1.5">
+              {extraCols.map((c, i) => (
+                <div key={c.field} className="flex items-center gap-2 px-3 py-2 bg-leaf/30 rounded-lg text-sm">
+                  <GripVertical size={13} className="text-pine/30" />
+                  <span className="font-medium flex-1">{c.label}</span>
+                  <span className="text-xs text-pine/40 money">{c.field}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-white text-pine/50">{c.type}</span>
+                  <button onClick={() => removeExtra(c.field)} className="text-red-300 hover:text-red-600"><X size={13} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-between pt-4 border-t border-leaf">
+          <button className="btn-ghost !py-1.5 text-red-500 text-sm" onClick={reset} disabled={busy}>Reset to default</button>
+          <div className="flex gap-2">
+            <button className="btn-ghost !py-1.5" onClick={onClose}>Cancel</button>
+            <button className="btn-primary !py-1.5" onClick={save} disabled={busy}>
+              <Settings2 size={14} /> {busy ? 'Saving…' : 'Save settings'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── ReportRunner ────────────────────────────────────────────────────────── */
+function ReportRunner({ def: defProp, company, back, canManage, onDeleted }) {
+  const [def, setDef] = useState(defProp) // local copy so we can refresh overrides
   const [cycle, setCycle] = useState('Monthly')
   const [anchor, setAnchor] = useState(todayISO())
   const [from, setFrom] = useState(cycleRange('Monthly', todayISO()).from)
@@ -86,18 +232,72 @@ function ReportRunner({ def, company, back, canManage, onDeleted }) {
   const [printing, setPrinting] = useState(false)
   const [data, setData] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [showCustomizer, setShowCustomizer] = useState(false)
 
   const applyCycle = (c, anc) => { if (c !== 'Date Range') { const r = cycleRange(c, anc); setFrom(r.from); setTo(r.to) } }
   const onCycle = (c) => { setCycle(c); applyCycle(c, anchor) }
   const onAnchor = (v) => { setAnchor(v); applyCycle(cycle, v) }
 
-  const run = async () => { setBusy(true); const res = await fetchReport(def, from, to); setData(res); setBusy(false) }
+  const run = async () => {
+    setBusy(true)
+    let res = await fetchReport(def, from, to)
+
+    // Apply column_overrides if any
+    const overrides = def.column_overrides || {}
+    const hidden = overrides.hidden_columns || []
+    const extra = overrides.extra_columns || []
+
+    if (hidden.length > 0 && res.head) {
+      // Build mask of which indices to keep
+      const keepIdx = res.head.map((h, i) => ({ h, i })).filter(({ h }) => !hidden.includes(h)).map(({ i }) => i)
+      res = {
+        ...res,
+        head: keepIdx.map(i => res.head[i]),
+        align: res.align ? keepIdx.map(i => res.align[i]) : res.align,
+        rows: res.rows.map(r => keepIdx.map(i => r[i])),
+        foot: res.foot ? keepIdx.map(i => res.foot[i]) : res.foot,
+      }
+    }
+
+    // Extra columns: append their label to head + '—' to each row
+    // (actual data fetch would require knowing the source table; we show '—' 
+    //  unless it's a custom report with config.source, then we re-fetch)
+    if (extra.length > 0) {
+      if (def.is_custom && def.config && def.config.source) {
+        // Re-fetch including extra fields for custom reports
+        const allCols = [...(def.config.columns || []), ...extra]
+        const extConfig = { ...def.config, columns: allCols }
+        const extRes = await runCustomReportForOverride(extConfig, from, to)
+        res = extRes
+      } else {
+        // Built-in reports: just append header + '—' placeholder
+        extra.forEach(ec => {
+          res.head = [...(res.head || []), ec.label]
+          res.align = [...(res.align || []), ec.type === 'money' || ec.type === 'num' ? 'r' : 'l']
+          res.rows = (res.rows || []).map(r => [...r, '—'])
+          if (res.foot) res.foot = [...res.foot, '']
+        })
+      }
+    }
+
+    setData(res)
+    setBusy(false)
+  }
+
   const delCustom = async () => {
     if (!window.confirm('Delete this custom report?')) return
     await supabase.from('report_definitions').delete().eq('id', def.id)
     onDeleted && onDeleted()
   }
+
+  const refreshDef = async () => {
+    const { data: updated } = await supabase.from('report_definitions').select('*').eq('id', def.id).single()
+    if (updated) setDef(updated)
+  }
+
   useEffect(() => { run() }, []) // eslint-disable-line
+
+  const visibleHead = data?.head || []
 
   const xls = () => {
     if (!data) return
@@ -106,15 +306,35 @@ function ReportRunner({ def, company, back, canManage, onDeleted }) {
     exportXLSX(`${def.report_key}_${from}_${to}.xlsx`, [{ name: def.report_name.slice(0, 28), rows: sheetRows }])
   }
 
+  const hasOverrides = !!(def.column_overrides && (
+    (def.column_overrides.extra_columns || []).length > 0 ||
+    (def.column_overrides.hidden_columns || []).length > 0
+  ))
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <button className="btn-ghost !py-1" onClick={back}><ChevronLeft size={15} /> All reports</button>
-        {canManage && def.is_custom && <button className="btn-ghost !py-1 text-red-600" onClick={delCustom}><Trash2 size={14} /> Delete report</button>}
+        <div className="flex gap-2">
+          {canManage && (
+            <button
+              className={`btn-ghost !py-1 flex items-center gap-1.5 text-sm ${hasOverrides ? 'text-forest border-forest' : ''}`}
+              onClick={() => setShowCustomizer(true)}
+              title="Customize columns">
+              <Settings2 size={14} /> Columns{hasOverrides ? ' ✓' : ''}
+            </button>
+          )}
+          {canManage && def.is_custom && (
+            <button className="btn-ghost !py-1 text-red-600" onClick={delCustom}><Trash2 size={14} /> Delete</button>
+          )}
+        </div>
       </div>
+
       <div>
         <h1 className="font-display text-2xl font-bold text-pine">{def.report_name}</h1>
-        <p className="text-sm text-pine/60">{def.department}</p>
+        <p className="text-sm text-pine/60">{def.department}
+          {hasOverrides && <span className="ml-2 text-xs text-forest bg-forest/10 px-2 py-0.5 rounded-full">Custom columns active</span>}
+        </p>
       </div>
 
       <div className="card p-4 flex items-end gap-3 flex-wrap">
@@ -136,11 +356,12 @@ function ReportRunner({ def, company, back, canManage, onDeleted }) {
         <button className="btn-ghost" onClick={() => setPrinting(true)} disabled={!data}><Printer size={14} /> Print</button>
       </div>
       <div className="text-xs text-pine/50">Showing {fmtDate(from)} — {fmtDate(to)}</div>
+
       {printing && (
         <PrintPortal title={def.report_name} onClose={() => setPrinting(false)}>
           <ReportHead company={company} title={def.report_name.toUpperCase()} from={from} to={to} />
           <table style={{ width: '100%', borderCollapse: 'collapse', maxWidth: 720, margin: '0 auto' }}>
-            <thead><tr style={{ background: '#eee' }}>{data.head.map((h, i) => <th key={i} style={{ border: '1px solid #000', padding: '4px 8px', fontSize: 10.5, textAlign: data.align && data.align[i] === 'r' ? 'right' : 'left' }}>{h}</th>)}</tr></thead>
+            <thead><tr style={{ background: '#eee' }}>{visibleHead.map((h, i) => <th key={i} style={{ border: '1px solid #000', padding: '4px 8px', fontSize: 10.5, textAlign: data.align && data.align[i] === 'r' ? 'right' : 'left' }}>{h}</th>)}</tr></thead>
             <tbody>{data.rows.map((r, ri) => <tr key={ri}>{r.map((c, ci) => <td key={ci} style={{ border: '1px solid #000', padding: '4px 8px', fontSize: 10.5, textAlign: data.align && data.align[ci] === 'r' ? 'right' : 'left' }}>{c}</td>)}</tr>)}</tbody>
             {data.foot && <tfoot><tr style={{ fontWeight: 700, background: '#f5f5f5' }}>{data.foot.map((c, ci) => <td key={ci} style={{ border: '1px solid #000', padding: '4px 8px', fontSize: 10.5, textAlign: data.align && data.align[ci] === 'r' ? 'right' : 'left' }}>{c}</td>)}</tr></tfoot>}
           </table>
@@ -149,17 +370,31 @@ function ReportRunner({ def, company, back, canManage, onDeleted }) {
 
       <div className="card overflow-hidden">
         <table className="w-full">
-          <thead><tr>{(data ? data.head : []).map((h, i) => <th key={i} className={`th ${data.align && data.align[i] === 'r' ? 'text-right' : ''}`}>{h}</th>)}</tr></thead>
+          <thead><tr>{visibleHead.map((h, i) => <th key={i} className={`th ${data?.align && data.align[i] === 'r' ? 'text-right' : ''}`}>{h}</th>)}</tr></thead>
           <tbody>
-            {(data ? data.rows : []).map((r, ri) => <tr key={ri}>{r.map((c, ci) => <td key={ci} className={`td ${data.align && data.align[ci] === 'r' ? 'money text-right' : 'text-sm'}`}>{c}</td>)}</tr>)}
-            {data && data.rows.length === 0 && <tr><td className="td text-pine/40" colSpan={data.head.length}>No data in this period.</td></tr>}
-            {!data && <tr><td className="td text-pine/40" colSpan={6}>Press Run.</td></tr>}
+            {(data ? data.rows : []).map((r, ri) => <tr key={ri}>{r.map((c, ci) => <td key={ci} className={`td ${data?.align && data.align[ci] === 'r' ? 'money text-right' : 'text-sm'}`}>{c}</td>)}</tr>)}
+            {data && data.rows.length === 0 && <tr><td className="td text-pine/40" colSpan={visibleHead.length || 6}>No data in this period.</td></tr>}
+            {!data && <tr><td className="td text-pine/40" colSpan={6}>Run করুন।</td></tr>}
           </tbody>
-          {data && data.foot && <tfoot><tr className="bg-leaf/40 font-bold money">{data.foot.map((c, ci) => <td key={ci} className={`td ${data.align && data.align[ci] === 'r' ? 'text-right' : ''}`}>{c}</td>)}</tr></tfoot>}
+          {data && data.foot && <tfoot><tr className="bg-leaf/40 font-bold money">{data.foot.map((c, ci) => <td key={ci} className={`td ${data?.align && data.align[ci] === 'r' ? 'text-right' : ''}`}>{c}</td>)}</tr></tfoot>}
         </table>
       </div>
+
+      {showCustomizer && (
+        <ColumnCustomizer
+          def={def}
+          existingHead={data?.head || []}
+          onSaved={async () => { await refreshDef(); run() }}
+          onClose={() => setShowCustomizer(false)}
+        />
+      )}
     </div>
   )
+}
+
+/* Helper: re-run custom report with overridden columns */
+async function runCustomReportForOverride(config, from, to) {
+  return runCustomReport(config, from, to)
 }
 
 function ReportHead({ company, title, from, to }) {
