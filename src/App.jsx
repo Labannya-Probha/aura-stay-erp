@@ -129,13 +129,13 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
 
   const SidebarContent = (
     <>
-      <div className="px-5 py-5 flex items-center gap-3 border-b border-leaf/80">
+      <div className="px-5 py-5 flex items-center gap-3 border-b border-white/10">
         <BrandLogo url={company?.logo_url} />
         <div className="min-w-0 flex-1">
-          <div className="font-display font-bold leading-tight truncate text-pine">{softwareName}</div>
-          <div className="text-[11px] text-pine/50 truncate">{company?.name || ''}</div>
+          <div className="font-display font-bold leading-tight truncate text-white">{softwareName}</div>
+          <div className="text-[11px] text-white/60 truncate">{company?.name || ''}</div>
         </div>
-        <button onClick={() => setMobileNavOpen(false)} className="lg:hidden text-pine/45 hover:text-forest shrink-0">
+        <button onClick={() => setMobileNavOpen(false)} className="lg:hidden text-white/50 hover:text-white shrink-0">
           <X size={20} />
         </button>
       </div>
@@ -148,7 +148,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
             <div key={g.title}>
               <button
                 onClick={() => toggleGroup(g.title)}
-                className="w-full px-3 py-1.5 flex items-center justify-between text-[10px] uppercase tracking-widest text-pine/35 font-semibold hover:text-pine/60 transition-colors"
+                className="w-full px-3 py-1.5 flex items-center justify-between text-[10px] uppercase tracking-widest text-white/45 font-semibold hover:text-white/85 transition-colors"
               >
                 <span>{g.title}</span>
                 <ChevronDown size={11} className={`transition-transform duration-200 ${isOpenGroup ? '' : '-rotate-90'}`} />
@@ -159,7 +159,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
                     if (n.id !== 'settings' && n.id !== 'cms') {
                       return (
                         <button key={n.id}
-                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentTopId === n.id ? 'bg-forest/10 text-forest ring-1 ring-forest/15' : 'text-pine/70 hover:bg-paper'}`}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentTopId === n.id ? 'bg-white/14 text-white ring-1 ring-white/20' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}
                           onClick={() => navigate(`/${n.id}`)}>
                           <n.icon size={17} /> {n.label}
                         </button>
@@ -176,7 +176,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
                     return (
                       <div key={n.id} className="space-y-1">
                         <button
-                          className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentTopId === n.id ? 'bg-forest/10 text-forest ring-1 ring-forest/15' : 'text-pine/70 hover:bg-paper'}`}
+                          className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentTopId === n.id ? 'bg-white/14 text-white ring-1 ring-white/20' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}
                           onClick={() => {
                             setOpenSystemMenu(n.id)
                             navigate(`/${n.id}`)
@@ -194,7 +194,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
                               return (
                                 <button
                                   key={child.id}
-                                  className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors ${isActiveChild ? 'bg-forest/10 text-forest' : 'text-pine/60 hover:bg-paper hover:text-pine/80'}`}
+                                  className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors ${isActiveChild ? 'bg-white/14 text-white' : 'text-white/65 hover:bg-white/10 hover:text-white'}`}
                                   onClick={() => navigate(`/${n.id}?${n.id === 'settings' ? 'section' : 'entity'}=${child.id}`)}
                                 >
                                   {child.label}
@@ -212,17 +212,17 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
           )
         })}
       </nav>
-      <div className="px-5 py-4 border-t border-leaf/80 text-xs text-pine/55">
+      <div className="px-5 py-4 border-t border-white/10 text-xs text-white/65">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate font-semibold text-pine">{userName}</div>
-            <div className="text-[10px] text-pine/40">{ROLE_LABELS[role] || role}</div>
+            <div className="truncate font-semibold text-white">{userName}</div>
+            <div className="text-[10px] text-white/50">{ROLE_LABELS[role] || role}</div>
           </div>
           <button title="Sign out" onClick={async () => {
             const slug = company?.slug
             await supabase.auth.signOut()
             window.location.href = slug ? `/${slug}/login` : '/login'
-          }} className="text-pine/45 hover:text-forest shrink-0"><LogOut size={15} /></button>
+          }} className="text-white/55 hover:text-white shrink-0"><LogOut size={15} /></button>
         </div>
       </div>
     </>
@@ -231,7 +231,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
   return (
     <div className="min-h-screen flex">
       {/* Desktop sidebar â€” always visible, fixed, unchanged from before */}
-      <aside className="hidden lg:flex w-60 bg-white text-pine flex-col fixed inset-y-0 overflow-y-auto z-30 border-r border-leaf/80 shadow-[0_10px_30px_rgba(23,23,23,0.04)]">
+      <aside className="hidden lg:flex w-60 bg-gradient-to-b from-[#18252f] to-[#111a21] text-white flex-col fixed inset-y-0 overflow-y-auto z-30 border-r border-white/10 shadow-[0_14px_40px_rgba(0,0,0,0.35)]">
         {SidebarContent}
       </aside>
 
@@ -239,7 +239,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
       {mobileNavOpen && (
         <div className="lg:hidden fixed inset-0 z-40">
           <div className="absolute inset-0 bg-ink/35" onClick={() => setMobileNavOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-white text-pine flex flex-col shadow-2xl border-r border-leaf/80">
+          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-gradient-to-b from-[#18252f] to-[#111a21] text-white flex flex-col shadow-2xl border-r border-white/10">
             {SidebarContent}
           </aside>
         </div>
