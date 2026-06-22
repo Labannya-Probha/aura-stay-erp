@@ -254,6 +254,7 @@ function New-ActionPlan {
             Reason     = $f.Reason
             Operation  = 'DisableOrQuarantine'
         }) | Out-Null
+        $null = $plan.Count
     }
 
     return $plan
