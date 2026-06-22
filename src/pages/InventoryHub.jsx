@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtBDT, fmtDate, todayISO } from '../lib/helpers'
+import KPICards from '../components/KPICards.jsx'
 import {
   Boxes, Plus, Trash2, Check, X, Truck, PackageCheck, ArrowLeftRight,
-  Undo2, Pencil, Save, RotateCcw, Search, ChevronRight, FileText,
+  Undo2, Pencil, Save, Search, ChevronRight, Printer,
 } from 'lucide-react'
-import VendorPaymentTab from '../components/VendorPaymentTab.jsx'
-import KPICards from '../components/KPICards.jsx'
 
-const TABS = ['Items & Stock', 'Vendors', 'Requisitions', 'Purchase Orders', 'Goods Receipt', 'Transfers', 'Returns', 'Vendor Payments']
+
+const TABS = ['Items & Stock', 'Vendors', 'Requisitions', 'Purchase Orders', 'Goods Receipt', 'Transfers', 'Returns']
 
 /* ─── shared helpers ─────────────────────────────────────────────────────── */
 function flash_fn(setMsg) {
@@ -22,6 +22,50 @@ function FlashBar({ msg }) {
   if (!msg) return null
   const bg = msg.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-forest/10 text-forest'
   return <div className={`px-4 py-3 rounded-lg text-sm font-medium ${bg}`}>{msg.text}</div>
+}
+
+function esc(v) {
+  return String(v ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+}
+
+function printInventoryDoc({ title, docNo, meta = [], lines = [] }) {
+  const w = window.open('', '_blank', 'width=900,height=800')
+  if (!w) return
+  const rows = lines.map((l, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${esc(l.item_name || '—')}</td>
+        <td style="text-align:right">${Number(l.qty || 0)}</td>
+        <td style="text-align:right">${Number(l.unit_cost || 0).toFixed(2)}</td>
+        <td style="text-align:right">${Number(l.vat_amount ?? l.vat_pct ?? 0).toFixed(2)}</td>
+      </tr>`).join('')
+  const metaRows = meta.map((m) => `<div><b>${esc(m.label)}:</b> ${esc(m.value)}</div>`).join('')
+  const html = `<!doctype html>
+  <html><head><meta charset="utf-8" /><title>${esc(title)}</title>
+  <style>
+    body{font-family:Inter,Arial,sans-serif;padding:24px;color:#111}
+    h1{font-size:20px;margin:0 0 6px}
+    .muted{color:#555;font-size:13px;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{border:1px solid #d6d6d6;padding:6px 8px;font-size:12px}
+    th{background:#f5f7f6;text-align:left}
+  </style></head>
+  <body>
+    <h1>${esc(title)}</h1>
+    <div class="muted"><b>Document:</b> ${esc(docNo)} | <b>Printed:</b> ${new Date().toLocaleString()}</div>
+    ${metaRows}
+    <table>
+      <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Unit Cost</th><th>VAT</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5">No lines</td></tr>'}</tbody>
+    </table>
+    <script>window.print();</script>
+  </body></html>`
+  w.document.open()
+  w.document.write(html)
+  w.document.close()
 }
 
 /* ─── main component ─────────────────────────────────────────────────────── */
@@ -47,6 +91,7 @@ export default function InventoryHub({ userName, role, isAdmin }) {
           Requisition → Purchase Order / Transfer → Goods Receipt — fully integrated procurement workflow.
         </p>
       </div>
+      <KPICards module="inventory" />
       <FlashBar msg={msg} />
       <div className="flex gap-1 border-b border-leaf flex-wrap">
         {TABS.map((t) => (
@@ -63,8 +108,7 @@ export default function InventoryHub({ userName, role, isAdmin }) {
       {tab === 'Goods Receipt'     && <GRNTab flash={flash} userName={userName} />}
       {tab === 'Transfers'         && <TransfersTab flash={flash} userName={userName} navReq={navReq} clearNav={() => setNavReq(null)} />}
       {tab === 'Returns'           && <ReturnsTab flash={flash} userName={userName} />}
-      {tab === 'Vendor Payments'   && <VendorPaymentTab role={role} />}
-    </div>
+</div>
   )
 }
 
@@ -301,6 +345,7 @@ function RequisitionsTab({ flash, userName, canApprove, onCreatePO, onCreateTRF 
   const [notes, setNotes] = useState('')
   const [lines, setLines] = useState([])
   const [expanded, setExpanded] = useState(null)
+  const [editId, setEditId] = useState(null)
 
   const load = async () => {
     const [{ data: it }, { data: rq }] = await Promise.all([
@@ -311,13 +356,31 @@ function RequisitionsTab({ flash, userName, canApprove, onCreatePO, onCreateTRF 
   }
   useEffect(() => { load() }, [])
 
+  const resetForm = () => {
+    setDept('GENERAL')
+    setNotes('')
+    setLines([])
+    setEditId(null)
+  }
+
   const create = async () => {
     if (lines.length === 0) { flash('অন্তত একটা item যোগ করুন।', 'error'); return }
     if (lines.some((l) => !l.item_id)) { flash('সব line-এ item বেছে নিন।', 'error'); return }
+    if (editId) {
+      const { error } = await supabase.from('requisitions').update({ department: dept, notes: notes || null }).eq('id', editId)
+      if (error) { flash(error.message, 'error'); return }
+      await supabase.from('requisition_items').delete().eq('requisition_id', editId)
+      await supabase.from('requisition_items').insert(lines.map((l) => ({ requisition_id: editId, item_id: l.item_id, item_name: l.item_name, qty: +l.qty, notes: l.notes || null })))
+      resetForm()
+      load()
+      flash('Requisition updated.')
+      return
+    }
     const { data: r, error } = await supabase.from('requisitions').insert({ department: dept, requested_by: userName, notes: notes || null }).select().single()
     if (error) { flash(error.message, 'error'); return }
     await supabase.from('requisition_items').insert(lines.map((l) => ({ requisition_id: r.id, item_id: l.item_id, item_name: l.item_name, qty: +l.qty, notes: l.notes || null })))
-    setLines([]); setNotes(''); load()
+    resetForm()
+    load()
     flash(`✓ ${r.req_no} তৈরি হয়েছে — Approve করলে PO বা Transfer তৈরি করা যাবে।`)
   }
 
@@ -326,12 +389,41 @@ function RequisitionsTab({ flash, userName, canApprove, onCreatePO, onCreateTRF 
     load()
   }
 
-  const statusChip = (s) => ({ PENDING: 'bg-amber/20 text-amber', APPROVED: 'bg-forest/15 text-forest', REJECTED: 'bg-red-100 text-red-600', CLOSED: 'bg-stone-200 text-stone-500' }[s] || 'bg-stone-100 text-stone-500')
+  const statusChip = (s) => ({ PENDING: 'bg-amber/20 text-amber', APPROVED: 'bg-forest/15 text-forest', REJECTED: 'bg-red-100 text-red-600', CLOSED: 'bg-stone-200 text-stone-500', CANCELLED: 'bg-red-100 text-red-600' }[s] || 'bg-stone-100 text-stone-500')
+
+  const editReq = (r) => {
+    setEditId(r.id)
+    setDept(r.department || 'GENERAL')
+    setNotes(r.notes || '')
+    setLines((r.requisition_items || []).map((it) => ({
+      item_id: it.item_id || '',
+      item_name: it.item_name || '',
+      qty: Number(it.qty || 0),
+      unit_cost: 0,
+      vat_pct: 0,
+      unit: '',
+      notes: it.notes || '',
+    })))
+  }
+
+  const printReq = (r) => {
+    printInventoryDoc({
+      title: 'Inventory Requisition',
+      docNo: r.req_no,
+      meta: [
+        { label: 'Date', value: fmtDate(r.req_date) },
+        { label: 'Department', value: r.department },
+        { label: 'Requested By', value: r.requested_by },
+        { label: 'Status', value: r.status },
+      ],
+      lines: r.requisition_items || [],
+    })
+  }
 
   return (
     <div className="space-y-4">
       <div className="card p-4 space-y-3">
-        <h3 className="font-display font-semibold text-pine">New Requisition</h3>
+        <h3 className="font-display font-semibold text-pine">{editId ? 'Edit Requisition' : 'New Requisition'}</h3>
         <div className="flex gap-3 flex-wrap">
           <div><label className="label">Department</label>
             <input className="input !w-48" value={dept} onChange={(e) => setDept(e.target.value)} placeholder="e.g. KITCHEN, HK" />
@@ -341,7 +433,12 @@ function RequisitionsTab({ flash, userName, canApprove, onCreatePO, onCreateTRF 
           </div>
         </div>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={false} />
-        <button className="btn-primary" onClick={create}><Plus size={15} /> Create requisition</button>
+        <div className="flex gap-2">
+          <button className="btn-primary" onClick={create}>
+            {editId ? <><Save size={15} /> Update requisition</> : <><Plus size={15} /> Create requisition</>}
+          </button>
+          {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -385,6 +482,13 @@ function RequisitionsTab({ flash, userName, canApprove, onCreatePO, onCreateTRF 
                             {(hasPO || hasTRF) && <button className="btn-ghost !py-0.5 !px-2 text-stone-500 text-xs" onClick={() => setStatus(r.id, 'CLOSED')}>Close</button>}
                           </>
                         )}
+                        {r.status === 'PENDING' && (
+                          <>
+                            <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => editReq(r)}><Pencil size={13} /> Edit</button>
+                            <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => setStatus(r.id, 'CANCELLED')}><X size={13} /> Cancel</button>
+                          </>
+                        )}
+                        <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => printReq(r)}><Printer size={13} /> Print</button>
                       </div>
                     </td>
                   </tr>
@@ -429,6 +533,7 @@ function POTab({ flash, userName, navReq, clearNav }) {
   const [notes, setNotes] = useState('')
   const [lines, setLines] = useState([])
   const [expanded, setExpanded] = useState(null)
+  const [editId, setEditId] = useState(null)
 
   const load = async () => {
     const [{ data: it }, { data: v }, { data: po }] = await Promise.all([
@@ -448,14 +553,34 @@ function POTab({ flash, userName, navReq, clearNav }) {
     clearNav()
   }, [navReq])
 
+  const resetForm = () => {
+    setLines([])
+    setVendor('')
+    setReqId(null)
+    setReqNo('')
+    setNotes('')
+    setEditId(null)
+  }
+
   const create = async () => {
     if (!vendor) { flash('Vendor বেছে নিন।', 'error'); return }
     if (lines.length === 0) { flash('অন্তত একটা item যোগ করুন।', 'error'); return }
     if (lines.some((l) => !l.item_id)) { flash('সব line-এ item বেছে নিন।', 'error'); return }
+    if (editId) {
+      const { error } = await supabase.from('purchase_orders').update({ vendor_id: vendor, notes: notes || null }).eq('id', editId)
+      if (error) { flash(error.message, 'error'); return }
+      await supabase.from('po_items').delete().eq('po_id', editId)
+      await supabase.from('po_items').insert(lines.map((l) => ({ po_id: editId, item_id: l.item_id, item_name: l.item_name, qty: +l.qty, unit_cost: +l.unit_cost, vat_pct: +l.vat_pct })))
+      resetForm()
+      load()
+      flash('Purchase order updated.')
+      return
+    }
     const { data: po, error } = await supabase.from('purchase_orders').insert({ vendor_id: vendor, requisition_id: reqId || null, notes: notes || null, created_by: userName }).select().single()
     if (error) { flash(error.message, 'error'); return }
     await supabase.from('po_items').insert(lines.map((l) => ({ po_id: po.id, item_id: l.item_id, item_name: l.item_name, qty: +l.qty, unit_cost: +l.unit_cost, vat_pct: +l.vat_pct })))
-    setLines([]); setVendor(''); setReqId(null); setReqNo(''); setNotes(''); load()
+    resetForm()
+    load()
     flash(`✓ ${po.po_no} তৈরি হয়েছে${reqNo ? ` (REQ: ${reqNo})` : ''}.`)
   }
 
@@ -463,11 +588,41 @@ function POTab({ flash, userName, navReq, clearNav }) {
   const poTotal = (po) => (po.po_items || []).reduce((a, l) => a + +l.qty * +l.unit_cost, 0)
   const statusChip = (s) => ({ OPEN: 'bg-amber/20 text-amber', PARTIAL: 'bg-sky-100 text-sky-700', RECEIVED: 'bg-forest/15 text-forest', CANCELLED: 'bg-red-100 text-red-600' }[s] || 'bg-stone-100 text-stone-500')
 
+  const editPO = (po) => {
+    setEditId(po.id)
+    setVendor(po.vendor_id || '')
+    setReqId(po.requisition_id || null)
+    setReqNo(po.requisitions?.req_no || '')
+    setNotes(po.notes || '')
+    setLines((po.po_items || []).map((it) => ({
+      item_id: it.item_id || '',
+      item_name: it.item_name || '',
+      qty: Number(it.qty || 0),
+      unit_cost: Number(it.unit_cost || 0),
+      vat_pct: Number(it.vat_pct || 0),
+      unit: '',
+    })))
+  }
+
+  const printPO = (po) => {
+    printInventoryDoc({
+      title: 'Purchase Order',
+      docNo: po.po_no,
+      meta: [
+        { label: 'Date', value: fmtDate(po.po_date) },
+        { label: 'Vendor', value: po.vendors?.name || '—' },
+        { label: 'REQ', value: po.requisitions?.req_no || '—' },
+        { label: 'Status', value: po.status },
+      ],
+      lines: po.po_items || [],
+    })
+  }
+
   return (
     <div className="space-y-4">
       <div className="card p-4 space-y-3">
         <h3 className="font-display font-semibold text-pine flex items-center gap-2">
-          <Truck size={18} /> New Purchase Order
+          <Truck size={18} /> {editId ? 'Edit Purchase Order' : 'New Purchase Order'}
           {reqNo && <span className="text-sm font-normal text-forest bg-forest/10 px-2 py-0.5 rounded-full">REQ: {reqNo}</span>}
         </h3>
         <div className="flex gap-3 flex-wrap">
@@ -485,7 +640,12 @@ function POTab({ flash, userName, navReq, clearNav }) {
         </div>
         <p className="text-xs text-pine/40">Unit cost (৳) + VAT amount (৳) per line — feeds the Mushak-6.1 purchase register.</p>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={true} />
-        <button className="btn-primary" onClick={create}><Truck size={15} /> Create PO</button>
+        <div className="flex gap-2">
+          <button className="btn-primary" onClick={create}>
+            {editId ? <><Save size={15} /> Update PO</> : <><Truck size={15} /> Create PO</>}
+          </button>
+          {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -512,9 +672,15 @@ function POTab({ flash, userName, navReq, clearNav }) {
                   <td className="td money text-right font-semibold">{fmtBDT(poTotal(po))}</td>
                   <td className="td"><span className={`status-chip ${statusChip(po.status)}`}>{po.status}</span></td>
                   <td className="td text-right">
-                    {['OPEN', 'PARTIAL'].includes(po.status) && (
-                      <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => setStatus(po.id, 'CANCELLED')}>Cancel</button>
-                    )}
+                    <div className="flex justify-end gap-1 flex-wrap">
+                      {['OPEN', 'PARTIAL'].includes(po.status) && (
+                        <>
+                          <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => editPO(po)}><Pencil size={13} /> Edit</button>
+                          <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => setStatus(po.id, 'CANCELLED')}><X size={13} /> Cancel</button>
+                        </>
+                      )}
+                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => printPO(po)}><Printer size={13} /> Print</button>
+                    </div>
                   </td>
                 </tr>
                 {expanded === po.id && (
@@ -554,6 +720,7 @@ function GRNTab({ flash, userName }) {
   const [h, setH] = useState({ vendor_id: '', po_id: '', vendor_invoice_no: '', vendor_invoice_date: todayISO(), rebateable: true, notes: '' })
   const [lines, setLines] = useState([])
   const [expanded, setExpanded] = useState(null)
+  const [editId, setEditId] = useState(null)
 
   const load = async () => {
     const [{ data: it }, { data: v }, { data: po }, { data: grn }] = await Promise.all([
@@ -579,9 +746,35 @@ function GRNTab({ flash, userName }) {
     })))
   }
 
+  const resetForm = () => {
+    setEditId(null)
+    setLines([])
+    setH({ vendor_id: '', po_id: '', vendor_invoice_no: '', vendor_invoice_date: todayISO(), rebateable: true, notes: '' })
+  }
+
   const create = async () => {
     if (!h.vendor_id) { flash('Vendor বেছে নিন।', 'error'); return }
     if (lines.length === 0) { flash('অন্তত একটা item যোগ করুন।', 'error'); return }
+    if (editId) {
+      const { error } = await supabase.from('goods_receipts').update({
+        vendor_id: h.vendor_id,
+        po_id: h.po_id || null,
+        vendor_invoice_no: h.vendor_invoice_no || null,
+        vendor_invoice_date: h.vendor_invoice_date,
+        rebateable: h.rebateable,
+        notes: h.notes || null,
+      }).eq('id', editId)
+      if (error) { flash(error.message, 'error'); return }
+      await supabase.from('grn_items').delete().eq('grn_id', editId)
+      await supabase.from('grn_items').insert(lines.map((l) => ({
+        grn_id: editId, item_id: l.item_id, item_name: l.item_name,
+        qty: +l.qty, unit_cost: +l.unit_cost, vat_amount: +(l.vat_amount ?? l.vat_pct ?? 0),
+      })))
+      resetForm()
+      load()
+      flash('GRN updated.')
+      return
+    }
     const { data: grn, error } = await supabase.from('goods_receipts').insert({
       vendor_id: h.vendor_id, po_id: h.po_id || null,
       vendor_invoice_no: h.vendor_invoice_no || null, vendor_invoice_date: h.vendor_invoice_date,
@@ -593,16 +786,62 @@ function GRNTab({ flash, userName }) {
       qty: +l.qty, unit_cost: +l.unit_cost, vat_amount: +l.vat_pct,
     })))
     if (h.po_id) await supabase.from('purchase_orders').update({ status: 'RECEIVED' }).eq('id', h.po_id)
-    setLines([]); setH({ vendor_id: '', po_id: '', vendor_invoice_no: '', vendor_invoice_date: todayISO(), rebateable: true, notes: '' })
+    resetForm()
     load(); flash(`✓ ${grn.grn_no} — stock updated, VAT-6.1 purchase register posted${h.rebateable ? ' (rebateable)' : ''}.`)
   }
 
   const grnTotal = (g) => (g.grn_items || []).reduce((a, l) => a + +l.qty * +l.unit_cost, 0)
 
+  const editGRN = (g) => {
+    setEditId(g.id)
+    setH({
+      vendor_id: g.vendor_id || '',
+      po_id: g.po_id || '',
+      vendor_invoice_no: g.vendor_invoice_no || '',
+      vendor_invoice_date: g.vendor_invoice_date || todayISO(),
+      rebateable: !!g.rebateable,
+      notes: g.notes || '',
+    })
+    setLines((g.grn_items || []).map((it) => ({
+      item_id: it.item_id || '',
+      item_name: it.item_name || '',
+      qty: Number(it.qty || 0),
+      unit_cost: Number(it.unit_cost || 0),
+      vat_pct: Number(it.vat_amount || 0),
+      vat_amount: Number(it.vat_amount || 0),
+      unit: '',
+    })))
+  }
+
+  const cancelGRN = async (g) => {
+    const ok = window.confirm(`Cancel ${g.grn_no}? This will remove this GRN.`)
+    if (!ok) return
+    await supabase.from('grn_items').delete().eq('grn_id', g.id)
+    const { error } = await supabase.from('goods_receipts').delete().eq('id', g.id)
+    if (error) { flash(error.message, 'error'); return }
+    if (editId === g.id) resetForm()
+    load()
+    flash(`${g.grn_no} cancelled.`)
+  }
+
+  const printGRN = (g) => {
+    printInventoryDoc({
+      title: 'Goods Receipt Note',
+      docNo: g.grn_no,
+      meta: [
+        { label: 'Date', value: fmtDate(g.grn_date) },
+        { label: 'Vendor', value: g.vendors?.name || '—' },
+        { label: 'PO', value: g.purchase_orders?.po_no || '—' },
+        { label: 'Invoice', value: g.vendor_invoice_no || '—' },
+      ],
+      lines: (g.grn_items || []).map((it) => ({ ...it, vat_pct: it.vat_amount })),
+    })
+  }
+
   return (
     <div className="space-y-4">
       <div className="card p-4 space-y-3">
-        <h3 className="font-display font-semibold text-pine flex items-center gap-2"><PackageCheck size={18} /> Goods Receipt (GRN)</h3>
+        <h3 className="font-display font-semibold text-pine flex items-center gap-2"><PackageCheck size={18} /> {editId ? 'Edit Goods Receipt (GRN)' : 'Goods Receipt (GRN)'}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div>
             <label className="label">PO (auto-fill items)</label>
@@ -633,7 +872,12 @@ function GRNTab({ flash, userName }) {
         </div>
         <p className="text-xs text-pine/40">VAT column = VAT amount in Tk per line. Auto-posts to Mushak-6.1 purchase register.</p>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={true} />
-        <button className="btn-primary" onClick={create}><PackageCheck size={15} /> Receive goods</button>
+        <div className="flex gap-2">
+          <button className="btn-primary" onClick={create}>
+            {editId ? <><Save size={15} /> Update GRN</> : <><PackageCheck size={15} /> Receive goods</>}
+          </button>
+          {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -642,7 +886,7 @@ function GRNTab({ flash, userName }) {
             <tr>
               <th className="th">GRN No</th><th className="th">Date</th><th className="th">Vendor</th>
               <th className="th">PO</th><th className="th">Invoice</th>
-              <th className="th text-right">Value</th><th className="th">Rebate</th>
+              <th className="th text-right">Value</th><th className="th">Rebate</th><th className="th text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -660,10 +904,17 @@ function GRNTab({ flash, userName }) {
                   <td className="td text-xs">{g.vendor_invoice_no || '—'}</td>
                   <td className="td money text-right font-semibold">{fmtBDT(grnTotal(g))}</td>
                   <td className="td text-xs">{g.rebateable ? <span className="text-forest font-medium">Yes</span> : 'No'}</td>
+                  <td className="td text-right">
+                    <div className="flex justify-end gap-1 flex-wrap">
+                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => editGRN(g)}><Pencil size={13} /> Edit</button>
+                      <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => cancelGRN(g)}><X size={13} /> Cancel</button>
+                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => printGRN(g)}><Printer size={13} /> Print</button>
+                    </div>
+                  </td>
                 </tr>
                 {expanded === g.id && (
                   <tr key={`${g.id}-d`}>
-                    <td colSpan={7} className="px-6 pb-3 bg-leaf/20">
+                    <td colSpan={8} className="px-6 pb-3 bg-leaf/20">
                       <div className="text-xs space-y-1 pt-2">
                         {(g.grn_items || []).map((it) => (
                           <div key={it.id} className="flex gap-4 text-pine/70">
@@ -680,7 +931,7 @@ function GRNTab({ flash, userName }) {
                 )}
               </>
             ))}
-            {rows.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={7}>No goods receipts.</td></tr>}
+            {rows.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={8}>No goods receipts.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -698,6 +949,7 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
   const [reqNo, setReqNo] = useState('')
   const [reqId, setReqId] = useState(null)
   const [expanded, setExpanded] = useState(null)
+  const [editId, setEditId] = useState(null)
 
   const load = async () => {
     const [{ data: it }, { data: tr }] = await Promise.all([
@@ -715,16 +967,38 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
     clearNav()
   }, [navReq])
 
+  const resetForm = () => {
+    setLines([])
+    setH({ from_location: '', to_location: '', notes: '' })
+    setReqId(null)
+    setReqNo('')
+    setEditId(null)
+  }
+
   const create = async () => {
     if (!h.from_location || !h.to_location) { flash('From / To location দিন।', 'error'); return }
     if (lines.length === 0) { flash('অন্তত একটা item যোগ করুন।', 'error'); return }
+    if (editId) {
+      const { error } = await supabase.from('stock_transfers').update({
+        from_location: h.from_location,
+        to_location: h.to_location,
+        notes: h.notes || null,
+      }).eq('id', editId)
+      if (error) { flash(error.message, 'error'); return }
+      await supabase.from('transfer_items').delete().eq('transfer_id', editId)
+      await supabase.from('transfer_items').insert(lines.map((l) => ({ transfer_id: editId, item_id: l.item_id, item_name: l.item_name, qty: +l.qty })))
+      resetForm()
+      load()
+      flash('Transfer updated.')
+      return
+    }
     const { data: tr, error } = await supabase.from('stock_transfers').insert({
       from_location: h.from_location, to_location: h.to_location,
       requisition_id: reqId || null, notes: h.notes || null, created_by: userName,
     }).select().single()
     if (error) { flash(error.message, 'error'); return }
     await supabase.from('transfer_items').insert(lines.map((l) => ({ transfer_id: tr.id, item_id: l.item_id, item_name: l.item_name, qty: +l.qty })))
-    setLines([]); setH({ from_location: '', to_location: '', notes: '' }); setReqId(null); setReqNo('')
+    resetForm()
     load(); flash(`✓ ${tr.trf_no} — stock moved from ${h.from_location} to ${h.to_location}${reqNo ? ` (REQ: ${reqNo})` : ''}.`)
   }
 
@@ -732,11 +1006,51 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
     ? locs.map((l) => <option key={l.id} value={l.code}>{l.name} ({l.code})</option>)
     : null
 
+  const editTransfer = (t) => {
+    setEditId(t.id)
+    setReqId(t.requisition_id || null)
+    setReqNo(t.requisitions?.req_no || '')
+    setH({ from_location: t.from_location || '', to_location: t.to_location || '', notes: t.notes || '' })
+    setLines((t.transfer_items || []).map((it) => ({
+      item_id: it.item_id || '',
+      item_name: it.item_name || '',
+      qty: Number(it.qty || 0),
+      unit_cost: 0,
+      vat_pct: 0,
+      unit: '',
+    })))
+  }
+
+  const cancelTransfer = async (t) => {
+    const ok = window.confirm(`Cancel ${t.trf_no}? This will remove this transfer.`)
+    if (!ok) return
+    await supabase.from('transfer_items').delete().eq('transfer_id', t.id)
+    const { error } = await supabase.from('stock_transfers').delete().eq('id', t.id)
+    if (error) { flash(error.message, 'error'); return }
+    if (editId === t.id) resetForm()
+    load()
+    flash(`${t.trf_no} cancelled.`)
+  }
+
+  const printTransfer = (t) => {
+    printInventoryDoc({
+      title: 'Stock Transfer',
+      docNo: t.trf_no,
+      meta: [
+        { label: 'Date', value: fmtDate(t.trf_date) },
+        { label: 'From', value: t.from_location },
+        { label: 'To', value: t.to_location },
+        { label: 'REQ', value: t.requisitions?.req_no || '—' },
+      ],
+      lines: t.transfer_items || [],
+    })
+  }
+
   return (
     <div className="space-y-4">
       <div className="card p-4 space-y-3">
         <h3 className="font-display font-semibold text-pine flex items-center gap-2">
-          <ArrowLeftRight size={18} /> Stock Transfer
+          <ArrowLeftRight size={18} /> {editId ? 'Edit Stock Transfer' : 'Stock Transfer'}
           {reqNo && <span className="text-sm font-normal text-forest bg-forest/10 px-2 py-0.5 rounded-full">REQ: {reqNo}</span>}
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -761,7 +1075,12 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
           </div>
         </div>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={false} />
-        <button className="btn-primary" onClick={create}><ArrowLeftRight size={15} /> Post transfer</button>
+        <div className="flex gap-2">
+          <button className="btn-primary" onClick={create}>
+            {editId ? <><Save size={15} /> Update transfer</> : <><ArrowLeftRight size={15} /> Post transfer</>}
+          </button>
+          {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -770,7 +1089,7 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
             <tr>
               <th className="th">TRF No</th><th className="th">Date</th>
               <th className="th">From → To</th><th className="th">REQ</th>
-              <th className="th">Items</th><th className="th">By</th>
+              <th className="th">Items</th><th className="th">By</th><th className="th text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -787,10 +1106,17 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
                   <td className="td text-xs text-forest">{t.requisitions?.req_no || '—'}</td>
                   <td className="td text-xs">{(t.transfer_items || []).length} items</td>
                   <td className="td text-xs text-pine/50">{t.created_by}</td>
+                  <td className="td text-right">
+                    <div className="flex justify-end gap-1 flex-wrap">
+                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => editTransfer(t)}><Pencil size={13} /> Edit</button>
+                      <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => cancelTransfer(t)}><X size={13} /> Cancel</button>
+                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => printTransfer(t)}><Printer size={13} /> Print</button>
+                    </div>
+                  </td>
                 </tr>
                 {expanded === t.id && (
                   <tr key={`${t.id}-d`}>
-                    <td colSpan={6} className="px-6 pb-3 bg-leaf/20">
+                    <td colSpan={7} className="px-6 pb-3 bg-leaf/20">
                       <div className="text-xs space-y-1 pt-2">
                         {(t.transfer_items || []).map((it) => (
                           <div key={it.id} className="flex gap-4 text-pine/70">
@@ -805,7 +1131,7 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
                 )}
               </>
             ))}
-            {rows.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={6}>No transfers.</td></tr>}
+            {rows.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={7}>No transfers.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -822,6 +1148,7 @@ function ReturnsTab({ flash, userName }) {
   const [h, setH] = useState({ return_type: 'TO_STORE', vendor_id: '', from_location: '' })
   const [lines, setLines] = useState([])
   const [expanded, setExpanded] = useState(null)
+  const [editId, setEditId] = useState(null)
 
   const load = async () => {
     const [{ data: it }, { data: v }, { data: rt }] = await Promise.all([
@@ -833,8 +1160,28 @@ function ReturnsTab({ flash, userName }) {
   }
   useEffect(() => { load() }, [])
 
+  const resetForm = () => {
+    setEditId(null)
+    setH({ return_type: 'TO_STORE', vendor_id: '', from_location: '' })
+    setLines([])
+  }
+
   const create = async () => {
     if (lines.length === 0) { flash('অন্তত একটা item যোগ করুন।', 'error'); return }
+    if (editId) {
+      const { error } = await supabase.from('stock_returns').update({
+        return_type: h.return_type,
+        vendor_id: h.return_type === 'TO_VENDOR' ? (h.vendor_id || null) : null,
+        from_location: h.from_location || null,
+      }).eq('id', editId)
+      if (error) { flash(error.message, 'error'); return }
+      await supabase.from('return_items').delete().eq('return_id', editId)
+      await supabase.from('return_items').insert(lines.map((l) => ({ return_id: editId, item_id: l.item_id, item_name: l.item_name, qty: +l.qty })))
+      resetForm()
+      load()
+      flash('Return updated.')
+      return
+    }
     const { data: rt, error } = await supabase.from('stock_returns').insert({
       return_type: h.return_type,
       vendor_id: h.return_type === 'TO_VENDOR' ? (h.vendor_id || null) : null,
@@ -842,15 +1189,59 @@ function ReturnsTab({ flash, userName }) {
     }).select().single()
     if (error) { flash(error.message, 'error'); return }
     await supabase.from('return_items').insert(lines.map((l) => ({ return_id: rt.id, item_id: l.item_id, item_name: l.item_name, qty: +l.qty })))
-    setLines([]); load(); flash(`✓ ${rt.ret_no} posted.`)
+    resetForm()
+    load()
+    flash(`✓ ${rt.ret_no} posted.`)
   }
 
   const locOptions = locs.map((l) => <option key={l.id} value={l.code}>{l.name} ({l.code})</option>)
 
+  const editReturn = (r) => {
+    setEditId(r.id)
+    setH({
+      return_type: r.return_type || 'TO_STORE',
+      vendor_id: r.vendor_id || '',
+      from_location: r.from_location || '',
+    })
+    setLines((r.return_items || []).map((it) => ({
+      item_id: it.item_id || '',
+      item_name: it.item_name || '',
+      qty: Number(it.qty || 0),
+      unit_cost: 0,
+      vat_pct: 0,
+      unit: '',
+    })))
+  }
+
+  const cancelReturn = async (r) => {
+    const ok = window.confirm(`Cancel ${r.ret_no}? This will remove this return.`)
+    if (!ok) return
+    await supabase.from('return_items').delete().eq('return_id', r.id)
+    const { error } = await supabase.from('stock_returns').delete().eq('id', r.id)
+    if (error) { flash(error.message, 'error'); return }
+    if (editId === r.id) resetForm()
+    load()
+    flash(`${r.ret_no} cancelled.`)
+  }
+
+  const printReturn = (r) => {
+    printInventoryDoc({
+      title: 'Stock Return',
+      docNo: r.ret_no,
+      meta: [
+        { label: 'Date', value: fmtDate(r.ret_date) },
+        { label: 'Type', value: r.return_type },
+        { label: 'Vendor', value: r.vendors?.name || '—' },
+        { label: 'From', value: r.from_location || '—' },
+      ],
+      lines: r.return_items || [],
+    })
+  }
+
   return (
     <div className="space-y-4">
       <div className="card p-4 space-y-3">
-        <h3 className="font-display font-semibold text-pine flex items-center gap-2"><Undo2 size={18} /> Stock Return</h3>
+        <h3 className="font-display font-semibold text-pine flex items-center gap-2"><Undo2 size={18} /> {editId ? 'Edit Stock Return' : 'Stock Return'}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <div>
             <label className="label">Return type</label>
@@ -877,13 +1268,18 @@ function ReturnsTab({ flash, userName }) {
           </div>
         </div>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={false} />
-        <button className="btn-primary" onClick={create}><Undo2 size={15} /> Post return</button>
+        <div className="flex gap-2">
+          <button className="btn-primary" onClick={create}>
+            {editId ? <><Save size={15} /> Update return</> : <><Undo2 size={15} /> Post return</>}
+          </button>
+          {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+        </div>
       </div>
 
       <div className="card overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr><th className="th">RET No</th><th className="th">Date</th><th className="th">Type</th><th className="th">Vendor</th><th className="th">From</th><th className="th">Items</th></tr>
+            <tr><th className="th">RET No</th><th className="th">Date</th><th className="th">Type</th><th className="th">Vendor</th><th className="th">From</th><th className="th">Items</th><th className="th text-right">Actions</th></tr>
           </thead>
           <tbody>
             {rows.map((r) => (
@@ -899,10 +1295,17 @@ function ReturnsTab({ flash, userName }) {
                   <td className="td text-sm">{r.vendors?.name || '—'}</td>
                   <td className="td text-xs">{r.from_location || '—'}</td>
                   <td className="td text-xs">{(r.return_items || []).length} items</td>
+                  <td className="td text-right">
+                    <div className="flex justify-end gap-1 flex-wrap">
+                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => editReturn(r)}><Pencil size={13} /> Edit</button>
+                      <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => cancelReturn(r)}><X size={13} /> Cancel</button>
+                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => printReturn(r)}><Printer size={13} /> Print</button>
+                    </div>
+                  </td>
                 </tr>
                 {expanded === r.id && (
                   <tr key={`${r.id}-d`}>
-                    <td colSpan={6} className="px-6 pb-3 bg-leaf/20">
+                    <td colSpan={7} className="px-6 pb-3 bg-leaf/20">
                       <div className="text-xs space-y-1 pt-2">
                         {(r.return_items || []).map((it) => (
                           <div key={it.id} className="flex gap-4 text-pine/70">
@@ -916,7 +1319,7 @@ function ReturnsTab({ flash, userName }) {
                 )}
               </>
             ))}
-            {rows.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={6}>No returns.</td></tr>}
+            {rows.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={7}>No returns.</td></tr>}
           </tbody>
         </table>
       </div>
