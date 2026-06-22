@@ -53,6 +53,7 @@ const NAV_GROUPS = [
   ]},
   { title: 'Restaurant POS', items: [
     { id: 'pos', label: 'Restaurant POS', icon: UtensilsCrossed },
+    { id: 'menu-management', label: 'Menu Management', icon: ChefHat },
   ]},
   { title: 'Accounting', items: [
     { id: 'accounting', label: 'Accounting', icon: Calculator },
@@ -70,8 +71,7 @@ const NAV_GROUPS = [
   ]},
   { title: 'System', items: [
     { id: 'cms', label: 'Configuration', icon: Building2 },
-    { id: 'settings', label: 'Settings', icon: Settings2 },
-    { id: 'menu-management', label: 'Menu Management', icon: ChefHat },
+    { id: 'settings', label: 'Settings', icon: Settings2 },    
   ]},
 ]
 
