@@ -45,7 +45,8 @@ export default function Reservations({ openReservation, userName, prefill, clear
     <div>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
         <div>
-          <h1 className="font-display text-2xl font-bold text-pine">Reservations</h1>          
+          <h1 className="font-display text-2xl font-bold text-pine">Reservations</h1>
+          <KPICards module="reservations" />
         </div>
         <button className="btn-primary" onClick={() => setShowNew(true)}><Plus size={16} /> New reservation query</button>
       </div>
