@@ -5,7 +5,7 @@ import { Users, Plus, Check, X, CalendarDays, FileText, Wallet, Printer } from '
 import PrintPortal from '../components/PrintPortal.jsx'
 import ComplianceTab from '../components/ComplianceTab'
 import EmployeeProfile from '../components/EmployeeProfile.jsx'
-
+import KPICards from '../components/KPICards.jsx'
 const TABS = ['Employees', 'Attendance', 'Leave', 'Comp Leave', 'Payroll', 'Incidents', 'Letters / Docket', 'Compliance']
 
 export default function HrOffice({ userName, role, isAdmin, company }) {
