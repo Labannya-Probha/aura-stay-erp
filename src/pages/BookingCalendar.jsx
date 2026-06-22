@@ -30,7 +30,7 @@ const STATUS_BG = {
   SETTLED:     '#bfe3c4',
 }
 
-export default function BookingCalendar({ openReservation, onNewReservation }) {
+export default function BookingCalendar({ openReservation, onNewReservation, onOpenReservations }) {
   const [ym, setYm]         = useState(todayISO().slice(0, 7))
   const [rooms, setRooms]   = useState([])
   const [cells, setCells]   = useState({})
@@ -114,6 +114,7 @@ export default function BookingCalendar({ openReservation, onNewReservation }) {
           <p className="text-[11px] text-pine/40 sm:hidden">↔ পাশে swipe করে পুরো মাস দেখুন</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button className="btn-ghost" onClick={() => onOpenReservations?.()}>Reservations</button>
           <button className="btn-primary" onClick={() => onNewReservation?.()}><Plus size={16} /> New reservation query</button>
           <button className="btn-ghost !px-2" onClick={() => setYm(shiftMonth(ym, -1))}><ChevronLeft size={16} /></button>
           <input type="month" className="input !w-44" value={ym} onChange={(e) => setYm(e.target.value)} />
