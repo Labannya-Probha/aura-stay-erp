@@ -5,27 +5,29 @@
 @tailwind utilities;
 
 /* ============================================================
-   AURA STAY — LIGHT FROSTED GLASS DESIGN SYSTEM
-   Consistent spacing, alignment, sizing across the whole app.
+   AURA STAY — MINIMAL LUXE ERP DESIGN SYSTEM
+   Clean, high-readability UI for dashboards, tables, and forms.
    ============================================================ */
 
 @layer base {
   :root {
-    --brand-color: #2E7D32;
-    --card-bg: rgba(255, 255, 255, 0.74);
+    --brand-color: #1F6F78;
+    --card-bg: #FFFFFF;
+    --surface-muted: #F1EEE9;
+    --border-color: #E5DFD6;
+    --text-primary: #171717;
+    --text-secondary: #5F5A55;
   }
   body {
     @apply text-ink font-body antialiased;
-    background: #eef4ee;
+    background: #F7F5F2;
     background-image:
-      radial-gradient(1100px 700px at 10% -10%, rgba(46,125,50,0.16), transparent 60%),
-      radial-gradient(1000px 800px at 110% 5%, rgba(27,77,46,0.14), transparent 55%),
-      radial-gradient(900px 900px at 50% 120%, rgba(212,160,23,0.10), transparent 60%),
-      linear-gradient(160deg, #f1f7f1 0%, #e8f1ea 50%, #eef4ee 100%);
-    background-attachment: fixed;
+      radial-gradient(1000px 650px at 8% -10%, rgba(31,111,120,0.08), transparent 58%),
+      radial-gradient(900px 700px at 112% 0%, rgba(208,169,104,0.08), transparent 52%),
+      linear-gradient(180deg, #FBFAF8 0%, #F7F5F2 100%);
     min-height: 100vh;
     font-family: 'Inter', sans-serif;
-    font-size: 14px;
+    font-size: 14.5px;
     line-height: 1.5;
   }
   h1, h2, h3, h4 { line-height: 1.25; }
@@ -38,12 +40,10 @@
 
   /* ---------- CARD ---------- */
   .card {
-    background: rgba(255, 255, 255, 0.74);
-    border: 1px solid rgba(255, 255, 255, 0.9);
-    border-radius: 14px;
-    box-shadow: 0 8px 30px rgba(27, 77, 46, 0.10), inset 0 1px 0 rgba(255,255,255,0.6);
-    -webkit-backdrop-filter: blur(14px) saturate(135%);
-    backdrop-filter: blur(14px) saturate(135%);
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: 0 10px 28px rgba(23, 23, 23, 0.06);
   }
 
   .label {
@@ -63,13 +63,13 @@
     @apply w-full text-ink focus:outline-none;
     padding: 0 12px;
     font-size: 14px;
-    border-radius: 9px;
-    background: rgba(255,255,255,0.9);
-    border: 1px solid rgba(27,77,46,0.18);
+    border-radius: 10px;
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
     transition: border-color .15s, box-shadow .15s, background .15s;
   }
-  .input::placeholder { color: rgba(27,77,46,0.4); }
-  .input:focus { border-color: #2E7D32; box-shadow: 0 0 0 3px rgba(46,125,50,0.16); background: #fff; }
+  .input::placeholder { color: rgba(95,90,85,0.55); }
+  .input:focus { border-color: #1F6F78; box-shadow: 0 0 0 3px rgba(31,111,120,0.14); background: #fff; }
   /* textarea & multiline override the fixed height */
   textarea.input { height: auto; min-height: 76px; padding: 9px 12px; line-height: 1.5; }
   select.input { padding-right: 8px; }
@@ -84,25 +84,24 @@
   }
   .btn-primary {
     @apply text-white;
-    background: linear-gradient(135deg, #2E7D32, #1B4D2E);
-    border: 1px solid rgba(255,255,255,0.22);
-    box-shadow: 0 4px 14px rgba(46,125,50,0.26);
+    background: linear-gradient(135deg, #1F6F78, #16565D);
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: 0 8px 18px rgba(31,111,120,0.18);
   }
-  .btn-primary:hover { filter: brightness(1.08); box-shadow: 0 6px 20px rgba(46,125,50,0.38); }
+  .btn-primary:hover { filter: brightness(1.06); box-shadow: 0 10px 22px rgba(31,111,120,0.24); }
   .btn-ghost {
     @apply text-pine;
-    background: rgba(255,255,255,0.66);
-    border: 1px solid rgba(27,77,46,0.18);
-    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
   }
-  .btn-ghost:hover { background: rgba(255,255,255,0.95); }
+  .btn-ghost:hover { background: #FAF8F5; }
   .btn-amber {
     @apply text-white;
-    background: linear-gradient(135deg, #D4A017, #B8860B);
-    border: 1px solid rgba(255,255,255,0.3);
-    box-shadow: 0 4px 14px rgba(212,160,23,0.28);
+    background: linear-gradient(135deg, #C89B5C, #B38443);
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: 0 8px 18px rgba(184,134,11,0.16);
   }
-  .btn-amber:hover { filter: brightness(1.07); }
+  .btn-amber:hover { filter: brightness(1.05); }
   /* compact buttons (when JSX adds !py-1 etc. they still align) */
   .btn-primary svg, .btn-ghost svg, .btn-amber svg { flex-shrink: 0; }
 
@@ -111,24 +110,24 @@
     @apply text-left text-pine/60;
     font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
     padding: 11px 14px;
-    border-bottom: 1.5px solid rgba(27,77,46,0.16);
+    border-bottom: 1.5px solid var(--border-color);
     white-space: nowrap;
-    background: rgba(46,125,50,0.04);
+    background: #FAF8F5;
   }
   .td {
     @apply text-ink;
     font-size: 13.5px;
     padding: 11px 14px;
-    border-bottom: 1px solid rgba(27,77,46,0.08);
+    border-bottom: 1px solid rgba(229,223,214,0.9);
     vertical-align: middle;
   }
   /* right-aligned numeric columns get tabular figures automatically */
   .th.text-right, .td.text-right { text-align: right; font-variant-numeric: tabular-nums; }
   /* zebra + hover for any table row inside a .card */
   .card tbody tr { transition: background .12s; }
-  .card tbody tr:hover { background: rgba(46,125,50,0.05); }
+  .card tbody tr:hover { background: #F8F4EE; }
   .card tbody tr:last-child .td { border-bottom: none; }
-  tfoot .td, tfoot td { border-top: 1.5px solid rgba(27,77,46,0.16); }
+  tfoot .td, tfoot td { border-top: 1.5px solid var(--border-color); }
 
   .status-chip {
     @apply inline-flex items-center;
@@ -161,7 +160,7 @@
 }
 /* =====================================================================
    AURA STAY — Motion System  (paste at END of index_CSS.css)
-   Matches the frosted-glass green/amber design tokens.
+   Matches the Minimal Luxe ERP design tokens.
    NOTE: timings tuned so the page LOADER runs for 3 seconds.
    ===================================================================== */
 
@@ -173,8 +172,8 @@
     --aura-enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
     --aura-stagger-step: 30ms;             /* gap between staggered children */
     --aura-loader-duration: 3s;            /* page loader = 3 seconds */
-    --aura-brand: #2E7D32;
-    --aura-brand-soft: rgba(46, 125, 50, 0.18);
+    --aura-brand: #1F6F78;
+    --aura-brand-soft: rgba(31, 111, 120, 0.16);
   }
 
   /* ============================================================
@@ -261,9 +260,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(238, 244, 238, 0.72);   /* body #eef4ee tint */
-    backdrop-filter: blur(10px) saturate(140%);
-    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    background: rgba(247, 245, 242, 0.84);
+    backdrop-filter: blur(8px) saturate(120%);
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
     animation: aura-overlay-fade var(--aura-enter-duration) var(--aura-enter-ease) both;
   }
   @keyframes aura-overlay-fade { from { opacity: 0; } to { opacity: 1; } }
@@ -311,9 +310,9 @@
     border-radius: 8px;
     background: linear-gradient(
       100deg,
-      rgba(46,125,50,0.06) 30%,
-      rgba(46,125,50,0.14) 50%,
-      rgba(46,125,50,0.06) 70%
+      rgba(31,111,120,0.05) 30%,
+      rgba(31,111,120,0.10) 50%,
+      rgba(31,111,120,0.05) 70%
     );
     background-size: 200% 100%;
     animation: aura-shimmer 1.4s ease-in-out infinite;
