@@ -28,7 +28,6 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
   const today = todayISO()
   const canCloseFrontDay = isAdmin || role === 'MANAGER' || role === 'FRONT_OFFICE' || role === 'ACCOUNTS'
   const canOpenDay = role === 'SUPERUSER'
-  const canEditHousekeeping = isAdmin || ['SUPERUSER', 'MANAGER', 'HOUSEKEEPING'].includes(role)
   const flashDay = (m) => { setDayMsg(m); setTimeout(() => setDayMsg(''), 4000) }
 
   const loadBoard = async () => {
@@ -102,17 +101,6 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
     setDayBusy(false)
     if (error) flashDay(error.message)
     else { flashDay(`Front Office day opened for ${today}.`); loadFrontOfficeClose() }
-  }
-
-  const cycleHK = async (room) => {
-    if (!canEditHousekeeping) {
-      flashDay('Front Office/Reservation roles cannot change housekeeping room status.')
-      return
-    }
-    const idx = HK_STATES.indexOf(room.hk_status || 'Clean')
-    const next = HK_STATES[(idx + 1) % HK_STATES.length]
-    setRooms((rs) => rs.map((r) => r.id === room.id ? { ...r, hk_status: next } : r))
-    await supabase.from('rooms').update({ hk_status: next }).eq('id', room.id)
   }
 
   const requestCheckoutClearance = async (room, occupancy) => {
@@ -245,12 +233,11 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
                         </div>
                       )
                       : <div className="text-[10px] text-pine/30 h-6">No booking</div>}
-                    <button onClick={() => cycleHK(room)}
-                      disabled={!canEditHousekeeping}
-                      title={canEditHousekeeping ? 'Change housekeeping status' : 'Housekeeping status can be changed only by Housekeeping/Manager/Admin'}
-                      className={`w-full px-1.5 py-1 rounded-lg text-[10px] font-medium border flex items-center justify-center gap-1 hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed ${HK_STYLE[hk]}`}>
+                    <div
+                      title="Room housekeeping status (view-only on Dashboard)"
+                      className={`w-full px-1.5 py-1 rounded-lg text-[10px] font-medium border flex items-center justify-center gap-1 ${HK_STYLE[hk]}`}>
                       <Icon size={11} /> {hk}
-                    </button>
+                    </div>
                     <button
                       onClick={() => requestCheckoutClearance(room, o)}
                       disabled={reqBusy[room.id] || !canRequestClearance}
