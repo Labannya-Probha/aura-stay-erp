@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtBDT, todayISO } from '../lib/helpers'
-import { CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react'
-import KPICards from '../components/KPICards.jsx'
+import { CalendarRange, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 
 const DAY_W = 34
 const monthDays = (ym) => {
@@ -115,6 +114,7 @@ export default function BookingCalendar({ openReservation, onNewReservation }) {
           <p className="text-[11px] text-pine/40 sm:hidden">↔ পাশে swipe করে পুরো মাস দেখুন</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button className="btn-primary" onClick={() => onNewReservation?.()}><Plus size={16} /> New reservation query</button>
           <button className="btn-ghost !px-2" onClick={() => setYm(shiftMonth(ym, -1))}><ChevronLeft size={16} /></button>
           <input type="month" className="input !w-44" value={ym} onChange={(e) => setYm(e.target.value)} />
           <button className="btn-ghost !px-2" onClick={() => setYm(shiftMonth(ym, 1))}><ChevronRight size={16} /></button>
