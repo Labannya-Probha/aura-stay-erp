@@ -23,10 +23,11 @@ import ReportsHub from './pages/ReportsHub.jsx'
 import Settings from './pages/Settings.jsx'
 import CmsPortal from './pages/CmsPortal.jsx'
 import TaskManagement from './pages/TaskManagement.jsx'
+import GuestCRM from './pages/GuestCRM.jsx'
 import {
   Leaf, LayoutDashboard, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
   FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut, BedDouble, Building2,
-  Menu, X, ListChecks,
+  Menu, X, ListChecks, HeartHandshake,
 } from 'lucide-react'
 
 function BrandLogo({ url }) {
@@ -38,6 +39,7 @@ function BrandLogo({ url }) {
 const NAV_GROUPS = [
    { title: 'Sales & Reservation', items: [
     { id: 'calendar', label: 'Booking Calendar', icon: CalendarDays },
+    { id: 'crm', label: 'Guest CRM', icon: HeartHandshake }, 
   ]},
   { title: 'Tasks', items: [
     { id: 'tasks', label: 'Task Management', icon: ListChecks },
@@ -199,7 +201,11 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
               <BookingCalendar openReservation={openReservation} onNewReservation={startReservation} onOpenReservations={() => navigate('/reservations')} />
             </GuardedRoute>
           } />
-
+          <Route path="/crm" element={
+            <GuardedRoute role={role} navId="crm" privileges={privileges}>
+              <GuestCRM userName={userName} isAdmin={isAdmin} role={role} />
+            </GuardedRoute>
+          } />
           <Route path="/nightaudit" element={
             <GuardedRoute role={role} navId="nightaudit" privileges={privileges}>
               <NightAudit userName={userName} isAdmin={isAdmin} role={role} />
