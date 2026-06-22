@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { fmtBDT } from '../lib/helpers'
 import SearchableSelect from '../components/SearchableSelect.jsx'
@@ -376,11 +376,9 @@ function EntityManager({ entity }) {
 /* ------------------------------------------------------------------ */
 export default function CmsPortal({ role, isAdmin }) {
   const location = useLocation()
-  const navigate = useNavigate()
   const isSuperuser = role === 'SUPERUSER'
   const isAdminPlus = isSuperuser || isAdmin
   const [selectedId, setSelectedId] = useState(CMS_ENTITIES[0].id)
-  const [entityQuery, setEntityQuery] = useState('') // search-first: filters the entity switcher itself
 
   if (!isAdminPlus) {
     return (
@@ -393,12 +391,7 @@ export default function CmsPortal({ role, isAdmin }) {
     )
   }
 
-  const visibleEntities = CMS_ENTITIES.filter((e) => e.label.toLowerCase().includes(entityQuery.trim().toLowerCase()))
-  // If the current search hides the selected entity, fall back to the first visible one
-  // so the right panel never shows a manager for a section not in the filtered list.
-  const entity = CMS_ENTITIES.find((e) => e.id === selectedId && visibleEntities.some((v) => v.id === selectedId))
-    || visibleEntities[0]
-    || CMS_ENTITIES[0]
+  const entity = CMS_ENTITIES.find((e) => e.id === selectedId) || CMS_ENTITIES[0]
 
   useEffect(() => {
     const requested = new URLSearchParams(location.search).get('entity')
@@ -407,49 +400,11 @@ export default function CmsPortal({ role, isAdmin }) {
     }
   }, [location.search])
 
-  const selectEntity = (id) => {
-    setSelectedId(id)
-    navigate(`/cms?entity=${id}`, { replace: true })
-  }
-
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-pine mb-1">Configuration</h1>
       <p className="text-sm text-pine/60 mb-6">Create and edit master records used across Reservations, POS, Inventory and Accounting.</p>
-      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-5 items-start">
-        <div className="lg:sticky lg:top-6 space-y-2">
-          <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-pine/30" />
-            <input
-              className="input !pl-8 !pr-7 !py-1.5 !text-sm"
-              placeholder="Find a section…"
-              value={entityQuery}
-              onChange={(e) => setEntityQuery(e.target.value)}
-              autoFocus
-            />
-            {entityQuery && (
-              <button onClick={() => setEntityQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-pine/30 hover:text-pine">
-                <X size={13} />
-              </button>
-            )}
-          </div>
-          <div className="card p-3 space-y-1">
-            {visibleEntities.map((e) => (
-              <button
-                key={e.id}
-                onClick={() => selectEntity(e.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
-                  entity.id === e.id ? 'bg-forest/15 text-forest' : 'text-pine/70 hover:bg-leaf/40'
-                }`}
-              >
-                <e.icon size={16} /> {e.label}
-              </button>
-            ))}
-            {visibleEntities.length === 0 && (
-              <p className="px-3 py-2 text-xs text-pine/40">No sections match "{entityQuery}".</p>
-            )}
-          </div>
-        </div>
+      <div>
         <EntityManager key={entity.id} entity={entity} />
       </div>
     </div>
