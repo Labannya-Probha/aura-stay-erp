@@ -5,7 +5,7 @@ import { ROLES, ROLE_LABELS } from '../lib/roles'
 import {
   Save, Plus, Percent, Building2, Trash2, Users, ShieldCheck,
   Upload, Image, KeyRound, AlertTriangle,
-  Eye, EyeOff, ChevronDown, ChevronUp, Pencil,
+  Eye, EyeOff, ChevronDown, ChevronUp, Pencil, Globe, FileText, ToggleLeft, ToggleRight,
 } from 'lucide-react'
 
 /* ------------------------------------------------------------------ */
@@ -35,8 +35,10 @@ export default function Settings({ userName, role, isAdmin, reloadCompany }) {
         <MyAccountCard userName={userName} />
         {isAdminPlus && <BrandingCard reloadCompany={reloadCompany} />}
         <TaxCard />
+        <TaxPolicyCard isAdminPlus={isAdminPlus} />
         {isSuperuser && <AllowanceCard />}
         {isSuperuser && <RolePrivilegesCard />}
+        {isSuperuser && <AdminFeatureAccessCard />}
         <StaffCard isAdminPlus={isAdminPlus} isSuperuser={isSuperuser} currentUserName={userName} />
         {isSuperuser && <DataWipeCard />}
       </div>
@@ -536,7 +538,191 @@ function BrandingCard({ reloadCompany }) {
     </div>
   )
 }
+/* ------------------------------------------------------------------ */
+/*  TAX POLICY CARD — Country-wise auto tax rates                      */
+/* ------------------------------------------------------------------ */
+function TaxPolicyCard({ isAdminPlus }) {
+  const [countries, setCountries]     = useState([])
+  const [policies, setPolicies]       = useState([])
+  const [company, setCompany]         = useState(null)
+  const [selectedCountry, setSelectedCountry] = useState('BD')
+  const [msg, setMsg]                 = useState('')
+  const [applying, setApplying]       = useState(false)
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
 
+  useEffect(() => {
+    // Load distinct countries from tax_policies
+    supabase.from('tax_policies')
+      .select('country_code, country_name')
+      .order('country_name')
+      .then(({ data }) => {
+        const unique = []
+        const seen   = new Set()
+        for (const r of (data || [])) {
+          if (!seen.has(r.country_code)) {
+            seen.add(r.country_code)
+            unique.push(r)
+          }
+        }
+        setCountries(unique)
+      })
+    // Load current company settings
+    supabase.from('company_settings').select('*').limit(1).single()
+      .then(({ data }) => {
+        if (data) { setCompany(data); setSelectedCountry(data.country_code || 'BD') }
+      })
+  }, [])
+
+  useEffect(() => {
+    if (!selectedCountry) return
+    supabase.from('tax_policies')
+      .select('*')
+      .eq('country_code', selectedCountry)
+      .order('charge_type')
+      .then(({ data }) => setPolicies(data || []))
+  }, [selectedCountry])
+
+  const applyPolicy = async () => {
+    if (!isAdminPlus) { flash('Admin access required.'); return }
+    setApplying(true)
+    try {
+      // 1. Update company country
+      await supabase.from('company_settings')
+        .update({ country_code: selectedCountry, auto_apply_tax_policy: true })
+        .eq('id', company.id)
+
+      // 2. For each policy row, upsert into tax_config
+      // Map charge_types: ROOM, RESTAURANT, FOOD, OTHER, LAUNDRY
+      const mainTypes = ['ROOM', 'RESTAURANT', 'FOOD', 'OTHER', 'LAUNDRY']
+      for (const pol of policies.filter(p => mainTypes.includes(p.charge_type))) {
+        // Check if tax_config row exists for this charge_type
+        const { data: existing } = await supabase.from('tax_config')
+          .select('id')
+          .eq('charge_type', pol.charge_type)
+          .order('effective_from', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (existing) {
+          await supabase.from('tax_config')
+            .update({
+              vat_pct:            pol.tax_pct,
+              service_charge_pct: pol.service_charge_pct,
+              effective_from:     pol.effective_from,
+            })
+            .eq('id', existing.id)
+        } else {
+          await supabase.from('tax_config').insert({
+            charge_type:        pol.charge_type,
+            vat_pct:            pol.tax_pct,
+            service_charge_pct: pol.service_charge_pct,
+            effective_from:     pol.effective_from,
+          })
+        }
+      }
+      flash(`✓ Tax policy for ${countries.find(c => c.country_code === selectedCountry)?.country_name || selectedCountry} applied to all charge types.`)
+    } catch (e) { flash(e.message) }
+    setApplying(false)
+  }
+
+  const CHARGE_LABELS = {
+    ROOM: 'Room / Accommodation', RESTAURANT: 'Restaurant', FOOD: 'Food / F&B',
+    OTHER: 'Other Services', LAUNDRY: 'Laundry', ROOM_CORPORATE: 'Room (Corporate)',
+  }
+
+  return (
+    <div className="card p-5">
+      <h2 className="font-display font-semibold text-pine flex items-center gap-2 mb-1">
+        <Globe size={18} className="text-forest" /> VAT & Tax Policy
+      </h2>
+      <p className="text-xs text-pine/50 mb-4">
+        Select your country to auto-apply the correct VAT, GST, and service charge rates.
+        Current: <span className="font-semibold text-pine/70">{company?.country_code || 'BD'}</span>
+      </p>
+      {msg && <div className="mb-3 px-3 py-2 rounded-lg bg-forest/10 text-forest text-sm">{msg}</div>}
+
+      {/* Country selector */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {countries.map((c) => (
+          <button key={c.country_code}
+            onClick={() => setSelectedCountry(c.country_code)}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+              selectedCountry === c.country_code
+                ? 'bg-forest text-white border-forest'
+                : 'border-leaf text-pine/60 hover:border-forest/40 hover:text-pine'
+            }`}>
+            {c.country_name}
+          </button>
+        ))}
+      </div>
+
+      {/* Policy table */}
+      {policies.length > 0 && (
+        <div className="overflow-x-auto mb-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-leaf/30">
+                <th className="th">Charge Type</th>
+                <th className="th">Tax Name</th>
+                <th className="th text-right">Tax %</th>
+                <th className="th text-right">SC %</th>
+                <th className="th text-right">TDS %</th>
+                <th className="th text-right">VDS %</th>
+                <th className="th text-right">SD %</th>
+                <th className="th">Inclusive?</th>
+                <th className="th">Effective From</th>
+                <th className="th text-left">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {policies.map((p) => (
+                <tr key={p.id} className="border-b border-leaf/40 hover:bg-leaf/10">
+                  <td className="td font-medium">{CHARGE_LABELS[p.charge_type] || p.charge_type}</td>
+                  <td className="td">
+                    <span className="status-chip bg-forest/10 text-forest text-xs">{p.tax_name}</span>
+                  </td>
+                  <td className="td text-right money font-semibold text-forest">{p.tax_pct}%</td>
+                  <td className="td text-right money">{p.service_charge_pct > 0 ? `${p.service_charge_pct}%` : '—'}</td>
+                  <td className="td text-right money">{p.tds_pct > 0 ? `${p.tds_pct}%` : '—'}</td>
+                  <td className="td text-right money">{p.vds_pct > 0 ? `${p.vds_pct}%` : '—'}</td>
+                  <td className="td text-right money">{p.sd_pct > 0 ? `${p.sd_pct}%` : '—'}</td>
+                  <td className="td">
+                    <span className={`status-chip text-xs ${p.is_tax_inclusive ? 'bg-amber/15 text-amber-700' : 'bg-stone-100 text-stone-500'}`}>
+                      {p.is_tax_inclusive ? 'Inclusive' : 'Exclusive'}
+                    </span>
+                  </td>
+                  <td className="td text-xs money text-pine/50">{p.effective_from}</td>
+                  <td className="td text-xs text-pine/40 max-w-[180px] truncate">{p.notes || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {policies.length === 0 && selectedCountry && (
+        <p className="text-sm text-pine/40 py-4">No policies found for this country.</p>
+      )}
+
+      {/* Apply button */}
+      {isAdminPlus && (
+        <div className="flex items-center gap-3 pt-2 border-t border-leaf">
+          <button
+            className="btn-primary"
+            onClick={applyPolicy}
+            disabled={applying || !selectedCountry}
+          >
+            <FileText size={15} />
+            {applying ? 'Applying…' : `Apply ${countries.find(c => c.country_code === selectedCountry)?.country_name || ''} Tax Policy`}
+          </button>
+          <p className="text-xs text-pine/40">
+            This will update your NBR Tax Rates table for all charge types.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
 /* ------------------------------------------------------------------ */
 /*  TAX CONFIG — with inline edit                                       */
 /* ------------------------------------------------------------------ */
@@ -613,7 +799,214 @@ function TaxCard() {
     </div>
   )
 }
+/* ------------------------------------------------------------------ */
+/*  ADMIN FEATURE ACCESS — Superuser only                              */
+/*  Controls which modules each ADMIN user can access per property.    */
+/*  SUPERUSER is never restricted by this table.                       */
+/* ------------------------------------------------------------------ */
+const FEATURE_MODULES = [
+  { id: 'dashboard',    label: 'Dashboard' },
+  { id: 'reservations', label: 'Reservations' },
+  { id: 'calendar',     label: 'Booking Calendar' },
+  { id: 'crm',          label: 'Guest CRM' },
+  { id: 'nightaudit',   label: 'Night Audit' },
+  { id: 'housekeeping', label: 'Housekeeping' },
+  { id: 'pos',          label: 'Restaurant POS' },
+  { id: 'menu-management', label: 'Menu Management' },
+  { id: 'facilities',   label: 'Facilities' },
+  { id: 'inventory',    label: 'Inventory' },
+  { id: 'consumption',  label: 'Consumption Entry' },
+  { id: 'accounting',   label: 'Accounting' },
+  { id: 'vat',          label: 'VAT Center' },
+  { id: 'hr',           label: 'HR & Office' },
+  { id: 'reports',      label: 'Reports' },
+  { id: 'tasks',        label: 'Task Management' },
+  { id: 'cms',          label: 'Configuration' },
+  { id: 'settings',     label: 'Settings' },
+]
 
+function AdminFeatureAccessCard() {
+  const [admins, setAdmins]           = useState([])
+  const [access, setAccess]           = useState({})  // { userId: { module: bool } }
+  const [selectedAdmin, setSelectedAdmin] = useState(null)
+  const [busy, setBusy]               = useState(false)
+  const [msg, setMsg]                 = useState('')
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
+
+  // Load all ADMIN users for this tenant
+  const loadAdmins = async () => {
+    const { data } = await supabase
+      .from('app_users')
+      .select('id, full_name, username, is_active')
+      .eq('role', 'ADMIN')
+      .order('full_name')
+    setAdmins(data || [])
+    if (data?.length && !selectedAdmin) setSelectedAdmin(data[0].id)
+  }
+
+  // Load access rows for selected admin
+  const loadAccess = async (userId) => {
+    const { data } = await supabase
+      .from('admin_feature_access')
+      .select('module, can_access')
+      .eq('user_id', userId)
+    // Build map — missing rows = true (full access)
+    const map = {}
+    for (const mod of FEATURE_MODULES) map[mod.id] = true  // default all on
+    for (const row of (data || [])) map[row.module] = row.can_access
+    setAccess(prev => ({ ...prev, [userId]: map }))
+  }
+
+  useEffect(() => { loadAdmins() }, [])
+  useEffect(() => { if (selectedAdmin) loadAccess(selectedAdmin) }, [selectedAdmin])
+
+  const toggleModule = async (userId, moduleId, current) => {
+    setBusy(true)
+    const next = !current
+    // Optimistic update
+    setAccess(prev => ({
+      ...prev,
+      [userId]: { ...prev[userId], [moduleId]: next }
+    }))
+    // Upsert into admin_feature_access
+    const { error } = await supabase
+      .from('admin_feature_access')
+      .upsert({
+        user_id:    userId,
+        module:     moduleId,
+        can_access: next,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'tenant_id,user_id,module' })
+    if (error) {
+      flash(error.message)
+      // Revert
+      setAccess(prev => ({ ...prev, [userId]: { ...prev[userId], [moduleId]: current } }))
+    }
+    setBusy(false)
+  }
+
+  const grantAll = async (userId) => {
+    setBusy(true)
+    // Delete all restriction rows for this admin = back to full access
+    await supabase.from('admin_feature_access').delete().eq('user_id', userId)
+    await loadAccess(userId)
+    setBusy(false)
+    flash('All modules enabled for this admin.')
+  }
+
+  const revokeAll = async (userId) => {
+    setBusy(true)
+    // Insert false for all modules
+    const rows = FEATURE_MODULES.map(m => ({
+      user_id:    userId,
+      module:     m.id,
+      can_access: false,
+    }))
+    await supabase.from('admin_feature_access').delete().eq('user_id', userId)
+    await supabase.from('admin_feature_access').insert(rows)
+    await loadAccess(userId)
+    setBusy(false)
+    flash('All modules disabled for this admin.')
+  }
+
+  const currentAccess = selectedAdmin ? (access[selectedAdmin] || {}) : {}
+  const selectedAdminObj = admins.find(a => a.id === selectedAdmin)
+
+  return (
+    <div className="card p-5">
+      <h2 className="font-display font-semibold text-pine flex items-center gap-2 mb-1">
+        <ShieldCheck size={18} className="text-forest" /> Admin Feature Access
+      </h2>
+      <p className="text-xs text-pine/50 mb-4">
+        Control which modules each Admin can access. Superuser is never restricted.
+        Disabled modules will be hidden from that Admin's sidebar entirely.
+      </p>
+      {msg && <div className="mb-3 px-3 py-2 rounded-lg bg-forest/10 text-forest text-sm">{msg}</div>}
+
+      {admins.length === 0 && (
+        <p className="text-sm text-pine/40">No Admin users found in this property.</p>
+      )}
+
+      {admins.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-5">
+
+          {/* Admin selector */}
+          <div className="space-y-1">
+            <div className="text-xs font-bold text-pine/40 uppercase tracking-wide mb-2">Select Admin</div>
+            {admins.map(admin => (
+              <button key={admin.id}
+                onClick={() => setSelectedAdmin(admin.id)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-colors ${
+                  selectedAdmin === admin.id
+                    ? 'bg-forest/15 text-forest border border-forest/20'
+                    : 'text-pine/70 hover:bg-leaf/40 border border-transparent'
+                } ${!admin.is_active ? 'opacity-50' : ''}`}
+              >
+                <div className="w-7 h-7 rounded-full bg-forest/15 text-forest flex items-center justify-center text-xs font-bold shrink-0">
+                  {admin.full_name?.[0] || admin.username?.[0] || 'A'}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate font-semibold">{admin.full_name || admin.username}</div>
+                  <div className="text-[10px] text-pine/40 truncate">@{admin.username}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Module toggles */}
+          {selectedAdmin && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-xs font-bold text-pine/40 uppercase tracking-wide">
+                  Modules — {selectedAdminObj?.full_name}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => grantAll(selectedAdmin)} disabled={busy}
+                    className="text-xs text-forest hover:underline font-semibold">
+                    Enable all
+                  </button>
+                  <span className="text-pine/20">·</span>
+                  <button onClick={() => revokeAll(selectedAdmin)} disabled={busy}
+                    className="text-xs text-red-400 hover:text-red-600 hover:underline font-semibold">
+                    Disable all
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {FEATURE_MODULES.map(mod => {
+                  const enabled = currentAccess[mod.id] !== false
+                  return (
+                    <button key={mod.id}
+                      onClick={() => toggleModule(selectedAdmin, mod.id, enabled)}
+                      disabled={busy}
+                      className={`flex items-center justify-between px-4 py-2.5 rounded-xl border transition-colors text-sm font-medium ${
+                        enabled
+                          ? 'border-forest/20 bg-forest/5 text-pine hover:bg-forest/10'
+                          : 'border-red-200 bg-red-50/50 text-pine/40 hover:bg-red-50'
+                      }`}
+                    >
+                      <span>{mod.label}</span>
+                      {enabled
+                        ? <ToggleRight size={20} className="text-forest shrink-0" />
+                        : <ToggleLeft size={20} className="text-red-300 shrink-0" />
+                      }
+                    </button>
+                  )
+                })}
+              </div>
+
+              <p className="text-xs text-pine/40 mt-3">
+                Changes apply immediately on next page load for that Admin.
+                Green = accessible · Red = hidden from sidebar.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 /* ------------------------------------------------------------------ */
 /*  STAFF — inline edit, password reset, fixed to use app_users        */
 /* ------------------------------------------------------------------ */
