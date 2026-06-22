@@ -497,24 +497,7 @@ function MenuManager({ cats, items, reload, isAdmin }) {
   )
 }
 
-function DayClose({ flash, isAdmin, userName, role }) {
-  const [day, setDay] = useState(todayISO())
-  const [restOrders, setRestOrders] = useState([])
-  const [closedRow, setClosedRow] = useState(null)
-  const [showConfirm, setShowConfirm] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const canOpenDay = role === 'SUPERUSER'
-
-  const load = async () => {
-    const dayStart = `${day}T00:00:00+06:00`
-    const dayEnd = `${day}T23:59:59+06:00`
-    const { data: rest } = await supabase.from('pos_orders').select('*').is('reservation_id', null).gte('created_at', dayStart).lte('created_at', dayEnd)
-    const { data: close } = await supabase.from('day_closes').select('*').eq('close_date', day).eq('type', 'RESTAURANT').maybeSingle()
-    setRestOrders(rest || [])
-    setClosedRow(close || null)
-  }
-
-  export function GuestPosKiosk() {
+export function GuestPosKiosk() {
     const [cats, setCats] = useState([])
     const [items, setItems] = useState([])
     const [taxConfig, setTaxConfig] = useState([])
@@ -714,7 +697,25 @@ function DayClose({ flash, isAdmin, userName, role }) {
         </div>
       </div>
     )
+}
+
+function DayClose({ flash, isAdmin, userName, role }) {
+  const [day, setDay] = useState(todayISO())
+  const [restOrders, setRestOrders] = useState([])
+  const [closedRow, setClosedRow] = useState(null)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const canOpenDay = role === 'SUPERUSER'
+
+  const load = async () => {
+    const dayStart = `${day}T00:00:00+06:00`
+    const dayEnd = `${day}T23:59:59+06:00`
+    const { data: rest } = await supabase.from('pos_orders').select('*').is('reservation_id', null).gte('created_at', dayStart).lte('created_at', dayEnd)
+    const { data: close } = await supabase.from('day_closes').select('*').eq('close_date', day).eq('type', 'RESTAURANT').maybeSingle()
+    setRestOrders(rest || [])
+    setClosedRow(close || null)
   }
+
   useEffect(() => { load() }, [day])
 
   const calcTotal = (orders, status = null) => {
