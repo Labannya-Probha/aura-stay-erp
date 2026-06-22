@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { fmtBDT } from '../lib/helpers'
 import SearchableSelect from '../components/SearchableSelect.jsx'
 import {
   Plus, Pencil, Trash2, Save, ShieldCheck, Search, X,
-  Building2, Truck, Package, FolderTree, UtensilsCrossed, Sparkles, Calculator, Handshake, Users, UserCircle, BedDouble, Warehouse,
+  Building2, Truck, Package, FolderTree, UtensilsCrossed, Sparkles, Calculator, Handshake, Users, BedDouble,
 } from 'lucide-react'
 
 /* ------------------------------------------------------------------ */
@@ -88,29 +89,6 @@ const CMS_ENTITIES = [
     ],
   },
   {
-    id: 'store_locations', table: 'store_locations', label: 'Store Locations', icon: Warehouse, orderBy: 'sort_order', hasIsActive: true,
-    fields: [
-      { key: 'code', label: 'Code', type: 'text', required: true },
-      { key: 'name', label: 'Location name', type: 'text', required: true },
-      { key: 'location_type', label: 'Type', type: 'select', required: true,
-        options: ['STORE', 'KITCHEN', 'BAR', 'OUTLET', 'COLD_STORAGE', 'OTHER'] },
-      { key: 'sort_order', label: 'Sort order', type: 'number', default: 0 },
-      { key: 'notes', label: 'Notes', type: 'text' },
-    ],
-  },
-  {
-    id: 'guests', table: 'guests', label: 'Guest Profiles', icon: UserCircle, orderBy: 'full_name', hasIsActive: false,
-    fields: [
-      { key: 'customer_id', label: 'Customer ID', type: 'text' },
-      { key: 'full_name', label: 'Full name', type: 'text', required: true },
-      { key: 'phone', label: 'Phone', type: 'text' },
-      { key: 'email', label: 'Email', type: 'text' },
-      { key: 'address', label: 'Address', type: 'text' },
-      { key: 'id_type', label: 'ID type', type: 'select', options: ['NID', 'Passport', 'Driving License', 'Birth Certificate', 'Other'] },
-      { key: 'id_number', label: 'ID number', type: 'text' },
-    ],
-  },
-  {
     id: 'chart_of_accounts', table: 'chart_of_accounts', label: 'Chart of Accounts', icon: Calculator, orderBy: 'code', hasIsActive: true,
     fields: [
       { key: 'code', label: 'Code', type: 'text', required: true },
@@ -118,18 +96,6 @@ const CMS_ENTITIES = [
       { key: 'type', label: 'Type', type: 'select', required: true, options: ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'] },
       { key: 'normal_side', label: 'Normal side', type: 'select', required: true, options: ['DEBIT', 'CREDIT'] },
       { key: 'subtype', label: 'Subtype', type: 'text' },
-    ],
-  },
-  {
-    id: 'guests', table: 'guests', label: 'Guest Profiles', icon: UserCircle, orderBy: 'full_name', hasIsActive: false,
-    fields: [
-      { key: 'customer_id', label: 'Customer ID', type: 'text' },
-      { key: 'full_name', label: 'Full name', type: 'text', required: true },
-      { key: 'phone', label: 'Phone', type: 'text' },
-      { key: 'email', label: 'Email', type: 'text' },
-      { key: 'address', label: 'Address', type: 'text' },
-      { key: 'id_type', label: 'ID type', type: 'select', options: ['NID', 'Passport', 'Driving License', 'Birth Certificate', 'Other'] },
-      { key: 'id_number', label: 'ID number', type: 'text' },
     ],
   },
   {
@@ -142,6 +108,8 @@ const CMS_ENTITIES = [
     ],
   },
 ]
+
+export const CMS_ENTITY_TABS = CMS_ENTITIES.map((e) => ({ id: e.id, label: e.label }))
 
 function emptyForm(entity) {
   const obj = {}
@@ -407,6 +375,8 @@ function EntityManager({ entity }) {
 /*  ROOT — Admin & Superuser only                                       */
 /* ------------------------------------------------------------------ */
 export default function CmsPortal({ role, isAdmin }) {
+  const location = useLocation()
+  const navigate = useNavigate()
   const isSuperuser = role === 'SUPERUSER'
   const isAdminPlus = isSuperuser || isAdmin
   const [selectedId, setSelectedId] = useState(CMS_ENTITIES[0].id)
@@ -429,6 +399,18 @@ export default function CmsPortal({ role, isAdmin }) {
   const entity = CMS_ENTITIES.find((e) => e.id === selectedId && visibleEntities.some((v) => v.id === selectedId))
     || visibleEntities[0]
     || CMS_ENTITIES[0]
+
+  useEffect(() => {
+    const requested = new URLSearchParams(location.search).get('entity')
+    if (requested && CMS_ENTITIES.some((e) => e.id === requested)) {
+      setSelectedId(requested)
+    }
+  }, [location.search])
+
+  const selectEntity = (id) => {
+    setSelectedId(id)
+    navigate(`/cms?entity=${id}`, { replace: true })
+  }
 
   return (
     <div>
@@ -455,7 +437,7 @@ export default function CmsPortal({ role, isAdmin }) {
             {visibleEntities.map((e) => (
               <button
                 key={e.id}
-                onClick={() => setSelectedId(e.id)}
+                onClick={() => selectEntity(e.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
                   entity.id === e.id ? 'bg-forest/15 text-forest' : 'text-pine/70 hover:bg-leaf/40'
                 }`}
