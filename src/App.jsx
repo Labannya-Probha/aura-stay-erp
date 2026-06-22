@@ -23,23 +23,21 @@ import ReportsHub from './pages/ReportsHub.jsx'
 import Settings from './pages/Settings.jsx'
 import CmsPortal from './pages/CmsPortal.jsx'
 import TaskManagement from './pages/TaskManagement.jsx'
-import GuestCRM from './pages/GuestCRM.jsx'
 import {
   Leaf, LayoutDashboard, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
   FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut, BedDouble, Building2,
-  Menu, X, ListChecks, HeartHandshake,
+  Menu, X, ListChecks,
 } from 'lucide-react'
 
 function BrandLogo({ url }) {
   const [ok, setOk] = useState(true)
   if (url && ok) return <img src={url} alt="logo" onError={() => setOk(false)} className="w-9 h-9 rounded-lg object-contain bg-white/90 p-0.5" />
-  return <div className="w-9 h-9 rounded-lg bg-forest flex items-center justify-center"><Leaf size={18} /></div>
+  return <div className="w-9 h-9 rounded-lg bg-forest flex items-center justify-center shadow-sm ring-1 ring-forest/15"><Leaf size={18} /></div>
 }
 
 const NAV_GROUPS = [
    { title: 'Sales & Reservation', items: [
     { id: 'calendar', label: 'Booking Calendar', icon: CalendarDays },
-    { id: 'crm', label: 'Guest CRM', icon: HeartHandshake }, 
   ]},
   { title: 'Tasks', items: [
     { id: 'tasks', label: 'Task Management', icon: ListChecks },
@@ -89,23 +87,23 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
   const currentTopId = location.pathname.split('/').filter(Boolean)[0] || 'dashboard'
 
   const openReservation = (id) => navigate(`/reservations/${id}`)
-  const startReservation = (prefill = null) => navigate('/reservations', { state: { prefill } })
+  const startReservation = (prefill = {}) => navigate('/reservations', { state: { prefill } })
 
   const softwareName = company?.software_name || 'Aura Stay'
 
-  // Close the mobile drawer automatically whenever the route changes —
+  // Close the mobile drawer automatically whenever the route changes â€”
   // otherwise it stays open after tapping a nav link.
   useEffect(() => { setMobileNavOpen(false) }, [location.pathname])
 
   const SidebarContent = (
     <>
-      <div className="px-5 py-5 flex items-center gap-3 border-b border-white/10">
+      <div className="px-5 py-5 flex items-center gap-3 border-b border-leaf/80">
         <BrandLogo url={company?.logo_url} />
         <div className="min-w-0 flex-1">
-          <div className="font-display font-bold leading-tight truncate">{softwareName}</div>
-          <div className="text-[11px] text-white/50 truncate">{company?.name || ''}</div>
+          <div className="font-display font-bold leading-tight truncate text-pine">{softwareName}</div>
+          <div className="text-[11px] text-pine/50 truncate">{company?.name || ''}</div>
         </div>
-        <button onClick={() => setMobileNavOpen(false)} className="lg:hidden text-white/60 hover:text-white shrink-0">
+        <button onClick={() => setMobileNavOpen(false)} className="lg:hidden text-pine/45 hover:text-forest shrink-0">
           <X size={20} />
         </button>
       </div>
@@ -115,11 +113,11 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
           if (items.length === 0) return null
           return (
             <div key={g.title}>
-              <div className="px-3 pb-1 text-[10px] uppercase tracking-widest text-white/35 font-semibold">{g.title}</div>
+              <div className="px-3 pb-1 text-[10px] uppercase tracking-widest text-pine/35 font-semibold">{g.title}</div>
               <div className="space-y-0.5">
                 {items.map((n) => (
                   <button key={n.id}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentTopId === n.id ? 'bg-forest text-white' : 'text-white/70 hover:bg-white/10'}`}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentTopId === n.id ? 'bg-forest/10 text-forest ring-1 ring-forest/15' : 'text-pine/70 hover:bg-paper'}`}
                     onClick={() => navigate(`/${n.id}`)}>
                     <n.icon size={17} /> {n.label}
                   </button>
@@ -129,17 +127,17 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
           )
         })}
       </nav>
-      <div className="px-5 py-4 border-t border-white/10 text-xs text-white/60">
+      <div className="px-5 py-4 border-t border-leaf/80 text-xs text-pine/55">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate font-semibold text-white/80">{userName}</div>
-            <div className="text-[10px] text-white/40">{ROLE_LABELS[role] || role}</div>
+            <div className="truncate font-semibold text-pine">{userName}</div>
+            <div className="text-[10px] text-pine/40">{ROLE_LABELS[role] || role}</div>
           </div>
           <button title="Sign out" onClick={async () => {
             const slug = company?.slug
             await supabase.auth.signOut()
             window.location.href = slug ? `/${slug}/login` : '/login'
-          }} className="hover:text-white shrink-0"><LogOut size={15} /></button>
+          }} className="text-pine/45 hover:text-forest shrink-0"><LogOut size={15} /></button>
         </div>
       </div>
     </>
@@ -147,24 +145,24 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
 
   return (
     <div className="min-h-screen flex">
-      {/* Desktop sidebar — always visible, fixed, unchanged from before */}
-      <aside className="hidden lg:flex w-60 bg-pine text-white flex-col fixed inset-y-0 overflow-y-auto z-30">
+      {/* Desktop sidebar â€” always visible, fixed, unchanged from before */}
+      <aside className="hidden lg:flex w-60 bg-white text-pine flex-col fixed inset-y-0 overflow-y-auto z-30 border-r border-leaf/80 shadow-[0_10px_30px_rgba(23,23,23,0.04)]">
         {SidebarContent}
       </aside>
 
-      {/* Mobile sidebar — slide-in drawer + backdrop, only rendered when open */}
+      {/* Mobile sidebar â€” slide-in drawer + backdrop, only rendered when open */}
       {mobileNavOpen && (
         <div className="lg:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-ink/50" onClick={() => setMobileNavOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-pine text-white flex flex-col shadow-2xl">
+          <div className="absolute inset-0 bg-ink/35" onClick={() => setMobileNavOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-white text-pine flex flex-col shadow-2xl border-r border-leaf/80">
             {SidebarContent}
           </aside>
         </div>
       )}
 
-      {/* Mobile top bar — hamburger + brand, only visible below lg */}
-      <div className="lg:hidden fixed top-0 inset-x-0 z-20 bg-pine text-white flex items-center gap-3 px-4 py-3 shadow-md">
-        <button onClick={() => setMobileNavOpen(true)} className="text-white/80 hover:text-white">
+      {/* Mobile top bar â€” hamburger + brand, only visible below lg */}
+      <div className="lg:hidden fixed top-0 inset-x-0 z-20 bg-white/95 backdrop-blur text-pine flex items-center gap-3 px-4 py-3 shadow-sm border-b border-leaf/80">
+        <button onClick={() => setMobileNavOpen(true)} className="text-pine/70 hover:text-forest">
           <Menu size={22} />
         </button>
         <BrandLogo url={company?.logo_url} />
@@ -178,7 +176,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
           <div className="no-print" style={{position:'sticky',top:0,zIndex:50,background:'#b91c1c',
                color:'#fff',textAlign:'center',padding:'6px',fontWeight:600,fontSize:13,
                margin:'-16px -16px 16px'}}>
-            ⚠ Maintenance mode — posting & edits are locked while accounts reconcile.
+            âš  Maintenance mode â€” posting & edits are locked while accounts reconcile.
           </div>
         )}
 
@@ -201,11 +199,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
               <BookingCalendar openReservation={openReservation} onNewReservation={startReservation} onOpenReservations={() => navigate('/reservations')} />
             </GuardedRoute>
           } />
-          <Route path="/crm" element={
-            <GuardedRoute role={role} navId="crm" privileges={privileges}>
-              <GuestCRM userName={userName} isAdmin={isAdmin} role={role} />
-            </GuardedRoute>
-          } />
+
           <Route path="/nightaudit" element={
             <GuardedRoute role={role} navId="nightaudit" privileges={privileges}>
               <NightAudit userName={userName} isAdmin={isAdmin} role={role} />
@@ -270,8 +264,8 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
           <Route path="*" element={<Navigate to={firstAccessiblePath(role, privileges)} replace />} />
         </Routes>
 
-        <footer className="no-print mt-10 pt-4 border-t border-pine/10 flex items-center justify-between text-xs text-pine/40">
-          <div>© {new Date().getFullYear()} Aura Stay</div>
+        <footer className="no-print mt-10 pt-4 border-t border-leaf/80 flex items-center justify-between text-xs text-pine/45">
+          <div>Â© {new Date().getFullYear()} Aura Stay</div>
           <div>Powered by <span className="font-semibold text-pine/60">Aura Stay</span></div>
         </footer>
       </main>
@@ -325,7 +319,7 @@ function AppRoot() {
     if (tenantId) query = query.eq('tenant_id', tenantId)
     const { data } = await query.limit(1).single()
     if (data) {
-      setCurrency(data.currency || '৳')
+      setCurrency(data.currency || 'à§³')
       let propertyQuery = supabase.from('properties').select('slug')
       if (tenantId) propertyQuery = propertyQuery.eq('id', tenantId)
       const { data: prop } = await propertyQuery.limit(1).maybeSingle()
@@ -351,42 +345,14 @@ function AppRoot() {
   useEffect(() => {
     const role = profile?.role
     if (!role) return
+    let query = supabase.from('role_privileges').select('module, can_create, can_view, can_edit, can_delete').eq('role', role)
     const tenantId = getTenantId()
-    let query = supabase.from('role_privileges')
-      .select('module, can_create, can_view, can_edit, can_delete')
-      .eq('role', role)
     if (tenantId) query = query.eq('tenant_id', tenantId)
+    query
+      .then(({ data }) => setPrivileges(data || []))
+  }, [profile?.role])
 
-    query.then(async ({ data: privData }) => {
-      let merged = privData || []
-
-      // For ADMIN role: apply admin_feature_access restrictions
-      // SUPERUSER is never restricted
-      if (role === 'ADMIN' && profile?.id) {
-        const { data: featureRows } = await supabase
-          .from('admin_feature_access')
-          .select('module, can_access')
-          .eq('user_id', profile.id)
-
-        if (featureRows?.length) {
-          // Build restriction map
-          const restricted = new Set(
-            featureRows.filter(r => !r.can_access).map(r => r.module)
-          )
-          // Zero out privileges for restricted modules
-          merged = merged.map(p =>
-            restricted.has(p.module)
-              ? { ...p, can_view: false, can_create: false, can_edit: false, can_delete: false }
-              : p
-          )
-        }
-      }
-
-      setPrivileges(merged)
-    })
-  }, [profile?.role, profile?.id])
-
-  if (session === undefined) return <div className="min-h-screen flex items-center justify-center text-pine/60">Loading…</div>
+  if (session === undefined) return <div className="min-h-screen flex items-center justify-center text-pine/60">Loadingâ€¦</div>
 
   if (location.pathname.endsWith('/login')) {
     const slug = location.pathname.split('/').filter(Boolean)[0]
@@ -402,3 +368,4 @@ function AppRoot() {
 
   return <AppShell company={company} role={role} isAdmin={isAdmin} userName={userName} loadCompany={loadCompany} privileges={privileges} />
 }
+
