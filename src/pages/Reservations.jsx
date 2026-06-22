@@ -43,7 +43,7 @@ export default function Reservations({ openReservation, userName, prefill, clear
         <div>
           <h1 className="font-display text-2xl font-bold text-pine">Reservations</h1>
         </div>
-        <button className="btn-primary" onClick={() => setShowNew(true)}>+ New reservation query</button>
+        <div className="text-xs text-pine/50">Create new queries from <span className="font-semibold">Booking Calendar</span>.</div>
       </div>
       <KPICards module="reservations" />
 
@@ -110,7 +110,7 @@ export default function Reservations({ openReservation, userName, prefill, clear
                   ))}
                   {filtered.length === 0 && (
                     <tr><td className="td text-pine/50 text-center py-8" colSpan={7}>
-                      No reservations found. Click <span className="font-semibold">+ New reservation query</span> to begin.
+                      No reservations found. Create a new query from Booking Calendar.
                     </td></tr>
                   )}
                 </tbody>
@@ -151,7 +151,7 @@ export default function Reservations({ openReservation, userName, prefill, clear
               ))}
               {filtered.length === 0 && (
                 <div className="text-pine/50 text-center py-8 text-sm px-4">
-                  No reservations found. Tap <span className="font-semibold">+ New reservation query</span> to begin.
+                  No reservations found. Create a new query from Booking Calendar.
                 </div>
               )}
             </div>
