@@ -1442,6 +1442,14 @@ function CheckInTab({ res, guest, resGuests, resRooms, rooms, reload, setStatus,
 
   const doCheckIn = async () => {
     if (resRooms.length === 0) { flash('Assign at least one room before check-in.'); return }
+    const notReadyRooms = resRooms.filter((rr) => {
+      const hk = (rr.rooms?.hk_status || '').toLowerCase()
+      return !['clean', 'inspected'].includes(hk)
+    })
+    if (notReadyRooms.length > 0) {
+      flash(`Check-in blocked: room(s) not ready/clean (${notReadyRooms.map((rr) => rr.rooms?.room_no).join(', ')}).`)
+      return
+    }
     await setStatus('CHECKED_IN', {
       extra_pax: +f.extra_pax, extra_pax_rate: +f.extra_pax_rate,
       driver_accommodation: f.driver_accommodation, driver_count: +f.driver_count, driver_rate: +f.driver_rate,
@@ -1579,7 +1587,7 @@ function BillingsAndCheckOutTab({
 }) {
   const isCheckedOut = ['CHECKED_OUT', 'SETTLED'].includes(res.status)
   const editable     = isAdmin || !['CHECKED_OUT', 'SETTLED', 'CANCELLED'].includes(res.status)
-  const uncleanRooms = resRooms.filter((rr) => rr.rooms?.hk_status && rr.rooms.hk_status !== 'Clean')
+  const pendingClearanceRooms = resRooms.filter((rr) => (rr.rooms?.hk_status || '').toLowerCase() !== 'inspected')
   const [c, setC]           = useState({ charge_type: 'OTHER', description: '', base_amount: '', discount_pct: 0, charge_date: todayISO() })
   const [discAmt, setDiscAmt]     = useState('')
   const [discReason, setDiscReason] = useState('')
@@ -1786,15 +1794,10 @@ function BillingsAndCheckOutTab({
   // Checkout handler — saves full invoice snapshot
   // ----------------------------------------------------------------
   const handleCheckOut = async () => {
-  if (uncleanRooms.length > 0) {
-    const names = uncleanRooms.map((rr) => `${rr.rooms?.room_no} (${rr.rooms?.hk_status})`).join(', ')
-    if (isAdmin) {
-      const ok = window.confirm(`Room(s) not housekeeping-cleared: ${names}.\n\nOverride and check out anyway?`)
-      if (!ok) return
-    } else {
-      flash(`Cannot check out — room(s) pending housekeeping clearance: ${names}. Ask an administrator to override.`)
-      return
-    }
+  if (pendingClearanceRooms.length > 0) {
+    const names = pendingClearanceRooms.map((rr) => `${rr.rooms?.room_no} (${rr.rooms?.hk_status || 'Unknown'})`).join(', ')
+    flash(`Cannot check out — housekeeping clearance pending. Mark room status as Inspected first: ${names}.`)
+    return
   }
   if (due > 0) {
       const ok = window.confirm(
@@ -1824,6 +1827,10 @@ function BillingsAndCheckOutTab({
     if (invErr) { flash(`Failed to generate invoice: ${invErr.message}`); return }
 
     await setStatus('CHECKED_OUT', { checked_out_at: issuedAt })
+    const roomIds = resRooms.map((rr) => rr.room_id).filter(Boolean)
+    if (roomIds.length > 0) {
+      await supabase.from('rooms').update({ hk_status: 'Dirty' }).in('id', roomIds)
+    }
     await reload()
     flash(
       due > 0
@@ -1866,8 +1873,8 @@ function BillingsAndCheckOutTab({
             <div className="h-6 w-px bg-leaf/60 mx-2 hidden sm:block" />
             {!isCheckedOut ? (
               <>
-                {uncleanRooms.length > 0 && (
-                  <span className="text-xs text-amber font-semibold mr-1">⚠ HK pending: {uncleanRooms.map(rr => rr.rooms?.room_no).join(', ')}</span>
+                {pendingClearanceRooms.length > 0 && (
+                  <span className="text-xs text-amber font-semibold mr-1">⚠ Clearance pending: {pendingClearanceRooms.map(rr => rr.rooms?.room_no).join(', ')}</span>
                 )}
                 <button className="btn-primary" onClick={handleCheckOut}>
                   <CheckCircle2 size={16} /> Check Out
