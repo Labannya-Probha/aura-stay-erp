@@ -5,6 +5,7 @@ import PrintPortal from '../components/PrintPortal.jsx'
 import GuestPicker from '../components/GuestPicker.jsx'
 import { PosReceipt } from '../components/print/PosDocs.jsx'
 import Mushak63 from '../components/print/Mushak63.jsx'
+import KPICards from '../components/KPICards.jsx'
 import { Plus, Minus, Trash2, Banknote, BedDouble, Leaf, Printer } from 'lucide-react'
 
 const CATS = [
