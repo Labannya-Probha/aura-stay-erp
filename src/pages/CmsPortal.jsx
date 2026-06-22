@@ -4,7 +4,7 @@ import { fmtBDT } from '../lib/helpers'
 import SearchableSelect from '../components/SearchableSelect.jsx'
 import {
   Plus, Pencil, Trash2, Save, ShieldCheck, Search, X,
-  Building2, Truck, Package, FolderTree, UtensilsCrossed, Sparkles, Calculator, Handshake, Users, BedDouble,
+  Building2, Truck, Package, FolderTree, UtensilsCrossed, Sparkles, Calculator, Handshake, Users, UserCircle, BedDouble,
 } from 'lucide-react'
 
 /* ------------------------------------------------------------------ */
@@ -95,6 +95,18 @@ const CMS_ENTITIES = [
       { key: 'type', label: 'Type', type: 'select', required: true, options: ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'] },
       { key: 'normal_side', label: 'Normal side', type: 'select', required: true, options: ['DEBIT', 'CREDIT'] },
       { key: 'subtype', label: 'Subtype', type: 'text' },
+    ],
+  },
+  {
+    id: 'guests', table: 'guests', label: 'Guest Profiles', icon: UserCircle, orderBy: 'full_name', hasIsActive: false,
+    fields: [
+      { key: 'customer_id', label: 'Customer ID', type: 'text' },
+      { key: 'full_name', label: 'Full name', type: 'text', required: true },
+      { key: 'phone', label: 'Phone', type: 'text' },
+      { key: 'email', label: 'Email', type: 'text' },
+      { key: 'address', label: 'Address', type: 'text' },
+      { key: 'id_type', label: 'ID type', type: 'select', options: ['NID', 'Passport', 'Driving License', 'Birth Certificate', 'Other'] },
+      { key: 'id_number', label: 'ID number', type: 'text' },
     ],
   },
   {
