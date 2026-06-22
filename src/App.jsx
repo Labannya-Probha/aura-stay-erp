@@ -20,8 +20,8 @@ import AccountingHub from './pages/AccountingHub.jsx'
 import HrOffice from './pages/HrOffice.jsx'
 import NightAudit from './pages/NightAudit.jsx'
 import ReportsHub from './pages/ReportsHub.jsx'
-import Settings from './pages/Settings.jsx'
-import CmsPortal from './pages/CmsPortal.jsx'
+import Settings, { SETTINGS_SECTIONS } from './pages/Settings.jsx'
+import CmsPortal, { CMS_ENTITY_TABS } from './pages/CmsPortal.jsx'
 import TaskManagement from './pages/TaskManagement.jsx'
 import {
   Leaf, LayoutDashboard, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
@@ -84,6 +84,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
   const location = useLocation()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState({})
+  const [openSystemMenu, setOpenSystemMenu] = useState(null)
   const toggleGroup = (title) => {
     const isActive = NAV_GROUPS.find(g => g.title === title)?.items.some(n => n.id === currentTopId)
     if (isActive) return // never collapse the active group
@@ -100,6 +101,10 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
   // Close the mobile drawer automatically whenever the route changes â€”
   // otherwise it stays open after tapping a nav link.
   useEffect(() => { setMobileNavOpen(false) }, [location.pathname])
+  useEffect(() => {
+    if (currentTopId === 'settings' || currentTopId === 'cms') setOpenSystemMenu(currentTopId)
+    else setOpenSystemMenu(null)
+  }, [currentTopId])
 
   const SidebarContent = (
     <>
@@ -130,13 +135,57 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
               </button>
               {!isCollapsed && (
                 <div className="space-y-0.5 mb-1">
-                  {items.map((n) => (
-                    <button key={n.id}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentTopId === n.id ? 'bg-forest/10 text-forest ring-1 ring-forest/15' : 'text-pine/70 hover:bg-paper'}`}
-                      onClick={() => navigate(`/${n.id}`)}>
-                      <n.icon size={17} /> {n.label}
-                    </button>
-                  ))}
+                  {items.map((n) => {
+                    if (n.id !== 'settings' && n.id !== 'cms') {
+                      return (
+                        <button key={n.id}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentTopId === n.id ? 'bg-forest/10 text-forest ring-1 ring-forest/15' : 'text-pine/70 hover:bg-paper'}`}
+                          onClick={() => navigate(`/${n.id}`)}>
+                          <n.icon size={17} /> {n.label}
+                        </button>
+                      )
+                    }
+                    const isOpen = openSystemMenu === n.id
+                    const nested = n.id === 'settings'
+                      ? SETTINGS_SECTIONS.filter((s) => {
+                        if (!s.adminOnly && !s.superuserOnly) return true
+                        if (s.adminOnly) return isAdmin || role === 'SUPERUSER'
+                        return role === 'SUPERUSER'
+                      })
+                      : CMS_ENTITY_TABS
+                    return (
+                      <div key={n.id} className="space-y-1">
+                        <button
+                          className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentTopId === n.id ? 'bg-forest/10 text-forest ring-1 ring-forest/15' : 'text-pine/70 hover:bg-paper'}`}
+                          onClick={() => {
+                            setOpenSystemMenu(n.id)
+                            navigate(`/${n.id}`)
+                          }}
+                        >
+                          <span className="flex items-center gap-3">
+                            <n.icon size={17} /> {n.label}
+                          </span>
+                          <ChevronDown size={13} className={`transition-transform ${isOpen ? '' : '-rotate-90'}`} />
+                        </button>
+                        {isOpen && (
+                          <div className="ml-6 space-y-0.5">
+                            {nested.map((child) => {
+                              const isActiveChild = currentTopId === n.id && location.search.includes(`${n.id === 'settings' ? 'section' : 'entity'}=${child.id}`)
+                              return (
+                                <button
+                                  key={child.id}
+                                  className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors ${isActiveChild ? 'bg-forest/10 text-forest' : 'text-pine/60 hover:bg-paper hover:text-pine/80'}`}
+                                  onClick={() => navigate(`/${n.id}?${n.id === 'settings' ? 'section' : 'entity'}=${child.id}`)}
+                                >
+                                  {child.label}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -384,4 +433,3 @@ function AppRoot() {
 
   return <AppShell company={company} role={role} isAdmin={isAdmin} userName={userName} loadCompany={loadCompany} privileges={privileges} />
 }
-
