@@ -384,11 +384,13 @@ function NewReservation({ close, openReservation, userName, prefill }) {
     return acc
   }, {})
 
-  // Generate auto Customer ID — CUST-XXXX — #28
+  // Generate auto Customer ID — CUST-{SHORT_CODE}-{8-digit} — #28
+  // Uses DB function generate_customer_id() which reads short_code from company_settings
   const generateCustomerId = async () => {
     try {
-      const { data: seq } = await supabase.rpc('next_tenant_seq', { p_seq_name: 'cust_id_seq' })
-      return seq ? `CUST-${String(seq).padStart(4, '0')}` : null
+      const { data, error } = await supabase.rpc('generate_customer_id')
+      if (error || !data) return null
+      return data
     } catch {
       return null
     }
