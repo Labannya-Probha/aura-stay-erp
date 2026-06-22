@@ -265,7 +265,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
         </Routes>
 
         <footer className="no-print mt-10 pt-4 border-t border-leaf/80 flex items-center justify-between text-xs text-pine/45">
-          <div>Â© {new Date().getFullYear()} Aura Stay</div>
+          <div>© {new Date().getFullYear()} Aura Stay</div>
           <div>Powered by <span className="font-semibold text-pine/60">Aura Stay</span></div>
         </footer>
       </main>
