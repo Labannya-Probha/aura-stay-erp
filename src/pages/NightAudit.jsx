@@ -136,10 +136,8 @@ export default function NightAudit({ userName, isAdmin, role }) {
           jvId = jv.id
         }
       }
-      const payload = { audit_date: auditDate, performed_by: userName, summary, jv_id: jvId, notes: makeJV ? 'Auto-JV posted' : null }
-      const { error } = existing
-        ? await supabase.from('night_audits').update({ ...payload, performed_at: new Date().toISOString() }).eq('id', existing.id)
-        : await supabase.from('night_audits').insert(payload)
+      const payload = { audit_date: auditDate, performed_by: userName, performed_at: new Date().toISOString(), summary, jv_id: jvId, notes: makeJV ? 'Auto-JV posted' : null }
+      const { error } = await supabase.from('night_audits').upsert(payload, { onConflict: 'tenant_id,audit_date' })
       if (error) throw error
 
       const dayStart = `${auditDate}T00:00:00+06:00`
