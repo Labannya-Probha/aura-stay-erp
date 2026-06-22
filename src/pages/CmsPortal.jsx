@@ -4,7 +4,7 @@ import { fmtBDT } from '../lib/helpers'
 import SearchableSelect from '../components/SearchableSelect.jsx'
 import {
   Plus, Pencil, Trash2, Save, ShieldCheck, Search, X,
-  Building2, Truck, Package, FolderTree, UtensilsCrossed, Sparkles, Calculator, Handshake, Users, UserCircle, BedDouble,
+  Building2, Truck, Package, FolderTree, UtensilsCrossed, Sparkles, Calculator, Handshake, Users, UserCircle, BedDouble, Warehouse,
 } from 'lucide-react'
 
 /* ------------------------------------------------------------------ */
@@ -85,6 +85,29 @@ const CMS_ENTITIES = [
       { key: 'charge_type', label: 'Charge type', type: 'text', default: 'OTHER' },
       { key: 'pricing_mode', label: 'Pricing mode', type: 'text', default: 'PER_UNIT' },
       { key: 'is_rental', label: 'Rental item', type: 'checkbox' },
+    ],
+  },
+  {
+    id: 'store_locations', table: 'store_locations', label: 'Store Locations', icon: Warehouse, orderBy: 'sort_order', hasIsActive: true,
+    fields: [
+      { key: 'code', label: 'Code', type: 'text', required: true },
+      { key: 'name', label: 'Location name', type: 'text', required: true },
+      { key: 'location_type', label: 'Type', type: 'select', required: true,
+        options: ['STORE', 'KITCHEN', 'BAR', 'OUTLET', 'COLD_STORAGE', 'OTHER'] },
+      { key: 'sort_order', label: 'Sort order', type: 'number', default: 0 },
+      { key: 'notes', label: 'Notes', type: 'text' },
+    ],
+  },
+  {
+    id: 'guests', table: 'guests', label: 'Guest Profiles', icon: UserCircle, orderBy: 'full_name', hasIsActive: false,
+    fields: [
+      { key: 'customer_id', label: 'Customer ID', type: 'text' },
+      { key: 'full_name', label: 'Full name', type: 'text', required: true },
+      { key: 'phone', label: 'Phone', type: 'text' },
+      { key: 'email', label: 'Email', type: 'text' },
+      { key: 'address', label: 'Address', type: 'text' },
+      { key: 'id_type', label: 'ID type', type: 'select', options: ['NID', 'Passport', 'Driving License', 'Birth Certificate', 'Other'] },
+      { key: 'id_number', label: 'ID number', type: 'text' },
     ],
   },
   {
