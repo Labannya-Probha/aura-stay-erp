@@ -24,7 +24,7 @@ import Settings from './pages/Settings.jsx'
 import CmsPortal from './pages/CmsPortal.jsx'
 import TaskManagement from './pages/TaskManagement.jsx'
 import {
-  Leaf, LayoutDashboard, CalendarRange, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
+  Leaf, LayoutDashboard, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
   FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut, BedDouble, Building2,
   Menu, X, ListChecks,
 } from 'lucide-react'
@@ -37,8 +37,7 @@ function BrandLogo({ url }) {
 
 const NAV_GROUPS = [
    { title: 'Sales & Reservation', items: [
-    { id: 'calendar', label: 'Booking Calendar', icon: CalendarDays }, 
-    { id: 'reservations', label: 'Reservations', icon: CalendarRange },
+    { id: 'calendar', label: 'Booking Calendar', icon: CalendarDays },
   ]},
   { title: 'Tasks', items: [
     { id: 'tasks', label: 'Task Management', icon: ListChecks },
