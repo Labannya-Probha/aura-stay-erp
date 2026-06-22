@@ -14,7 +14,7 @@ import { supabase } from '../supabase'
 import { fmtBDT, todayISO } from '../lib/helpers'
 import {
   BedDouble, TrendingUp, TrendingDown, Users, Banknote, Clock,
-  AlertTriangle, CheckCircle2, ShoppingCart, Boxes, Calculator,
+  AlertTriangle, CheckCircle2, ShoppingCart, Boxes, Calculator, LogOut,
   CalendarCheck, FileText, Star, ArrowUpRight, Loader2,
 } from 'lucide-react'
 
@@ -72,7 +72,8 @@ async function fetchKPIs(module, today) {
       return [
         { label: 'In-house', value: inhouse, sub: `of ${totalRooms} rooms`, icon: BedDouble, color: inhouse > 0 ? 'green' : 'stone' },
         { label: 'Occupancy', value: `${occPct}%`, sub: `${inhouse} occupied`, icon: TrendingUp, color: occPct >= 70 ? 'green' : occPct >= 40 ? 'amber' : 'red' },
-        { label: "Today's arrivals", value: arrivalsToday, sub: `${depToday} departures`, icon: CalendarCheck, color: arrivalsToday > 0 ? 'blue' : 'stone' },
+        { label: "Today's arrivals", value: arrivalsToday, sub: 'Check-ins today', icon: CalendarCheck, color: arrivalsToday > 0 ? 'blue' : 'stone' },
+        { label: "Today's departures", value: depToday, sub: 'Due check-out', icon: LogOut, color: depToday > 0 ? 'amber' : 'stone' },
         { label: "Today's revenue", value: fmtBDT(todayRev), sub: `MTD: ${fmtBDT(mtdRev)}`, icon: Banknote, color: 'green' },
         { label: 'MTD collections', value: fmtBDT(mtdCol), sub: `Due: ${fmtBDT(dueAmt)}`, icon: TrendingUp, color: mtdCol > 0 ? 'pine' : 'stone' },
         { label: 'Outstanding due', value: fmtBDT(dueAmt), sub: dueAmt > 0 ? 'Unsettled charges' : 'All clear', icon: dueAmt > 0 ? AlertTriangle : CheckCircle2, color: dueAmt > 50000 ? 'red' : dueAmt > 0 ? 'amber' : 'green' },
@@ -288,4 +289,3 @@ export default function KPICards({ module }) {
     </div>
   )
 }
-
