@@ -104,13 +104,9 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [collapsedGroups, setCollapsedGroups] = useState({})
+  const [openGroup, setOpenGroup] = useState(null)
   const [openSystemMenu, setOpenSystemMenu] = useState(null)
-  const toggleGroup = (title) => {
-    const isActive = NAV_GROUPS.find(g => g.title === title)?.items.some(n => n.id === currentTopId)
-    if (isActive) return // never collapse the active group
-    setCollapsedGroups(prev => ({ ...prev, [title]: !prev[title] }))
-  }
+  const toggleGroup = (title) => setOpenGroup((prev) => (prev === title ? null : title))
 
   const currentTopId = location.pathname.split('/').filter(Boolean)[0] || 'dashboard'
 
@@ -122,6 +118,10 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
   // Close the mobile drawer automatically whenever the route changes â€”
   // otherwise it stays open after tapping a nav link.
   useEffect(() => { setMobileNavOpen(false) }, [location.pathname])
+  useEffect(() => {
+    const activeGroup = NAV_GROUPS.find((g) => g.items.some((n) => n.id === currentTopId))
+    setOpenGroup(activeGroup?.title || null)
+  }, [currentTopId])
   useEffect(() => {
     if (currentTopId === 'settings' || currentTopId === 'cms') setOpenSystemMenu(currentTopId)
     else setOpenSystemMenu(null)
@@ -143,8 +143,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
         {NAV_GROUPS.map((g) => {
           const items = g.items.filter((n) => n.id === 'cms' ? (isAdmin || role === 'SUPERUSER') : can(role, n.id, privileges))
           if (items.length === 0) return null
-          const isActive = g.items.some(n => n.id === currentTopId)
-          const isCollapsed = !isActive && !!collapsedGroups[g.title]
+          const isOpenGroup = openGroup === g.title
           return (
             <div key={g.title}>
               <button
@@ -152,9 +151,9 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
                 className="w-full px-3 py-1.5 flex items-center justify-between text-[10px] uppercase tracking-widest text-pine/35 font-semibold hover:text-pine/60 transition-colors"
               >
                 <span>{g.title}</span>
-                <ChevronDown size={11} className={`transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`} />
+                <ChevronDown size={11} className={`transition-transform duration-200 ${isOpenGroup ? '' : '-rotate-90'}`} />
               </button>
-              {!isCollapsed && (
+              {isOpenGroup && (
                 <div className="space-y-0.5 mb-1">
                   {items.map((n) => {
                     if (n.id !== 'settings' && n.id !== 'cms') {
