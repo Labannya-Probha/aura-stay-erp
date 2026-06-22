@@ -3,7 +3,7 @@ import { supabase } from '../supabase'
 import { fmtBDT, fmtDate, todayISO, nightsBetween, rateFor, computeCharge, STATUS_COLORS } from '../lib/helpers'
 import { Plus, Search, Trash2 } from 'lucide-react'
 import SearchableSelect from '../components/SearchableSelect.jsx'
-
+import KPICards from '../components/KPICards.jsx'
 const STATUSES = ['ALL', 'QUERY', 'QUOTED', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'SETTLED', 'CANCELLED']
 
 // Which ReservationDetail tab the status badge should jump to when clicked
