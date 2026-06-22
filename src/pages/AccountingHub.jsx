@@ -566,7 +566,6 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
   }
 
   const edit = (r) => {
-    if (r.is_locked) { flash('This entry is locked and cannot be edited.'); return }
     setEditingId(r.id)
     setHead({ jv_date: r.jv_date, narration: r.narration || '', voucher_type: voucherTypeFromNo(r.jv_no || '') })
     setLines((r.journal_lines || []).map((l) => ({
@@ -681,11 +680,9 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
                       <button className="btn-ghost !py-1" title="Print voucher" onClick={() => openVoucher(r)}>
                         <Printer size={13} /> Voucher
                       </button>
-                      {!r.is_locked && (
-                        <button className="btn-ghost !py-1" title="Edit" onClick={() => edit(r)}>
-                          <Pencil size={13} />
-                        </button>
-                      )}
+                      <button className="btn-ghost !py-1" title="Edit" onClick={() => edit(r)}>
+                        <Pencil size={13} />
+                      </button>
                       {isAdmin && !r.is_locked && (
                         <button className="btn-ghost !py-1 text-red-600" title="Delete" onClick={() => del(r.id)}>
                           <Trash2 size={13} />
