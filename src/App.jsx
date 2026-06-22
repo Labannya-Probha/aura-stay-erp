@@ -351,12 +351,40 @@ function AppRoot() {
   useEffect(() => {
     const role = profile?.role
     if (!role) return
-    let query = supabase.from('role_privileges').select('module, can_create, can_view, can_edit, can_delete').eq('role', role)
     const tenantId = getTenantId()
+    let query = supabase.from('role_privileges')
+      .select('module, can_create, can_view, can_edit, can_delete')
+      .eq('role', role)
     if (tenantId) query = query.eq('tenant_id', tenantId)
-    query
-      .then(({ data }) => setPrivileges(data || []))
-  }, [profile?.role])
+
+    query.then(async ({ data: privData }) => {
+      let merged = privData || []
+
+      // For ADMIN role: apply admin_feature_access restrictions
+      // SUPERUSER is never restricted
+      if (role === 'ADMIN' && profile?.id) {
+        const { data: featureRows } = await supabase
+          .from('admin_feature_access')
+          .select('module, can_access')
+          .eq('user_id', profile.id)
+
+        if (featureRows?.length) {
+          // Build restriction map
+          const restricted = new Set(
+            featureRows.filter(r => !r.can_access).map(r => r.module)
+          )
+          // Zero out privileges for restricted modules
+          merged = merged.map(p =>
+            restricted.has(p.module)
+              ? { ...p, can_view: false, can_create: false, can_edit: false, can_delete: false }
+              : p
+          )
+        }
+      }
+
+      setPrivileges(merged)
+    })
+  }, [profile?.role, profile?.id])
 
   if (session === undefined) return <div className="min-h-screen flex items-center justify-center text-pine/60">Loading…</div>
 
