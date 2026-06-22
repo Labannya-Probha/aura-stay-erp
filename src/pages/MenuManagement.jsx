@@ -344,8 +344,7 @@ function MenuItemEditor({ item, cats, invItems, latestCost, isAdmin, onClose, on
         </fieldset>
 
         <fieldset className="border border-leaf rounded-xl p-4 mb-5" disabled={!isAdmin}>
-          <legend className="text-xs font-bold text-pine/60 px-2 uppercase tracking-wide flex items-center gap-1"><ChefHat size={13} /> Bill of Materials / Recipe</legend>
-          <p className="text-xs text-pine/50 mb-3">কোন কোন raw material (inv_items) কত পরিমাণে এই dish-এ লাগে — তার থেকে costing হিসাব হবে। Cost সবচেয়ে সাম্প্রতিক purchase rate (GRN) থেকে আসে।</p>
+          <legend className="text-xs font-bold text-pine/60 px-2 uppercase tracking-wide flex items-center gap-1"><ChefHat size={13} /> Bill of Materials / Recipe</legend>          
 
           {!recipeLoaded ? (
             <p className="text-xs text-pine/40">লোড হচ্ছে…</p>
