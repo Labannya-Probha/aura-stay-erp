@@ -20,29 +20,29 @@ import {
 
 /* ── colour helpers ─────────────────────────────────────────────────────── */
 const COLORS = {
-  green:  { bg: 'bg-forest/10',  text: 'text-forest',  icon: 'text-forest' },
-  amber:  { bg: 'bg-amber/15',   text: 'text-amber-800', icon: 'text-amber' },
-  red:    { bg: 'bg-red-50',     text: 'text-red-700',  icon: 'text-red-500' },
-  blue:   { bg: 'bg-sky-50',     text: 'text-sky-700',  icon: 'text-sky-500' },
-  pine:   { bg: 'bg-pine/10',    text: 'text-pine',     icon: 'text-pine' },
-  purple: { bg: 'bg-violet-50',  text: 'text-violet-700', icon: 'text-violet-500' },
-  stone:  { bg: 'bg-stone-100',  text: 'text-stone-600', icon: 'text-stone-400' },
+  green:  { bg: 'bg-forest/14',  text: 'text-forest',     icon: 'text-forest',     ring: 'ring-forest/20' },
+  amber:  { bg: 'bg-amber/18',   text: 'text-amber-900',  icon: 'text-amber-700',  ring: 'ring-amber/25' },
+  red:    { bg: 'bg-red-100',    text: 'text-red-800',    icon: 'text-red-600',    ring: 'ring-red-200' },
+  blue:   { bg: 'bg-sky-100',    text: 'text-sky-800',    icon: 'text-sky-600',    ring: 'ring-sky-200' },
+  pine:   { bg: 'bg-pine/14',    text: 'text-pine',       icon: 'text-pine',       ring: 'ring-pine/20' },
+  purple: { bg: 'bg-violet-100', text: 'text-violet-800', icon: 'text-violet-600', ring: 'ring-violet-200' },
+  stone:  { bg: 'bg-stone-200',  text: 'text-stone-700',  icon: 'text-stone-500',  ring: 'ring-stone-300' },
 }
 
 /* ── single card ────────────────────────────────────────────────────────── */
 function KPICard({ label, value, sub, icon: Icon, color = 'pine', loading }) {
   const c = COLORS[color] || COLORS.pine
   return (
-    <div className={`rounded-xl p-4 ${c.bg} flex items-start gap-3 min-w-0`}>
-      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-white/60 ${c.icon}`}>
+    <div className={`rounded-xl p-4 ${c.bg} ring-1 ${c.ring} shadow-[0_8px_20px_rgba(23,23,23,0.06)] flex items-start gap-3 min-w-0`}>
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-white/85 ring-1 ring-black/5 ${c.icon}`}>
         {loading ? <Loader2 size={16} className="animate-spin opacity-40" /> : <Icon size={17} />}
       </div>
       <div className="min-w-0">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-pine/50 leading-tight mb-0.5">{label}</div>
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-pine/80 leading-tight mb-0.5">{label}</div>
         <div className={`font-display text-xl font-bold leading-tight ${c.text}`}>
           {loading ? <span className="opacity-30">—</span> : value}
         </div>
-        {sub && <div className="text-[11px] text-pine/40 mt-0.5 leading-tight">{sub}</div>}
+        {sub && <div className="text-[11px] text-pine/70 mt-0.5 leading-tight">{sub}</div>}
       </div>
     </div>
   )
@@ -52,7 +52,62 @@ function KPICard({ label, value, sub, icon: Icon, color = 'pine', loading }) {
 async function fetchKPIs(module, today) {
   switch (module) {
 
-    case 'reservations':
+    case 'reservations': {
+      const [{ data: rooms }, { data: res }] = await Promise.all([
+        supabase.from('rooms').select('id').eq('is_active', true),
+        supabase.from('reservations').select('status, check_in, created_at, room_rate, source'),
+      ])
+      const all = res || []
+      const totalRooms = (rooms || []).length
+      const inhouse = all.filter(r => r.status === 'CHECKED_IN').length
+      const occupancyRate = totalRooms ? (inhouse / totalRooms) * 100 : 0
+
+      const occupiedRateRows = all.filter(r => r.status === 'CHECKED_IN')
+      const adr = occupiedRateRows.length
+        ? occupiedRateRows.reduce((s, r) => s + Number(r.room_rate || 0), 0) / occupiedRateRows.length
+        : 0
+      const revPar = adr * (occupancyRate / 100)
+
+      const inquiryCount = all.filter(r => ['QUERY', 'QUOTED'].includes(r.status)).length
+      const convertedCount = all.filter(r => ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'SETTLED'].includes(r.status)).length
+      const conversionRate = (inquiryCount + convertedCount) > 0 ? (convertedCount / (inquiryCount + convertedCount)) * 100 : 0
+
+      const channelBookings = all.filter(r => !['QUERY', 'QUOTED'].includes(r.status))
+      const isDirectSource = (source) => {
+        const s = (source || '').toUpperCase()
+        if (!s) return true
+        const otaHints = ['OTA', 'BOOKING', 'EXPEDIA', 'AGODA', 'AIRBNB', 'TRIP', 'TRAVELOKA', 'GOIBIBO', 'MAKEMYTRIP']
+        return !otaHints.some((h) => s.includes(h))
+      }
+      const directCount = channelBookings.filter(r => isDirectSource(r.source)).length
+      const directRatio = channelBookings.length > 0 ? (directCount / channelBookings.length) * 100 : 0
+
+      const cancellationBase = all.filter(r => ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'SETTLED', 'CANCELLED'].includes(r.status)).length
+      const cancelledCount = all.filter(r => r.status === 'CANCELLED').length
+      const cancellationRate = cancellationBase > 0 ? (cancelledCount / cancellationBase) * 100 : 0
+
+      const leadRows = all.filter(r => ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'SETTLED', 'CANCELLED', 'NO_SHOW'].includes(r.status) && r.check_in && r.created_at)
+      const avgLeadDays = leadRows.length > 0
+        ? leadRows.reduce((sum, r) => {
+          const created = new Date(r.created_at)
+          const checkIn = new Date(r.check_in)
+          const days = Math.floor((checkIn - created) / 86400000)
+          return sum + Math.max(0, Number.isFinite(days) ? days : 0)
+        }, 0) / leadRows.length
+        : 0
+
+      const pct = (n) => `${(Math.round(n * 10) / 10).toFixed(1)}%`
+      return [
+        { label: 'Occupancy Rate', value: pct(occupancyRate), sub: `${inhouse} of ${totalRooms} rooms occupied`, icon: BedDouble, color: occupancyRate >= 70 ? 'green' : occupancyRate >= 40 ? 'amber' : 'red' },
+        { label: 'ADR', value: fmtBDT(adr), sub: 'Average daily room rate', icon: Banknote, color: adr > 0 ? 'green' : 'stone' },
+        { label: 'RevPAR', value: fmtBDT(revPar), sub: 'Revenue per available room', icon: TrendingUp, color: revPar > 0 ? 'pine' : 'stone' },
+        { label: 'Booking Conversion Rate', value: pct(conversionRate), sub: `${convertedCount} converted from ${inquiryCount + convertedCount} leads`, icon: ArrowUpRight, color: conversionRate >= 60 ? 'green' : conversionRate >= 35 ? 'amber' : 'red' },
+        { label: 'Direct Booking Ratio', value: pct(directRatio), sub: `${directCount} direct of ${channelBookings.length} bookings`, icon: CalendarCheck, color: directRatio >= 60 ? 'green' : directRatio >= 40 ? 'amber' : 'red' },
+        { label: 'Cancellation Rate', value: pct(cancellationRate), sub: `${cancelledCount} cancelled bookings`, icon: cancellationRate > 20 ? AlertTriangle : CheckCircle2, color: cancellationRate > 20 ? 'red' : cancellationRate > 10 ? 'amber' : 'green' },
+        { label: 'Lead Time', value: `${Math.round(avgLeadDays)} days`, sub: leadRows.length > 0 ? `Avg booking window (${leadRows.length} bookings)` : 'No booking history', icon: Clock, color: avgLeadDays >= 10 ? 'blue' : avgLeadDays >= 3 ? 'pine' : 'stone' },
+      ]
+    }
+
     case 'dashboard': {
       const [{ data: rooms }, { data: fc }, { data: pay }, { data: res }] = await Promise.all([
         supabase.from('rooms').select('id, status, hk_status').eq('is_active', true),
