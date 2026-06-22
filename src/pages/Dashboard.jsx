@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtDate, todayISO, STATUS_COLORS } from '../lib/helpers'
-import { BedDouble, Sparkles, Brush, Wrench, DoorOpen, RefreshCw } from 'lucide-react'
+import { BedDouble, Sparkles, Brush, Wrench, DoorOpen, RefreshCw, Clock, XCircle } from 'lucide-react'
 import KPICards from '../components/KPICards.jsx'
 
 const HK_STATES = ['Clean', 'Dirty', 'Inspected', 'Out of Order']
@@ -15,13 +15,19 @@ const HK_ICON = { 'Clean': Sparkles, 'Inspected': BedDouble, 'Dirty': Brush, 'Ou
 const OCC_STYLE = { OCCUPIED: 'bg-pine text-white', ARRIVAL: 'bg-amber text-white', DEPARTURE: 'bg-sky-600 text-white', VACANT: 'bg-leaf/50 text-pine' }
 const OCC_LABEL = { OCCUPIED: 'In-house', ARRIVAL: 'Arrival', DEPARTURE: 'Departure', VACANT: 'Vacant' }
 
-export default function Dashboard({ openReservation }) {
+export default function Dashboard({ openReservation, userName, role, isAdmin }) {
   const [arrivals, setArrivals] = useState([])
   const [departures, setDepartures] = useState([])
   const [rooms, setRooms] = useState([])
   const [occ, setOcc] = useState({})
   const [boardBusy, setBoardBusy] = useState(false)
+  const [dayBusy, setDayBusy] = useState(false)
+  const [foCloseRow, setFoCloseRow] = useState(null)
+  const [dayMsg, setDayMsg] = useState('')
   const today = todayISO()
+  const canCloseFrontDay = isAdmin || role === 'MANAGER' || role === 'FRONT_OFFICE'
+  const canOpenDay = role === 'SUPERUSER'
+  const flashDay = (m) => { setDayMsg(m); setTimeout(() => setDayMsg(''), 4000) }
 
   const loadBoard = async () => {
     setBoardBusy(true)
@@ -67,7 +73,34 @@ export default function Dashboard({ openReservation }) {
     }
     load()
     loadBoard()
+    loadFrontOfficeClose()
   }, [])
+
+  const loadFrontOfficeClose = async () => {
+    const { data } = await supabase.from('day_closes').select('*').eq('close_date', today).eq('type', 'RESERVATION').maybeSingle()
+    setFoCloseRow(data || null)
+  }
+
+  const closeFrontOfficeDay = async () => {
+    if (!canCloseFrontDay) { flashDay('Front Office day-close requires Front Office, Manager, Admin or SUPERUSER access.'); return }
+    setDayBusy(true)
+    const payload = { close_date: today, type: 'RESERVATION', closed_by: userName, closed_at: new Date().toISOString() }
+    const { error: delErr } = await supabase.from('day_closes').delete().eq('close_date', today).eq('type', 'RESERVATION')
+    if (delErr) { setDayBusy(false); flashDay(delErr.message); return }
+    const { error } = await supabase.from('day_closes').insert(payload)
+    setDayBusy(false)
+    if (error) flashDay(error.message)
+    else { flashDay(`Front Office day closed for ${today}.`); loadFrontOfficeClose() }
+  }
+
+  const openFrontOfficeDay = async () => {
+    if (!canOpenDay) { flashDay('Only SUPERUSER can open a closed day.'); return }
+    setDayBusy(true)
+    const { error } = await supabase.from('day_closes').delete().eq('close_date', today).eq('type', 'RESERVATION')
+    setDayBusy(false)
+    if (error) flashDay(error.message)
+    else { flashDay(`Front Office day opened for ${today}.`); loadFrontOfficeClose() }
+  }
 
   const cycleHK = async (room) => {
     const idx = HK_STATES.indexOf(room.hk_status || 'Clean')
@@ -104,6 +137,26 @@ export default function Dashboard({ openReservation }) {
       <h1 className="font-display text-xl sm:text-2xl font-bold text-pine mb-1">Front Office — {fmtDate(today)}</h1>
       <p className="text-sm text-pine/60 mb-6">The day at a glance.</p>
       <KPICards module="dashboard" />
+      {dayMsg && <div className="mb-4 px-4 py-2 rounded-lg bg-forest/10 text-forest text-sm font-medium">{dayMsg}</div>}
+      <div className="card p-4 mb-6 border border-leaf/70">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <div className="font-display font-semibold text-pine flex items-center gap-2"><Clock size={15} className="text-amber" /> Front Office Day Close</div>
+            <p className="text-xs text-pine/60 mt-1">This closes Front Office (Reservation) day only.</p>
+            {foCloseRow && <p className="text-xs text-pine/50 mt-1">Closed by {foCloseRow.closed_by || '—'} at {fmtDate(foCloseRow.closed_at || foCloseRow.created_at || today)}.</p>}
+          </div>
+          <div className="flex items-center gap-2">
+            {canOpenDay && foCloseRow && (
+              <button className="btn-ghost !py-1 text-red-600" onClick={openFrontOfficeDay} disabled={dayBusy}>
+                <XCircle size={14} /> Day Open
+              </button>
+            )}
+            <button className="btn-amber !py-1" onClick={closeFrontOfficeDay} disabled={dayBusy}>
+              <Clock size={14} /> Close Day
+            </button>
+          </div>
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <List title="Expected arrivals" rows={arrivals} empty="No arrivals expected today." />
         <List title="Due to check out" rows={departures} empty="No departures due today." />
