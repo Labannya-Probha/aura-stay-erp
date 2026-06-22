@@ -1,8 +1,11 @@
 {
-  "name": "novem-erp",
+  "name": "Aura-Stay-erp",
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
