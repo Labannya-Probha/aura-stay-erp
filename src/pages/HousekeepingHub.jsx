@@ -41,6 +41,7 @@ export default function HousekeepingHub({ role, isAdmin }) {
     <div>
       <h1 className="font-display text-2xl font-bold text-pine mb-1">Housekeeping Hub</h1>
       <p className="text-sm text-pine/60 mb-5">Track and update the cleaning status of every room.</p>
+      <KPICards module="housekeeping" />
       {msg && <div className="mb-4 px-4 py-2 rounded-lg bg-red-50 text-red-600 text-sm">{msg}</div>}
       {!canEdit && <div className="mb-4 px-4 py-2 rounded-lg bg-amber/10 text-amber text-sm">Read-only — your role can view housekeeping status but not change it.</div>}
 
