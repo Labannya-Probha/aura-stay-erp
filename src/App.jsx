@@ -256,7 +256,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
         </div>
       </div>
 
-      <main className="flex-1 lg:ml-60 p-4 pt-20 lg:pt-8 lg:p-8 max-w-[1400px] w-full">
+      <main className="flex-1 min-w-0 lg:ml-60 p-4 pt-20 lg:pt-8 lg:p-8 w-full overflow-x-hidden">
         {company?.maintenance_mode && (
           <div className="no-print" style={{position:'sticky',top:0,zIndex:50,background:'#b91c1c',
                color:'#fff',textAlign:'center',padding:'6px',fontWeight:600,fontSize:13,
