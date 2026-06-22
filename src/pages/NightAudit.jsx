@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtBDT, fmtDate, todayISO, rateFor, computeCharge, exportXLSX } from '../lib/helpers'
 import PrintPortal from '../components/PrintPortal.jsx'
-import { MoonStar, BedDouble, UserX, CheckCircle2, FileDown, BookOpenCheck, Printer } from 'lucide-react'
-import KPICards from '../components/KPICards.jsx'
+import { MoonStar, BedDouble, UserX, CheckCircle2, FileDown, BookOpenCheck, Printer, XCircle } from 'lucide-react'
+
 const CASH_ACC = { CASH: '1010', BKASH: '1020', NAGAD: '1020', CARD: '1030', BANK: '1030', OTHER: '1030' }
 const REV_ACC = { ROOM: '4100', RESTAURANT: '4200', TEA: '4300', PICKLE: '4300', SPORTS: '4300', LAUNDRY: '4400', OTHER: '4400' }
 
 export default function NightAudit({ userName, isAdmin, role }) {
   const canCloseDay = isAdmin || role === 'SUPERUSER'
+  const canOpenDay = role === 'SUPERUSER'
   const [auditDate, setAuditDate] = useState(todayISO())
   const [inHouse, setInHouse] = useState([])
   const [noShows, setNoShows] = useState([])
@@ -17,6 +18,7 @@ export default function NightAudit({ userName, isAdmin, role }) {
   const [summary, setSummary] = useState(null)
   const [audits, setAudits] = useState([])
   const [existing, setExisting] = useState(null)
+  const [closeMarks, setCloseMarks] = useState([])
   const [company, setCompany] = useState(null)
   const [printAudit, setPrintAudit] = useState(null)
   const [makeJV, setMakeJV] = useState(false)
@@ -27,16 +29,18 @@ export default function NightAudit({ userName, isAdmin, role }) {
   useEffect(() => { supabase.from('company_settings').select('*').limit(1).maybeSingle().then(({ data }) => setCompany(data)) }, [])
 
   const loadAll = async () => {
-    const [ih, ns, fc, tc, na, ex] = await Promise.all([
+    const [ih, ns, fc, tc, na, ex, dc] = await Promise.all([
       supabase.from('reservations').select('*, reservation_rooms(*, rooms(*))').eq('status', 'CHECKED_IN'),
       supabase.from('reservations').select('*, guests:primary_guest_id(full_name)').eq('status', 'CONFIRMED').lt('check_in', auditDate),
       supabase.from('folio_charges').select('reservation_id, charge_type').eq('charge_date', auditDate).eq('charge_type', 'ROOM'),
       supabase.from('tax_config').select('*'),
       supabase.from('night_audits').select('*').order('audit_date', { ascending: false }).limit(15),
       supabase.from('night_audits').select('*').eq('audit_date', auditDate).maybeSingle(),
+      supabase.from('day_closes').select('*').eq('close_date', auditDate).in('type', ['RESERVATION', 'RESTAURANT']),
     ])
     setInHouse(ih.data || []); setNoShows(ns.data || []); setPostedToday(fc.data || [])
     setTaxConfig(tc.data || []); setAudits(na.data || []); setExisting(ex.data || null)
+    setCloseMarks(dc.data || [])
     await buildSummary()
   }
 
@@ -137,11 +141,50 @@ export default function NightAudit({ userName, isAdmin, role }) {
         ? await supabase.from('night_audits').update({ ...payload, performed_at: new Date().toISOString() }).eq('id', existing.id)
         : await supabase.from('night_audits').insert(payload)
       if (error) throw error
+
+      const dayStart = `${auditDate}T00:00:00+06:00`
+      const dayEnd = `${auditDate}T23:59:59+06:00`
+      const [{ data: rest }, { data: resv }] = await Promise.all([
+        supabase.from('pos_orders').select('total,status').is('reservation_id', null).gte('created_at', dayStart).lte('created_at', dayEnd),
+        supabase.from('pos_orders').select('total,status').not('reservation_id', 'is', null).gte('created_at', dayStart).lte('created_at', dayEnd),
+      ])
+      const restSettled = (rest || []).filter((o) => o.status === 'SETTLED')
+      const resCharged = (resv || []).filter((o) => o.status === 'CHARGED_TO_ROOM')
+      await supabase.from('day_closes').delete().eq('close_date', auditDate).in('type', ['RESERVATION', 'RESTAURANT'])
+      const { error: dcErr } = await supabase.from('day_closes').insert([
+        {
+          close_date: auditDate,
+          closed_by: userName,
+          closed_at: new Date().toISOString(),
+          type: 'RESTAURANT',
+          settled_amount: restSettled.reduce((a, o) => a + Number(o.total || 0), 0),
+          settled_orders: restSettled.length,
+        },
+        {
+          close_date: auditDate,
+          closed_by: userName,
+          closed_at: new Date().toISOString(),
+          type: 'RESERVATION',
+          charged_amount: resCharged.reduce((a, o) => a + Number(o.total || 0), 0),
+          charged_orders: resCharged.length,
+        },
+      ])
+      if (dcErr) throw dcErr
+
       await supabase.from('company_settings').update({ last_audit_date: auditDate }).gt('id', 0)
       flash(`Night audit for ${fmtDate(auditDate)} ${existing ? 'updated' : 'closed'}.${jvId ? ' Journal voucher posted.' : ''}`)
       await loadAll()
     } catch (e) { flash(e.message) }
     setBusy(false)
+  }
+
+  const openDay = async () => {
+    if (!canOpenDay) { flash('Only SUPERUSER can open a closed day.'); return }
+    setBusy(true)
+    const { error } = await supabase.from('day_closes').delete().eq('close_date', auditDate).in('type', ['RESERVATION', 'RESTAURANT'])
+    setBusy(false)
+    if (error) flash(error.message)
+    else { flash(`Day opened for ${fmtDate(auditDate)} — Reservation and Restaurant.`); await loadAll() }
   }
 
   const exportSummary = () => {
@@ -244,7 +287,12 @@ export default function NightAudit({ userName, isAdmin, role }) {
                 Also post a balanced journal voucher into Accounting
               </label>
               {canCloseDay ? (
-                <button className="btn-primary mt-3" disabled={busy} onClick={closeDay}><MoonStar size={15} /> {existing ? 'Re-close day' : 'Close the day'}</button>
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
+                  <button className="btn-primary" disabled={busy} onClick={closeDay}><MoonStar size={15} /> {existing ? 'Re-close day' : 'Close the day'}</button>
+                  {canOpenDay && closeMarks.length > 0 && (
+                    <button className="btn-ghost text-red-600" disabled={busy} onClick={openDay}><XCircle size={15} /> Day Open</button>
+                  )}
+                </div>
               ) : (
                 <p className="text-xs text-pine/50 mt-3">Day-close requires Admin or SUPERUSER access.</p>
               )}
