@@ -29,7 +29,9 @@
     font-family: 'Inter', sans-serif;
     font-size: 14.5px;
     line-height: 1.5;
+    overflow-x: hidden;
   }
+  #root { width: 100%; max-width: 100%; }
   h1, h2, h3, h4 { line-height: 1.25; }
   /* Consistent vertical rhythm for headings */
   h1 { letter-spacing: -0.01em; }
