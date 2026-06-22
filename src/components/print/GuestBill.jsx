@@ -32,12 +32,12 @@ function takaInWords(amount) {
 }
 
 /* ---------- palette ---------- */
-const FOREST = '#2E7D32'
-const PINE = '#1B4D2E'
+const FOREST = 'var(--print-accent, #2E7D32)'
+const PINE = 'var(--print-primary, #1B4D2E)'
 const GOLD = '#D4A017'
 const INK = '#1f2937'
 const MUTE = '#6b7280'
-const LINE = 'rgba(27,77,46,0.18)'
+const LINE = 'var(--print-line, rgba(27,77,46,0.18))'
 
 export default function GuestBill({
   charges = [], line_snapshot = [], totals = {}, paid = 0, due = 0,
@@ -88,13 +88,17 @@ export default function GuestBill({
   }
 
   return (
-    <div className="gb-wrap" style={{
+    <div className="gb-wrap print-a4-doc" style={{
       fontFamily: "'Inter', sans-serif", color: INK, background: '#fff',
-      maxWidth: 794, margin: '0 auto', padding: '16px 22px', lineHeight: 1.35,
+      maxWidth: '186mm', margin: '0 auto', padding: '3mm 4mm 5mm', lineHeight: 1.35,
     }}>
       <style>{`
         .gb-wrap, .gb-wrap * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
-        @media print { .gb-wrap { padding: 0 !important; max-width: 100% !important; } }
+        @media print {
+          .gb-wrap { padding: 0 !important; max-width: 100% !important; }
+          .gb-wrap .break-avoid { page-break-inside: avoid; break-inside: avoid; }
+          .gb-wrap .w-auto-table { table-layout: auto !important; }
+        }
       `}</style>
 
       {/* ═══ 1. COMPANY HEADER ═══ */}
@@ -132,7 +136,7 @@ export default function GuestBill({
       </section>
 
       {/* ═══ 3. GUEST INFO — 2-COLUMN BOX ═══ */}
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: `1px solid ${LINE}`, borderRadius: 8, overflow: 'hidden', marginBottom: 11 }}>
+      <section className="break-avoid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: `1px solid ${LINE}`, borderRadius: 8, overflow: 'hidden', marginBottom: 11 }}>
         <div style={{ padding: '9px 14px', borderRight: `1px solid ${LINE}`, background: 'rgba(46,125,50,0.03)' }}>
           <div style={sectionTitle}>Billed To</div>
           <Field k={buyer.isCompany ? 'Company' : 'Guest'} v={buyer.name} strong />
@@ -156,7 +160,7 @@ export default function GuestBill({
       {/* ═══ 4. GUEST TOTAL BILLING HISTORY — matches the on-screen folio table exactly ═══ */}
       <section>
         <div style={sectionTitle}>Guest Total Billing History</div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', border: `1px solid ${LINE}` }}>
+        <table className="w-auto-table" style={{ width: '100%', borderCollapse: 'collapse', border: `1px solid ${LINE}` }}>
           <thead>
             <tr>
               <th style={{ ...th, width: 78 }}>Date</th>
@@ -227,7 +231,7 @@ export default function GuestBill({
       </section>
 
       {/* ═══ 7. SIGNATURE LINES ═══ */}
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 36, marginBottom: 18, pageBreakInside: 'avoid' }}>
+      <section className="print-signature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '20px', marginBottom: 18, pageBreakInside: 'avoid' }}>
         {['Prepared By', 'Authorized By', 'Guest Signature'].map((label) => (
           <div key={label} style={{ textAlign: 'center' }}>
             <div style={{ 
@@ -244,7 +248,7 @@ export default function GuestBill({
       </section>
 
       {/* ═══ 8. FOOTER ═══ */}
-      <footer id="print-footer" style={{ borderTop: `1px solid ${LINE}`, paddingTop: 9, textAlign: 'center', pageBreakInside: 'avoid' }}>
+      <footer id="print-footer" className="print-avoid-break" style={{ borderTop: `1px solid ${LINE}`, paddingTop: 9, textAlign: 'center', pageBreakInside: 'avoid' }}>
         <div style={{ fontSize: 11.5, fontWeight: 600, color: FOREST }}>Thank you for staying with {co.name}.</div>
         <div style={{ fontSize: 9, color: MUTE, marginTop: 5, letterSpacing: '0.04em' }}>
           Powered by <span style={{ fontWeight: 700, color: PINE }}>{co.software || 'Aura Stay'}</span>
