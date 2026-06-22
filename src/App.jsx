@@ -20,8 +20,8 @@ import AccountingHub from './pages/AccountingHub.jsx'
 import HrOffice from './pages/HrOffice.jsx'
 import NightAudit from './pages/NightAudit.jsx'
 import ReportsHub from './pages/ReportsHub.jsx'
-import Settings, { SETTINGS_SECTIONS } from './pages/Settings.jsx'
-import CmsPortal, { CMS_ENTITY_TABS } from './pages/CmsPortal.jsx'
+import Settings from './pages/Settings.jsx'
+import CmsPortal from './pages/CmsPortal.jsx'
 import TaskManagement from './pages/TaskManagement.jsx'
 import {
   Leaf, LayoutDashboard, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
@@ -71,6 +71,27 @@ const NAV_GROUPS = [
 ]
 
 const ALL_NAV_IDS = NAV_GROUPS.flatMap((g) => g.items.map((n) => n.id))
+const SIDEBAR_SETTINGS_SECTIONS = [
+  { id: 'my-account', label: 'My Account', adminOnly: false, superuserOnly: false },
+  { id: 'branding', label: 'Branding', adminOnly: true, superuserOnly: false },
+  { id: 'tax', label: 'Tax Rates', adminOnly: false, superuserOnly: false },
+  { id: 'allowance', label: 'Allowance Configuration', adminOnly: false, superuserOnly: true },
+  { id: 'role-permissions', label: 'Role Permissions', adminOnly: false, superuserOnly: true },
+  { id: 'staff', label: 'Staff Management', adminOnly: false, superuserOnly: false },
+  { id: 'data-system', label: 'Data & System', adminOnly: false, superuserOnly: true },
+]
+const SIDEBAR_CMS_ENTITY_TABS = [
+  { id: 'companies', label: 'Companies' },
+  { id: 'agencies', label: 'Agencies' },
+  { id: 'shareholders', label: 'Shareholders' },
+  { id: 'vendors', label: 'Vendors' },
+  { id: 'inv_items', label: 'Inventory Items' },
+  { id: 'menu_categories', label: 'Menu Categories' },
+  { id: 'menu_items', label: 'Menu Items' },
+  { id: 'facility_items', label: 'Facility Items' },
+  { id: 'chart_of_accounts', label: 'Chart of Accounts' },
+  { id: 'rooms', label: 'Rooms' },
+]
 
 const firstAccessiblePath = (role, privileges) => {
   for (const id of ALL_NAV_IDS) {
@@ -147,12 +168,12 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
                     }
                     const isOpen = openSystemMenu === n.id
                     const nested = n.id === 'settings'
-                      ? SETTINGS_SECTIONS.filter((s) => {
+                      ? SIDEBAR_SETTINGS_SECTIONS.filter((s) => {
                         if (!s.adminOnly && !s.superuserOnly) return true
                         if (s.adminOnly) return isAdmin || role === 'SUPERUSER'
                         return role === 'SUPERUSER'
                       })
-                      : CMS_ENTITY_TABS
+                      : SIDEBAR_CMS_ENTITY_TABS
                     return (
                       <div key={n.id} className="space-y-1">
                         <button
