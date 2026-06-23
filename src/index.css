@@ -1,6 +1,5 @@
 /* ============================================================
-   FONTS — Fraunces (display) + IBM Plex Sans (body) +
-           IBM Plex Mono (money) + Inter (legacy fallback)
+   FONTS — Fraunces (display) + Inter (body) + IBM Plex Mono (money)
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
@@ -56,7 +55,7 @@
       radial-gradient(900px  700px at 112% 0%,  rgba(208,169,104,0.08), transparent 52%),
       linear-gradient(180deg, #FBFAF8 0%, #F7F5F2 100%);
     min-height: 100vh;
-    font-family: 'IBM Plex Sans', 'Inter', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 14.5px;
     line-height: 1.5;
     overflow-x: hidden;
