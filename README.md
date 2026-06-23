@@ -9,10 +9,37 @@ This repository includes workspace-level VS Code settings in `.vscode/settings.j
 - If you open this repo in VS Code, these settings are applied automatically.
 - Please keep this file committed so the whole team sees the same lint behavior.
 
-## Supabase security hardening notes
+## Supabase setup — required steps
 
-- This repo now includes a DB migration to harden exposed `SECURITY DEFINER` functions in the `public` schema.
-- Supabase **Leaked password protection** is a hosted Auth setting and must be enabled in the Supabase dashboard:
-  - Go to **Authentication → Providers → Email**
-  - Enable **Leaked password protection**
-  - Save changes
+### 1. Database migrations
+
+Run all SQL files in the `migrations/` directory in numbered order against your Supabase project (SQL Editor → New query or via Supabase CLI).
+
+Migration `010_ensure_handle_new_user_trigger.sql` is critical: it creates the `handle_new_user` trigger that links every new `auth.users` record to a matching row in `public.app_users`.
+
+### 2. Edge Functions
+
+The staff-creation flow uses a Supabase Edge Function that bypasses the public sign-up restriction (recommended to keep disabled for ERP systems).
+
+Deploy the functions with the Supabase CLI:
+
+```bash
+supabase functions deploy admin-create-user
+supabase functions deploy admin-reset-password
+```
+
+Or deploy them from the Supabase Dashboard → Edge Functions.
+
+**Required secrets** (set in Dashboard → Edge Functions → Secrets, or via CLI):
+
+```bash
+supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+```
+
+`SUPABASE_URL` and `SUPABASE_ANON_KEY` are injected automatically by Supabase.
+
+### 3. Authentication settings
+
+- **Disable public sign-ups** — Authentication → Providers → Email → disable "Enable email sign-ups". All accounts are created by admins through the Settings → Staff Management screen.
+- **Enable Leaked password protection** — Authentication → Providers → Email → enable "Leaked password protection".
+
