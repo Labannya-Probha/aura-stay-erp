@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtBDT, fmtDate, todayISO, rateFor, computeCharge, applyRounding } from '../lib/helpers'
+import { buildWorkflowDescription, updateDescriptionStage } from '../lib/aiTaskRouter'
 import PrintPortal from '../components/PrintPortal.jsx'
 import KPICards from '../components/KPICards.jsx'
 import { PosReceipt, KitchenTicket } from '../components/print/PosDocs.jsx'
@@ -10,6 +11,7 @@ import { Plus, Minus, Trash2, Printer, ChefHat, Banknote, BedDouble, Search, Sav
 
 const TABS = ['Orders', 'Menu', 'Day Close']
 const PAYMENT_METHODS = ['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER']
+const RESTAURANT_WORKFLOW = ['REQUESTED', 'CONFIRMED', 'ACCEPTED', 'KOT_GENERATED', 'PREPARING', 'READY', 'SERVED']
 
 // Cash rounding logic: >= 0.50 round up, < 0.50 round down
 const applyCashRounding = (amount) => {
@@ -360,6 +362,7 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
   const printKot = async (o) => {
     const { data: oi } = await supabase.from('pos_order_items').select('*').eq('order_id', o.id)
     setPrintDoc({ type: 'KOT', order: o, items: oi || [] })
+    await syncGuestOrderTask(o, 'KOT_GENERATED')
   }
   const printMushak = async (o) => {
     const { data: inv } = await supabase.from('invoices').select('*').eq('id', o.invoice_id).single()
@@ -375,6 +378,29 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
     if (o.invoice_id) await supabase.from('invoices').delete().eq('id', o.invoice_id)
     await supabase.from('pos_orders').update({ status: 'CANCELLED', notes: ((o.notes || '') + ' [VOIDED by admin]').trim() }).eq('id', o.id)
     flash(`${o.order_no} voided — folio charge, payment and Mushak entry reversed.`); load()
+  }
+  const syncGuestOrderTask = async (order, nextStage, nextStatus = 'IN_PROGRESS') => {
+    const ref = `POS_ORDER_ID:${order.id}`
+    const { data: linkedTasks } = await supabase
+      .from('tasks')
+      .select('id, description')
+      .eq('source', 'GUEST_POS_ORDER')
+      .ilike('description', `%${ref}%`)
+      .in('status', ['OPEN', 'IN_PROGRESS'])
+      .limit(10)
+    if (!linkedTasks?.length) return
+    for (const row of linkedTasks) {
+      const patch = {
+        description: updateDescriptionStage(row.description || '', nextStage),
+        status: nextStatus,
+        updated_at: new Date().toISOString(),
+      }
+      if (nextStatus === 'DONE') {
+        patch.completed_at = new Date().toISOString()
+        patch.completed_by = userName || 'Restaurant'
+      }
+      await supabase.from('tasks').update(patch).eq('id', row.id)
+    }
   }
 
   const chip = { OPEN: 'bg-amber/20 text-amber', SETTLED: 'bg-forest/15 text-forest', CHARGED_TO_ROOM: 'bg-pine/15 text-pine', CANCELLED: 'bg-red-100 text-red-600' }
@@ -413,6 +439,9 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
                   <div className="flex justify-end gap-2">
                     <button className="btn-ghost !py-1 !px-2 text-forest" onClick={() => printReceipt(o)} title="Print receipt"><Receipt size={14} /></button>
                     {o.status !== 'CANCELLED' && (<button className="btn-ghost !py-1 !px-2 text-amber" onClick={() => printKot(o)} title="Print KOT"><ChefHat size={14} /></button>)}
+                    {o.status !== 'CANCELLED' && (<button className="btn-ghost !py-1 !px-2 text-sky-700" onClick={async () => { await syncGuestOrderTask(o, 'ACCEPTED'); flash(`Workflow updated: ${o.order_no} accepted.`) }} title="Mark accepted">Accept</button>)}
+                    {o.status !== 'CANCELLED' && (<button className="btn-ghost !py-1 !px-2 text-pine" onClick={async () => { await syncGuestOrderTask(o, 'READY'); flash(`Workflow updated: ${o.order_no} ready.`) }} title="Mark ready">Ready</button>)}
+                    {o.status !== 'CANCELLED' && (<button className="btn-ghost !py-1 !px-2 text-forest" onClick={async () => { await syncGuestOrderTask(o, 'SERVED', 'DONE'); flash(`Workflow updated: ${o.order_no} served.`) }} title="Mark served">Served</button>)}
                     {o.invoice_id && (<button className="btn-ghost !py-1 !px-2 text-pine" onClick={() => printMushak(o)} title="Print Mushak-6.3"><FileText size={14} /></button>)}
                     {canEdit(o) && (<button className="btn-ghost !py-1 !px-2 text-forest" onClick={() => resumeOrder(o)} title="Edit order">Edit</button>)}
                     {isAdmin && o.status === 'SETTLED' && (<button className="btn-ghost !py-1 !px-2 text-red-500" onClick={() => voidOrder(o)} title="Void order"><XCircle size={14} /></button>)}
@@ -597,13 +626,19 @@ export function GuestPosKiosk() {
 
         await supabase.from('tasks').insert({
           title: `New guest food order · ${order.order_no || 'POS'}`,
-          description: [
+          description: buildWorkflowDescription([
             `Guest: ${guestName || '—'}`,
             `Room: ${roomNo || '—'}`,
             `Reservation: ${reservationId || '—'}`,
             `Total: ${fmtBDT(total)}`,
             `Source: QR/Kiosk POS`,
-          ].join('\n'),
+          ].join('\n'), {
+            department: 'RESTAURANT',
+            stage: 'REQUESTED',
+            workflow: RESTAURANT_WORKFLOW,
+            intent: 'Guest POS kiosk order',
+            reference: `POS_ORDER_ID:${order.id}`,
+          }),
           priority: 'HIGH',
           status: 'OPEN',
           source: 'GUEST_POS_ORDER',
