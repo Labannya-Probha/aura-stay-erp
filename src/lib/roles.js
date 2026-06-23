@@ -1,9 +1,9 @@
 export const ROLES = ['SUPERUSER', 'ADMIN', 'MANAGER', 'FRONT_OFFICE', 'RESTAURANT', 'STORE', 'ACCOUNTS', 'HR', 'HOUSEKEEPING']
 
 export const ROLE_LABELS = {
-  SUPERUSER: 'Superuser Admin', ADMIN: 'Administrator', MANAGER: 'Manager',
+  SUPERUSER: 'Superuser', ADMIN: 'Administrator', MANAGER: 'Manager',
   FRONT_OFFICE: 'Front Office', RESTAURANT: 'Restaurant', STORE: 'Store',
-  ACCOUNTS: 'Accounts', HR: 'HR & Admin', HOUSEKEEPING: 'Housekeeping',
+  ACCOUNTS: 'Accounts', HR: 'HR Officer', HOUSEKEEPING: 'Housekeeping',
 }
 
 // Fallback map — used ONLY if role_privileges hasn't loaded yet (brief window
