@@ -1,4 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* ============================================================
+   FONTS — Fraunces (display) + IBM Plex Sans (body) +
+           IBM Plex Mono (money) + Inter (legacy fallback)
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,11 +10,23 @@
 
 /* ============================================================
    AURA STAY — MINIMAL LUXE ERP DESIGN SYSTEM
+   Clean, high-readability UI for dashboards, tables, and forms.
    ============================================================ */
 
 @layer base {
   :root {
-    /* ── Design tokens ── */
+    /* ── Tailwind color bridge (RGB channels, no commas) ──────────────
+       Required by the rgb(var(--x) / <alpha-value>) pattern in
+       tailwind.config.js. Without these, ALL brand color classes
+       (text-forest, bg-pine, border-leaf …) render as transparent.   */
+    --color-forest-rgb: 46 125 50;    /* #2E7D32 — primary forest green  */
+    --color-pine-rgb:   27 77 46;     /* #1B4D2E — deep pine             */
+    --color-ink-rgb:    23 23 23;     /* #171717 — near-black text       */
+    --color-paper-rgb:  247 245 242;  /* #F7F5F2 — warm off-white bg     */
+    --color-leaf-rgb:   56 142 60;    /* #388E3C — mid leaf green        */
+    --color-amber-rgb:  212 160 23;   /* #D4A017 — gold accent           */
+
+    /* ── Design tokens ───────────────────────────────────────────────── */
     --brand-color:        #1F6F78;
     --card-bg:            #FFFFFF;
     --surface-muted:      #F1EEE9;
@@ -20,13 +36,13 @@
     --interactive-glow:   rgba(31, 111, 120, 0.16);
     --interactive-shadow: 0 16px 36px rgba(23, 23, 23, 0.10);
 
-    /* ── Motion system (FIX 1: merged from utilities :root) ── */
-    --aura-enter-duration: 0.75s;
-    --aura-enter-ease:     cubic-bezier(0.22, 1, 0.36, 1);
-    --aura-stagger-step:   30ms;
+    /* ── Motion system ───────────────────────────────────────────────── */
+    --aura-enter-duration:  0.75s;
+    --aura-enter-ease:      cubic-bezier(0.22, 1, 0.36, 1);
+    --aura-stagger-step:    30ms;
     --aura-loader-duration: 3s;
 
-    /* FIX 2: alias instead of duplicate value */
+    /* Aliases — single source of truth, no duplicate hex values */
     --aura-brand:      var(--brand-color);
     --aura-brand-soft: var(--interactive-glow);
   }
@@ -35,18 +51,18 @@
     @apply text-ink font-body antialiased;
     background: #F7F5F2;
     background-image:
-      radial-gradient(1000px 650px at 8% -10%, rgba(31,111,120,0.08), transparent 58%),
-      radial-gradient(900px 700px at 112% 0%, rgba(208,169,104,0.08), transparent 52%),
+      radial-gradient(1000px 650px at 8% -10%,  rgba(31,111,120,0.08), transparent 58%),
+      radial-gradient(900px  700px at 112% 0%,  rgba(208,169,104,0.08), transparent 52%),
       linear-gradient(180deg, #FBFAF8 0%, #F7F5F2 100%);
     min-height: 100vh;
-    font-family: 'Inter', sans-serif;
+    font-family: 'IBM Plex Sans', 'Inter', sans-serif;
     font-size: 14.5px;
     line-height: 1.5;
     overflow-x: hidden;
     background-size: 140% 140%;
   }
 
-  /* FIX 3: gate body animation at declaration — no need for !important override */
+  /* Gate animation — no !important override needed in reduced-motion block */
   @media (prefers-reduced-motion: no-preference) {
     body {
       animation: aura-bg-drift 18s ease-in-out infinite alternate;
@@ -58,15 +74,22 @@
   h1 { letter-spacing: -0.01em; }
 
   @keyframes aura-bg-drift {
-    0%   { background-position: 0% 0%, 100% 0%, 0% 0%; }
+    0%   { background-position: 0% 0%,  100% 0%, 0% 0%; }
     100% { background-position: 8% 10%, 92% -4%, 0% 0%; }
   }
 }
 
+/* ============================================================
+   COMPONENTS
+   ============================================================ */
 @layer components {
-  .money { @apply font-money tabular-nums; font-variant-numeric: tabular-nums; }
 
-  /* ---------- CARD ---------- */
+  .money {
+    @apply font-money tabular-nums;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── CARD ──────────────────────────────────────────────────────── */
   .card {
     background: #FFFFFF;
     border: 1px solid var(--border-color);
@@ -83,7 +106,12 @@
     pointer-events: none;
     opacity: 0;
     transition: opacity .2s ease;
-    background: linear-gradient(120deg, rgba(31,111,120,0.00) 30%, rgba(31,111,120,0.06) 55%, rgba(31,111,120,0.00) 80%);
+    background: linear-gradient(
+      120deg,
+      rgba(31,111,120,0.00) 30%,
+      rgba(31,111,120,0.06) 55%,
+      rgba(31,111,120,0.00) 80%
+    );
   }
   .card:hover {
     transform: translateY(-2px);
@@ -92,13 +120,18 @@
   }
   .card:hover::after { opacity: 1; }
 
+  /* ── FORM LABELS ───────────────────────────────────────────────── */
   .label {
     @apply block text-pine/70 mb-1.5;
-    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
+  /* Reserve 2 lines so inputs align in multi-column grids */
   .grid .label, .flex .label { min-height: 2.4em; }
 
-  /* ---------- FORM CONTROLS ---------- */
+  /* ── FORM CONTROLS — shared height baseline ────────────────────── */
   .input, .btn-primary, .btn-ghost, .btn-amber {
     height: 38px;
     box-sizing: border-box;
@@ -119,17 +152,29 @@
     background: #fff;
     transform: translateY(-1px);
   }
-  textarea.input { height: auto; min-height: 76px; padding: 9px 12px; line-height: 1.5; }
+  /* textarea overrides fixed height */
+  textarea.input {
+    height: auto;
+    min-height: 76px;
+    padding: 9px 12px;
+    line-height: 1.5;
+  }
   select.input { padding-right: 8px; }
 
-  /* ---------- BUTTONS ---------- */
+  /* ── BUTTONS ───────────────────────────────────────────────────── */
   .btn-primary, .btn-ghost, .btn-amber {
-    @apply inline-flex items-center justify-center gap-2 font-semibold disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 font-semibold
+           disabled:opacity-40 disabled:cursor-not-allowed;
     padding: 0 16px;
     font-size: 13.5px;
     border-radius: 9px;
     white-space: nowrap;
-    transition: transform .16s ease, box-shadow .16s ease, filter .16s ease, background-color .16s ease, border-color .16s ease;
+    transition:
+      transform      .16s ease,
+      box-shadow     .16s ease,
+      filter         .16s ease,
+      background-color .16s ease,
+      border-color   .16s ease;
   }
   .btn-primary {
     @apply text-white;
@@ -139,6 +184,7 @@
   }
   .btn-primary:hover  { filter: brightness(1.06); box-shadow: 0 12px 26px rgba(31,111,120,0.26); transform: translateY(-1px); }
   .btn-primary:active { transform: translateY(0); }
+
   .btn-ghost {
     @apply text-pine;
     background: #FFFFFF;
@@ -146,6 +192,7 @@
   }
   .btn-ghost:hover  { background: #FAF8F5; transform: translateY(-1px); border-color: rgba(31,111,120,0.30); box-shadow: 0 8px 20px rgba(23,23,23,0.08); }
   .btn-ghost:active { transform: translateY(0); }
+
   .btn-amber {
     @apply text-white;
     background: linear-gradient(135deg, #C89B5C, #B38443);
@@ -154,12 +201,18 @@
   }
   .btn-amber:hover  { filter: brightness(1.05); transform: translateY(-1px); box-shadow: 0 11px 24px rgba(184,134,11,0.24); }
   .btn-amber:active { transform: translateY(0); }
-  .btn-primary svg, .btn-ghost svg, .btn-amber svg { flex-shrink: 0; }
 
-  /* ---------- TABLES ---------- */
+  .btn-primary svg,
+  .btn-ghost svg,
+  .btn-amber svg { flex-shrink: 0; }
+
+  /* ── TABLES ────────────────────────────────────────────────────── */
   .th {
     @apply text-left text-pine/60;
-    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     padding: 11px 14px;
     border-bottom: 1.5px solid var(--border-color);
     white-space: nowrap;
@@ -172,41 +225,55 @@
     border-bottom: 1px solid rgba(229,223,214,0.9);
     vertical-align: middle;
   }
-  .th.text-right, .td.text-right { text-align: right; font-variant-numeric: tabular-nums; }
+  /* Numeric columns get tabular figures automatically */
+  .th.text-right,
+  .td.text-right {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Zebra + hover */
   .card tbody tr { transition: background .14s, box-shadow .14s; }
   .card tbody tr:hover { background: #F8F4EE; box-shadow: inset 0 0 0 1px rgba(31,111,120,0.10); }
   .card tbody tr:last-child .td { border-bottom: none; }
   tfoot .td, tfoot td { border-top: 1.5px solid var(--border-color); }
 
+  /* ── STATUS CHIP ───────────────────────────────────────────────── */
   .status-chip {
     @apply inline-flex items-center;
     padding: 3px 9px;
     border-radius: 999px;
-    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     line-height: 1.4;
     transition: transform .14s ease, filter .14s ease;
   }
   .status-chip:hover { transform: translateY(-1px); filter: saturate(1.08); }
 
+  /* ── SPACING HELPER ────────────────────────────────────────────── */
   .card-pad { padding: 20px; }
 }
 
+/* ============================================================
+   SCREEN — table reset
+   ============================================================ */
 @media screen {
   table { border-collapse: collapse; width: 100%; }
 }
 
-/* =====================================================================
-   PRINT — .no-print only. PrintPortal.jsx owns all other print rules.
-   ===================================================================== */
+/* ============================================================
+   PRINT
+   NOTE: PrintPortal.jsx owns ALL print CSS. Only .no-print here.
+   ============================================================ */
 @media print {
   .no-print { display: none !important; }
 }
 
-/* =====================================================================
-   AURA STAY — Motion System
-   ===================================================================== */
-
-/* Keyframes are global (not layered) — browser support is broadest this way */
+/* ============================================================
+   KEYFRAMES — declared globally (not inside @layer) for
+   broadest browser support with @layer utilities references.
+   ============================================================ */
 @keyframes aura-enter {
   0% {
     opacity: var(--aura-enter-opacity, 1);
@@ -217,7 +284,7 @@
   }
   100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale3d(1, 1, 1) rotate(0deg);
+    transform: translate3d(0,0,0) scale3d(1,1,1) rotate(0deg);
   }
 }
 @keyframes aura-overlay-fade { from { opacity: 0; } to { opacity: 1; } }
@@ -228,37 +295,44 @@
   100% { background-position: -200% 0; }
 }
 
+/* ============================================================
+   MOTION SYSTEM
+   ============================================================ */
 @layer utilities {
 
-  /* ── Entry animation ── */
+  /* ── Entry animation ───────────────────────────────────────────── */
   .animate-entry {
     animation-name: aura-enter;
     animation-duration: var(--aura-enter-duration);
     animation-timing-function: var(--aura-enter-ease);
     animation-fill-mode: both;
     will-change: transform, opacity;
+    /* default: fade + slide down */
     --aura-enter-opacity: 0;
-    --aura-enter-y: -18px;
-    --aura-enter-x: 0;
-    --aura-enter-scale: 1;
-    --aura-enter-rotate: 0;
+    --aura-enter-y:       -18px;
+    --aura-enter-x:       0;
+    --aura-enter-scale:   1;
+    --aura-enter-rotate:  0;
   }
-  .fade        { --aura-enter-y: 0;    --aura-enter-x: 0; }
+
+  /* Direction / style variants */
+  .fade        { --aura-enter-y: 0;     --aura-enter-x: 0; }
   .slide-down  { --aura-enter-y: -24px; }
-  .slide-up    { --aura-enter-y: 24px; }
-  .slide-left  { --aura-enter-x: 24px;  --aura-enter-y: 0; }
+  .slide-up    { --aura-enter-y:  24px; }
+  .slide-left  { --aura-enter-x:  24px; --aura-enter-y: 0; }
   .slide-right { --aura-enter-x: -24px; --aura-enter-y: 0; }
   .zoom-in     { --aura-enter-scale: 0.92; --aura-enter-y: 0; }
   .zoom-out    { --aura-enter-scale: 1.08; --aura-enter-y: 0; }
   .pop         { --aura-enter-scale: 0.8;  --aura-enter-y: 0; }
   .spin-in     { --aura-enter-rotate: -8deg; --aura-enter-scale: 0.94; --aura-enter-y: 0; }
 
+  /* Manual delays */
   .delay-100 { animation-delay: 0.1s; }
   .delay-200 { animation-delay: 0.2s; }
   .delay-300 { animation-delay: 0.3s; }
   .delay-500 { animation-delay: 0.5s; }
 
-  /* ── Stagger ── */
+  /* ── Stagger — apply to parent ─────────────────────────────────── */
   .animate-stagger > * {
     animation-name: aura-enter;
     animation-duration: var(--aura-enter-duration);
@@ -267,18 +341,18 @@
     --aura-enter-opacity: 0;
     --aura-enter-y: -14px;
   }
-  .animate-stagger > *:nth-child(1)  { animation-delay: calc(var(--aura-stagger-step) * 1); }
-  .animate-stagger > *:nth-child(2)  { animation-delay: calc(var(--aura-stagger-step) * 2); }
-  .animate-stagger > *:nth-child(3)  { animation-delay: calc(var(--aura-stagger-step) * 3); }
-  .animate-stagger > *:nth-child(4)  { animation-delay: calc(var(--aura-stagger-step) * 4); }
-  .animate-stagger > *:nth-child(5)  { animation-delay: calc(var(--aura-stagger-step) * 5); }
-  .animate-stagger > *:nth-child(6)  { animation-delay: calc(var(--aura-stagger-step) * 6); }
-  .animate-stagger > *:nth-child(7)  { animation-delay: calc(var(--aura-stagger-step) * 7); }
-  .animate-stagger > *:nth-child(8)  { animation-delay: calc(var(--aura-stagger-step) * 8); }
-  .animate-stagger > *:nth-child(9)  { animation-delay: calc(var(--aura-stagger-step) * 9); }
+  .animate-stagger > *:nth-child(1)  { animation-delay: calc(var(--aura-stagger-step) * 1);  }
+  .animate-stagger > *:nth-child(2)  { animation-delay: calc(var(--aura-stagger-step) * 2);  }
+  .animate-stagger > *:nth-child(3)  { animation-delay: calc(var(--aura-stagger-step) * 3);  }
+  .animate-stagger > *:nth-child(4)  { animation-delay: calc(var(--aura-stagger-step) * 4);  }
+  .animate-stagger > *:nth-child(5)  { animation-delay: calc(var(--aura-stagger-step) * 5);  }
+  .animate-stagger > *:nth-child(6)  { animation-delay: calc(var(--aura-stagger-step) * 6);  }
+  .animate-stagger > *:nth-child(7)  { animation-delay: calc(var(--aura-stagger-step) * 7);  }
+  .animate-stagger > *:nth-child(8)  { animation-delay: calc(var(--aura-stagger-step) * 8);  }
+  .animate-stagger > *:nth-child(9)  { animation-delay: calc(var(--aura-stagger-step) * 9);  }
   .animate-stagger > *:nth-child(10) { animation-delay: calc(var(--aura-stagger-step) * 10); }
 
-  /* ── Page loader ── */
+  /* ── Page loader ───────────────────────────────────────────────── */
   .aura-loader-overlay {
     position: fixed; inset: 0; z-index: 9999;
     display: flex; align-items: center; justify-content: center;
@@ -300,19 +374,19 @@
       aura-loader-out 0.4s var(--aura-enter-ease) var(--aura-loader-duration) forwards;
   }
 
-  /* ── Inline button spinner ── */
+  /* ── Inline button spinner ─────────────────────────────────────── */
   .btn-spinner {
     display: inline-block;
     width: 1em; height: 1em;
     margin-right: 0.5em;
     vertical-align: -0.15em;
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.45);
+    border: 2px solid rgba(255,255,255,0.45);
     border-top-color: #fff;
     animation: aura-spin 0.7s linear infinite;
   }
 
-  /* ── Skeleton loaders ── */
+  /* ── Skeleton loaders ──────────────────────────────────────────── */
   .skeleton {
     border-radius: 8px;
     background: linear-gradient(
@@ -324,17 +398,18 @@
     background-size: 200% 100%;
     animation: aura-shimmer 1.4s ease-in-out infinite;
   }
-  .skeleton-line { height: 14px; margin: 8px 0; }
-  .skeleton-line.short { width: 60%; }
+  .skeleton-line        { height: 14px; margin: 8px 0; }
+  .skeleton-line.short  { width: 60%; }
 
-  /* ── Reduced motion (FIX 3: body animation already gated above) ── */
+  /* ── Reduced motion ────────────────────────────────────────────── */
+  /* body animation is already gated via prefers-reduced-motion: no-preference
+     above, so no body override needed here.                          */
   @media (prefers-reduced-motion: reduce) {
     .animate-entry,
     .animate-stagger > *,
     .aura-loader-overlay,
-    .aura-loader-overlay.auto-dismiss {
-      animation: none !important;
-    }
+    .aura-loader-overlay.auto-dismiss { animation: none !important; }
+
     .aura-spinner,
     .btn-spinner,
     .skeleton { animation-duration: 20s; }
