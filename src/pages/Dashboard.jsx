@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtDate, todayISO, STATUS_COLORS } from '../lib/helpers'
+import { buildWorkflowDescription } from '../lib/aiTaskRouter'
 import { BedDouble, Sparkles, Brush, Wrench, DoorOpen, RefreshCw, Clock, XCircle, Send } from 'lucide-react'
 import KPICards from '../components/KPICards.jsx'
 
@@ -124,7 +125,16 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
         : []
       const { error } = await supabase.from('tasks').insert({
         title,
-        description: [`Please inspect and clear room for checkout.`, ...reservationBits, `Requested by: ${userName}`].join('\n'),
+        description: buildWorkflowDescription(
+          [`Please inspect and clear room for checkout.`, ...reservationBits, `Requested by: ${userName}`].join('\n'),
+          {
+            department: 'HOUSEKEEPING',
+            stage: 'REQUESTED',
+            workflow: ['REQUESTED', 'QUEUED', 'IN_PROGRESS', 'INSPECTED', 'COMPLETED'],
+            intent: 'Checkout clearance request',
+            reference: `ROOM:${room.room_no}`,
+          },
+        ),
         priority: 'HIGH',
         status: 'OPEN',
         due_date: today,
