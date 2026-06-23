@@ -584,7 +584,8 @@ function AppRoot() {
   )
 
   if (location.pathname.endsWith('/login')) {
-    const slug = location.pathname.split('/').filter(Boolean)[0]
+    const pathParts = location.pathname.split('/').filter(Boolean)
+    const slug = pathParts.length > 1 ? pathParts[0] : undefined
     if (!session) return <Login slug={slug} />
     return <Navigate to="/dashboard" replace />
   }
