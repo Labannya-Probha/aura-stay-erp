@@ -3,56 +3,60 @@ import { supabase } from '../supabase'
 import { LogIn } from 'lucide-react'
 
 // Hardcoded fallback — used if the slug lookup fails or no slug is given
-const FALLBACK_LOGO = 'https://gwllsoembqacolzfrquu.supabase.co/storage/v1/object/public/branding/logo_1781457117977.png'
-const FALLBACK_NAME = 'Novem Eco Resort'
+const FALLBACK_LOGO     = 'https://gwllsoembqacolzfrquu.supabase.co/storage/v1/object/public/branding/logo_1781457117977.png'
+const FALLBACK_NAME     = 'Novem Eco Resort'
 const FALLBACK_SOFTWARE = 'Aura Stay ERP'
 
+// Default slug when accessing the root domain (www.erp.aurastay.bd with no path)
+const DEFAULT_SLUG = 'novemecoresort'
+
 export default function Login({ slug }) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [err, setErr]           = useState('')
-  const [busy, setBusy]         = useState(false)
-  const [company, setCompany]   = useState(null)
-  const [property, setProperty] = useState(null)
-  const [notFound, setNotFound] = useState(false)
-  const [imgFailed, setImgFailed] = useState(false)
+  const [username,   setUsername]   = useState('')
+  const [password,   setPassword]   = useState('')
+  const [err,        setErr]        = useState('')
+  const [busy,       setBusy]       = useState(false)
+  const [company,    setCompany]    = useState(null)
+  const [property,   setProperty]   = useState(null)
+  const [notFound,   setNotFound]   = useState(false)
+  const [imgFailed,  setImgFailed]  = useState(false)
+
+  // Effective slug: use URL slug if present, otherwise fall back to default property
+  const effectiveSlug = slug || DEFAULT_SLUG
 
   useEffect(() => {
     setImgFailed(false)
-    if (slug) {
-      // Resolve slug -> property -> branding, all pre-auth (RLS allows public read on both)
-      supabase
-        .from('properties')
-        .select('id, slug, name, is_active')
-        .eq('slug', slug)
-        .maybeSingle()
-        .then(({ data: prop }) => {
-          if (!prop || !prop.is_active) { setNotFound(true); return }
-          setProperty(prop)
-          return supabase
-            .from('company_settings')
-            .select('logo_url, name, software_name, login_background_video_url')
-            .eq('tenant_id', prop.id)
-            .maybeSingle()
-        })
-        .then((res) => { if (res?.data) setCompany(res.data) })
-    } else {
-      // No slug in the URL — fall back to the single default property lookup
-      supabase
-        .from('company_settings')
-        .select('logo_url, name, software_name, login_background_video_url')
-        .eq('id', 1)
-        .single()
-        .then(({ data }) => { if (data) setCompany(data) })
-    }
-  }, [slug])
+    setNotFound(false)
+
+    supabase
+      .from('properties')
+      .select('id, slug, name, is_active')
+      .eq('slug', effectiveSlug)
+      .maybeSingle()
+      .then(({ data: prop }) => {
+        // Only show "not found" if an explicit slug was given and it doesn't exist
+        if (!prop || !prop.is_active) {
+          if (slug) { setNotFound(true) }
+          return null
+        }
+        setProperty(prop)
+        return supabase
+          .from('company_settings')
+          .select('logo_url, name, software_name, login_background_video_url')
+          .eq('tenant_id', prop.id)
+          .maybeSingle()
+      })
+      .then((res) => { if (res?.data) setCompany(res.data) })
+  }, [effectiveSlug])
 
   const signIn = async () => {
     setBusy(true); setErr('')
     try {
       const uname = username.trim()
       if (!uname) throw new Error('Enter your username')
-      const { data: email, error: re } = await supabase.rpc('email_for_username', { p_username: uname, p_slug: slug || null })
+      const { data: email, error: re } = await supabase.rpc('email_for_username', {
+        p_username: uname,
+        p_slug: effectiveSlug,
+      })
       if (re) throw re
       if (!email) throw new Error('No active account found for this username')
       const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -76,16 +80,13 @@ export default function Login({ slug }) {
   const softwareName = company?.software_name
     ? `${company.software_name} ERP`
     : FALLBACK_SOFTWARE
-  const logoUrl = (company?.logo_url || FALLBACK_LOGO)
+  const logoUrl = company?.logo_url || FALLBACK_LOGO
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-paper relative overflow-hidden">
       {company?.login_background_video_url ? (
         <>
-          <video
-            autoPlay loop muted playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-          >
+          <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
             <source src={company.login_background_video_url} type="video/mp4" />
           </video>
           <div className="absolute inset-0 bg-black/35" />
