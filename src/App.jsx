@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation,
 } from 'react-router-dom'
@@ -49,22 +49,22 @@ const NAV_GROUPS = [
     { id: 'ai-tasker', label: 'AI Tasker',        icon: Bot },
   ]},
   { title: 'Front Office', items: [
-    { id: 'dashboard',    label: 'Dashboard',   icon: LayoutDashboard },
-    { id: 'nightaudit',   label: 'Night Audit', icon: MoonStar },
+    { id: 'dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+    { id: 'nightaudit',   label: 'Night Audit',  icon: MoonStar },
     { id: 'housekeeping', label: 'Housekeeping', icon: BedDouble },
-    { id: 'facilities',   label: 'Facilities',  icon: ShoppingBasket },
+    { id: 'facilities',   label: 'Facilities',   icon: ShoppingBasket },
   ]},
   { title: 'Restaurant POS', items: [
-    { id: 'pos',              label: 'Restaurant POS',  icon: UtensilsCrossed },
-    { id: 'menu-management',  label: 'Menu Management', icon: ChefHat },
+    { id: 'pos',             label: 'Restaurant POS',  icon: UtensilsCrossed },
+    { id: 'menu-management', label: 'Menu Management', icon: ChefHat },
   ]},
   { title: 'Accounting', items: [
     { id: 'accounting', label: 'Accounting', icon: Calculator },
     { id: 'vat',        label: 'VAT Center',  icon: FileSpreadsheet },
   ]},
   { title: 'Inventory', items: [
-    { id: 'inventory',   label: 'Inventory',          icon: Boxes },
-    { id: 'consumption', label: 'Consumption Entry',  icon: ClipboardList },
+    { id: 'inventory',   label: 'Inventory',         icon: Boxes },
+    { id: 'consumption', label: 'Consumption Entry', icon: ClipboardList },
   ]},
   { title: 'HR & Admin', items: [
     { id: 'hr', label: 'HR & Office', icon: Users },
@@ -124,15 +124,15 @@ const firstAccessiblePath = (role, privileges) => {
 function AppShell({ company, role, isAdmin, userName, loadCompany, privileges }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [openGroup, setOpenGroup]         = useState(null)
+  const [mobileNavOpen,  setMobileNavOpen]  = useState(false)
+  const [openGroup,      setOpenGroup]      = useState(null)
   const [openSystemMenu, setOpenSystemMenu] = useState(null)
   const toggleGroup = (title) => setOpenGroup((prev) => (prev === title ? null : title))
 
   const currentTopId = location.pathname.split('/').filter(Boolean)[0] || 'dashboard'
 
-  const openReservation   = (id) => navigate(`/reservations/${id}`)
-  const startReservation  = (prefill = {}) => navigate('/reservations', { state: { prefill } })
+  const openReservation  = (id)          => navigate(`/reservations/${id}`)
+  const startReservation = (prefill = {}) => navigate('/reservations', { state: { prefill } })
 
   const softwareName    = company?.software_name || 'Aura Stay'
   const sidebarThemeStyle = { background: 'var(--sidebar-bg)' }
@@ -163,10 +163,10 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
       <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
         {NAV_GROUPS.map((g) => {
           const items = g.items.filter((n) => {
-            if (n.id === 'ai-tasker')        return can(role, 'tasks', privileges)
-            if (n.id === 'cms')              return isAdmin || role === 'SUPERUSER'
-            if (n.id === 'menu-management')  return isAdmin || role === 'SUPERUSER' || role === 'RESTAURANT'
-            if (n.id === 'consumption')      return can(role, 'inventory', privileges)
+            if (n.id === 'ai-tasker')       return can(role, 'tasks', privileges)
+            if (n.id === 'cms')             return isAdmin || role === 'SUPERUSER'
+            if (n.id === 'menu-management') return isAdmin || role === 'SUPERUSER' || role === 'RESTAURANT'
+            if (n.id === 'consumption')     return can(role, 'inventory', privileges)
             return can(role, n.id, privileges)
           })
           if (items.length === 0) return null
@@ -184,7 +184,6 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
               {isOpenGroup && (
                 <div className="space-y-0.5 mb-1">
                   {items.map((n) => {
-                    // Simple nav items (not settings/cms)
                     if (n.id !== 'settings' && n.id !== 'cms') {
                       return (
                         <button key={n.id}
@@ -199,9 +198,8 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
                       )
                     }
 
-                    // Settings / CMS — expandable sub-menus
-                    const isOpen = openSystemMenu === n.id
-                    const nested = n.id === 'settings'
+                    const isOpen  = openSystemMenu === n.id
+                    const nested  = n.id === 'settings'
                       ? SIDEBAR_SETTINGS_SECTIONS.filter((s) => {
                           if (!s.adminOnly && !s.superuserOnly) return true
                           if (s.adminOnly) return isAdmin || role === 'SUPERUSER'
@@ -224,7 +222,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
                         {isOpen && (
                           <div className="ml-6 space-y-0.5">
                             {nested.map((child) => {
-                              const paramKey = n.id === 'settings' ? 'section' : 'entity'
+                              const paramKey      = n.id === 'settings' ? 'section' : 'entity'
                               const isActiveChild = currentTopId === n.id && location.search.includes(`${paramKey}=${child.id}`)
                               return (
                                 <button key={child.id}
@@ -439,7 +437,11 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
 /* ------------------------------------------------------------------ */
 /*  GUARDED ROUTE                                                       */
 /* ------------------------------------------------------------------ */
+// FIX 3: Return null while privileges are still loading (null = not yet fetched).
+// Previously this would immediately redirect every protected route on first load,
+// causing a flash/redirect before the role_privileges query completed.
 function GuardedRoute({ role, navId, privileges, children }) {
+  if (privileges === null) return null
   if (!can(role, navId, privileges)) return <Navigate to={firstAccessiblePath(role, privileges)} replace />
   return children
 }
@@ -448,15 +450,15 @@ function GuardedRoute({ role, navId, privileges, children }) {
 /*  ROUTE HELPERS                                                       */
 /* ------------------------------------------------------------------ */
 function ReservationsRoute({ openReservation, userName }) {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const prefill    = location.state?.prefill || null
+  const location    = useLocation()
+  const navigate    = useNavigate()
+  const prefill     = location.state?.prefill || null
   const clearPrefill = () => navigate(location.pathname, { replace: true, state: {} })
   return <Reservations openReservation={openReservation} userName={userName} prefill={prefill} clearPrefill={clearPrefill} />
 }
 
 function ReservationDetailRoute({ userName, role, isAdmin }) {
-  const { id } = useParams()
+  const { id }   = useParams()
   const navigate = useNavigate()
   return <ReservationDetail id={id} back={() => navigate('/reservations')} userName={userName} role={role} isAdmin={isAdmin} />
 }
@@ -486,7 +488,9 @@ function AppRoot() {
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  const loadCompany = async () => {
+  // FIX 1 & 2: loadCompany defined BEFORE the useEffect that calls it,
+  // and wrapped in useCallback so it has a stable reference for the dep array.
+  const loadCompany = useCallback(async () => {
     const tenantId = getTenantId()
     let query = supabase.from('company_settings').select('*')
     if (tenantId) query = query.eq('tenant_id', tenantId)
@@ -498,7 +502,7 @@ function AppRoot() {
       const { data: prop } = await propertyQuery.limit(1).maybeSingle()
       setCompany({ ...data, slug: prop?.slug || null })
     }
-  }
+  }, []) // no external deps — uses getTenantId() at call time
 
   useEffect(() => {
     if (!session) {
@@ -515,9 +519,9 @@ function AppRoot() {
         const nextProfile = data || fallbackProfile
         setProfile(nextProfile)
         setTenantId(data?.tenant_id || null)
-        loadCompany()
+        loadCompany() // ✅ FIX 1: now defined above, safe to call
       })
-  }, [session?.user?.id])
+  }, [session?.user?.id, loadCompany]) // ✅ FIX 2: loadCompany in dep array
 
   useEffect(() => {
     let active = true
@@ -542,25 +546,26 @@ function AppRoot() {
 
     const tenantId = getTenantId()
 
-    // Base privileges from role_privileges table
     let query = supabase
       .from('role_privileges')
       .select('module, can_create, can_view, can_edit, can_delete')
       .eq('role', role)
     if (tenantId) query = query.eq('tenant_id', tenantId)
 
+    // FIX 4 (confirmed): callback is async — await inside .then() is safe here.
+    // Also replaced the nested supabase.auth.getUser() call with a direct userId
+    // captured from session at effect-run time, avoiding an extra round-trip.
+    const userId = profile?.id  // app_users.id matches auth user id
     query.then(async ({ data: basePrivs }) => {
       let privs = basePrivs || []
 
-      // For ADMIN role — apply admin_feature_access restrictions
       if (role === 'ADMIN') {
         const { data: accessRows } = await supabase
           .from('admin_feature_access')
           .select('module, can_access')
-          .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+          .eq('user_id', userId) // ✅ FIX 4: no extra getUser() call needed
 
         if (accessRows && accessRows.length > 0) {
-          // Zero out modules where can_access = false
           const restricted = new Set(
             accessRows.filter(r => r.can_access === false).map(r => r.module)
           )
@@ -572,12 +577,11 @@ function AppRoot() {
             )
           }
         }
-        // No rows = full access (no restrictions set by Superuser)
       }
 
       setPrivileges(privs)
     })
-  }, [profile?.role])
+  }, [profile?.role, profile?.id])
 
   if (session === undefined) return (
     <div className="min-h-screen flex items-center justify-center text-pine/60">Loading…</div>
