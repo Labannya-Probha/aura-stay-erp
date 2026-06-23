@@ -11,41 +11,51 @@ const FALLBACK_SOFTWARE = 'Aura Stay ERP'
 const DEFAULT_SLUG = 'novemecoresort'
 
 export default function Login({ slug }) {
-  const [username,   setUsername]   = useState('')
-  const [password,   setPassword]   = useState('')
-  const [err,        setErr]        = useState('')
-  const [busy,       setBusy]       = useState(false)
-  const [company,    setCompany]    = useState(null)
-  const [property,   setProperty]   = useState(null)
-  const [notFound,   setNotFound]   = useState(false)
-  const [imgFailed,  setImgFailed]  = useState(false)
+  const [username,     setUsername]     = useState('')
+  const [password,     setPassword]     = useState('')
+  const [err,          setErr]          = useState('')
+  const [busy,         setBusy]         = useState(false)
+  const [company,      setCompany]      = useState(null)
+  const [property,     setProperty]     = useState(null)
+  const [resolvedSlug, setResolvedSlug] = useState(slug || DEFAULT_SLUG)
+  const [imgFailed,    setImgFailed]    = useState(false)
 
   // Effective slug: use URL slug if present, otherwise fall back to default property
   const effectiveSlug = slug || DEFAULT_SLUG
 
   useEffect(() => {
     setImgFailed(false)
-    setNotFound(false)
+    setProperty(null)
+    setCompany(null)
+    setResolvedSlug(effectiveSlug)
 
-    supabase
-      .from('properties')
-      .select('id, slug, name, is_active')
-      .eq('slug', effectiveSlug)
-      .maybeSingle()
-      .then(({ data: prop }) => {
-        // Only show "not found" if an explicit slug was given and it doesn't exist
-        if (!prop || !prop.is_active) {
-          if (slug) { setNotFound(true) }
-          return null
-        }
+    const loadProperty = async (slugToTry) => {
+      const { data: prop } = await supabase
+        .from('properties')
+        .select('id, slug, name, is_active')
+        .eq('slug', slugToTry)
+        .maybeSingle()
+
+      if (prop?.is_active) {
         setProperty(prop)
-        return supabase
+        setResolvedSlug(prop.slug)
+        const { data: cs } = await supabase
           .from('company_settings')
           .select('logo_url, name, software_name, login_background_video_url')
           .eq('tenant_id', prop.id)
           .maybeSingle()
-      })
-      .then((res) => { if (res?.data) setCompany(res.data) })
+        if (cs) setCompany(cs)
+        return
+      }
+
+      // If the explicit slug wasn't found, fall back to the default property
+      if (slugToTry !== DEFAULT_SLUG) {
+        loadProperty(DEFAULT_SLUG)
+      }
+      // If DEFAULT_SLUG also fails, the login form shows with fallback branding
+    }
+
+    loadProperty(effectiveSlug)
   }, [effectiveSlug])
 
   const signIn = async () => {
@@ -55,7 +65,7 @@ export default function Login({ slug }) {
       if (!uname) throw new Error('Enter your username')
       const { data: email, error: re } = await supabase.rpc('email_for_username', {
         p_username: uname,
-        p_slug: effectiveSlug,
+        p_slug: resolvedSlug,
       })
       if (re) throw re
       if (!email) throw new Error('No active account found for this username')
@@ -63,17 +73,6 @@ export default function Login({ slug }) {
       if (error) throw new Error('Wrong username or password')
     } catch (e) { setErr(e.message) }
     setBusy(false)
-  }
-
-  if (slug && notFound) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-paper">
-        <div className="card w-full max-w-sm p-8 text-center">
-          <h1 className="font-display text-xl font-bold text-pine mb-2">Property not found</h1>
-          <p className="text-sm text-pine/60">No active property matches this link. Please check the URL or contact your administrator.</p>
-        </div>
-      </div>
-    )
   }
 
   const propertyName = company?.name || property?.name || FALLBACK_NAME
