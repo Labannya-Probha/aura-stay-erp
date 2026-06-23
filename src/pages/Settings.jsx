@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react'
-import { createClient } from '@supabase/supabase-js'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase, SUPABASE_CONFIG } from '../supabase'
 import { fmtBDT, todayISO, setCurrency } from '../lib/helpers'
@@ -753,17 +752,24 @@ function StaffCard({ isAdminPlus, isSuperuser, currentUserName }) {
       const { data: propRow } = await supabase
         .from('properties').select('slug').eq('id', myRow.tenant_id).maybeSingle()
       const tenantSlug = propRow?.slug || myRow.tenant_id.replace(/-/g, '').substring(0, 8)
-      // createClient is statically imported at the top of this file
-      const tmp = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
       const email = `${uname}.${tenantSlug}@${LOGIN_DOMAIN}`
-      const { data, error } = await tmp.auth.signUp({
-        email, password: nu.password,
-        options: { data: { username: uname, full_name: nu.full_name.trim(), tenant_id: myRow.tenant_id } },
+
+      // Use the admin-create-user Edge Function so that user creation succeeds
+      // even when "Enable Signups" is disabled in the Supabase Auth dashboard.
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/admin-create-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({
+          email,
+          password: nu.password,
+          user_metadata: { username: uname, full_name: nu.full_name.trim(), tenant_id: myRow.tenant_id },
+        }),
       })
-      if (error) throw error
-      const newId = data?.user?.id
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to create user account.')
+      const newId = json.user?.id
       if (newId) await supabase.from('app_users').update({ role: nu.role, full_name: nu.full_name.trim(), username: uname }).eq('id', newId)
-      await tmp.auth.signOut()
       setNu({ full_name: '', username: '', password: '', role: 'FRONT_OFFICE' })
       await load()
       flash(`Staff "${uname}" created successfully.`)
