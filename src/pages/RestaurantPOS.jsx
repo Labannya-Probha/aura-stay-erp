@@ -12,7 +12,6 @@ const TABS = ['Orders', 'Menu', 'Day Close']
 const PAYMENT_METHODS = ['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER']
 const RESTAURANT_WORKFLOW = ['REQUESTED', 'CONFIRMED', 'ACCEPTED', 'KOT_GENERATED', 'PREPARING', 'READY', 'SERVED']
 
-// Cash rounding logic: >= 0.50 round up, < 0.50 round down
 const applyCashRounding = (amount) => {
   const decimal = amount % 1
   if (decimal === 0) return { rounded: amount, rounding: 0 }
@@ -60,7 +59,7 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-pine">Restaurant POS</h1>
-          <p className="text-sm text-pine/60">Orders for in-house guests post straight to their billing history — pay now or charge to room.</p>
+          <p className="text-sm text-pine/60">Tap items to add — every price stays editable.</p>
         </div>
       </div>
       <KPICards module="pos" />
@@ -102,7 +101,6 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
   const rate = rateFor(taxConfig, 'RESTAURANT', todayISO())
   const subtotal = cart.reduce((a, c) => a + c.qty * c.unit_price, 0)
   
-  // Calculate discount based on type
   let discountAmount = 0
   let discountPct = 0
   if (meta.discount_type === 'PERCENT') {
@@ -113,7 +111,6 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
     discountPct = subtotal > 0 ? (discountAmount / subtotal) * 100 : 0
   }
 
-  // Calculate totals with proper rounding
   const rawTotal = computeCharge(subtotal, discountPct, rate)
   const subtotalAfterTax = rawTotal.base_amount - rawTotal.discount + rawTotal.service_charge + rawTotal.vat
   const { rounded: finalTotal, rounding: roundingAmount } = applyCashRounding(subtotalAfterTax)
@@ -127,6 +124,7 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
     })
   }
   const bump = (idx, d) => setCart((prev) => prev.map((c, i) => (i === idx ? { ...c, qty: Math.max(0, c.qty + d) } : c)).filter((c) => c.qty > 0))
+  const setPrice = (idx, price) => setCart((prev) => prev.map((c, i) => (i === idx ? { ...c, unit_price: price } : c)))
   const removeLine = (idx) => setCart((prev) => prev.filter((_, i) => i !== idx))
   const visible = items.filter((i) =>  i.is_active &&  (activeCat === 'ALL' || i.category_id === activeCat) &&  (!itemSearch || i.name.toLowerCase().includes(itemSearch.toLowerCase())))
 
@@ -168,7 +166,6 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
     if (totalPaid > t.total) { flash(`Change: ${fmtBDT(totalPaid - t.total)}`); return }
     setBusy(true)
     try {
-      // Store only payment method names (not amounts) to satisfy DB constraint
       const settled = { status: 'SETTLED', payment_method: paidMethods.map(([m]) => m).join(', '), settled_at: new Date().toISOString() }
       const { order, items: oi } = await persist(settled)
       let mushakNo = null
@@ -192,7 +189,6 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
   try {
     const { order, items: oi } = await persist({ status: 'CHARGED_TO_ROOM' })
     
-    // folio_charges এ invoice_type যোগ করা হয়েছে
     const { data: fc, error: fe } = await supabase.from('folio_charges').insert({ 
       reservation_id: order.reservation_id, 
       charge_date: todayISO(), 
@@ -204,7 +200,7 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
       vat: t.vat, 
       total: t.total, 
       status: 'DUE', 
-      invoice_type: 'RESTAURANT', // <--- এখানে যুক্ত করুন
+      invoice_type: 'RESTAURANT',
       created_by: userName 
     }).select().single()
     
@@ -267,7 +263,7 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
               <div key={i} className="flex items-center gap-2 py-2">
                 <div className="flex-1">
                   <div className="text-sm font-medium leading-tight">{c.item_name}</div>
-                  <div className="text-xs text-pine/50 money">{fmtBDT(c.unit_price)} each</div>
+                  <input type="number" min="0" step="0.01" className="input !w-24 !py-0.5 !px-2 text-xs money" value={c.unit_price} onChange={(e) => setPrice(i, Number(e.target.value) || 0)} />
                 </div>
                 <button className="w-6 h-6 rounded bg-leaf text-pine font-bold" onClick={() => bump(i, -1)}><Minus size={13} className="mx-auto" /></button>
                 <span className="money w-7 text-center font-semibold">{c.qty}</span>
