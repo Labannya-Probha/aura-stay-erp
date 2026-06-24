@@ -156,7 +156,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
         if (fe) throw fe
         await supabase.from('payments').insert({
           reservation_id: order.reservation_id, received_date: todayISO(), amount: t.total,
-          method: payMethod, reference: order.order_no, received_by: userName, notes: catMeta.outlet,
+          method: primaryMethod, reference: order.order_no, received_by: userName, notes: catMeta.outlet,
         })
         await supabase.from('pos_orders').update({ folio_charge_id: fc.id }).eq('id', order.id)
       } else if (issueMushak) {
@@ -177,7 +177,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
     } catch (e) { flash(e.message) }
     setBusy(false)
   }
-
+  
   const chargeToRoom = async () => {
     if (cart.length === 0) { flash('Add at least one item.'); return }
     if (!link.reservation_id) { flash('Link an in-house guest first.'); return }
