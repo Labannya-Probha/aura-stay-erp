@@ -3,10 +3,9 @@ import { supabase } from '../supabase'
 import { LogIn } from 'lucide-react'
 
 // Hardcoded fallback — used if the slug lookup fails or no slug is given
-const FALLBACK_LOGO     = 'https://gwllsoembqacolzfrquu.supabase.co/storage/v1/object/public/branding/logo_1781457117977.png'
-const FALLBACK_NAME     = 'Novem Eco Resort'
+const FALLBACK_LOGO     = null
+const FALLBACK_NAME     = 'Aura Stay'
 const FALLBACK_SOFTWARE = 'Aura Stay ERP'
-const LOGIN_DOMAIN      = 'aura-stay.local'
 
 // Default slug when accessing the root domain (www.erp.aurastay.bd with no path)
 const DEFAULT_SLUG = 'novemecoresort'
