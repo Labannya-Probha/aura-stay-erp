@@ -238,29 +238,29 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, flash, setPr
       </div>
       <div className="xl:col-span-2 space-y-3">
         <div className="card p-4">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
             <h3 className="font-display font-semibold text-pine">{existing ? `Editing ${existing.order.order_no}` : 'Current order'}</h3>
-            <div className="flex gap-2">
-              <select className="input !w-auto !py-1 text-xs" value={meta.order_type} onChange={(e) => setMeta({ ...meta, order_type: e.target.value })}>
+            <div className="flex gap-2 flex-wrap w-full sm:w-auto">
+              <select className="input !w-full sm:!w-auto !py-1 text-xs" value={meta.order_type} onChange={(e) => setMeta({ ...meta, order_type: e.target.value })}>
                 <option value="DINE_IN">Dine-in</option><option value="ROOM_SERVICE">Room service</option><option value="TAKEAWAY">Takeaway</option>
               </select>
-              <input className="input !w-20 !py-1 text-xs" placeholder="Table" value={meta.table_no} onChange={(e) => setMeta({ ...meta, table_no: e.target.value })} />
+              <input className="input !w-full sm:!w-20 !py-1 text-xs" placeholder="Table" value={meta.table_no} onChange={(e) => setMeta({ ...meta, table_no: e.target.value })} />
             </div>
           </div>
           {link.reservation_id ? (
-            <div className="flex items-center justify-between bg-leaf/50 rounded-lg px-3 py-2 mb-2 text-sm">
-              <span><b>{link.guest_name}</b> · Room {link.room_no}</span>
+            <div className="flex items-center justify-between flex-wrap gap-2 bg-leaf/50 rounded-lg px-3 py-2 mb-2 text-sm">
+              <span className="min-w-0 break-words"><b>{link.guest_name}</b> · Room {link.room_no}</span>
               <button className="text-red-500 text-xs font-semibold" onClick={() => setLink({ reservation_id: null, guest_name: '', room_no: '' })}>Unlink</button>
             </div>
           ) : (
-            <div className="flex gap-2 mb-2">
+            <div className="flex flex-col sm:flex-row gap-2 mb-2">
               <button className="btn-ghost flex-1 justify-center !py-1.5 text-xs" onClick={() => setShowPicker(true)}><BedDouble size={14} /> Link in-house guest</button>
               <input className="input flex-1 !py-1.5 text-xs" placeholder="Walk-in name (optional)" value={link.guest_name} onChange={(e) => setLink({ ...link, guest_name: e.target.value })} />
             </div>
           )}
           <div className="max-h-64 overflow-auto divide-y divide-leaf/60">
             {cart.map((c, i) => (
-              <div key={i} className="flex items-center gap-2 py-2">
+              <div key={i} className="flex items-center gap-2 py-2 flex-wrap sm:flex-nowrap">
                 <div className="flex-1">
                   <div className="text-sm font-medium leading-tight">{c.item_name}</div>
                   <input type="number" min="0" step="0.01" className="input !w-24 !py-0.5 !px-2 text-xs money" value={c.unit_price} onChange={(e) => setPrice(i, Number(e.target.value) || 0)} />

@@ -37,10 +37,10 @@ export default function Facilities({ userName, isAdmin }) {
 
       {msg && <div className="mb-4 px-4 py-2 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
 
-      <div className="flex gap-1 border-b border-leaf mb-6">
+      <div className="flex gap-1 border-b border-leaf mb-6 flex-wrap overflow-x-auto">
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
+            className={`px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
             {t}
           </button>
         ))}
@@ -250,12 +250,12 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
           <h3 className="font-display font-semibold text-pine mb-2">Facilities &amp; Shop — current sale</h3>
 
           {link.reservation_id ? (
-            <div className="flex items-center justify-between bg-leaf/50 rounded-lg px-3 py-2 mb-2 text-sm">
-              <span><b>{link.guest_name}</b> · Room {link.room_no}</span>
+            <div className="flex items-center justify-between flex-wrap gap-2 bg-leaf/50 rounded-lg px-3 py-2 mb-2 text-sm">
+              <span className="min-w-0 break-words"><b>{link.guest_name}</b> · Room {link.room_no}</span>
               <button className="text-red-500 text-xs font-semibold" onClick={() => setLink({ reservation_id: null, guest_name: '', room_no: '' })}>Unlink</button>
             </div>
           ) : (
-            <div className="flex gap-2 mb-2">
+            <div className="flex flex-col sm:flex-row gap-2 mb-2">
               <button className="btn-ghost flex-1 justify-center !py-1.5 text-xs" onClick={() => setShowPicker(true)}>
                 <BedDouble size={14} /> Link in-house guest
               </button>
@@ -275,7 +275,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
                   <input className="input flex-1 !py-1 text-sm" value={c.item_name} onChange={(e) => setName(i, e.target.value)} />
                   <button className="text-red-300 hover:text-red-600" onClick={() => removeLine(i)}><Trash2 size={14} /></button>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button className="w-6 h-6 rounded bg-leaf text-pine" onClick={() => bump(i, -1)}><Minus size={13} className="mx-auto" /></button>
                   <span className="money w-7 text-center font-semibold">{c.qty}</span>
                   <button className="w-6 h-6 rounded bg-forest text-white" onClick={() => bump(i, 1)}><Plus size={13} className="mx-auto" /></button>
@@ -307,7 +307,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
           {/* Split payment rows */}
           <div className="space-y-2">
             {payments.map((p, i) => (
-              <div key={i} className="flex gap-2 items-center">
+              <div key={i} className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
                 <select
                   className="input !w-28"
                   value={p.method}
@@ -344,7 +344,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
             const due  = Math.max(0, t.total - paid)
             const over = Math.max(0, paid - t.total)
             return (
-              <div className="flex justify-between text-xs font-medium px-1">
+              <div className="flex justify-between gap-2 flex-wrap text-xs font-medium px-1">
                 <span className="text-pine/60">Paid: <span className="money text-forest font-bold">{fmtBDT(paid)}</span></span>
                 {due  > 0 && <span className="text-red-500">Due: {fmtBDT(due)}</span>}
                 {over > 0 && <span className="text-amber-600">Change: {fmtBDT(over)}</span>}
@@ -485,7 +485,7 @@ function ItemsManager({ items, reload, isAdmin }) {
         {!isAdmin && ' Changing the catalog requires administrator access.'}
       </p>
       {isAdmin && (
-        <div className="grid grid-cols-4 gap-2 mb-4 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4 items-end">
           <div>
             <label className="label">Item name</label>
             <input className="input" value={n.name} onChange={(e) => setN({ ...n, name: e.target.value })} />

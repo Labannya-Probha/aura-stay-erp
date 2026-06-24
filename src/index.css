@@ -45,6 +45,16 @@
     /* Aliases — single source of truth, no duplicate hex values */
     --aura-brand:      var(--brand-color);
     --aura-brand-soft: var(--interactive-glow);
+    --app-mobile-header-height: 4.25rem;
+    --app-mobile-header-offset: calc(var(--app-mobile-header-height) + env(safe-area-inset-top, 0px));
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   body {
@@ -62,6 +72,9 @@
     background-size: 140% 140%;
   }
 
+  button, input, select, textarea { min-width: 0; }
+  img, svg, video, canvas, iframe { max-width: 100%; }
+
   /* Gate animation — no !important override needed in reduced-motion block */
   @media (prefers-reduced-motion: no-preference) {
     body {
@@ -76,6 +89,45 @@
   @keyframes aura-bg-drift {
     0%   { background-position: 0% 0%,  100% 0%, 0% 0%; }
     100% { background-position: 8% 10%, 92% -4%, 0% 0%; }
+  }
+
+  .app-shell {
+    width: 100%;
+    overflow-x: clip;
+  }
+
+  .app-shell-mobile-bar {
+    min-height: var(--app-mobile-header-offset);
+    padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+    padding-bottom: 0.75rem;
+  }
+
+  .app-shell-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: calc(var(--app-mobile-header-offset) + 1rem) 1rem 1rem;
+    overflow-x: clip;
+  }
+
+  .app-shell-banner {
+    position: sticky;
+    top: calc(var(--app-mobile-header-offset) + 0.5rem);
+    z-index: 15;
+    margin: 0 -1rem 1rem;
+  }
+
+  @media (min-width: 1024px) {
+    .app-shell-main {
+      margin-left: 15rem;
+      padding: 2rem;
+    }
+
+    .app-shell-banner {
+      top: 0;
+      margin: 0 0 1rem;
+    }
   }
 }
 
@@ -135,6 +187,7 @@
   .input, .btn-primary, .btn-ghost, .btn-amber {
     height: 38px;
     box-sizing: border-box;
+    max-width: 100%;
   }
   .input {
     @apply w-full text-ink focus:outline-none;
@@ -253,6 +306,12 @@
 
   /* ── SPACING HELPER ────────────────────────────────────────────── */
   .card-pad { padding: 20px; }
+
+  .table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* ============================================================
@@ -260,6 +319,30 @@
    ============================================================ */
 @media screen {
   table { border-collapse: collapse; width: 100%; }
+}
+
+@media (max-width: 767px) {
+  .card table,
+  .table-scroll > table,
+  table.table-scroll {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .card table thead,
+  .card table tbody,
+  .card table tfoot,
+  .table-scroll > table thead,
+  .table-scroll > table tbody,
+  .table-scroll > table tfoot,
+  table.table-scroll thead,
+  table.table-scroll tbody,
+  table.table-scroll tfoot {
+    white-space: nowrap;
+  }
 }
 
 /* ============================================================

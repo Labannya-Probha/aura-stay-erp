@@ -207,8 +207,8 @@ function GuestSearchPopup({ onSelect, onClose }) {
   }, [q])
 
   return (
-    <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4">
-      <div className="card w-full max-w-md p-5 shadow-2xl">
+    <div className="fixed inset-0 bg-ink/60 z-50 flex items-start justify-center overflow-auto overscroll-contain p-3 sm:p-4">
+      <div className="card w-full max-w-md p-5 shadow-2xl my-0 sm:my-8 max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-4rem)] flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-display font-semibold text-pine flex items-center gap-2">
             <UserSearch size={18} className="text-forest" /> Search Existing Guest
@@ -229,7 +229,7 @@ function GuestSearchPopup({ onSelect, onClose }) {
           />
         </div>
 
-        <div className="min-h-[120px]">
+        <div className="flex-1 min-h-0">
           {loading && <p className="text-sm text-pine/40 text-center py-6">Searching…</p>}
           {!loading && q.length >= 2 && results.length === 0 && (
             <p className="text-sm text-pine/40 text-center py-6">No guests found matching "{q}"</p>
@@ -237,7 +237,7 @@ function GuestSearchPopup({ onSelect, onClose }) {
           {!loading && q.length < 2 && (
             <p className="text-sm text-pine/40 text-center py-6">Type at least 2 characters to search</p>
           )}
-          <div className="space-y-1 max-h-64 overflow-y-auto">
+          <div className="space-y-1 h-full overflow-y-auto">
             {results.map((g) => (
               <button
                 key={g.id}
