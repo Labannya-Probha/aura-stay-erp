@@ -64,7 +64,8 @@ export function PosReceipt({ order, items, company, mushakNo }) {
       </div>
       {mushakNo && <div style={{ textAlign: 'center', fontSize: 9, marginTop: 2, fontFamily: 'monospace' }}>Mushak-6.3 issued: {mushakNo}</div>}
       {order.status === 'CHARGED_TO_ROOM' && <div style={{ textAlign: 'center', fontSize: 8.5, marginTop: 2, fontFamily: 'monospace' }}>Tax invoice (Mushak-6.3) will be issued with the final guest bill at check-out.</div>}
-      <div style={{ textAlign: 'center', fontSize: 9, marginTop: 8, fontStyle: 'italic', fontFamily: 'monospace' }}>{company?.invoice_footer}</div>
+      <div style={{ textAlign: 'center', fontSize: 9, marginTop: 8, fontStyle: 'italic', fontFamily: 'monospace' }}>{`Thanks for ordering from ${company?.name || 'us'}! We truly appreciate you for choosing us.`}
+      </div>
     </div>
   )
 }
