@@ -326,8 +326,16 @@ function PayrollTab({ flash, userName, canApprove, isAdmin, company }) {
   const approveRun = async () => {
     if (!window.confirm(`Approve payroll for ${MONTH_NAMES[active.period_month - 1]} ${active.period_year}? Net amounts will be locked for payout.`)) return
     try {
-      await approvePayrollAndPostJv(active.id)
+      const jvId = await approvePayrollAndPostJv(active.id)
+      flash(`Payroll approved and journal ${jvId ? 'posted' : 'generated'}.`)
     } catch (e) {
+      console.error('approve_payroll_and_post_jv failed', {
+        payrollRunId: active.id,
+        message: e.message,
+        code: e.code,
+        details: e.details,
+        hint: e.hint,
+      })
       flash(e.message)
       return
     }
