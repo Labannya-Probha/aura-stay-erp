@@ -70,7 +70,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
   const cat = 'OTHER'
   const [cart, setCart] = useState([]) // {facility_item_id, item_name, unit, qty, unit_price}
   const [link, setLink] = useState({ reservation_id: null, guest_name: '', room_no: '' })
-  const [payMethod, setPayMethod] = useState('CASH')
+  const [payments, setPayments] = useState([{ method: 'CASH', amount: '' }])
   const [issueMushak, setIssueMushak] = useState(true)
   const [showPicker, setShowPicker] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -130,9 +130,21 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
 
   const payNow = async () => {
     if (cart.length === 0) { flash('Add at least one item.'); return }
+    const validPayments = payments.filter(p => Number(p.amount) > 0)
+    if (validPayments.length === 0) { flash('Enter at least one payment amount.'); return }
+    const totalPaid = validPayments.reduce((a, p) => a + Number(p.amount), 0)
+    if (totalPaid < t.total - 0.01) { flash(`Amount short by ${fmtBDT(t.total - totalPaid)} — add more payment.`); return }
+    // Primary method = largest amount
+    const primaryMethod = validPayments.sort((a, b) => Number(b.amount) - Number(a.amount))[0].method
+    const paymentSummary = validPayments.map(p => `${p.method}:${Number(p.amount).toFixed(2)}`).join(', ')
     setBusy(true)
     try {
-      const { order, items: oi } = await persist({ status: 'SETTLED', payment_method: payMethod, settled_at: new Date().toISOString() })
+      const { order, items: oi } = await persist({
+        status: 'SETTLED',
+        payment_method: primaryMethod,
+        notes: validPayments.length > 1 ? `Split: ${paymentSummary}` : null,
+        settled_at: new Date().toISOString(),
+      })
       let mushakNo = null
       if (order.reservation_id) {
         const { data: fc, error: fe } = await supabase.from('folio_charges').insert({
@@ -159,8 +171,9 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
         await supabase.from('pos_orders').update({ invoice_id: inv.id }).eq('id', order.id)
       }
       setCart([]); setLink({ reservation_id: null, guest_name: '', room_no: '' })
-      onDone({ type: 'RECEIPT', order: { ...order, status: 'SETTLED', payment_method: payMethod }, items: oi, mushakNo })
-      flash(`${order.order_no} settled — ${payMethod}.${mushakNo ? ` Mushak-6.3 ${mushakNo} issued.` : ''}`)
+      setPayments([{ method: 'CASH', amount: '' }])
+      onDone({ type: 'RECEIPT', order: { ...order, status: 'SETTLED', payment_method: primaryMethod }, items: oi, mushakNo })
+      flash(`${order.order_no} settled — ${paymentSummary}.${mushakNo ? ` Mushak-6.3 ${mushakNo} issued.` : ''}`)
     } catch (e) { flash(e.message) }
     setBusy(false)
   }
@@ -249,27 +262,70 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
           </div>
         </div>
 
-        <div className="card p-4 space-y-2">
-          <div className="flex gap-2">
-            <select className="input !w-32" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
-              {['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER'].map((m) => <option key={m}>{m}</option>)}
-            </select>
-            <button className="btn-primary flex-1 justify-center" onClick={payNow} disabled={busy}><Banknote size={16} /> Pay now</button>
+        <div className="card p-4 space-y-3">
+          {/* Split payment rows */}
+          <div className="space-y-2">
+            {payments.map((p, i) => (
+              <div key={i} className="flex gap-2 items-center">
+                <select
+                  className="input !w-28"
+                  value={p.method}
+                  onChange={e => setPayments(prev => prev.map((x, j) => j === i ? { ...x, method: e.target.value } : x))}
+                >
+                  {['CASH','BKASH','NAGAD','CARD','BANK','OTHER'].map(m => <option key={m}>{m}</option>)}
+                </select>
+                <input
+                  type="number"
+                  className="input flex-1 money text-right"
+                  placeholder="Amount"
+                  value={p.amount}
+                  onChange={e => setPayments(prev => prev.map((x, j) => j === i ? { ...x, amount: e.target.value } : x))}
+                />
+                {payments.length > 1 && (
+                  <button onClick={() => setPayments(prev => prev.filter((_, j) => j !== i))} className="text-red-300 hover:text-red-600 shrink-0">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
+
+          {/* Add method button */}
+          <button
+            onClick={() => setPayments(prev => [...prev, { method: 'CASH', amount: '' }])}
+            className="btn-ghost !py-1.5 text-xs w-full justify-center"
+          >
+            <Plus size={13} /> Add payment method
+          </button>
+
+          {/* Paid / Due summary */}
+          {(() => {
+            const paid = payments.reduce((a, p) => a + (Number(p.amount) || 0), 0)
+            const due  = Math.max(0, t.total - paid)
+            const over = Math.max(0, paid - t.total)
+            return (
+              <div className="flex justify-between text-xs font-medium px-1">
+                <span className="text-pine/60">Paid: <span className="money text-forest font-bold">{fmtBDT(paid)}</span></span>
+                {due  > 0 && <span className="text-red-500">Due: {fmtBDT(due)}</span>}
+                {over > 0 && <span className="text-amber-600">Change: {fmtBDT(over)}</span>}
+              </div>
+            )
+          })()}
+
           {!link.reservation_id && (
             <label className="flex items-center gap-2 text-xs text-pine/70">
               <input type="checkbox" checked={issueMushak} onChange={(e) => setIssueMushak(e.target.checked)} />
               Issue Mushak-6.3 for this walk-in sale (feeds the 6.2 register)
             </label>
           )}
+
+          <button className="btn-primary w-full justify-center" onClick={payNow} disabled={busy}>
+            <Banknote size={16} /> Pay now
+          </button>
           <button className="btn-amber w-full justify-center" onClick={chargeToRoom} disabled={busy || !link.reservation_id}>
             <BedDouble size={16} /> Charge to room (DUE — settles at check-out)
           </button>
         </div>
-      </div>
-
-      {showPicker && <GuestPicker close={() => setShowPicker(false)} pick={(g) => { setLink(g); setShowPicker(false) }} />}
-    </div>
   )
 }
 
