@@ -153,7 +153,7 @@ export default function BookingCalendar({ openReservation, onNewReservation, onO
       </div>
 
       {/* Calendar grid */}
-      <div className="card overflow-visible">
+      <div className="card w-full max-w-full overflow-x-scroll overflow-y-visible">
         {loading ? (
           <div className="p-6 text-pine/50">Loading…</div>
         ) : (
