@@ -304,6 +304,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
   const [taxConfig, setTaxConfig]   = useState([])
   const [facilityItems, setFacilityItems] = useState([])
   const [reservationCfg, setReservationCfg] = useState(() => loadReservationConfig())
+  const [discountPolicies, setDiscountPolicies] = useState([])
   const [selectedPolicyId, setSelectedPolicyId] = useState('')
   const [addons, setAddons]         = useState({})
   const [serviceSearch, setServiceSearch] = useState('')
@@ -316,12 +317,12 @@ function NewReservation({ close, openReservation, userName, prefill }) {
 
   const applyDiscountPolicy = (policyId) => {
     setSelectedPolicyId(policyId)
-    const policy = reservationCfg.discountPolicies.find((item) => item.id === policyId)
-    if (!policy) return
+    const policy = discountPolicies.find((p) => p.id === policyId)
+    if (!policy) { setF(prev => ({ ...prev, discount_type: 'percentage', discount_val: 0 })); return }
     setF((prev) => ({
       ...prev,
       discount_type: policy.type,
-      discount_val: policy.value,
+      discount_val:  policy.value,
       notes: policy.note && !prev.notes?.includes(policy.note)
         ? `${prev.notes ? `${prev.notes}\n` : ''}${policy.note}`.trim()
         : prev.notes,
@@ -368,6 +369,24 @@ function NewReservation({ close, openReservation, userName, prefill }) {
   useEffect(() => {
     supabase.from('companies').select('id,name').eq('is_active', true).order('name').then(({ data }) => setCompanies(data || []))
     supabase.from('tax_config').select('*').then(({ data }) => setTaxConfig(data || []))
+    supabase.from('discount_policies').select('*').eq('is_active', true).order('is_default', { ascending: false }).order('name')
+      .then(({ data }) => {
+        const policies = data || []
+        setDiscountPolicies(policies)
+        // Auto-apply default policy
+        const def = policies.find(p => p.is_default) || policies[0]
+        if (def) {
+          setSelectedPolicyId(def.id)
+          setF(prev => ({
+            ...prev,
+            discount_type: def.type,
+            discount_val:  def.value,
+            notes: def.note && !prev.notes?.includes(def.note)
+              ? `${prev.notes ? `${prev.notes}\n` : ''}${def.note}`.trim()
+              : prev.notes,
+          }))
+        }
+      })
     supabase.from('facility_items').select('*').eq('is_active', true).order('category').order('name')
       .then(({ data }) => {
         const items = data || []
@@ -389,14 +408,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       window.removeEventListener('storage', syncConfig)
     }
   }, [])
-
-  useEffect(() => {
-    if (selectedPolicyId) return
-    const defaultPolicy = (reservationCfg.discountPolicies || []).find((item) => item.active)
-    if (!defaultPolicy) return
-    applyDiscountPolicy(defaultPolicy.id)
-  }, [reservationCfg.discountPolicies, selectedPolicyId])
-
+  
   const createCompany = async (name) => {
     const { data, error } = await supabase.from('companies').insert({ name }).select().single()
     if (error) { setErr(error.message); return null }
