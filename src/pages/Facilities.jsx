@@ -31,7 +31,7 @@ export default function Facilities({ userName, isAdmin }) {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-pine mb-1">Facilities & Shop</h1>
+      <h1 className="font-display text-2xl font-bold text-pine mb-1">Facilities &amp; Shop</h1>
       <p className="text-sm text-pine/60 mb-4">Tea sale · Pickle sale · Sports items rental — prices editable at the counter; charge to room or settle on the spot.</p>
       <KPICards module="facilities" />
 
@@ -46,32 +46,46 @@ export default function Facilities({ userName, isAdmin }) {
         ))}
       </div>
 
-      {tab === 'New Sale' && <NewSale items={items} taxConfig={taxConfig} userName={userName} flash={flash}
-        onDone={(doc) => { if (doc) setPrintDoc(doc); setTab('Sales') }} />}
+      {tab === 'New Sale' && (
+        <NewSale
+          items={items}
+          taxConfig={taxConfig}
+          userName={userName}
+          flash={flash}
+          onDone={(doc) => { if (doc) setPrintDoc(doc); setTab('Sales') }}
+        />
+      )}
       {tab === 'Sales' && <SalesList setPrintDoc={setPrintDoc} isAdmin={isAdmin} flash={flash} />}
       {tab === 'Items' && <ItemsManager items={items} reload={load} isAdmin={isAdmin} />}
 
       {printDoc?.type === 'RECEIPT' && (
-        <PrintPortal title={`${printDoc.order.outlet} — ${printDoc.order.order_no}`} onClose={() => setPrintDoc(null)} primaryColor={company?.primary_color || company?.brand_primary} accentColor={company?.accent_color || company?.brand_accent}>
+        <PrintPortal
+          title={`${printDoc.order.outlet} — ${printDoc.order.order_no}`}
+          onClose={() => setPrintDoc(null)}
+          primaryColor={company?.primary_color || company?.brand_primary}
+          accentColor={company?.accent_color || company?.brand_accent}
+        >
           <PosReceipt order={printDoc.order} items={printDoc.items} company={company} mushakNo={printDoc.mushakNo} />
         </PrintPortal>
       )}
       {printDoc?.type === 'MUSHAK' && (
-        <PrintPortal title={`Mushak-6.3 — ${printDoc.invoice.invoice_no}`} onClose={() => setPrintDoc(null)} primaryColor={company?.primary_color || company?.brand_primary} accentColor={company?.accent_color || company?.brand_accent}>
+        <PrintPortal
+          title={`Mushak-6.3 — ${printDoc.invoice.invoice_no}`}
+          onClose={() => setPrintDoc(null)}
+          primaryColor={company?.primary_color || company?.brand_primary}
+          accentColor={company?.accent_color || company?.brand_accent}
+        >
           <Mushak63 invoice={printDoc.invoice} res={null} company={company} refNo={printDoc.refNo} />
         </PrintPortal>
       )}
     </div>
-      </div>
-      {showPicker && <GuestPicker close={() => setShowPicker(false)} pick={(g) => { setLink(g); setShowPicker(false) }} />}
-    </div>
   )
 }
 
-/* ================= SALES LIST ================= */
+/* ================= NEW SALE ================= */
 function NewSale({ items, taxConfig, userName, flash, onDone }) {
   const cat = 'OTHER'
-  const [cart, setCart] = useState([]) // {facility_item_id, item_name, unit, qty, unit_price}
+  const [cart, setCart] = useState([])
   const [link, setLink] = useState({ reservation_id: null, guest_name: '', room_no: '' })
   const [payments, setPayments] = useState([{ method: 'CASH', amount: '' }])
   const [issueMushak, setIssueMushak] = useState(true)
@@ -84,6 +98,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
     || { vat_pct: 0, service_charge_pct: 0 }
   const subtotal = cart.reduce((a, c) => a + c.qty * c.unit_price, 0)
   const t = computeCharge(subtotal, 0, rate)
+
   const addItem = (fi) => setCart((prev) => {
     const f = prev.find((c) => c.facility_item_id === fi.id)
     if (f) return prev.map((c) => (c.facility_item_id === fi.id ? { ...c, qty: c.qty + 1 } : c))
@@ -137,8 +152,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
     if (validPayments.length === 0) { flash('Enter at least one payment amount.'); return }
     const totalPaid = validPayments.reduce((a, p) => a + Number(p.amount), 0)
     if (totalPaid < t.total - 0.01) { flash(`Amount short by ${fmtBDT(t.total - totalPaid)} — add more payment.`); return }
-    // Primary method = largest amount
-    const primaryMethod = validPayments.sort((a, b) => Number(b.amount) - Number(a.amount))[0].method
+    const primaryMethod = [...validPayments].sort((a, b) => Number(b.amount) - Number(a.amount))[0].method
     const paymentSummary = validPayments.map(p => `${p.method}:${Number(p.amount).toFixed(2)}`).join(', ')
     setBusy(true)
     try {
@@ -173,14 +187,15 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
         mushakNo = inv.invoice_no
         await supabase.from('pos_orders').update({ invoice_id: inv.id }).eq('id', order.id)
       }
-      setCart([]); setLink({ reservation_id: null, guest_name: '', room_no: '' })
+      setCart([])
+      setLink({ reservation_id: null, guest_name: '', room_no: '' })
       setPayments([{ method: 'CASH', amount: '' }])
       onDone({ type: 'RECEIPT', order: { ...order, status: 'SETTLED', payment_method: primaryMethod }, items: oi, mushakNo })
       flash(`${order.order_no} settled — ${paymentSummary}.${mushakNo ? ` Mushak-6.3 ${mushakNo} issued.` : ''}`)
     } catch (e) { flash(e.message) }
     setBusy(false)
   }
-  
+
   const chargeToRoom = async () => {
     if (cart.length === 0) { flash('Add at least one item.'); return }
     if (!link.reservation_id) { flash('Link an in-house guest first.'); return }
@@ -188,14 +203,16 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
     try {
       const { order, items: oi } = await persist({ status: 'CHARGED_TO_ROOM' })
       const { data: fc, error: fe } = await supabase.from('folio_charges').insert({
-        reservation_id: order.reservation_id, charge_date: todayISO(), charge_type: cat,
+        reservation_id: order.reservation_id, charge_date: todayISO(), charge_type: 'OTHER',
         description: `${catMeta.outlet} ${order.order_no}`,
         base_amount: t.base_amount, discount: t.discount, service_charge: t.service_charge,
         vat: t.vat, total: t.total, status: 'DUE', created_by: userName,
       }).select().single()
       if (fe) throw fe
       await supabase.from('pos_orders').update({ folio_charge_id: fc.id }).eq('id', order.id)
-      setCart([]); setLink({ reservation_id: null, guest_name: '', room_no: '' })
+      setCart([])
+      setLink({ reservation_id: null, guest_name: '', room_no: '' })
+      setPayments([{ method: 'CASH', amount: '' }])
       onDone({ type: 'RECEIPT', order: { ...order, status: 'CHARGED_TO_ROOM' }, items: oi })
       flash(`${order.order_no} charged to Room ${order.room_no} as DUE.`)
     } catch (e) { flash(e.message) }
@@ -206,8 +223,9 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+      {/* ── Item grid ── */}
       <div className="xl:col-span-3">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {visible.map((fi) => (
             <button key={fi.id} onClick={() => addItem(fi)}
               className="card p-3 text-left hover:border-forest hover:shadow transition-all active:scale-[0.98]">
@@ -216,7 +234,8 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
             </button>
           ))}
           <button onClick={addCustom} className="card p-3 text-left border-dashed hover:border-forest text-pine/60">
-            <Plus size={15} className="mb-1" /><div className="text-sm font-semibold">Custom item / price</div>
+            <Plus size={15} className="mb-1" />
+            <div className="text-sm font-semibold">Custom item / price</div>
           </button>
         </div>
         {rate && (
@@ -224,9 +243,12 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
         )}
       </div>
 
+      {/* ── Cart + Payment ── */}
       <div className="xl:col-span-2 space-y-3">
+        {/* Cart card */}
         <div className="card p-4">
-          <h3 className="font-display font-semibold text-pine mb-2">Facilities & Shop — current sale</h3>
+          <h3 className="font-display font-semibold text-pine mb-2">Facilities &amp; Shop — current sale</h3>
+
           {link.reservation_id ? (
             <div className="flex items-center justify-between bg-leaf/50 rounded-lg px-3 py-2 mb-2 text-sm">
               <span><b>{link.guest_name}</b> · Room {link.room_no}</span>
@@ -234,10 +256,18 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
             </div>
           ) : (
             <div className="flex gap-2 mb-2">
-              <button className="btn-ghost flex-1 justify-center !py-1.5 text-xs" onClick={() => setShowPicker(true)}><BedDouble size={14} /> Link in-house guest</button>
-              <input className="input flex-1 !py-1.5 text-xs" placeholder="Walk-in name (optional)" value={link.guest_name} onChange={(e) => setLink({ ...link, guest_name: e.target.value })} />
+              <button className="btn-ghost flex-1 justify-center !py-1.5 text-xs" onClick={() => setShowPicker(true)}>
+                <BedDouble size={14} /> Link in-house guest
+              </button>
+              <input
+                className="input flex-1 !py-1.5 text-xs"
+                placeholder="Walk-in name (optional)"
+                value={link.guest_name}
+                onChange={(e) => setLink({ ...link, guest_name: e.target.value })}
+              />
             </div>
           )}
+
           <div className="max-h-64 overflow-auto divide-y divide-leaf/60">
             {cart.map((c, i) => (
               <div key={i} className="py-2 space-y-1">
@@ -250,21 +280,29 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
                   <span className="money w-7 text-center font-semibold">{c.qty}</span>
                   <button className="w-6 h-6 rounded bg-forest text-white" onClick={() => bump(i, 1)}><Plus size={13} className="mx-auto" /></button>
                   <span className="text-xs text-pine/50">×</span>
-                  <input type="number" className="input !w-28 !py-1 money text-right" value={c.unit_price} onChange={(e) => setPrice(i, e.target.value)} title="Editable price" />
+                  <input type="number" className="input !w-28 !py-1 money text-right" value={c.unit_price} onChange={(e) => setPrice(i, e.target.value)} />
                   <span className="money flex-1 text-right text-sm font-semibold">{(c.qty * c.unit_price).toFixed(2)}</span>
                 </div>
               </div>
             ))}
-            {cart.length === 0 && <p className="text-sm text-pine/50 py-4 text-center">Tap items to add — every price stays editable.</p>}
+            {cart.length === 0 && (
+              <p className="text-sm text-pine/50 py-4 text-center">Tap items to add — every price stays editable.</p>
+            )}
           </div>
+
           <div className="border-t border-leaf mt-2 pt-2 text-sm space-y-1 money">
             <div className="flex justify-between"><span>Subtotal</span><span>{t.base_amount.toFixed(2)}</span></div>
-            {rate.service_charge_pct > 0 && <div className="flex justify-between"><span>Service charge {rate.service_charge_pct}%</span><span>{t.service_charge.toFixed(2)}</span></div>}
+            {rate.service_charge_pct > 0 && (
+              <div className="flex justify-between"><span>Service charge {rate.service_charge_pct}%</span><span>{t.service_charge.toFixed(2)}</span></div>
+            )}
             <div className="flex justify-between"><span>VAT {rate.vat_pct}%</span><span>{t.vat.toFixed(2)}</span></div>
-            <div className="flex justify-between font-bold text-base border-t border-pine/20 pt-1"><span>Total</span><span>{fmtBDT(t.total)}</span></div>
+            <div className="flex justify-between font-bold text-base border-t border-pine/20 pt-1">
+              <span>Total</span><span>{fmtBDT(t.total)}</span>
+            </div>
           </div>
         </div>
 
+        {/* Payment card */}
         <div className="card p-4 space-y-3">
           {/* Split payment rows */}
           <div className="space-y-2">
@@ -275,7 +313,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
                   value={p.method}
                   onChange={e => setPayments(prev => prev.map((x, j) => j === i ? { ...x, method: e.target.value } : x))}
                 >
-                  {['CASH','BKASH','NAGAD','CARD','BANK','OTHER'].map(m => <option key={m}>{m}</option>)}
+                  {['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER'].map(m => <option key={m}>{m}</option>)}
                 </select>
                 <input
                   type="number"
@@ -293,7 +331,6 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
             ))}
           </div>
 
-          {/* Add method button */}
           <button
             onClick={() => setPayments(prev => [...prev, { method: 'CASH', amount: '' }])}
             className="btn-ghost !py-1.5 text-xs w-full justify-center"
@@ -329,9 +366,18 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
             <BedDouble size={16} /> Charge to room (DUE — settles at check-out)
           </button>
         </div>
+      </div>
+
+      {showPicker && (
+        <GuestPicker
+          close={() => setShowPicker(false)}
+          pick={(g) => { setLink(g); setShowPicker(false) }}
+        />
+      )}
+    </div>
   )
 }
-}
+
 /* ================= SALES LIST ================= */
 function SalesList({ setPrintDoc, isAdmin, flash }) {
   const [rows, setRows] = useState([])
@@ -356,34 +402,53 @@ function SalesList({ setPrintDoc, isAdmin, flash }) {
     flash(`${o.order_no} voided & reversed.`); load()
   }
 
-  const chip = { SETTLED: 'bg-forest/15 text-forest', CHARGED_TO_ROOM: 'bg-pine/15 text-pine', CANCELLED: 'bg-red-100 text-red-600', OPEN: 'bg-amber/20 text-amber' }
+  const chip = {
+    SETTLED: 'bg-forest/15 text-forest',
+    CHARGED_TO_ROOM: 'bg-pine/15 text-pine',
+    CANCELLED: 'bg-red-100 text-red-600',
+    OPEN: 'bg-amber/20 text-amber',
+  }
 
   return (
     <div className="card overflow-hidden">
       <table className="w-full">
-        <thead><tr>
-          <th className="th">Sale</th><th className="th">Outlet</th><th className="th">Date</th>
-          <th className="th">Guest / Room</th><th className="th text-right">Total</th><th className="th">Status</th><th className="th text-right">Actions</th>
-        </tr></thead>
+        <thead>
+          <tr>
+            <th className="th">Sale</th>
+            <th className="th">Outlet</th>
+            <th className="th">Date</th>
+            <th className="th">Guest / Room</th>
+            <th className="th text-right">Total</th>
+            <th className="th">Status</th>
+            <th className="th text-right">Actions</th>
+          </tr>
+        </thead>
         <tbody>
           {rows.map((o) => (
             <tr key={o.id} className="hover:bg-leaf/20">
               <td className="td money font-semibold">{o.order_no}</td>
               <td className="td text-xs">{o.outlet}</td>
               <td className="td money text-xs">{fmtDate(o.created_at)}</td>
-              <td className="td text-sm">{o.guest_name || 'Walk-in'}{o.room_no ? <span className="text-xs text-pine/50"> · Rm {o.room_no}</span> : ''}</td>
+              <td className="td text-sm">
+                {o.guest_name || 'Walk-in'}
+                {o.room_no ? <span className="text-xs text-pine/50"> · Rm {o.room_no}</span> : ''}
+              </td>
               <td className="td money text-right font-semibold">{Number(o.total).toFixed(2)}</td>
               <td className="td"><span className={`status-chip ${chip[o.status]}`}>{o.status.replace(/_/g, ' ')}</span></td>
               <td className="td">
                 <div className="flex justify-end gap-1.5">
                   <button className="btn-ghost !py-1 !px-2" title="Bill" onClick={() => printReceipt(o)}><Printer size={13} /></button>
                   {o.invoice_id && <button className="btn-ghost !py-1 !px-2 text-xs" onClick={() => printMushak(o)}>6.3</button>}
-                  {isAdmin && ['SETTLED', 'CHARGED_TO_ROOM'].includes(o.status) && <button className="btn-ghost !py-1 !px-2 text-red-500 text-xs" onClick={() => voidSale(o)}>Void</button>}
+                  {isAdmin && ['SETTLED', 'CHARGED_TO_ROOM'].includes(o.status) && (
+                    <button className="btn-ghost !py-1 !px-2 text-red-500 text-xs" onClick={() => voidSale(o)}>Void</button>
+                  )}
                 </div>
               </td>
             </tr>
           ))}
-          {rows.length === 0 && <tr><td className="td text-pine/50" colSpan={7}>No facility sales yet.</td></tr>}
+          {rows.length === 0 && (
+            <tr><td className="td text-pine/50" colSpan={7}>No facility sales yet.</td></tr>
+          )}
         </tbody>
       </table>
     </div>
@@ -393,7 +458,8 @@ function SalesList({ setPrintDoc, isAdmin, flash }) {
 /* ================= ITEMS MANAGER ================= */
 function ItemsManager({ items, reload, isAdmin }) {
   const [n, setN] = useState({ name: '', unit: 'pc', default_price: '' })
- const add = async () => {
+
+  const add = async () => {
     if (!n.name.trim() || n.default_price === '') return
     await supabase.from('facility_items').insert({ ...n, default_price: +n.default_price, category: 'OTHER' })
     setN({ name: '', unit: 'pc', default_price: '' }); reload()
@@ -402,26 +468,51 @@ function ItemsManager({ items, reload, isAdmin }) {
     if (price === '' || +price === +it.default_price) return
     await supabase.from('facility_items').update({ default_price: +price }).eq('id', it.id); reload()
   }
-  const toggle = async (it) => { await supabase.from('facility_items').update({ is_active: !it.is_active }).eq('id', it.id); reload() }
-  const del = async (it) => { await supabase.from('facility_items').delete().eq('id', it.id); reload() }
+  const toggle = async (it) => {
+    await supabase.from('facility_items').update({ is_active: !it.is_active }).eq('id', it.id); reload()
+  }
+  const del = async (it) => {
+    await supabase.from('facility_items').delete().eq('id', it.id); reload()
+  }
 
   return (
     <div className="card p-5">
-      <h3 className="font-display font-semibold text-pine mb-1 flex items-center gap-2"><Leaf size={17} /> Facility items (default prices)</h3>
-      <p className="text-xs text-pine/50 mb-3">Defaults only — the price stays editable on every sale. {!isAdmin && 'Changing the catalog requires administrator access.'}</p>
+      <h3 className="font-display font-semibold text-pine mb-1 flex items-center gap-2">
+        <Leaf size={17} /> Facility items (default prices)
+      </h3>
+      <p className="text-xs text-pine/50 mb-3">
+        Defaults only — the price stays editable on every sale.
+        {!isAdmin && ' Changing the catalog requires administrator access.'}
+      </p>
       {isAdmin && (
         <div className="grid grid-cols-4 gap-2 mb-4 items-end">
-          <div><label className="label">Item name</label><input className="input" value={n.name} onChange={(e) => setN({ ...n, name: e.target.value })} /></div>
-          <div><label className="label">Unit</label>
+          <div>
+            <label className="label">Item name</label>
+            <input className="input" value={n.name} onChange={(e) => setN({ ...n, name: e.target.value })} />
+          </div>
+          <div>
+            <label className="label">Unit</label>
             <select className="input" value={n.unit} onChange={(e) => setN({ ...n, unit: e.target.value })}>
               {['pc', 'pkt', 'jar', 'kg', 'hour', 'day'].map((u) => <option key={u}>{u}</option>)}
-            </select></div>
-          <div><label className="label">Default price ৳</label><input type="number" className="input money" value={n.default_price} onChange={(e) => setN({ ...n, default_price: e.target.value })} /></div>
+            </select>
+          </div>
+          <div>
+            <label className="label">Default price ৳</label>
+            <input type="number" className="input money" value={n.default_price} onChange={(e) => setN({ ...n, default_price: e.target.value })} />
+          </div>
           <button className="btn-primary justify-center" onClick={add}><Plus size={15} /> Add item</button>
         </div>
       )}
       <table className="w-full">
-        <thead><tr><th className="th">Item</th><th className="th">Unit</th><th className="th text-right">Default price</th><th className="th">Status</th><th className="th"></th></tr></thead>
+        <thead>
+          <tr>
+            <th className="th">Item</th>
+            <th className="th">Unit</th>
+            <th className="th text-right">Default price</th>
+            <th className="th">Status</th>
+            <th className="th"></th>
+          </tr>
+        </thead>
         <tbody>
           {items.map((it) => (
             <tr key={it.id}>
@@ -429,15 +520,32 @@ function ItemsManager({ items, reload, isAdmin }) {
               <td className="td text-xs">{it.unit}</td>
               <td className="td text-right">
                 {isAdmin ? (
-                  <input type="number" defaultValue={it.default_price} onBlur={(e) => updatePrice(it, e.target.value)} className="input !w-28 !py-1 money text-right inline-block" />
-                ) : (<span className="money">{Number(it.default_price).toFixed(2)}</span>)}
+                  <input
+                    type="number"
+                    defaultValue={it.default_price}
+                    onBlur={(e) => updatePrice(it, e.target.value)}
+                    className="input !w-28 !py-1 money text-right inline-block"
+                  />
+                ) : (
+                  <span className="money">{Number(it.default_price).toFixed(2)}</span>
+                )}
               </td>
               <td className="td">
-                <button onClick={() => isAdmin && toggle(it)} disabled={!isAdmin} className={`status-chip ${it.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'} ${!isAdmin ? 'cursor-default' : ''}`}>
+                <button
+                  onClick={() => isAdmin && toggle(it)}
+                  disabled={!isAdmin}
+                  className={`status-chip ${it.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'} ${!isAdmin ? 'cursor-default' : ''}`}
+                >
                   {it.is_active ? 'ACTIVE' : 'OFF'}
                 </button>
               </td>
-              <td className="td text-right">{isAdmin && <button onClick={() => del(it)} className="text-red-300 hover:text-red-600"><Trash2 size={14} /></button>}</td>
+              <td className="td text-right">
+                {isAdmin && (
+                  <button onClick={() => del(it)} className="text-red-300 hover:text-red-600">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
