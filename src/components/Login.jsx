@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
-import { LogIn } from 'lucide-react'
+import { LogIn, Eye, EyeOff } from 'lucide-react'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Card, CardContent, CardHeader } from './ui/card'
+import { Alert, AlertDescription } from './ui/alert'
+import { Separator } from './ui/separator'
+import { cn } from '../lib/utils'
 
 // Hardcoded fallback — used if the slug lookup fails or no slug is given
 const FALLBACK_LOGO     = null
@@ -13,6 +20,7 @@ const DEFAULT_SLUG = 'novemecoresort'
 export default function Login({ slug }) {
   const [username,     setUsername]     = useState('')
   const [password,     setPassword]     = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [err,          setErr]          = useState('')
   const [busy,         setBusy]         = useState(false)
   const [company,      setCompany]      = useState(null)
@@ -83,6 +91,7 @@ export default function Login({ slug }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-paper relative overflow-hidden">
+      {/* Background */}
       {company?.login_background_video_url ? (
         <>
           <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
@@ -93,16 +102,21 @@ export default function Login({ slug }) {
       ) : (
         <div
           className="absolute inset-0 opacity-[0.35]"
-          style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(46,125,50,0.08), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.55), rgba(247,245,242,0.95))' }}
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 20% 20%, rgba(46,125,50,0.08), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.55), rgba(247,245,242,0.95))',
+          }}
         />
       )}
 
-      <div className="card w-full max-w-sm p-8 relative shadow-xl border border-leaf/80">
-
-        {/* Logo */}
-        <div className="flex flex-col items-center text-center mb-7">
-          <div className="w-24 h-24 rounded-2xl mb-4 overflow-hidden shadow-sm bg-white flex items-center justify-center ring-1 ring-leaf/70">
-            {!imgFailed ? (
+      {/* Login Card */}
+      <Card className="relative w-full max-w-sm shadow-2xl border-leaf/80">
+        <CardHeader className="items-center text-center pt-8 pb-5">
+          {/* Logo / Avatar */}
+          <div className={cn(
+            'w-24 h-24 rounded-2xl mb-4 overflow-hidden shadow-sm bg-white flex items-center justify-center ring-1 ring-leaf/70',
+          )}>
+            {!imgFailed && logoUrl ? (
               <img
                 src={logoUrl}
                 alt={propertyName}
@@ -117,59 +131,84 @@ export default function Login({ slug }) {
               </div>
             )}
           </div>
+
           <h1 className="font-display text-2xl font-bold text-pine leading-tight">{softwareName}</h1>
           <p className="text-sm text-pine/60 mt-1">Welcome to {propertyName}</p>
-        </div>
+        </CardHeader>
 
-        <div className="border-t border-leaf/80 mb-6" />
+        <CardContent className="px-8 pb-8">
+          <Separator className="mb-6" />
 
-        <div className="space-y-4">
-          <div>
-            <label className="label">Username</label>
-            <input
-              className="input"
-              type="text"
-              autoCapitalize="none"
-              autoCorrect="off"
-              autoComplete="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="your username"
-              onKeyDown={(e) => e.key === 'Enter' && signIn()}
-            />
-          </div>
-          <div>
-            <label className="label">Password</label>
-            <input
-              className="input"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && signIn()}
-            />
-          </div>
-
-          {err && (
-            <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-sm text-red-600">
-              {err}
-            </div>
-          )}
-
-          <button
-            className="btn-primary w-full justify-center mt-2"
-            onClick={signIn}
-            disabled={busy || !username || !password}
+          <form
+            className="space-y-4"
+            onSubmit={(e) => { e.preventDefault(); signIn() }}
           >
-            <LogIn size={16} /> {busy ? 'Signing in…' : 'Sign in'}
-          </button>
+            {/* Username */}
+            <div className="space-y-1.5">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                type="text"
+                autoCapitalize="none"
+                autoCorrect="off"
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="your username"
+              />
+            </div>
 
-          <div className="pt-1 flex items-center justify-between text-xs text-pine/40">
-            <div>© {new Date().getFullYear()} Aura Stay</div>
-            <div>Powered by <span className="font-semibold text-pine/60">Aura Stay</span></div>
-          </div>
-        </div>
-      </div>
+            {/* Password */}
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-pine/40 hover:text-pine/70 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Error */}
+            {err && (
+              <Alert variant="destructive">
+                <AlertDescription>{err}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Submit */}
+            <Button
+              type="submit"
+              className="w-full mt-2"
+              disabled={busy || !username || !password}
+            >
+              <LogIn size={16} />
+              {busy ? 'Signing in…' : 'Sign in'}
+            </Button>
+
+            {/* Footer */}
+            <div className="pt-1 flex items-center justify-between text-xs text-pine/40">
+              <span>© {new Date().getFullYear()} Aura Stay</span>
+              <span>
+                Powered by <span className="font-semibold text-pine/60">Aura Stay</span>
+              </span>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

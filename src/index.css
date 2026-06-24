@@ -36,6 +36,30 @@
     --interactive-shadow: 0 16px 36px rgba(23, 23, 23, 0.10);
     --sidebar-bg:         #1B4D2E;
 
+    /* ── shadcn/ui semantic tokens (HSL) — mapped to brand palette ────
+       These power the Tailwind classes: bg-background, text-foreground,
+       bg-primary, bg-muted, border-border, etc.                        */
+    --background:        38 33% 96%;   /* #F7F5F2 paper          */
+    --foreground:        0 0% 9%;      /* #171717 ink            */
+    --card:              0 0% 100%;    /* #FFFFFF                */
+    --card-foreground:   0 0% 9%;
+    --popover:           0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --primary:           185 59% 32%; /* #1F6F78 brand teal     */
+    --primary-foreground: 0 0% 100%;
+    --secondary:         36 23% 92%;  /* #F1EEE9 surface-muted  */
+    --secondary-foreground: 0 0% 9%;
+    --muted:             36 23% 92%;
+    --muted-foreground:  26 7% 47%;   /* #5F5A55                */
+    --accent:            148 48% 20%; /* #1B4D2E pine           */
+    --accent-foreground: 0 0% 100%;
+    --destructive:       0 84% 60%;   /* red-500                */
+    --destructive-foreground: 0 0% 100%;
+    --border:            35 19% 87%;  /* #E5DFD6                */
+    --input:             35 19% 87%;
+    --ring:              185 59% 32%; /* brand teal             */
+    --radius:            0.625rem;
+
     /* ── Motion system ───────────────────────────────────────────────── */
     --aura-enter-duration:  0.75s;
     --aura-enter-ease:      cubic-bezier(0.22, 1, 0.36, 1);
