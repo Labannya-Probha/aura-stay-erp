@@ -333,6 +333,7 @@ function SalesList({ setPrintDoc, isAdmin, flash }) {
 
 /* ================= ITEMS MANAGER ================= */
 function ItemsManager({ items, reload, isAdmin }) {
+  const [n, setN] = useState({ name: '', unit: 'pc', default_price: '' })
  const add = async () => {
     if (!n.name.trim() || n.default_price === '') return
     await supabase.from('facility_items').insert({ ...n, default_price: +n.default_price, category: 'OTHER' })
