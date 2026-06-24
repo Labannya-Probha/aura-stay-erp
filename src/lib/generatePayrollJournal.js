@@ -17,6 +17,15 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { supabase } from '../supabase'
 
+function toRpcError(error) {
+  const rpcError = new Error(error.message)
+  rpcError.name = 'PostgrestError'
+  rpcError.code = error.code
+  rpcError.details = error.details
+  rpcError.hint = error.hint
+  return rpcError
+}
+
 /**
  * Atomically approve a payroll run and post its double-entry journal.
  *
@@ -29,7 +38,7 @@ export async function approvePayrollAndPostJv(payrollRunId) {
   const { data, error } = await supabase.rpc('approve_payroll_and_post_jv', {
     p_payroll_run_id: payrollRunId,
   })
-  if (error) throw new Error(error.message)
+  if (error) throw toRpcError(error)
   return data
 }
 
@@ -45,6 +54,6 @@ export async function generatePayrollJournal(payrollRunId) {
   const { data, error } = await supabase.rpc('generate_payroll_journal', {
     p_payroll_run_id: payrollRunId,
   })
-  if (error) throw new Error(error.message)
+  if (error) throw toRpcError(error)
   return data
 }
