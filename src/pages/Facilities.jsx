@@ -328,7 +328,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
         </div>
   )
 }
-
+}
 /* ================= SALES LIST ================= */
 function SalesList({ setPrintDoc, isAdmin, flash }) {
   const [rows, setRows] = useState([])
