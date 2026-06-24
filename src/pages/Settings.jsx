@@ -52,7 +52,15 @@ export default function Settings({ userName, role, isAdmin, reloadCompany }) {
   const isAdminPlus = isSuperuser || isAdmin          // Admin or above
   const canManage   = isAdminPlus || role === 'MANAGER'
   const [activeSection, setActiveSection] = useState(null)
-
+  const [myTenantId, setMyTenantId]       = useState(null)
+  
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: u }) => {
+      if (!u?.user?.id) return
+      supabase.from('app_users').select('tenant_id').eq('id', u.user.id).single()
+        .then(({ data }) => { if (data?.tenant_id) setMyTenantId(data.tenant_id) })
+    })
+  }, [])
   if (!canManage) {
     return (
       <div className="card p-8 max-w-xl">
@@ -68,7 +76,7 @@ export default function Settings({ userName, role, isAdmin, reloadCompany }) {
     { id: 'my-account', title: 'My Account', icon: KeyRound, visible: true, content: <MyAccountCard userName={userName} /> },
     { id: 'branding', title: 'Branding', icon: Image, visible: isAdminPlus, content: <BrandingCard reloadCompany={reloadCompany} /> },
     { id: 'tax', title: 'Tax Rates', visible: true, content: <TaxCard /> },
-    { id: 'tax-policy', title: 'Tax Policy', icon: FileText, visible: true, content: <TaxPolicyCard /> },
+    { id: 'tax-policy', title: 'Tax Policy', icon: FileText, visible: true, content: <TaxPolicyCard tenantId={myTenantId} isAdmin={isAdminPlus} /> },
     { id: 'allowance', title: 'Allowance Configuration', icon: Percent, visible: isSuperuser, content: <AllowanceCard /> },
     { id: 'role-permissions', title: 'Role Permissions', icon: ShieldCheck, visible: isSuperuser, content: <RolePrivilegesCard /> },
     { id: 'admin-feature-access', title: 'Admin Feature Access', icon: Lock, visible: isSuperuser, content: <AdminFeatureAccessCard /> },
