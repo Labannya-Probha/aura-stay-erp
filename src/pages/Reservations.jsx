@@ -748,80 +748,70 @@ function NewReservation({ close, openReservation, userName, prefill }) {
               )}
               {facilityItems.length > 0 && (
                 <>
-                  {/* Search bar */}
-                  <div className="relative mb-3">
-                    <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-pine/30" />
-                    <input
-                      className="input !pl-8 text-sm"
-                      placeholder="Search services…"
-                      value={serviceSearch}
-                      onChange={(e) => setServiceSearch(e.target.value)}
-                    />
-                    {serviceSearch && (
-                      <button onClick={() => setServiceSearch('')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-pine/30 hover:text-pine">
-                        <X size={13} />
-                      </button>
-                    )}
+                  {/* Search + Add */}
+                  <div className="flex gap-2 mb-3">
+                    <div className="relative flex-1">
+                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-pine/30" />
+                      <input
+                        className="input !pl-8 text-sm"
+                        placeholder="Search services…"
+                        value={serviceSearch}
+                        onChange={(e) => setServiceSearch(e.target.value)}
+                      />
+                      {serviceSearch && (
+                        <button onClick={() => setServiceSearch('')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-pine/30 hover:text-pine">
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+                    {/* Add matched item */}
+                    {serviceSearch && (() => {
+                      const match = facilityItems.find(it =>
+                        it.name.toLowerCase().includes(serviceSearch.toLowerCase()) && !addons[it.id]?.selected
+                      )
+                      return match ? (
+                        <button
+                          type="button"
+                          onClick={() => { toggleAddon(match.id); setServiceSearch('') }}
+                          className="btn-primary !py-1.5 text-xs shrink-0"
+                        >
+                          + Add "{match.name}"
+                        </button>
+                      ) : null
+                    })()}
                   </div>
-                  {/* Selected services summary */}
+
+                  {/* Selected services chips */}
                   {Object.values(addons).some(a => a.selected) && (
-                    <div className="flex flex-wrap gap-1.5 mb-2">
+                    <div className="space-y-2">
                       {facilityItems.filter(it => addons[it.id]?.selected).map(it => (
-                        <span key={it.id}
-                          className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-forest/15 text-forest text-xs font-medium">
-                          {it.name}
-                          <button onClick={() => toggleAddon(it.id)} className="hover:text-red-500 ml-0.5">×</button>
-                        </span>
+                        <div key={it.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-forest bg-forest/5">
+                          <span className="text-sm flex-1 font-medium text-pine">
+                            {it.name}
+                            <span className="text-pine/40 text-xs ml-1">/{it.unit}</span>
+                          </span>
+                          <input type="number" min="0" step="0.01"
+                            className="input !w-24 !py-1 money text-right"
+                            placeholder="Price ৳"
+                            value={addons[it.id].price}
+                            onChange={(e) => updAddon(it.id, 'price', e.target.value)} />
+                          <input type="number" min="1"
+                            className="input !w-14 !py-1 money text-right"
+                            placeholder="Qty"
+                            value={addons[it.id].qty}
+                            onChange={(e) => updAddon(it.id, 'qty', e.target.value)} />
+                          <button onClick={() => toggleAddon(it.id)}
+                            className="text-red-300 hover:text-red-600 shrink-0">
+                            <X size={14} />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}
-                  {/* Grouped list */}
-                  {Object.entries(groupedFacilityItems).map(([category, catItems]) => {
-                    const visible = catItems.filter(it =>
-                      !serviceSearch || it.name.toLowerCase().includes(serviceSearch.toLowerCase()) ||
-                      it.category.toLowerCase().includes(serviceSearch.toLowerCase())
-                    )
-                    if (visible.length === 0) return null
-                    return (
-                      <div key={category} className="mb-3">
-                        <div className="text-[10px] uppercase tracking-wide font-bold text-pine/40 mb-1.5">{category}</div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {visible.map((it) => (
-                            <div key={it.id}
-                              className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
-                                addons[it.id]?.selected ? 'border-forest bg-forest/5' : 'border-leaf hover:border-forest/30'
-                              }`}
-                              onClick={() => !addons[it.id]?.selected && toggleAddon(it.id)}
-                            >
-                              <input type="checkbox" checked={!!addons[it.id]?.selected}
-                                onChange={() => toggleAddon(it.id)}
-                                onClick={e => e.stopPropagation()} />
-                              <span className="text-sm flex-1">{it.name}
-                                <span className="text-pine/40 text-xs ml-1">/{it.unit}</span>
-                              </span>
-                              {addons[it.id]?.selected && (
-                                <>
-                                  <input type="number" min="0" step="0.01"
-                                    className="input !w-24 !py-1 money text-right"
-                                    placeholder="Price ৳"
-                                    value={addons[it.id].price}
-                                    onChange={(e) => updAddon(it.id, 'price', e.target.value)}
-                                    onClick={e => e.stopPropagation()} />
-                                  <input type="number" min="1"
-                                    className="input !w-14 !py-1 money text-right"
-                                    placeholder="Qty"
-                                    value={addons[it.id].qty}
-                                    onChange={(e) => updAddon(it.id, 'qty', e.target.value)}
-                                    onClick={e => e.stopPropagation()} />
-                                </>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
+                  {!Object.values(addons).some(a => a.selected) && !serviceSearch && (
+                    <p className="text-xs text-pine/40 py-2">Search and add services above.</p>
+                  )}
                 </>
               )}
             </div>
@@ -855,22 +845,21 @@ function NewReservation({ close, openReservation, userName, prefill }) {
             <div><label className="label">Children</label><input type="number" min="0" className="input" value={f.pax_children} onChange={(e) => set('pax_children', e.target.value)} /></div>
 
             <div className="col-span-2">
-              <label className="label">Discount Policy</label>
-              <SearchableSelect
-                options={[
-                  { value: '', label: 'No policy (manual discount)' },
-                  ...reservationCfg.discountPolicies
-                    .filter((item) => item.active)
-                    .map((item) => ({
-                      value: item.id,
-                      label: `${item.name} · ${item.type === 'fixed' ? fmtBDT(item.value) : `${item.value}%`}`,
-                    })),
-                ]}
-                value={selectedPolicyId}
-                onChange={(val) => applyDiscountPolicy(val)}
-                placeholder="Select policy…"
-              />
-            </div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="label !mb-0">Discount</label>
+                {selectedPolicyId && (() => {
+                  const policy = reservationCfg.discountPolicies.find(p => p.id === selectedPolicyId)
+                  return policy ? (
+                    <span className="text-xs text-forest font-medium flex items-center gap-1">
+                      ✓ {policy.name} applied
+                      <button onClick={() => { setSelectedPolicyId(''); set('discount_val', 0) }}
+                        className="text-pine/40 hover:text-red-500 ml-1">
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ) : null
+                })()}
+              </div>
 
             <div className="col-span-2">
               <label className="label">Discount</label>
