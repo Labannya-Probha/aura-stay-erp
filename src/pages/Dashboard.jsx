@@ -3,16 +3,25 @@ import { supabase } from '../supabase'
 import { fmtDate, todayISO, STATUS_COLORS, buildWorkflowDescription } from '../lib/helpers'
 import { BedDouble, Sparkles, Brush, Wrench, DoorOpen, RefreshCw, Clock, XCircle, Send } from 'lucide-react'
 import KPICards from '../components/KPICards.jsx'
+import { Button } from '../components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Badge, badgeVariants } from '../components/ui/badge'
+import { Alert, AlertDescription } from '../components/ui/alert'
+import { cn } from '../lib/utils'
 
-const HK_STATES = ['Clean', 'Dirty', 'Inspected', 'Out of Order']
 const HK_STYLE = {
-  'Clean': 'bg-forest/15 text-forest border-forest/30',
-  'Inspected': 'bg-sky-100 text-sky-700 border-sky-300',
-  'Dirty': 'bg-amber/20 text-amber-700 border-amber/40',
+  'Clean':        'bg-forest/15 text-forest border-forest/30',
+  'Inspected':    'bg-sky-100 text-sky-700 border-sky-300',
+  'Dirty':        'bg-amber/20 text-amber-700 border-amber/40',
   'Out of Order': 'bg-red-100 text-red-700 border-red-300',
 }
 const HK_ICON = { 'Clean': Sparkles, 'Inspected': BedDouble, 'Dirty': Brush, 'Out of Order': Wrench }
-const OCC_STYLE = { OCCUPIED: 'bg-pine text-white', ARRIVAL: 'bg-amber text-white', DEPARTURE: 'bg-sky-600 text-white', VACANT: 'bg-leaf/50 text-pine' }
+const OCC_STYLE = {
+  OCCUPIED:   'bg-pine text-white',
+  ARRIVAL:    'bg-amber text-white',
+  DEPARTURE:  'bg-sky-600 text-white',
+  VACANT:     'bg-leaf/50 text-pine',
+}
 const OCC_LABEL = { OCCUPIED: 'In-house', ARRIVAL: 'Arrival', DEPARTURE: 'Departure', VACANT: 'Vacant' }
 
 export default function Dashboard({ openReservation, userName, role, isAdmin }) {
@@ -149,23 +158,35 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
     }
   }
 
-  const List = ({ title, rows, empty }) => (
-    <div className="card p-5">
-      <h3 className="font-display font-semibold text-pine mb-3">{title}</h3>
-      {rows.length === 0 && <p className="text-sm text-pine/50">{empty}</p>}
-      <div className="space-y-2">
-        {rows.map((r) => (
-          <button key={r.id} onClick={() => openReservation(r.id)}
-            className="w-full flex items-center justify-between gap-2 p-3 rounded-lg border border-leaf hover:bg-leaf/40 text-left">
-            <div className="min-w-0">
-              <div className="font-semibold text-sm truncate">{r.reservation_name || r.guests?.full_name || '—'}</div>
-              <div className="text-xs text-pine/60 money truncate">{r.res_no} · {fmtDate(r.check_in)} → {fmtDate(r.check_out)}</div>
+  // Inline reservation list card
+  const ReservationList = ({ title, rows, empty }) => (
+    <Card>
+      <CardHeader className="pt-5 pb-3">
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {rows.length === 0
+          ? <p className="text-sm text-pine/50">{empty}</p>
+          : (
+            <div className="space-y-2">
+              {rows.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => openReservation(r.id)}
+                  className="w-full flex items-center justify-between gap-2 p-3 rounded-lg border border-leaf hover:bg-leaf/40 text-left transition-colors"
+                >
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm truncate">{r.reservation_name || r.guests?.full_name || '—'}</div>
+                    <div className="text-xs text-pine/60 font-mono truncate">{r.res_no} · {fmtDate(r.check_in)} → {fmtDate(r.check_out)}</div>
+                  </div>
+                  <span className={cn('status-chip shrink-0 whitespace-nowrap', STATUS_COLORS[r.status])}>{r.status.replace('_', ' ')}</span>
+                </button>
+              ))}
             </div>
-            <span className={`status-chip shrink-0 whitespace-nowrap ${STATUS_COLORS[r.status]}`}>{r.status.replace('_', ' ')}</span>
-          </button>
-        ))}
-      </div>
-    </div>
+          )
+        }
+      </CardContent>
+    </Card>
   )
 
   const groups = rooms.reduce((a, r) => { (a[r.room_type] = a[r.room_type] || []).push(r); return a }, {})
@@ -174,47 +195,77 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
 
   return (
     <div>
-      <h1 className="font-display text-xl sm:text-2xl font-bold text-pine mb-1">Front Office — {fmtDate(today)}</h1>
+      {/* Page header */}
+      <h1 className="font-display text-xl sm:text-2xl font-bold text-pine mb-1">
+        Front Office — {fmtDate(today)}
+      </h1>
       <p className="text-sm text-pine/60 mb-6">The day at a glance.</p>
+
       <KPICards module="dashboard" />
-      {dayMsg && <div className="mb-4 px-4 py-2 rounded-lg bg-forest/10 text-forest text-sm font-medium">{dayMsg}</div>}
-      <div className="card p-4 mb-6 border border-leaf/70">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <div className="font-display font-semibold text-pine flex items-center gap-2"><Clock size={15} className="text-amber" /> Front Office Day Close</div>
-            <p className="text-xs text-pine/60 mt-1">This closes Front Office (Reservation) day only.</p>
-            {foCloseRow && <p className="text-xs text-pine/50 mt-1">Closed by {foCloseRow.closed_by || '—'} at {fmtDate(foCloseRow.closed_at || foCloseRow.created_at || today)}.</p>}
+
+      {/* Flash message */}
+      {dayMsg && (
+        <Alert variant="success" className="mb-4">
+          <AlertDescription>{dayMsg}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Front Office Day Close card */}
+      <Card className="mb-6 border-leaf/70">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="font-display font-semibold text-pine flex items-center gap-2">
+                <Clock size={15} className="text-amber" /> Front Office Day Close
+              </div>
+              <p className="text-xs text-pine/60 mt-1">This closes Front Office (Reservation) day only.</p>
+              {foCloseRow && (
+                <p className="text-xs text-pine/50 mt-1">
+                  Closed by {foCloseRow.closed_by || '—'} at {fmtDate(foCloseRow.closed_at || foCloseRow.created_at || today)}.
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {canOpenDay && foCloseRow && (
+                <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300" onClick={openFrontOfficeDay} disabled={dayBusy}>
+                  <XCircle size={14} /> Day Open
+                </Button>
+              )}
+              <Button variant="amber" size="sm" onClick={closeFrontOfficeDay} disabled={dayBusy}>
+                <Clock size={14} /> Close Day
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {canOpenDay && foCloseRow && (
-              <button className="btn-ghost !py-1 text-red-600" onClick={openFrontOfficeDay} disabled={dayBusy}>
-                <XCircle size={14} /> Day Open
-              </button>
-            )}
-            <button className="btn-amber !py-1" onClick={closeFrontOfficeDay} disabled={dayBusy}>
-              <Clock size={14} /> Close Day
-            </button>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+
+      {/* Arrivals + Departures */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <List title="Expected arrivals" rows={arrivals} empty="No arrivals expected today." />
-        <List title="Due to check out" rows={departures} empty="No departures due today." />
+        <ReservationList title="Expected arrivals" rows={arrivals} empty="No arrivals expected today." />
+        <ReservationList title="Due to check out" rows={departures} empty="No departures due today." />
       </div>
 
-      {/* ---------------- ROOM STATUS BOARD ---------------- */}
+      {/* Room Status Board */}
       <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-        <h2 className="font-display text-lg font-bold text-pine flex items-center gap-2"><DoorOpen size={18} className="text-forest" /> Room Status Board</h2>
-        <button className="btn-ghost !py-1" onClick={loadBoard} disabled={boardBusy}><RefreshCw size={14} className={boardBusy ? 'animate-spin' : ''} /> Refresh</button>
+        <h2 className="font-display text-lg font-bold text-pine flex items-center gap-2">
+          <DoorOpen size={18} className="text-forest" /> Room Status Board
+        </h2>
+        <Button variant="outline" size="sm" onClick={loadBoard} disabled={boardBusy}>
+          <RefreshCw size={14} className={boardBusy ? 'animate-spin' : ''} /> Refresh
+        </Button>
       </div>
-      <div className="card p-3 mb-3 flex flex-wrap gap-3 text-[11px] text-pine/70">
+
+      {/* Occupancy legend */}
+      <Card className="p-3 mb-3 flex flex-wrap gap-3 text-[11px] text-pine/70">
         <span className="font-semibold text-pine/50 uppercase tracking-wide">Occupancy:</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-pine inline-block" /> In-house ({occCount('OCCUPIED')})</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber inline-block" /> Arrival ({occCount('ARRIVAL')})</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-sky-600 inline-block" /> Departure ({occCount('DEPARTURE')})</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-leaf inline-block" /> Vacant</span>
         <span className="font-semibold text-pine/50 uppercase tracking-wide ml-2">HK need attention: {hkAttn}</span>
-      </div>
+      </Card>
+
+      {/* Room grid by type */}
       {Object.entries(groups).map(([type, list]) => (
         <div key={type} className="mb-4">
           <div className="text-[11px] uppercase tracking-widest text-pine/40 font-semibold mb-2">{type} · {list.length}</div>
@@ -226,11 +277,14 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
               const hk = room.hk_status || 'Clean'
               const Icon = HK_ICON[hk] || Sparkles
               return (
-                <div key={room.id} className="card p-0 overflow-hidden border border-leaf">
-                  <div className={`px-2 py-1.5 flex items-center justify-between ${OCC_STYLE[occSt]}`}>
+                <Card key={room.id} className="p-0 overflow-hidden border-leaf rounded-xl">
+                  {/* Occupancy banner */}
+                  <div className={cn('px-2 py-1.5 flex items-center justify-between', OCC_STYLE[occSt])}>
                     <span className="font-bold text-xs flex items-center gap-1"><DoorOpen size={12} /> {room.room_no}</span>
                     <span className="text-[9px] font-medium opacity-90">{OCC_LABEL[occSt]}</span>
                   </div>
+
+                  {/* Room detail */}
                   <div className="p-1.5 space-y-1.5">
                     <div className="text-[10px] text-pine/60 leading-tight h-6 overflow-hidden">{room.room_name}</div>
                     {o
@@ -241,22 +295,28 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
                           <div className="truncate"><span className="text-pine/50">Mobile:</span> {o.phone || '—'}</div>
                         </div>
                       )
-                      : <div className="text-[10px] text-pine/30 h-6">No booking</div>}
+                      : <div className="text-[10px] text-pine/30 h-6">No booking</div>
+                    }
+
+                    {/* HK status badge */}
                     <div
                       title="Room housekeeping status (view-only on Dashboard)"
-                      className={`w-full px-1.5 py-1 rounded-lg text-[10px] font-medium border flex items-center justify-center gap-1 ${HK_STYLE[hk]}`}>
+                      className={cn('w-full px-1.5 py-1 rounded-lg text-[10px] font-medium border flex items-center justify-center gap-1', HK_STYLE[hk])}
+                    >
                       <Icon size={11} /> {hk}
                     </div>
+
+                    {/* Checkout clearance button */}
                     <button
                       onClick={() => requestCheckoutClearance(room, o)}
                       disabled={reqBusy[room.id] || !canRequestClearance}
-                      className="w-full px-1.5 py-1 rounded-lg text-[10px] font-medium border flex items-center justify-center gap-1 bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100 disabled:opacity-50"
+                      className="w-full px-1.5 py-1 rounded-lg text-[10px] font-medium border flex items-center justify-center gap-1 bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100 disabled:opacity-50 transition-colors"
                       title={canRequestClearance ? 'Send checkout clearance request to Housekeeping' : 'Checkout clearance request applies to in-house/departure rooms'}
                     >
                       <Send size={11} /> {reqBusy[room.id] ? 'Sending…' : 'Request checkout clearance'}
                     </button>
                   </div>
-                </div>
+                </Card>
               )
             })}
           </div>
