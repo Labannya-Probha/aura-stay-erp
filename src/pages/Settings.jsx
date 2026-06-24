@@ -53,11 +53,13 @@ export default function Settings({ userName, role, isAdmin, reloadCompany }) {
   const canManage   = isAdminPlus || role === 'MANAGER'
   const [activeSection, setActiveSection] = useState(null)
   const [myTenantId, setMyTenantId]       = useState(null)
-  
-  useEffect(() => {
+    useEffect(() => {
     supabase.auth.getUser().then(({ data: u }) => {
       if (!u?.user?.id) return
-      supabase.from('app_users').select('tenant_id').eq('id', u.user.id).single()
+      supabase.from('app_users')
+        .select('tenant_id')
+        .eq('id', u.user.id)
+        .single()
         .then(({ data }) => { if (data?.tenant_id) setMyTenantId(data.tenant_id) })
     })
   }, [])
