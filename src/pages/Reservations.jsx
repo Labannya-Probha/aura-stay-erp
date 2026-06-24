@@ -856,8 +856,39 @@ function NewReservation({ close, openReservation, userName, prefill }) {
             <div><label className="label">Adults</label><input type="number" min="1" className="input" value={f.pax_adults} onChange={(e) => set('pax_adults', e.target.value)} /></div>
             <div><label className="label">Children</label><input type="number" min="0" className="input" value={f.pax_children} onChange={(e) => set('pax_children', e.target.value)} /></div>
 
-            <div className="col-span-2">
-              <label className="label">Discount</label>
+           <div className="col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="label !mb-0">Discount</label>
+                {selectedPolicyId && (() => {
+                  const policy = discountPolicies.find(p => p.id === selectedPolicyId)
+                  return policy ? (
+                    <span className="text-xs text-forest font-medium flex items-center gap-1">
+                      ✓ {policy.name} auto-applied
+                      <button
+                        type="button"
+                        onClick={() => applyDiscountPolicy('')}
+                        className="text-pine/40 hover:text-red-500 ml-1"
+                      >
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ) : null
+                })()}
+                {!selectedPolicyId && discountPolicies.length > 0 && (
+                  <select
+                    className="text-xs border border-leaf rounded px-2 py-1 text-pine/70"
+                    value=""
+                    onChange={e => applyDiscountPolicy(e.target.value)}
+                  >
+                    <option value="">Apply policy…</option>
+                    {discountPolicies.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} · {p.type === 'fixed' ? `৳${p.value}` : `${p.value}%`}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <div className="flex gap-2">
                 <div className="flex gap-1 h-[38px] items-center shrink-0">
                   {[{ v: 'percentage', label: '%' }, { v: 'fixed', label: '৳ Fixed' }].map((opt) => (
