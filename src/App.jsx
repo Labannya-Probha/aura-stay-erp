@@ -264,7 +264,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
   )
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex app-shell">
       {/* Desktop sidebar */}
       <aside style={sidebarThemeStyle} className="hidden lg:flex w-60 text-white flex-col fixed inset-y-0 overflow-y-auto z-30 border-r border-white/10 shadow-[0_14px_40px_rgba(0,0,0,0.35)]">
         {SidebarContent}
@@ -281,7 +281,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
       )}
 
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 inset-x-0 z-20 bg-white/95 backdrop-blur text-pine flex items-center gap-3 px-4 py-3 shadow-sm border-b border-leaf/80">
+      <div className="lg:hidden fixed top-0 inset-x-0 z-20 bg-white/95 backdrop-blur text-pine flex items-center gap-3 px-4 shadow-sm border-b border-leaf/80 app-shell-mobile-bar">
         <button onClick={() => setMobileNavOpen(true)} className="text-pine/70 hover:text-forest">
           <Menu size={22} />
         </button>
@@ -291,11 +291,10 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
         </div>
       </div>
 
-      <main className="flex-1 min-w-0 lg:ml-60 p-4 pt-20 lg:pt-8 lg:p-8 w-full overflow-x-hidden">
+      <main className="app-shell-main">
         {company?.maintenance_mode && (
-          <div className="no-print" style={{ position:'sticky', top:0, zIndex:50, background:'#b91c1c',
-            color:'#fff', textAlign:'center', padding:'6px', fontWeight:600, fontSize:13,
-            margin:'-16px -16px 16px' }}>
+          <div className="no-print app-shell-banner" style={{ background:'#b91c1c',
+            color:'#fff', textAlign:'center', padding:'6px', fontWeight:600, fontSize:13 }}>
             ⚠ Maintenance mode — posting & edits are locked while accounts reconcile.
           </div>
         )}
@@ -426,7 +425,7 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
           <Route path="*" element={<Navigate to={firstAccessiblePath(role, privileges)} replace />} />
         </Routes>
 
-        <footer className="no-print mt-10 pt-4 border-t border-leaf/80 flex items-center justify-between text-xs text-pine/45">
+        <footer className="no-print mt-10 pt-4 border-t border-leaf/80 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-xs text-pine/45">
           <div>© {new Date().getFullYear()} Aura Stay</div>
           <div>Powered by <span className="font-semibold text-pine/60">Aura Stay</span></div>
         </footer>

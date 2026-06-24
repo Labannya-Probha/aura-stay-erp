@@ -114,13 +114,13 @@ export default function PrintPortal({ title, onClose, children, type = 'A4', pri
 
   if (!portalNode) return null
   return createPortal(
-    <div id="print-modal-overlay" className="fixed inset-0 bg-black/60 z-[9999] flex items-start justify-center overflow-auto p-6">
-      <div className="bg-white max-w-3xl w-full my-4 relative overflow-hidden">
+    <div id="print-modal-overlay" className="fixed inset-0 bg-black/60 z-[9999] flex items-start justify-center overflow-auto overscroll-contain p-3 sm:p-6">
+      <div className="bg-white max-w-3xl w-full my-0 sm:my-4 relative overflow-hidden rounded-xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-3rem)] flex flex-col">
         
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-300 sticky top-0 bg-white z-10 no-print">
-          <h3 className="font-semibold text-gray-800 font-sans">{title}</h3>
-          <div className="flex gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-gray-300 sticky top-0 bg-white z-10 no-print">
+          <h3 className="font-semibold text-gray-800 font-sans min-w-0 flex-1 truncate">{title}</h3>
+          <div className="flex flex-wrap gap-2 justify-end">
             <button className="flex items-center gap-1 text-white px-3 py-1.5 rounded text-sm" style={{ background: brandPrimary }} onClick={handleExportPDF}>
               <Download size={14} /> Export PDF
             </button>
@@ -133,7 +133,7 @@ export default function PrintPortal({ title, onClose, children, type = 'A4', pri
           </div>
         </div>
         {/* Print Content Wrapper */}
-        <div id="print-root" className={`p-8 ${type === 'thermal' ? 'epos-receipt' : 'print-doc'}`}>
+        <div id="print-root" className={`p-4 sm:p-8 overflow-auto ${type === 'thermal' ? 'epos-receipt' : 'print-doc'}`}>
           {children}
         </div>
       </div>
