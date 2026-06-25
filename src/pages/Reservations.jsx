@@ -179,14 +179,13 @@ export default function Reservations({ openReservation, userName, prefill, clear
 }
 
 /* ================================================================== */
-/*  GUEST SEARCH POPUP — #3                                             */
-/*  Search existing guests by name/phone, pick to auto-fill form       */
+/*  GUEST SEARCH POPUP                                                  */
 /* ================================================================== */
 function GuestSearchPopup({ onSelect, onClose }) {
-  const [q, setQ]           = useState('')
+  const [q, setQ]             = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
-  const inputRef = useRef(null)
+  const inputRef              = useRef(null)
 
   useEffect(() => { inputRef.current?.focus() }, [])
 
@@ -275,15 +274,13 @@ function GuestSearchPopup({ onSelect, onClose }) {
 }
 
 /* ================================================================== */
-/*  NEW RESERVATION FORM                                                */
+/*  SERVICE COMBOBOX                                                    */
 /* ================================================================== */
-const SALUTATIONS = ['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Prof.', 'Engr.']
-/* ── Service Combobox ── */
 function ServiceCombobox({ items, addons, onSelect }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen]   = useState(false)
   const [query, setQuery] = useState('')
-  const ref = useRef(null)
-  const inputRef = useRef(null)
+  const ref               = useRef(null)
+  const inputRef          = useRef(null)
 
   useEffect(() => {
     const handler = (e) => {
@@ -297,24 +294,26 @@ function ServiceCombobox({ items, addons, onSelect }) {
     if (open) setTimeout(() => inputRef.current?.focus(), 30)
   }, [open])
 
-  const filtered = query
-    ? items.filter(it => it.name.toLowerCase().includes(query.toLowerCase()))
-    : items
-
+  const filtered      = query ? items.filter(it => it.name.toLowerCase().includes(query.toLowerCase())) : items
   const selectedCount = Object.values(addons).filter(a => a.selected).length
 
   return (
     <div ref={ref} className="relative">
-      {/* Trigger button */}
+      {/* Trigger */}
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
         className="input w-full text-left flex items-center justify-between gap-2 cursor-pointer"
       >
         <span className={selectedCount > 0 ? 'text-pine' : 'text-pine/40'}>
-          {selectedCount > 0 ? `${selectedCount} service${selectedCount > 1 ? 's' : ''} selected` : 'Search and select services…'}
+          {selectedCount > 0
+            ? `${selectedCount} service${selectedCount > 1 ? 's' : ''} selected`
+            : 'Search and select services…'}
         </span>
-        <svg className={`w-4 h-4 text-pine/40 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg
+          className={`w-4 h-4 text-pine/40 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -322,7 +321,7 @@ function ServiceCombobox({ items, addons, onSelect }) {
       {/* Dropdown */}
       {open && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-leaf rounded-xl shadow-lg overflow-hidden">
-          {/* Search input */}
+          {/* Search */}
           <div className="p-2 border-b border-leaf">
             <input
               ref={inputRef}
@@ -347,10 +346,9 @@ function ServiceCombobox({ items, addons, onSelect }) {
                   key={it.id}
                   type="button"
                   onClick={() => onSelect(it.id)}
-                  className={`w-full text-left px-3 py-2.5 text-sm flex items-center justify-between gap-2 hover:bg-leaf/40 transition-colors ${selected ? 'bg-forest/8 text-forest' : 'text-pine'}`}
+                  className={`w-full text-left px-3 py-2.5 text-sm flex items-center justify-between gap-2 hover:bg-leaf/40 transition-colors ${selected ? 'bg-forest/[0.08] text-forest' : 'text-pine'}`}
                 >
                   <span className="flex items-center gap-2">
-                    {/* Checkbox indicator */}
                     <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${selected ? 'bg-forest border-forest' : 'border-leaf'}`}>
                       {selected && (
                         <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -381,6 +379,12 @@ function ServiceCombobox({ items, addons, onSelect }) {
     </div>
   )
 }
+
+/* ================================================================== */
+/*  NEW RESERVATION FORM                                                */
+/* ================================================================== */
+const SALUTATIONS = ['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Prof.', 'Engr.']
+
 function NewReservation({ close, openReservation, userName, prefill }) {
   const t        = todayISO()
   const tomorrow = (d) => { const dt = new Date(d); dt.setDate(dt.getDate() + 1); return dt.toISOString().slice(0, 10) }
@@ -396,25 +400,22 @@ function NewReservation({ close, openReservation, userName, prefill }) {
     vat_mode: 'EXCLUSIVE',
   })
 
-  // #3 — existing guest picked from search
-  const [linkedGuest, setLinkedGuest]     = useState(null)  // { id, full_name, phone, ... }
+  const [linkedGuest, setLinkedGuest]         = useState(null)
   const [showGuestSearch, setShowGuestSearch] = useState(false)
-
-  const [rooms, setRooms]           = useState([])
-  const [companies, setCompanies]   = useState([])
-  const [booked, setBooked]         = useState([])
-  const [roomRows, setRoomRows]     = useState([])
-  const [taxConfig, setTaxConfig]   = useState([])
-  const [facilityItems, setFacilityItems] = useState([])
-  const [reservationCfg, setReservationCfg] = useState(() => loadReservationConfig())
+  const [rooms, setRooms]                     = useState([])
+  const [companies, setCompanies]             = useState([])
+  const [booked, setBooked]                   = useState([])
+  const [roomRows, setRoomRows]               = useState([])
+  const [taxConfig, setTaxConfig]             = useState([])
+  const [facilityItems, setFacilityItems]     = useState([])
+  const [reservationCfg, setReservationCfg]   = useState(() => loadReservationConfig())
   const [discountPolicies, setDiscountPolicies] = useState([])
   const [selectedPolicyId, setSelectedPolicyId] = useState('')
-  const [addons, setAddons]         = useState({})
-  const [serviceSearch, setServiceSearch] = useState('')
-  const [busy, setBusy]             = useState(false)
-  const [err, setErr]               = useState('')
+  const [addons, setAddons]                   = useState({})
+  const [busy, setBusy]                       = useState(false)
+  const [err, setErr]                         = useState('')
 
-  const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
+  const set          = (k, v) => setF((p) => ({ ...p, [k]: v }))
   const toggleAddon  = (key) => setAddons((p) => ({ ...p, [key]: { ...p[key], selected: !p[key].selected } }))
   const updAddon     = (key, field, val) => setAddons((p) => ({ ...p, [key]: { ...p[key], [field]: val } }))
 
@@ -450,16 +451,15 @@ function NewReservation({ close, openReservation, userName, prefill }) {
     ...p, link_names: checked, guest_name: checked ? p.reservation_name : p.guest_name,
   }))
 
-  // Handle existing guest selection from search popup — #3
   const handleGuestSelect = (guest) => {
     setLinkedGuest(guest)
     setF((p) => ({
       ...p,
-      guest_name:        guest.full_name  || '',
-      phone:             guest.phone      || '',
-      email:             guest.email      || '',
-      address:           guest.address    || '',
-      reservation_name:  p.reservation_name || guest.full_name || '',
+      guest_name:       guest.full_name  || '',
+      phone:            guest.phone      || '',
+      email:            guest.email      || '',
+      address:          guest.address    || '',
+      reservation_name: p.reservation_name || guest.full_name || '',
     }))
     setShowGuestSearch(false)
   }
@@ -476,7 +476,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       .then(({ data }) => {
         const policies = data || []
         setDiscountPolicies(policies)
-        // Auto-apply default policy
         const def = policies.find(p => p.is_default) || policies[0]
         if (def) {
           setSelectedPolicyId(def.id)
@@ -511,7 +510,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       window.removeEventListener('storage', syncConfig)
     }
   }, [])
-  
+
   const createCompany = async (name) => {
     const { data, error } = await supabase.from('companies').insert({ name }).select().single()
     if (error) { setErr(error.message); return null }
@@ -531,32 +530,22 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       }))))
   }, [])
 
-  const isBusy = (roomId, from, to) => !!roomId && from && to && to > from &&
+  const isBusy    = (roomId, from, to) => !!roomId && from && to && to > from &&
     booked.some((b) => b.room_id === roomId && b.ci < to && b.co > from)
-
   const addRoomRow = () => setRoomRows((p) => [...p, { room_id: '', from_date: f.check_in, to_date: f.check_out }])
   const updRow     = (i, k, v) => setRoomRows((p) => p.map((r, idx) => idx === i ? { ...r, [k]: v } : r))
   const delRow     = (i) => setRoomRows((p) => p.filter((_, idx) => idx !== i))
 
-  const validRows  = roomRows.filter((r) => r.room_id && r.from_date && r.to_date && r.to_date > r.from_date)
-  const overallCI  = validRows.length ? validRows.reduce((m, r) => r.from_date < m ? r.from_date : m, validRows[0].from_date) : f.check_in
-  const overallCO  = validRows.length ? validRows.reduce((m, r) => r.to_date > m ? r.to_date : m, validRows[0].to_date) : f.check_out
+  const validRows = roomRows.filter((r) => r.room_id && r.from_date && r.to_date && r.to_date > r.from_date)
+  const overallCI = validRows.length ? validRows.reduce((m, r) => r.from_date < m ? r.from_date : m, validRows[0].from_date) : f.check_in
+  const overallCO = validRows.length ? validRows.reduce((m, r) => r.to_date > m ? r.to_date : m, validRows[0].to_date) : f.check_out
 
-  const groupedFacilityItems = facilityItems.reduce((acc, it) => {
-    (acc[it.category] = acc[it.category] || []).push(it)
-    return acc
-  }, {})
-
-  // Generate auto Customer ID — CUST-{SHORT_CODE}-{8-digit} — #28
-  // Uses DB function generate_customer_id() which reads short_code from company_settings
   const generateCustomerId = async () => {
     try {
       const { data, error } = await supabase.rpc('generate_customer_id')
       if (error || !data) return null
       return data
-    } catch {
-      return null
-    }
+    } catch { return null }
   }
 
   const save = async () => {
@@ -580,7 +569,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       let guestId = linkedGuest?.id || null
 
       if (guestId) {
-        // Existing guest — update any changed contact info but keep their customer_id
         await supabase.from('guests').update({
           full_name: f.guest_name,
           phone:     f.phone    || linkedGuest.phone,
@@ -588,7 +576,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
           address:   f.address  || linkedGuest.address,
         }).eq('id', guestId)
       } else {
-        // New guest — generate customer_id (#28)
         const customerId = await generateCustomerId()
         const { data: g, error: ge } = await supabase.from('guests').insert({
           full_name:   f.guest_name,
@@ -635,7 +622,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
         }))
       }
 
-      // Including Items
       const selectedAddons = facilityItems
         .filter((it) => addons[it.id]?.selected)
         .map((it) => ({
@@ -648,10 +634,9 @@ function NewReservation({ close, openReservation, userName, prefill }) {
         if (ae) throw ae
       }
 
-      // Auto-save quotation (best-effort)
       try {
-        const qRate      = rateFor(taxConfig, 'ROOM', overallCI)
-        const roomTotal  = firstRoom ? Number(firstRoom.base_rate) : 0
+        const qRate       = rateFor(taxConfig, 'ROOM', overallCI)
+        const roomTotal   = firstRoom ? Number(firstRoom.base_rate) : 0
         const nightsCount = nightsBetween(overallCI, overallCO) || 1
         const discDescriptor = f.discount_type === 'fixed'
           ? { type: 'fixed', value: +f.discount_val || 0 }
@@ -710,7 +695,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
               <input className="input" value={f.reservation_name} onChange={(e) => setReservationName(e.target.value)} placeholder={f.guest_type === 'Company' ? 'e.g. Acme Corporation' : ''} />
             </div>
 
-            {/* ── Guest Name + Search existing — #3 ── */}
+            {/* Guest Name */}
             <div className="col-span-2">
               <div className="flex items-center justify-between mb-1">
                 <label className="label !mb-0">Guest Name *</label>
@@ -731,7 +716,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
                 </div>
               </div>
 
-              {/* Linked guest badge */}
               {linkedGuest && (
                 <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-forest/10 border border-forest/20">
                   <CheckCircle2 size={14} className="text-forest shrink-0" />
@@ -743,16 +727,10 @@ function NewReservation({ close, openReservation, userName, prefill }) {
                     {linkedGuest.phone && <span className="ml-2 text-xs text-pine/50">{linkedGuest.phone}</span>}
                   </div>
                   <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setShowGuestSearch(true)}
-                      className="text-xs text-pine/50 hover:text-forest underline"
-                    >Change</button>
-                    <button
-                      type="button"
-                      onClick={clearLinkedGuest}
-                      className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 text-pine/30 hover:text-red-500"
-                    ><X size={12} /></button>
+                    <button type="button" onClick={() => setShowGuestSearch(true)} className="text-xs text-pine/50 hover:text-forest underline">Change</button>
+                    <button type="button" onClick={clearLinkedGuest} className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 text-pine/30 hover:text-red-500">
+                      <X size={12} />
+                    </button>
                   </div>
                 </div>
               )}
@@ -762,24 +740,15 @@ function NewReservation({ close, openReservation, userName, prefill }) {
                 value={f.guest_name}
                 disabled={f.link_names || !!linkedGuest}
                 onChange={(e) => set('guest_name', e.target.value)}
-                placeholder={
-                  linkedGuest ? 'Linked from existing guest' :
-                  f.link_names ? 'Pulled from Reservation Name above' : ''
-                }
+                placeholder={linkedGuest ? 'Linked from existing guest' : f.link_names ? 'Pulled from Reservation Name above' : ''}
               />
             </div>
 
             <div><label className="label">Phone (WhatsApp)</label>
-              <input className="input" placeholder="01XXXXXXXXX" value={f.phone}
-                onChange={(e) => set('phone', e.target.value)}
-                disabled={!!linkedGuest}
-              />
+              <input className="input" placeholder="01XXXXXXXXX" value={f.phone} onChange={(e) => set('phone', e.target.value)} disabled={!!linkedGuest} />
             </div>
             <div><label className="label">Email</label>
-              <input className="input" value={f.email}
-                onChange={(e) => set('email', e.target.value)}
-                disabled={!!linkedGuest}
-              />
+              <input className="input" value={f.email} onChange={(e) => set('email', e.target.value)} disabled={!!linkedGuest} />
             </div>
 
             {f.guest_type === 'Company' && (
@@ -813,6 +782,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
             <div><label className="label">Default check-out *</label><input type="date" className="input" value={f.check_out} onChange={(e) => set('check_out', e.target.value)} /></div>
             <div className="text-[11px] text-pine/50 -mt-2">{dayName(f.check_out)}</div>
 
+            {/* Rooms */}
             <div className="col-span-2">
               <div className="flex items-center justify-between mb-1">
                 <label className="label !mb-0">Rooms — pick from dropdown, each with its own dates</label>
@@ -854,25 +824,23 @@ function NewReservation({ close, openReservation, userName, prefill }) {
               )}
             </div>
 
-            {/* Included Services — Combobox style */}
+            {/* Included Services — Combobox */}
             <div className="col-span-2">
               <label className="label">Included Services</label>
               <p className="text-xs text-pine/50 mb-2">Select services included with this booking.</p>
-            
+
               {facilityItems.length === 0 && (
                 <p className="text-xs text-amber py-2">No active Facility Items — add in Configuration → Facility Items.</p>
               )}
-            
+
               {facilityItems.length > 0 && (
                 <>
-                  {/* Combobox dropdown */}
                   <ServiceCombobox
                     items={facilityItems}
                     addons={addons}
-                    onSelect={(id) => { toggleAddon(id) }}
+                    onSelect={toggleAddon}
                   />
-            
-                  {/* Selected services */}
+
                   {Object.values(addons).some(a => a.selected) && (
                     <div className="space-y-2 mt-3">
                       {facilityItems.filter(it => addons[it.id]?.selected).map(it => (
@@ -905,40 +873,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
               )}
             </div>
 
-                  {/* Selected services chips */}
-                  {Object.values(addons).some(a => a.selected) && (
-                    <div className="space-y-2">
-                      {facilityItems.filter(it => addons[it.id]?.selected).map(it => (
-                        <div key={it.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-forest bg-forest/5">
-                          <span className="text-sm flex-1 font-medium text-pine">
-                            {it.name}
-                            <span className="text-pine/40 text-xs ml-1">/{it.unit}</span>
-                          </span>
-                          <input type="number" min="0" step="0.01"
-                            className="input !w-24 !py-1 money text-right"
-                            placeholder="Price ৳"
-                            value={addons[it.id].price}
-                            onChange={(e) => updAddon(it.id, 'price', e.target.value)} />
-                          <input type="number" min="1"
-                            className="input !w-14 !py-1 money text-right"
-                            placeholder="Qty"
-                            value={addons[it.id].qty}
-                            onChange={(e) => updAddon(it.id, 'qty', e.target.value)} />
-                          <button onClick={() => toggleAddon(it.id)}
-                            className="text-red-300 hover:text-red-600 shrink-0">
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {!Object.values(addons).some(a => a.selected) && !serviceSearch && (
-                    <p className="text-xs text-pine/40 py-2">Search and add services above.</p>
-                  )}
-                </>
-              )}
-            </div>
-
             {/* VAT Mode */}
             <div className="col-span-2">
               <label className="label">VAT on Room Charges</label>
@@ -951,14 +885,10 @@ function NewReservation({ close, openReservation, userName, prefill }) {
                   <button key={opt.v} type="button"
                     onClick={() => set('vat_mode', opt.v)}
                     className={`flex-1 py-2 px-3 rounded-xl border text-sm font-semibold transition-colors text-left ${
-                      f.vat_mode === opt.v
-                        ? 'bg-forest text-white border-forest'
-                        : 'border-leaf text-pine/70 hover:border-forest/40'
+                      f.vat_mode === opt.v ? 'bg-forest text-white border-forest' : 'border-leaf text-pine/70 hover:border-forest/40'
                     }`}>
                     <div>{opt.label}</div>
-                    <div className={`text-[10px] font-normal mt-0.5 ${f.vat_mode === opt.v ? 'text-white/70' : 'text-pine/40'}`}>
-                      {opt.hint}
-                    </div>
+                    <div className={`text-[10px] font-normal mt-0.5 ${f.vat_mode === opt.v ? 'text-white/70' : 'text-pine/40'}`}>{opt.hint}</div>
                   </button>
                 ))}
               </div>
@@ -967,7 +897,8 @@ function NewReservation({ close, openReservation, userName, prefill }) {
             <div><label className="label">Adults</label><input type="number" min="1" className="input" value={f.pax_adults} onChange={(e) => set('pax_adults', e.target.value)} /></div>
             <div><label className="label">Children</label><input type="number" min="0" className="input" value={f.pax_children} onChange={(e) => set('pax_children', e.target.value)} /></div>
 
-           <div className="col-span-2">
+            {/* Discount */}
+            <div className="col-span-2">
               <div className="flex items-center justify-between mb-1">
                 <label className="label !mb-0">Discount</label>
                 {selectedPolicyId && (() => {
@@ -975,27 +906,17 @@ function NewReservation({ close, openReservation, userName, prefill }) {
                   return policy ? (
                     <span className="text-xs text-forest font-medium flex items-center gap-1">
                       ✓ {policy.name} auto-applied
-                      <button
-                        type="button"
-                        onClick={() => applyDiscountPolicy('')}
-                        className="text-pine/40 hover:text-red-500 ml-1"
-                      >
+                      <button type="button" onClick={() => applyDiscountPolicy('')} className="text-pine/40 hover:text-red-500 ml-1">
                         <X size={11} />
                       </button>
                     </span>
                   ) : null
                 })()}
                 {!selectedPolicyId && discountPolicies.length > 0 && (
-                  <select
-                    className="text-xs border border-leaf rounded px-2 py-1 text-pine/70"
-                    value=""
-                    onChange={e => applyDiscountPolicy(e.target.value)}
-                  >
+                  <select className="text-xs border border-leaf rounded px-2 py-1 text-pine/70" value="" onChange={e => applyDiscountPolicy(e.target.value)}>
                     <option value="">Apply policy…</option>
                     {discountPolicies.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} · {p.type === 'fixed' ? `৳${p.value}` : `${p.value}%`}
-                      </option>
+                      <option key={p.id} value={p.id}>{p.name} · {p.type === 'fixed' ? `৳${p.value}` : `${p.value}%`}</option>
                     ))}
                   </select>
                 )}
