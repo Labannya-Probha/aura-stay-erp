@@ -754,11 +754,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
 
             {/* Included Services — searchable, #3 */}
             <div className="col-span-2">
-              <label className="label">Included Services</label>
-              <p className="text-xs text-pine/50 mb-2">Select services included with this booking. Prices editable per booking.</p>
-              {facilityItems.length === 0 && (
-                <p className="text-xs text-amber py-2">No active Facility Items — add in Configuration → Facility Items.</p>
-              )}
+              <label className="label">Included Services</label>              
               {facilityItems.length > 0 && (
                 <>
                   {/* Search + Add */}
