@@ -895,11 +895,6 @@ function Overview({
 
         <div className="flex items-center justify-between mt-5 mb-2">
           <h3 className="font-display font-semibold text-pine">Including items</h3>
-          {addons.length > 0 && (
-            <button className="btn-amber !py-1.5 text-xs" onClick={postAddonCharges} disabled={posting || unposted.length === 0}>
-              {posting ? 'Posting…' : unposted.length === 0 ? 'All posted' : `Post ${unposted.length} item(s) to folio`}
-            </button>
-          )}
         </div>
         {addons.length === 0 && <p className="text-sm text-pine/50">No additional items selected for this booking.</p>}
         {addons.length > 0 && (
@@ -913,29 +908,28 @@ function Overview({
             isAdmin={isAdmin}
           />
         )}
-      </div>
 
-      {/* Pipeline actions */}
-      <div className="card p-5">
-        <h3 className="font-display font-semibold text-pine mb-3">Pipeline actions</h3>
-        <div className="space-y-2">
-          {canConfirm && (
-            <button className="btn-primary w-full justify-center" onClick={() => {
-              if (advance <= 0 && payments.length === 0) { flash('Record the advance payment first (Billings & Check-Out tab).'); return }
-              setStatus('CONFIRMED'); flash('Booking confirmed.')
-            }}>
-              <CheckCircle2 size={16} /> Confirm booking
-            </button>
-          )}
-          {['QUERY', 'QUOTED', 'CONFIRMED'].includes(res.status) && (
-            <button className="btn-ghost w-full justify-center text-red-600" onClick={() => setStatus('CANCELLED')}>
-              <Ban size={15} /> Cancel reservation
-            </button>
-          )}
-
-          <p className="text-xs text-pine/50 pt-2">Advance received: <span className="money font-semibold">{fmtBDT(advance)}</span>.</p>
+        {/* Pipeline actions */}
+        <div className="mt-5 pt-4 border-t border-leaf">
+          <h3 className="font-display font-semibold text-pine mb-3">Pipeline actions</h3>
+          <div className="space-y-2">
+            {canConfirm && (
+              <button className="btn-primary w-full justify-center" onClick={() => {
+                if (advance <= 0 && payments.length === 0) { flash('Record the advance payment first (Billings & Check-Out tab).'); return }
+                setStatus('CONFIRMED'); flash('Booking confirmed.')
+              }}>
+                <CheckCircle2 size={16} /> Confirm booking
+              </button>
+            )}
+            {['QUERY', 'QUOTED', 'CONFIRMED'].includes(res.status) && (
+              <button className="btn-ghost w-full justify-center text-red-600" onClick={() => setStatus('CANCELLED')}>
+                <Ban size={15} /> Cancel reservation
+              </button>
+            )}
+            <p className="text-xs text-pine/50 pt-2">Advance received: <span className="money font-semibold">{fmtBDT(advance)}</span>.</p>
+          </div>
         </div>
-      </div>
+      </div>      
 
       {/* QUOTATION TABLE — single latest row */}
       <div className="card p-5 lg:col-span-2">
