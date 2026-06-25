@@ -6,7 +6,8 @@ import KPICards from '../components/KPICards.jsx'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge, badgeVariants } from '../components/ui/badge'
-import { Alert, AlertDescription } from '../components/ui/alert'
+import { Alert, AlertTitle, AlertDescription } from '../components/ui/alert'
+import { Separator } from '../components/ui/separator'
 import { cn } from '../lib/utils'
 
 const HK_STYLE = {
@@ -23,6 +24,26 @@ const OCC_STYLE = {
   VACANT:     'bg-leaf/50 text-pine',
 }
 const OCC_LABEL = { OCCUPIED: 'In-house', ARRIVAL: 'Arrival', DEPARTURE: 'Departure', VACANT: 'Vacant' }
+const STATUS_BADGE_VARIANTS = {
+  QUERY: 'warning',
+  QUOTED: 'info',
+  CONFIRMED: 'success',
+  CHECKED_IN: 'default',
+  CANCELLED: 'destructive',
+  NO_SHOW: 'destructive',
+  COMPLETED: 'secondary',
+}
+
+function getStatusBadgeVariant(status) {
+  return STATUS_BADGE_VARIANTS[status] || 'outline'
+}
+
+function getHousekeepingBadgeVariant(hk) {
+  if (hk === 'Dirty') return 'warning'
+  if (hk === 'Out of Order') return 'destructive'
+  if (hk === 'Inspected') return 'info'
+  return 'success'
+}
 
 export default function Dashboard({ openReservation, userName, role, isAdmin }) {
   const [arrivals, setArrivals] = useState([])
@@ -157,9 +178,8 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
     }
   }
 
-  // Inline reservation list card
   const ReservationList = ({ title, rows, empty }) => (
-    <Card>
+    <Card className="border-0 shadow-sm">
       <CardHeader className="pt-5 pb-3">
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
@@ -172,13 +192,15 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
                 <button
                   key={r.id}
                   onClick={() => openReservation(r.id)}
-                  className="w-full flex items-center justify-between gap-2 p-3 rounded-lg border border-leaf hover:bg-leaf/40 text-left transition-colors"
+                  className="w-full flex items-center justify-between gap-2 p-3 rounded-lg border border-leaf/50 bg-white/80 hover:bg-leaf/20 text-left transition-colors"
                 >
                   <div className="min-w-0">
                     <div className="font-semibold text-sm truncate">{r.reservation_name || r.guests?.full_name || '—'}</div>
                     <div className="text-xs text-pine/60 font-mono truncate">{r.res_no} · {fmtDate(r.check_in)} → {fmtDate(r.check_out)}</div>
                   </div>
-                  <span className={cn('status-chip shrink-0 whitespace-nowrap', STATUS_COLORS[r.status])}>{r.status.replace('_', ' ')}</span>
+                  <Badge variant={getStatusBadgeVariant(r.status)} className="shrink-0 whitespace-nowrap">
+                    {r.status.replace('_', ' ')}
+                  </Badge>
                 </button>
               ))}
             </div>
@@ -194,23 +216,36 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
 
   return (
     <div>
-      {/* Page header */}
-      <h1 className="font-display text-xl sm:text-2xl font-bold text-pine mb-1">
-        Front Office — {fmtDate(today)}
-      </h1>
-      <p className="text-sm text-pine/60 mb-6">The day at a glance.</p>
+      <Card className="mb-6 border-0 bg-gradient-to-br from-white to-forest/5 shadow-sm">
+        <CardContent className="p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="info">Today</Badge>
+                <Badge variant="success">Front Office</Badge>
+                {isAdmin && <Badge variant="warning">Admin</Badge>}
+              </div>
+              <div>
+                <h1 className="font-display text-xl sm:text-2xl font-bold text-pine">
+                  Front Office — {fmtDate(today)}
+                </h1>
+                <p className="text-sm text-pine/60 mt-1">The day at a glance.</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <KPICards module="dashboard" />
 
-      {/* Flash message */}
       {dayMsg && (
-        <Alert variant="success" className="mb-4">
+        <Alert variant="success" className="mb-4 shadow-sm">
+          <AlertTitle>Update</AlertTitle>
           <AlertDescription>{dayMsg}</AlertDescription>
         </Alert>
       )}
 
-      {/* Front Office Day Close card */}
-      <Card className="mb-6 border-leaf/70">
+      <Card className="mb-6 border-leaf/70 shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
@@ -225,6 +260,9 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
               )}
             </div>
             <div className="flex items-center gap-2">
+              <Badge variant={foCloseRow ? 'warning' : 'success'} className="capitalize">
+                {foCloseRow ? 'Closed' : 'Open'}
+              </Badge>
               {canOpenDay && foCloseRow && (
                 <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300" onClick={openFrontOfficeDay} disabled={dayBusy}>
                   <XCircle size={14} /> Day Open
@@ -238,13 +276,11 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
         </CardContent>
       </Card>
 
-      {/* Arrivals + Departures */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <ReservationList title="Expected arrivals" rows={arrivals} empty="No arrivals expected today." />
         <ReservationList title="Due to check out" rows={departures} empty="No departures due today." />
       </div>
 
-      {/* Room Status Board */}
       <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
         <h2 className="font-display text-lg font-bold text-pine flex items-center gap-2">
           <DoorOpen size={18} className="text-forest" /> Room Status Board
@@ -254,17 +290,15 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
         </Button>
       </div>
 
-      {/* Occupancy legend */}
-      <Card className="p-3 mb-3 flex flex-wrap gap-3 text-[11px] text-pine/70">
+      <Card className="p-3 mb-3 flex flex-wrap gap-3 text-[11px] text-pine/70 border-0 shadow-sm">
         <span className="font-semibold text-pine/50 uppercase tracking-wide">Occupancy:</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-pine inline-block" /> In-house ({occCount('OCCUPIED')})</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber inline-block" /> Arrival ({occCount('ARRIVAL')})</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-sky-600 inline-block" /> Departure ({occCount('DEPARTURE')})</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-leaf inline-block" /> Vacant</span>
+        <Badge variant="default" className="bg-pine text-white">In-house ({occCount('OCCUPIED')})</Badge>
+        <Badge variant="warning">Arrival ({occCount('ARRIVAL')})</Badge>
+        <Badge variant="info">Departure ({occCount('DEPARTURE')})</Badge>
+        <Badge variant="success">Vacant</Badge>
         <span className="font-semibold text-pine/50 uppercase tracking-wide ml-2">HK need attention: {hkAttn}</span>
       </Card>
 
-      {/* Room grid by type */}
       {Object.entries(groups).map(([type, list]) => (
         <div key={type} className="mb-4">
           <div className="text-[11px] uppercase tracking-widest text-pine/40 font-semibold mb-2">{type} · {list.length}</div>
@@ -276,14 +310,12 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
               const hk = room.hk_status || 'Clean'
               const Icon = HK_ICON[hk] || Sparkles
               return (
-                <Card key={room.id} className="p-0 overflow-hidden border-leaf rounded-xl">
-                  {/* Occupancy banner */}
+                <Card key={room.id} className="p-0 overflow-hidden border-leaf/60 rounded-xl shadow-sm">
                   <div className={cn('px-2 py-1.5 flex items-center justify-between', OCC_STYLE[occSt])}>
                     <span className="font-bold text-xs flex items-center gap-1"><DoorOpen size={12} /> {room.room_no}</span>
                     <span className="text-[9px] font-medium opacity-90">{OCC_LABEL[occSt]}</span>
                   </div>
 
-                  {/* Room detail */}
                   <div className="p-1.5 space-y-1.5">
                     <div className="text-[10px] text-pine/60 leading-tight h-6 overflow-hidden">{room.room_name}</div>
                     {o
@@ -297,23 +329,22 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
                       : <div className="text-[10px] text-pine/30 h-6">No booking</div>
                     }
 
-                    {/* HK status badge */}
-                    <div
-                      title="Room housekeeping status (view-only on Dashboard)"
-                      className={cn('w-full px-1.5 py-1 rounded-lg text-[10px] font-medium border flex items-center justify-center gap-1', HK_STYLE[hk])}
-                    >
-                      <Icon size={11} /> {hk}
-                    </div>
+                    <Separator className="my-1" />
 
-                    {/* Checkout clearance button */}
-                    <button
+                    <Badge variant={getHousekeepingBadgeVariant(hk)} className="w-full justify-center">
+                      <Icon size={11} /> {hk}
+                    </Badge>
+
+                    <Button
                       onClick={() => requestCheckoutClearance(room, o)}
                       disabled={reqBusy[room.id] || !canRequestClearance}
-                      className="w-full px-1.5 py-1 rounded-lg text-[10px] font-medium border flex items-center justify-center gap-1 bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100 disabled:opacity-50 transition-colors"
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-center h-8 border-sky-200 text-sky-700 hover:bg-sky-100"
                       title={canRequestClearance ? 'Send checkout clearance request to Housekeeping' : 'Checkout clearance request applies to in-house/departure rooms'}
                     >
                       <Send size={11} /> {reqBusy[room.id] ? 'Sending…' : 'Request checkout clearance'}
-                    </button>
+                    </Button>
                   </div>
                 </Card>
               )
