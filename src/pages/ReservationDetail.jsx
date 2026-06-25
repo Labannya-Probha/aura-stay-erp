@@ -18,6 +18,8 @@ import {
 } from 'lucide-react'
 import Quotation from '../components/print/Quotation.jsx'
 import SearchableSelect from '../components/SearchableSelect.jsx'
+import { Combobox } from '../components/ui/combobox.jsx'
+
 const TABS = ['Overview', 'Check-In', 'Billings & Check-Out']
 
 const generateInvoiceNo = (resNo) => `INV-${resNo}-${Date.now().toString().slice(-6)}`
@@ -2040,15 +2042,24 @@ function BillingsAndCheckOutTab({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-2 items-end">
             <div className="sm:col-span-2 xl:col-span-1">
-              <ChargeTypeSelect
-                value={c.charge_type}
-                items={facilityItems}
+              <Combobox
+                items={facilityItems.map(it => ({
+                  value: it.id,
+                  label: it.name,
+                  sublabel: `${fmtBDT(it.default_price)} / ${it.unit}`,
+                }))}
+                value={facilityItems.find(it => it.name === c.charge_type)?.id || ''}
                 onChange={(id, item) => setC(prev => ({
                   ...prev,
-                  charge_type: item?.name || id,
-                  description: prev.description || item?.name || '',
-                  base_amount: prev.base_amount || String(item?.default_price ?? ''),
+                  charge_type: item?.label || 'OTHER',
+                  description: prev.description || item?.label || '',
+                  base_amount: prev.base_amount || String(
+                    facilityItems.find(it => it.id === id)?.default_price ?? ''
+                  ),
                 }))}
+                placeholder="Select service…"
+                searchPlaceholder="Search services…"
+                emptyText="No services — add in Facility Items"
               />
             </div>
             <div className="sm:col-span-2 xl:col-span-2">
