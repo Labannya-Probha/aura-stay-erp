@@ -53,7 +53,7 @@ const NAV_GROUPS = [
     { id: 'dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
     { id: 'nightaudit',   label: 'Night Audit',  icon: MoonStar },
     { id: 'housekeeping', label: 'Housekeeping', icon: BedDouble },
-    { id: 'service-bills', label: 'Service Bills', icon: ShoppingBasket },
+    { id: 'facilities', label: 'Service Bills', icon: ShoppingBasket },
   ]},
   { title: 'Restaurant POS', items: [
     { id: 'pos',             label: 'Restaurant POS',  icon: UtensilsCrossed },
@@ -339,9 +339,9 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
               <HousekeepingHub userName={userName} role={role} isAdmin={isAdmin} />
             </GuardedRoute>
           } />
-          <Route path="/service-bills" element={
+          <Route path="/facilities" element={
             <GuardedRoute role={role} navId="facilities" privileges={privileges}>
-              <ServiceBills userName={userName} isAdmin={isAdmin} />
+              <Facilities userName={userName} isAdmin={isAdmin} />
             </GuardedRoute>
           } />
 
