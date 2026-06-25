@@ -26,7 +26,7 @@ export default function Facilities({ userName, isAdmin }) {
 
   const load = async () => {
     const [{ data: it }, { data: tc }, { data: co }] = await Promise.all([
-      withTenant(supabase.from('facility_items').select('*')).order('category').order('name'),
+      withTenant(supabase.from('facility_items').select('*')).order('name'),
       withTenant(supabase.from('tax_config').select('*')),
       withTenant(supabase.from('company_settings').select('*')).eq('id', 1).single(),
     ])
