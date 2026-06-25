@@ -911,7 +911,7 @@ function Overview({
 
         {/* Pipeline actions */}
         <div className="mt-5 pt-4 border-t border-leaf">
-          <h3 className="font-display font-semibold text-pine mb-3">Pipeline actions</h3>
+          <h3 className="font-display font-semibold text-pine mb-3"></h3>
           <div className="space-y-2">
             {canConfirm && (
               <button className="btn-primary w-full justify-center" onClick={() => {
