@@ -2087,7 +2087,76 @@ function BillingsAndCheckOutTab({
           </div>
         </div>
       )}
-
+      
+      {/* 3. Record Payment */}
+      {editable && (
+        <div className="card p-4">
+          <h3 className="font-display font-semibold text-pine mb-3 flex items-center gap-2">
+            <Receipt size={16} className="text-forest" /> Record Payment
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <label className="label !text-xs">Amount (৳) *</label>
+              <input type="number" className="input money"
+                placeholder="0.00" value={p.amount}
+                onChange={(e) => setP({ ...p, amount: e.target.value })} />
+            </div>
+            <div>
+              <label className="label !text-xs">Payment method</label>
+              <SearchableSelect
+                value={p.method}
+                onChange={v => setP({ ...p, method: v })}
+                options={['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK_TRANSFER', 'CHEQUE', 'OTHER']}
+                placeholder="Method…"
+              />
+            </div>
+            <div>
+              <label className="label !text-xs">Date</label>
+              <input type="date" className="input" value={p.received_date}
+                onChange={(e) => setP({ ...p, received_date: e.target.value })} />
+            </div>
+            <div>
+              <label className="label !text-xs">Reference / TrxID</label>
+              <input className="input" placeholder="Optional"
+                value={p.reference} onChange={(e) => setP({ ...p, reference: e.target.value })} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label !text-xs">Paid by</label>
+              <SearchableSelect
+                value={p.paid_by_party || ''}
+                onChange={v => setP({ ...p, paid_by_party: v })}
+                options={[
+                  { value: guest?.full_name || 'Guest', label: `👤 ${guest?.full_name || 'Guest'} (Guest)` },
+                  ...(res.agencies ? [{ value: res.agencies.name, label: `🤝 ${res.agencies.name} (Agency)` }] : []),
+                  ...(res.shareholders ? [{ value: res.shareholders.name, label: `👥 ${res.shareholders.name} (Shareholder)` }] : []),
+                ].filter(Boolean)}
+                placeholder="Select who is paying…"
+                allowCreate
+                onCreate={async (v) => v}
+              />
+            </div>
+            <div>
+              <label className="label !text-xs">Payment class</label>
+              <SearchableSelect
+                value={p.payment_class || 'SETTLEMENT'}
+                onChange={v => setP({ ...p, payment_class: v })}
+                options={[
+                  { value: 'ADVANCE', label: 'Advance' },
+                  { value: 'SETTLEMENT', label: 'Settlement' },
+                  { value: 'PARTIAL', label: 'Partial' },
+                ]}
+                placeholder="Class…"
+              />
+            </div>
+            <div className="sm:col-span-4 flex justify-end">
+              <button className="btn-primary" onClick={addPayment} disabled={!p.amount || +p.amount <= 0}>
+                <Receipt size={15} /> Save payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* 4. Reservation Discount (Admin) */}
       {isAdmin && editable && (
         <div className="card p-4 border border-amber/30 bg-amber/5">
