@@ -10,7 +10,7 @@ import PrintPortal from '../components/PrintPortal.jsx'
 import RegistrationCard from '../components/print/RegistrationCard.jsx'
 import GuestBill from '../components/print/GuestBill.jsx'
 import Mushak63 from '../components/print/Mushak63.jsx'
-import Quotation from '../components/print/Quotation.jsx'
+import  from '../components/print/.jsx'
 import { exportXLSX } from '../lib/helpers'
 import {
   ArrowLeft, MessageCircle, Mail, CheckCircle2, LogIn, BedDouble,
@@ -942,61 +942,60 @@ function Overview({
         {!quote ? (
           <p className="text-sm text-pine/50 py-4">No quotation created yet. Click "+ New quotation" to create one.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr>
-                  <th className="th">Quotation ID</th>
-                  <th className="th">Guest / Reservation</th>
-                  <th className="th">Stay</th>
-                  <th className="th text-center">Rooms</th>
-                  <th className="th text-center">Pax</th>
-                  <th className="th">Source</th>
-                  <th className="th text-right">Total</th>
-                  <th className="th text-right">Valid Till</th>
-                  <th className="th text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="hover:bg-leaf/20 border-b border-leaf/40">
-                  <td className="td money font-semibold text-sm text-forest">{res.res_no}</td>
-                  <td className="td text-sm">
-                    <div className="font-semibold">{guest?.full_name || res.reservation_name || '—'}</div>
-                    <div className="text-xs text-pine/50">{guest?.phone || '—'}</div>
-                  </td>
-                  <td className="td text-xs text-pine/70 whitespace-nowrap">
-                    {fmtDate(res.check_in)} → {fmtDate(res.check_out)}
-                    <div className="text-pine/40">{nights} night{nights !== 1 ? 's' : ''}</div>
-                  </td>
-                  <td className="td text-center money font-semibold">{quote.room_count ?? resRooms.length}</td>
-                  <td className="td text-center money">{((res.pax_adults || 0) + (res.pax_children || 0)) || resGuests.length || '—'}</td>
-                  <td className="td text-sm text-pine/70">{res.source || '—'}</td>
-                  <td className="td text-right money font-bold text-forest">{fmtBDT(quote.total_amount)}</td>
-                  <td className="td text-right text-xs text-pine/60 whitespace-nowrap">{fmtDate(quote.valid_until)}</td>
-                  <td className="td">
-                    <div className="flex gap-1 justify-end items-center">
-                      <button onClick={() => openQuoteEditor(true)} title="Edit quotation"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-leaf text-pine/40 hover:text-forest transition-colors">
-                        <Pencil size={13} /></button>
-                      <button onClick={printQuote} title="Print quotation"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-leaf text-pine/40 hover:text-forest transition-colors">
-                        <Printer size={13} /></button>
-                      <button onClick={sendQuoteWhatsApp} title={guest?.phone ? 'Send via WhatsApp' : 'No phone number'}
-                        disabled={!guest?.phone}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-green-100 text-pine/40 hover:text-green-600 transition-colors disabled:opacity-25 disabled:cursor-not-allowed">
-                        <MessageCircle size={13} /></button>
-                      <button onClick={sendQuoteEmail} title="Send via Email"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-blue-50 text-pine/40 hover:text-blue-600 transition-colors">
-                        <Mail size={13} /></button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Col 1 — IDs & Guest */}
+            <div className="space-y-1">
+              <div className="text-xs text-pine/50 uppercase tracking-wide font-semibold">Quotation</div>
+              <div className="font-bold text-forest money text-sm">{res.res_no}</div>
+              <div className="font-semibold text-pine text-sm">{guest?.full_name || res.reservation_name || '—'}</div>
+              <div className="text-xs text-pine/50">{guest?.phone || '—'}</div>
+            </div>
+      
+            {/* Col 2 — Stay */}
+            <div className="space-y-1">
+              <div className="text-xs text-pine/50 uppercase tracking-wide font-semibold">Stay</div>
+              <div className="text-sm text-pine">{fmtDate(res.check_in)} → {fmtDate(res.check_out)}</div>
+              <div className="text-xs text-pine/40">{nights} night{nights !== 1 ? 's' : ''}</div>
+              <div className="text-xs text-pine/60">
+                {quote.room_count ?? resRooms.length} room{(quote.room_count ?? resRooms.length) !== 1 ? 's' : ''} ·{' '}
+                {((res.pax_adults || 0) + (res.pax_children || 0)) || resGuests.length || '—'} pax ·{' '}
+                {res.source || '—'}
+              </div>
+            </div>
+      
+            {/* Col 3 — Amount & Valid */}
+            <div className="space-y-1">
+              <div className="text-xs text-pine/50 uppercase tracking-wide font-semibold">Total</div>
+              <div className="font-bold text-forest money text-xl">{fmtBDT(quote.total_amount)}</div>
+              <div className="text-xs text-pine/50">Valid till {fmtDate(quote.valid_until)}</div>
+            </div>
+      
+            {/* Col 4 — Actions */}
+            <div className="space-y-1">
+              <div className="text-xs text-pine/50 uppercase tracking-wide font-semibold">Actions</div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => openQuoteEditor(true)} title="Edit quotation"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-leaf text-pine/40 hover:text-forest transition-colors border border-leaf">
+                  <Pencil size={13} />
+                </button>
+                <button onClick={printQuote} title="Print quotation"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-leaf text-pine/40 hover:text-forest transition-colors border border-leaf">
+                  <Printer size={13} />
+                </button>
+                <button onClick={sendQuoteWhatsApp} title={guest?.phone ? 'Send via WhatsApp' : 'No phone number'}
+                  disabled={!guest?.phone}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-green-100 text-pine/40 hover:text-green-600 transition-colors border border-leaf disabled:opacity-25 disabled:cursor-not-allowed">
+                  <MessageCircle size={13} />
+                </button>
+                <button onClick={sendQuoteEmail} title="Send via Email"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-pine/40 hover:text-blue-600 transition-colors border border-leaf">
+                  <Mail size={13} />
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
-
 
       {/* GUEST PROFILE */}
       <GuestProfileCard
