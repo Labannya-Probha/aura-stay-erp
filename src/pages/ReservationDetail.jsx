@@ -17,7 +17,7 @@ import {
   Plus, Trash2, Printer, FileDown, Receipt, BadgeCheck, Ban, Pencil, Save,
   Users, Handshake,
 } from 'lucide-react'
-
+import Quotation from '../components/print/Quotation.jsx'
 const TABS = ['Overview', 'Check-In', 'Billings & Check-Out']
 
 /* ------------------------------------------------------------------ */
