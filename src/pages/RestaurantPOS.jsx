@@ -58,8 +58,7 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
     <div>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-pine">Restaurant POS</h1>
-          <p className="text-sm text-pine/60">Tap items to add — every price stays editable.</p>
+          <h1 className="font-display text-2xl font-bold text-pine">Food & Beverage</h1>          
         </div>
       </div>
       <KPICards module="pos" />
