@@ -252,10 +252,9 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
             <div className="text-[10px] text-white/50">{ROLE_LABELS[role] || role}</div>
           </div>
           <button title="Sign out" onClick={async () => {
-            const slug = company?.slug
-            await supabase.auth.signOut()
-            window.location.href = slug ? `/${slug}/login` : '/login'
-          }} className="text-white/55 hover:text-white shrink-0"><LogOut size={15} /></button>
+          await supabase.auth.signOut()
+          window.location.href = '/login'
+        }} className="text-white/55 hover:text-white shrink-0"><LogOut size={15} /></button>
         </div>
       </div>
     </>
@@ -516,8 +515,9 @@ function AppRoot() {
         const fallbackProfile = { role: 'FRONT_OFFICE', full_name: session.user.email?.split('@')[0] }
         const nextProfile = data || fallbackProfile
         setProfile(nextProfile)
-        setTenantId(data?.tenant_id || null)
-        loadCompany(data?.tenant_id || null)
+        const tid = data?.tenant_id || null
+        setTenantId(tid)
+        loadCompany(tid)
       })
   }, [session?.user?.id, loadCompany])
 
