@@ -20,6 +20,7 @@ import InventoryHub from './pages/InventoryHub.jsx'
 import ConsumptionEntry from './pages/ConsumptionEntry.jsx'
 import MenuManagement from './pages/MenuManagement.jsx'
 import VatCenter from './pages/VatCenter.jsx'
+import VATReturn from "./pages/VATReturn";
 import AccountingHub, {
   VoucherEntryPage,
   TrialBalancePage,
@@ -536,6 +537,7 @@ function firstAccessiblePath(role, privileges) {
               <VatCenter userName={userName} company={company} />
             </GuardedRoute>
           } />
+          <Route path="/vat-return" element={<VATReturn />} />
           <Route path="/accounting" element={<Navigate to="/accounting/voucher-entry" replace />} />
           <Route path="/accounting/voucher-entry" element={
             <GuardedRoute role={role} navId="accounting" privileges={privileges}>
