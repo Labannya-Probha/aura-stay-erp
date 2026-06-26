@@ -76,8 +76,8 @@ const NAV_GROUPS = [
     { id: 'reports', label: 'Reports', icon: BarChart3 },
   ]},
   { title: 'System', items: [
-    { id: 'cms',      label: 'Configuration', icon: Building2 },
-    { id: 'settings', label: 'Settings',       icon: Settings2 },
+    { id: 'cms',      label: 'Configuration', icon: Building2,  superuserOnly: true },
+    { id: 'settings', label: 'Settings',       icon: Settings2, superuserOnly: true },
   ]},
 ]
 
@@ -189,8 +189,9 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
       <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
         {NAV_GROUPS.map((g) => {
           const items = g.items.filter((n) => {
+            if (n.superuserOnly)            return role === 'SUPERUSER'
             if (n.id === 'ai-tasker')       return can(role, 'tasks', privileges)
-            if (n.id === 'cms')             return isAdmin || role === 'SUPERUSER'
+            if (n.id === 'cms')             return role === 'SUPERUSER'
             if (n.id === 'menu-management') return isAdmin || role === 'SUPERUSER' || role === 'RESTAURANT'
             if (n.id === 'consumption')     return can(role, 'inventory', privileges)
             return can(role, n.id, privileges)
@@ -465,16 +466,16 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
             </GuardedRoute>
           } />
 
-          {/* System */}
+          {/* System — superuser only */}
           <Route path="/cms" element={
-            (isAdmin || role === 'SUPERUSER')
+            role === 'SUPERUSER'
               ? <CmsPortal role={role} isAdmin={isAdmin} />
               : <Navigate to={firstAccessiblePath(role, privileges)} replace />
           } />
           <Route path="/settings" element={
-            <GuardedRoute role={role} navId="settings" privileges={privileges}>
-              <Settings userName={userName} role={role} isAdmin={isAdmin} reloadCompany={loadCompany} />
-            </GuardedRoute>
+            role === 'SUPERUSER'
+              ? <Settings userName={userName} role={role} isAdmin={isAdmin} reloadCompany={loadCompany} />
+              : <Navigate to={firstAccessiblePath(role, privileges)} replace />
           } />
 
           <Route path="*" element={<Navigate to={firstAccessiblePath(role, privileges)} replace />} />
