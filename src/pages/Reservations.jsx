@@ -329,11 +329,22 @@ function NewReservation({ close, openReservation, userName, prefill }) {
   const [reservationCfg, setReservationCfg]   = useState(() => loadReservationConfig())
   const [discountPolicies, setDiscountPolicies] = useState([])
   const [selectedPolicyId, setSelectedPolicyId] = useState('')
+  const [reservationPolicy, setReservationPolicy] = useState(null)
+  const [policyDiscountPct, setPolicyDiscountPct] = useState(null)
   const [addons, setAddons]                   = useState({})
   const [busy, setBusy]                       = useState(false)
   const [err, setErr]                         = useState('')
 
   const set          = (k, v) => setF((p) => ({ ...p, [k]: v }))
+  
+  useEffect(() => {
+    if (!reservationPolicy) return
+    const disc = getPolicyDiscount(f.check_in, reservationPolicy)
+    if (disc !== null && f.discount_type === 'percentage') {
+      setPolicyDiscountPct(disc)
+      setF(p => ({ ...p, discount_val: disc }))
+    }
+  }, [reservationPolicy])
   const toggleAddon  = (key) => setAddons((p) => ({ ...p, [key]: { ...p[key], selected: !p[key].selected } }))
   const updAddon     = (key, field, val) => setAddons((p) => ({ ...p, [key]: { ...p[key], [field]: val } }))
 
@@ -357,11 +368,41 @@ function NewReservation({ close, openReservation, userName, prefill }) {
     return eachNight(fromDate, toDate).some((d) => blocked.has(d))
   }
 
-  const setCheckIn = (val) => setF((p) => {
-    const next = { ...p, check_in: val }
-    if (!p.check_out || p.check_out <= val) next.check_out = tomorrow(val)
-    return next
-  })
+  const getPolicyDiscount = (dateStr, policy) => {
+    if (!policy || !dateStr) return null
+    const blackouts = policy.policy_blackout_dates || []
+    const isBlackout = blackouts.some(b => dateStr >= b.from_date && dateStr <= b.to_date)
+    if (isBlackout) return Number(policy.blackout_discount_pct)
+    const dow = new Date(`${dateStr}T00:00:00`).getDay() // 0=Sun
+    const isWeekend = (policy.weekend_days || [4,5,6]).includes(dow)
+    return isWeekend ? Number(policy.weekend_discount_pct) : Number(policy.weekday_discount_pct)
+  }
+
+  const setCheckIn = (val) => {
+    // Recalculate policy discount for new check-in date
+    if (reservationPolicy) {
+      const disc = getPolicyDiscount(val, reservationPolicy)
+      if (disc !== null) {
+        setPolicyDiscountPct(disc)
+        // Only auto-update if user hasn't manually changed discount
+        setF((p) => {
+          const next = { ...p, check_in: val }
+          if (!p.check_out || p.check_out <= val) next.check_out = tomorrow(val)
+          // Auto-apply policy discount if discount_type is percentage
+          if (p.discount_type === 'percentage') {
+            next.discount_val = disc
+          }
+          return next
+        })
+        return
+      }
+    }
+    setF((p) => {
+      const next = { ...p, check_in: val }
+      if (!p.check_out || p.check_out <= val) next.check_out = tomorrow(val)
+      return next
+    })
+  }
   const setReservationName = (val) => setF((p) => ({
     ...p, reservation_name: val, guest_name: p.link_names ? val : p.guest_name,
   }))
@@ -407,7 +448,12 @@ function NewReservation({ close, openReservation, userName, prefill }) {
           }))
         }
       })
-    supabase.from('facility_items').select('*').eq('is_active', true).order('name')
+    supabase.from('reservation_policies')
+      .select('*, policy_blackout_dates(*)')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setReservationPolicy(data) })
       .then(({ data }) => {
         const items = data || []
         setFacilityItems(items)
@@ -843,34 +889,49 @@ function NewReservation({ close, openReservation, userName, prefill }) {
 
             {/* Discount */}
             <div className="col-span-2">
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
                 <label className="label !mb-0">Discount</label>
-                {selectedPolicyId && (() => {
-                  const policy = discountPolicies.find(p => p.id === selectedPolicyId)
-                  return policy ? (
-                    <span className="text-xs text-forest font-medium flex items-center gap-1">
-                      ✓ {policy.name} auto-applied
-                      <button type="button" onClick={() => applyDiscountPolicy('')} className="text-pine/40 hover:text-red-500 ml-1">
-                        <X size={11} />
-                      </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Pricing policy auto-badge */}
+                  {reservationPolicy && policyDiscountPct !== null && (
+                    <span className="text-xs text-forest font-medium flex items-center gap-1 bg-forest/10 px-2 py-0.5 rounded-full">
+                      📅 {(() => {
+                        const dow = new Date(`${f.check_in}T00:00:00`).getDay()
+                        const blackouts = reservationPolicy.policy_blackout_dates || []
+                        const isBlackout = blackouts.some(b => f.check_in >= b.from_date && f.check_in <= b.to_date)
+                        if (isBlackout) return `Blackout — ${policyDiscountPct}% auto`
+                        const isWeekend = (reservationPolicy.weekend_days || [4,5,6]).includes(dow)
+                        return isWeekend ? `Weekend — ${policyDiscountPct}% auto` : `Weekday — ${policyDiscountPct}% auto`
+                      })()}
                     </span>
-                  ) : null
-                })()}
-                {!selectedPolicyId && discountPolicies.length > 0 && (
-                  <div className="w-56">
-                    <Combobox
-                      items={discountPolicies.map((p) => ({
-                        value: p.id,
-                        label: p.name,
-                        sublabel: p.type === 'fixed' ? `৳${p.value}` : `${p.value}%`,
-                      }))}
-                      value=""
-                      onChange={(v) => applyDiscountPolicy(v)}
-                      placeholder="Apply policy…"
-                      searchPlaceholder="Search policy…"
-                    />
-                  </div>
-                )}
+                  )}
+                  {selectedPolicyId && (() => {
+                    const policy = discountPolicies.find(p => p.id === selectedPolicyId)
+                    return policy ? (
+                      <span className="text-xs text-forest font-medium flex items-center gap-1">
+                        ✓ {policy.name}
+                        <button type="button" onClick={() => applyDiscountPolicy('')} className="text-pine/40 hover:text-red-500 ml-1">
+                          <X size={11} />
+                        </button>
+                      </span>
+                    ) : null
+                  })()}
+                  {!selectedPolicyId && discountPolicies.length > 0 && (
+                    <div className="w-48">
+                      <Combobox
+                        items={discountPolicies.map((p) => ({
+                          value: p.id,
+                          label: p.name,
+                          sublabel: p.type === 'fixed' ? `৳${p.value}` : `${p.value}%`,
+                        }))}
+                        value=""
+                        onChange={(v) => applyDiscountPolicy(v)}
+                        placeholder="Apply policy…"
+                        searchPlaceholder="Search policy…"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex gap-2">
                 <div className="flex gap-1 h-[38px] items-center shrink-0">
