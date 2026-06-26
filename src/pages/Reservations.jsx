@@ -315,7 +315,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
     source: 'Phone', notes: '', discount_pct: 0,
     discount_type: 'percentage', discount_val: 0,
     commission_pct: 0, vat_vds_pct: 0, tax_tds_pct: 0,
-    vat_mode: 'EXCLUSIVE',
+    vat_mode: 'EXCLUSIVE', vip_status: '',
   })
 
   const [linkedGuest, setLinkedGuest]         = useState(null)
@@ -510,6 +510,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       const { data: r, error: re } = await supabase.from('reservations').insert({
         salutation:       f.salutation,
         guest_type:       f.guest_type,
+        vip_status:       f.vip_status || null,
         reservation_name: f.reservation_name || f.guest_name,
         company_id:       f.guest_type === 'Company' ? (f.company_id || null) : null,
         primary_guest_id: guestId,
@@ -562,8 +563,11 @@ function NewReservation({ close, openReservation, userName, prefill }) {
         const perNight   = computeCharge(roomTotal, discDescriptor, qRate)
         const grandTotal = +(perNight.total * nightsCount).toFixed(2)
         const validUntil = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
+        const { data: qSeq } = await supabase.rpc('next_tenant_seq', { p_seq_name: 'quotation' })
+        const quoteNo = `Q-${String(qSeq || 1).padStart(4, '0')}`
         await supabase.from('quotations').insert({
-          reservation_id: r.id, total_amount: grandTotal, valid_until: validUntil,
+          reservation_id: r.id, quote_no: quoteNo,
+          total_amount: grandTotal, valid_until: validUntil,
           room_rate: roomTotal, room_count: validRows.length,
           discount_pct: f.discount_type === 'percentage' ? (+f.discount_val || 0) : 0,
           status: 'DRAFT', message: '',
@@ -814,6 +818,28 @@ function NewReservation({ close, openReservation, userName, prefill }) {
 
             <div><label className="label">Adults</label><input type="number" min="1" className="input" value={f.pax_adults} onChange={(e) => set('pax_adults', e.target.value)} /></div>
             <div><label className="label">Children</label><input type="number" min="0" className="input" value={f.pax_children} onChange={(e) => set('pax_children', e.target.value)} /></div>
+
+            <div className="col-span-2">
+              <label className="label">VIP Status <span className="text-pine/40 font-normal">(optional)</span></label>
+              <div className="flex gap-2 h-[38px] items-center">
+                {[
+                  { v: '', label: 'Regular' },
+                  { v: 'VIP', label: '⭐ VIP' },
+                  { v: 'VVIP', label: '👑 VVIP' },
+                ].map((opt) => (
+                  <button key={opt.v} type="button" onClick={() => set('vip_status', opt.v)}
+                    className={`px-4 h-full rounded-lg text-sm font-semibold border transition-colors ${
+                      f.vip_status === opt.v
+                        ? opt.v === 'VVIP' ? 'bg-amber-600 text-white border-amber-600'
+                          : opt.v === 'VIP' ? 'bg-forest text-white border-forest'
+                          : 'bg-pine text-white border-pine'
+                        : 'border-leaf text-pine/70 hover:border-forest/40'
+                    }`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Discount */}
             <div className="col-span-2">
