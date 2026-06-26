@@ -11,6 +11,11 @@ import { Plus, Minus, Trash2, Printer, ChefHat, Banknote, BedDouble, Search, Sav
 const TABS = ['Orders', 'Menu', 'Day Close']
 const PAYMENT_METHODS = ['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER']
 const RESTAURANT_WORKFLOW = ['ACCEPTED', 'READY', 'SERVED']
+const WORKFLOW_NEXT = {
+  OPEN:     { label: 'Accept',  nextStatus: 'ACCEPTED', taskStage: 'ACCEPTED', taskStatus: 'IN_PROGRESS', cls: 'text-sky-700  border-sky-200  hover:bg-sky-50' },
+  ACCEPTED: { label: 'Ready',   nextStatus: 'READY',    taskStage: 'READY',    taskStatus: 'IN_PROGRESS', cls: 'text-amber   border-amber/30 hover:bg-amber/10' },
+  READY:    { label: 'Served ✓',nextStatus: 'SERVED',   taskStage: 'SERVED',   taskStatus: 'DONE',        cls: 'text-forest  border-forest/20 hover:bg-forest/10' },
+}
 
 const applyCashRounding = (amount) => {
   const decimal = amount % 1
@@ -386,7 +391,7 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
   }
 
   const chip = {
-    OPEN: 'bg-amber/20 text-amber',
+    OPEN: 'bg-sky-50 text-sky-600 border border-sky-200',
     ACCEPTED: 'bg-sky-100 text-sky-700',
     READY: 'bg-pine/15 text-pine',
     SERVED: 'bg-forest/15 text-forest',
@@ -429,9 +434,14 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
                   <div className="flex justify-end gap-2">
                     <button className="btn-ghost !py-1 !px-2 text-forest" onClick={() => printReceipt(o)} title="Print receipt"><Receipt size={14} /></button>
                     {o.status !== 'CANCELLED' && (<button className="btn-ghost !py-1 !px-2 text-amber" onClick={() => printKot(o)} title="Print KOT"><ChefHat size={14} /></button>)}
-                    {!['CANCELLED','SETTLED','CHARGED_TO_ROOM'].includes(o.status) && (<button className="btn-ghost !py-1 !px-2 text-sky-700" onClick={async () => { await advanceOrderStatus(o, 'ACCEPTED', 'ACCEPTED'); flash(`${o.order_no} — Accepted.`) }} title="Mark accepted">Accept</button>)}
-                    {!['CANCELLED','SETTLED','CHARGED_TO_ROOM'].includes(o.status) && (<button className="btn-ghost !py-1 !px-2 text-pine" onClick={async () => { await advanceOrderStatus(o, 'READY', 'READY'); flash(`${o.order_no} — Ready.`) }} title="Mark ready">Ready</button>)}
-                    {!['CANCELLED','SETTLED','CHARGED_TO_ROOM'].includes(o.status) && (<button className="btn-ghost !py-1 !px-2 text-forest" onClick={async () => { await advanceOrderStatus(o, 'SERVED', 'SERVED', 'DONE'); flash(`${o.order_no} — Served.`) }} title="Mark served">Served</button>)}
+                    {WORKFLOW_NEXT[o.status] && (() => { const wf = WORKFLOW_NEXT[o.status]; 
+                return (
+                        <button
+                          className={`btn-ghost !py-1 !px-2 text-xs font-semibold border ${wf.cls}`}
+                          onClick={async () => { await advanceOrderStatus(o, wf.nextStatus, wf.taskStage, wf.taskStatus); flash(`${o.order_no} — ${wf.label}.`) }}
+                          title={`Mark as ${wf.nextStatus}`}
+                        >{wf.label}</button>
+                      )})()}
                     {o.invoice_id && (<button className="btn-ghost !py-1 !px-2 text-pine" onClick={() => printMushak(o)} title="Print Mushak-6.3"><FileText size={14} /></button>)}
                     {canEdit(o) && (<button className="btn-ghost !py-1 !px-2 text-forest" onClick={() => resumeOrder(o)} title="Edit order">Edit</button>)}
                     {isAdmin && o.status === 'SETTLED' && (<button className="btn-ghost !py-1 !px-2 text-red-500" onClick={() => voidOrder(o)} title="Void order"><XCircle size={14} /></button>)}
