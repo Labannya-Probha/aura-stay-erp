@@ -252,9 +252,16 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
             <div className="text-[10px] text-white/50">{ROLE_LABELS[role] || role}</div>
           </div>
           <button title="Sign out" onClick={async () => {
-          await supabase.auth.signOut()
-          window.location.href = '/login'
-        }} className="text-white/55 hover:text-white shrink-0"><LogOut size={15} /></button>
+            const tenantId = getTenantId()
+            await supabase.auth.signOut()
+              const { data: prop } = await supabase
+              .from('properties')
+              .select('slug')
+              .eq('id', tenantId)
+              .maybeSingle()
+            const slug = prop?.slug
+            window.location.href = slug ? `/${slug}/login` : '/login'
+          }} className="text-white/55 hover:text-white shrink-0"><LogOut size={15} /></button>
         </div>
       </div>
     </>
