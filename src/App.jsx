@@ -20,13 +20,22 @@ import InventoryHub from './pages/InventoryHub.jsx'
 import ConsumptionEntry from './pages/ConsumptionEntry.jsx'
 import MenuManagement from './pages/MenuManagement.jsx'
 import VatCenter from './pages/VatCenter.jsx'
-import AccountingHub from './pages/AccountingHub.jsx'
+import AccountingHub, {
+  VoucherEntryPage,
+  TrialBalancePage,
+  ChartOfAccountsPage,
+  FixedAssetsPage,
+  OpeningBalancePage,
+  TransactionMappingPage,
+  VendorPaymentPage,
+} from './pages/AccountingHub.jsx'
 import HrOffice from './pages/HrOffice.jsx'
 import NightAudit from './pages/NightAudit.jsx'
 import ReportsHub from './pages/ReportsHub.jsx'
 import Settings from './pages/Settings.jsx'
 import CmsPortal from './pages/CmsPortal.jsx'
 import TaskManagement from './pages/TaskManagement.jsx'
+import VendorPaymentTab from '../components/VendorPaymentTab.jsx'
 import {
   Leaf, LayoutDashboard, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
   FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut, BedDouble, Building2,
@@ -129,13 +138,14 @@ const SIDEBAR_INVENTORY_TABS = [
 ]
 
 const SIDEBAR_ACCOUNTING_TABS = [
-  { id: 'Journal Vouchers',    label: 'Journal Vouchers' },
-  { id: 'Trial Balance',       label: 'Trial Balance' },
-  { id: 'Chart of Accounts',   label: 'Chart of Accounts' },
-  { id: 'Fixed Assets',        label: 'Fixed Assets' },
-  { id: 'Opening Balance',     label: 'Opening Balance',    adminOnly: true },
-  { id: 'Transaction Mapping', label: 'Transaction Mapping', adminOnly: true },
-  { id: 'Vendor Payments',     label: 'Vendor Payments' },
+  { id: 'voucher-entry',       label: 'Voucher Entry',       icon: BookOpen,       path: '/accounting/voucher-entry' },
+  { id: 'trial-balance',       label: 'Trial Balance',       icon: Scale,          path: '/accounting/trial-balance' },
+  { id: 'chart-of-accounts',   label: 'Chart of Accounts',   icon: BookMarked,     path: '/accounting/chart-of-accounts' },
+  { id: 'fixed-assets',        label: 'Fixed Assets',        icon: Landmark,       path: '/accounting/fixed-assets' },
+  { id: 'opening-balance',     label: 'Opening Balance',     icon: Lock,           path: '/accounting/opening-balance', adminOnly: true },
+  { id: 'transaction-mapping', label: 'Transaction Mapping', icon: ArrowLeftRight, path: '/accounting/transaction-mapping', adminOnly: true },
+  { id: 'vendor-payments',     label: 'Vendor Payments',     icon: CreditCard,     path: '/accounting/vendor-payments' },
+  { id: 'vat',                 label: 'VAT Centre',          icon: Wallet,         path: '/vat' },
 ]
 
 function firstAccessiblePath(role, privileges) {
@@ -170,14 +180,15 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
     setOpenGroup(activeGroup?.title || null)
   }, [currentTopId])
   useEffect(() => {
-    if (['settings', 'cms', 'inventory', 'consumption', 'accounting', 'vat'].includes(currentTopId)) {
+    const isAccountingRoute = location.pathname.startsWith('/accounting') || location.pathname === '/vat'
+    if (['settings', 'cms', 'inventory', 'consumption'].includes(currentTopId) || isAccountingRoute) {
       setOpenSystemMenu(
         ['inventory', 'consumption'].includes(currentTopId) ? 'inventory' :
-        ['accounting', 'vat'].includes(currentTopId) ? 'accounting' :
+        isAccountingRoute ? 'accounting' :
         currentTopId
       )
     } else setOpenSystemMenu(null)
-  }, [currentTopId])
+  }, [currentTopId, location.pathname])
 
   const SidebarContent = (
     <>
@@ -255,8 +266,14 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
                         { id: 'consumption', label: 'Consumption Entry', path: '/consumption', active: currentTopId === 'consumption' },
                       ]
                     } else if (n.id === 'accounting') {
-                      nested = [
-                        ...SIDEBAR_ACCOUNTING_TABS.filter((s) => !s.adminOnly || isAdmin || role === 'SUPERUSER').map((s) => ({ ...s, path: `/accounting?tab=${encodeURIComponent(s.id)}`, active: currentTopId === 'accounting' && location.search.includes(`tab=${encodeURIComponent(s.id)}`) })),
+                      nested = SIDEBAR_ACCOUNTING_TABS
+                        .filter((s) => !s.adminOnly || isAdmin || role === 'SUPERUSER')
+                        .map((s) => ({
+                          ...s,
+                          active: s.id === 'vat'
+                            ? currentTopId === 'vat'
+                            : location.pathname === s.path,
+                        })),
                         { id: 'vat', label: 'VAT Centre', path: '/vat', active: currentTopId === 'vat' },
                       ]
                     }
@@ -434,15 +451,46 @@ function AppShell({ company, role, isAdmin, userName, loadCompany, privileges })
             </GuardedRoute>
           } />
 
-          {/* Accounting */}
+         {/* Accounting — separate routes per section */}
           <Route path="/vat" element={
             <GuardedRoute role={role} navId="vat" privileges={privileges}>
               <VatCenter userName={userName} company={company} />
             </GuardedRoute>
           } />
-          <Route path="/accounting" element={
+          <Route path="/accounting" element={<Navigate to="/accounting/voucher-entry" replace />} />
+          <Route path="/accounting/voucher-entry" element={
             <GuardedRoute role={role} navId="accounting" privileges={privileges}>
-              <AccountingHub userName={userName} isAdmin={isAdmin} role={role} />
+              <VoucherEntryPage userName={userName} isAdmin={isAdmin} role={role} />
+            </GuardedRoute>
+          } />
+          <Route path="/accounting/trial-balance" element={
+            <GuardedRoute role={role} navId="accounting" privileges={privileges}>
+              <TrialBalancePage />
+            </GuardedRoute>
+          } />
+          <Route path="/accounting/chart-of-accounts" element={
+            <GuardedRoute role={role} navId="accounting" privileges={privileges}>
+              <ChartOfAccountsPage isAdmin={isAdmin} />
+            </GuardedRoute>
+          } />
+          <Route path="/accounting/fixed-assets" element={
+            <GuardedRoute role={role} navId="accounting" privileges={privileges}>
+              <FixedAssetsPage userName={userName} />
+            </GuardedRoute>
+          } />
+          <Route path="/accounting/opening-balance" element={
+            <GuardedRoute role={role} navId="accounting" privileges={privileges}>
+              <OpeningBalancePage userName={userName} />
+            </GuardedRoute>
+          } />
+          <Route path="/accounting/transaction-mapping" element={
+            <GuardedRoute role={role} navId="accounting" privileges={privileges}>
+              <TransactionMappingPage userName={userName} />
+            </GuardedRoute>
+          } />
+          <Route path="/accounting/vendor-payments" element={
+            <GuardedRoute role={role} navId="accounting" privileges={privileges}>
+             <VendorPaymentPage role={role} />
             </GuardedRoute>
           } />
 
