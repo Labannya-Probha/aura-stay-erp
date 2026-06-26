@@ -517,9 +517,9 @@ function AppRoot() {
         const nextProfile = data || fallbackProfile
         setProfile(nextProfile)
         setTenantId(data?.tenant_id || null)
-        loadCompany() // ✅ FIX 1: now defined above, safe to call
+        loadCompany(data?.tenant_id || null)
       })
-  }, [session?.user?.id, loadCompany]) // ✅ FIX 2: loadCompany in dep array
+  }, [session?.user?.id, loadCompany])
 
   useEffect(() => {
     let active = true
