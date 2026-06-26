@@ -9,33 +9,68 @@ import ComplianceTab from '../components/ComplianceTab'
 import EmployeeProfile from '../components/EmployeeProfile.jsx'
 import HrLetterDoc from '../components/print/HrLetterDoc.jsx'
 
-const TABS = ['Employees', 'Attendance', 'Leave', 'Comp Leave', 'Payroll', 'Incidents', 'Letters / Docket', 'HR Letters', 'Compliance']
+const TAB_GROUPS = [
+  { id: 'employees', label: 'Employee Mgmt',  tabs: ['Employees', 'Attendance'] },
+  { id: 'leave',     label: 'Leave Mgmt',     tabs: ['Leave', 'Comp Leave'] },
+  { id: 'payroll',   label: 'Payroll Mgmt',   tabs: ['Payroll'] },
+  { id: 'letters',   label: 'HR Letters',     tabs: ['HR Letters', 'Letters / Docket'] },
+  { id: 'compliance',label: 'Compliance',     tabs: ['Incidents', 'Compliance'] },
+]
 
 export default function HrOffice({ userName, role, isAdmin, company }) {
-  const [tab, setTab] = useState('Employees')
-  const [msg, setMsg] = useState('')
+  const [group, setGroup] = useState('employees')
+  const [subTab, setSubTab] = useState('Employees')
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
   const canApprove = isAdmin || role === 'MANAGER' || role === 'HR'
+
+  const switchGroup = (g) => {
+    setGroup(g.id)
+    setSubTab(g.tabs[0])
+  }
+
+  const currentGroup = TAB_GROUPS.find((g) => g.id === group)
+
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2"><Users className="text-forest" /> HR & Office</h1>
-        <p className="text-sm text-pine/60">Employee records, attendance, leave, payroll, incidents and the office document register.</p>
+        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2"><Users className="text-forest" /> HR & Payroll</h1>
+        <p className="text-sm text-pine/60">Employee records, attendance, leave, payroll and compliance.</p>
       </div>
       <KPICards module="hr" />
       {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
-      <div className="flex gap-1 border-b border-leaf flex-wrap">
-        {TABS.map((t) => (<button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-semibold rounded-t-lg ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>{t}</button>))}
+
+      {/* Group bar */}
+      <div className="flex gap-1 border-b-2 border-leaf flex-wrap">
+        {TAB_GROUPS.map((g) => (
+          <button key={g.id} onClick={() => switchGroup(g)}
+            className={`px-4 py-2 text-sm font-bold rounded-t-lg whitespace-nowrap transition-colors ${group === g.id ? 'bg-pine text-white -mb-0.5 border-b-2 border-pine' : 'text-pine/60 hover:text-pine hover:bg-leaf/30'}`}>
+            {g.label}
+          </button>
+        ))}
       </div>
-      {tab === 'Employees' && <EmployeesTab flash={flash} isAdmin={isAdmin} userName={userName} company={company} />}
-      {tab === 'Attendance' && <AttendanceTab flash={flash} />}
-      {tab === 'Leave' && <LeaveTab flash={flash} userName={userName} canApprove={canApprove} />}
-      {tab === 'Comp Leave' && <CompLeaveTab flash={flash} />}
-      {tab === 'Payroll' && <PayrollTab flash={flash} userName={userName} canApprove={canApprove} isAdmin={isAdmin} company={company} />}
-      {tab === 'Incidents' && <IncidentsTab flash={flash} userName={userName} />}
-      {tab === 'Letters / Docket' && <DocketTab flash={flash} userName={userName} />}
-      {tab === 'HR Letters' && <HrLettersTab flash={flash} company={company} />}
-      {tab === 'Compliance' && <ComplianceTab role={role} />}
+
+      {/* Sub-tab bar */}
+      {currentGroup && currentGroup.tabs.length > 1 && (
+        <div className="flex gap-1 border-b border-leaf/60 flex-wrap -mt-3">
+          {currentGroup.tabs.map((t) => (
+            <button key={t} onClick={() => setSubTab(t)}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-t-lg whitespace-nowrap ${subTab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/50 hover:text-pine'}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Tab content */}
+      {subTab === 'Employees'        && <EmployeesTab flash={flash} isAdmin={isAdmin} userName={userName} company={company} />}
+      {subTab === 'Attendance'       && <AttendanceTab flash={flash} />}
+      {subTab === 'Leave'            && <LeaveTab flash={flash} userName={userName} canApprove={canApprove} />}
+      {subTab === 'Comp Leave'       && <CompLeaveTab flash={flash} />}
+      {subTab === 'Payroll'          && <PayrollTab flash={flash} userName={userName} canApprove={canApprove} isAdmin={isAdmin} company={company} />}
+      {subTab === 'Incidents'        && <IncidentsTab flash={flash} userName={userName} />}
+      {subTab === 'Letters / Docket' && <DocketTab flash={flash} userName={userName} />}
+      {subTab === 'HR Letters'       && <HrLettersTab flash={flash} company={company} />}
+      {subTab === 'Compliance'       && <ComplianceTab role={role} />}
     </div>
   )
 }
