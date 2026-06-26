@@ -282,7 +282,7 @@ function firstAccessiblePath(role, privileges) {
         </button>
       </div>
 
-      <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
+            <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
         {NAV_GROUPS.map((g) => {
           const items = g.items.filter((n) => {
             if (n.superuserOnly)            return role === 'SUPERUSER'
@@ -306,8 +306,7 @@ function firstAccessiblePath(role, privileges) {
 
               {isOpenGroup && (
                 <div className="space-y-0.5 mb-1">
-                                    {items.map((n) => {
-                    // Items that are folded into a parent's sub-nav are hidden at top level
+                  {items.map((n) => {
                     if (n.id === 'consumption' || n.id === 'vat') return null
 
                     const isExpandable = ['settings', 'cms', 'inventory', 'accounting', 'hr'].includes(n.id)
@@ -326,18 +325,14 @@ function firstAccessiblePath(role, privileges) {
                     }
 
                     const isOpen = openSystemMenu === n.id
-                    // Build the sub-item list for this expandable nav item
                     let nested = []
-                    let paramKey = 'section'
                     if (n.id === 'settings') {
-                      paramKey = 'section'
                       nested = SIDEBAR_SETTINGS_SECTIONS.filter((s) => {
                         if (!s.adminOnly && !s.superuserOnly) return true
                         if (s.adminOnly) return isAdmin || role === 'SUPERUSER'
                         return role === 'SUPERUSER'
                       }).map((s) => ({ ...s, path: `/settings?section=${s.id}`, active: currentTopId === 'settings' && location.search.includes(`section=${s.id}`) }))
                     } else if (n.id === 'cms') {
-                      paramKey = 'entity'
                       nested = SIDEBAR_CMS_ENTITY_TABS.map((s) => ({ ...s, path: `/cms?entity=${s.id}`, active: currentTopId === 'cms' && location.search.includes(`entity=${s.id}`) }))
                     } else if (n.id === 'inventory') {
                       nested = [
@@ -369,7 +364,6 @@ function firstAccessiblePath(role, privileges) {
                           onClick={() => {
                             setOpenSystemMenu(isOpen ? null : n.id)
                             if (!isOpen && ['inventory', 'accounting'].includes(n.id)) {
-                              // Navigate to the first sub-item when opening
                               navigate(`/${n.id}`)
                             } else if (!['inventory', 'accounting'].includes(n.id)) {
                               navigate(`/${n.id}`)
@@ -398,17 +392,12 @@ function firstAccessiblePath(role, privileges) {
                       </div>
                     )
                   })}
-                  </div>
-                    )
-                  })}
                 </div>
               )}
             </div>
           )
         })}
-      </div>
       </nav>
-
       <div className="px-5 py-4 border-t border-white/10 text-xs text-white/65">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
