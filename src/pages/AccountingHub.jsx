@@ -1546,3 +1546,150 @@ function TransactionMappingTab({ accounts, flash, userName }) {
     </div>
   )
 }
+/* ================================================================== */
+/*  NAMED PAGE EXPORTS — each accounting sub-route                     */
+/* ================================================================== */
+export function VoucherEntryPage({ userName, isAdmin, role }) {
+  const [accounts, setAccounts] = useState([])
+  const [company, setCompany]   = useState(null)
+  const [msg, setMsg]           = useState('')
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
+
+  useEffect(() => {
+    supabase.from('chart_of_accounts').select('*').eq('is_active', true).order('code')
+      .then(({ data }) => setAccounts(data || []))
+    supabase.from('company_settings').select('*').limit(1).single()
+      .then(({ data }) => setCompany(data))
+  }, [])
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
+          <Calculator className="text-forest" /> Voucher Entry
+        </h1>
+      </div>
+      {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
+      <JournalsTab accounts={accounts} userName={userName} flash={flash} company={company} isAdmin={isAdmin} />
+    </div>
+  )
+}
+
+export function TrialBalancePage() {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
+          <Calculator className="text-forest" /> Trial Balance
+        </h1>
+      </div>
+      <TrialBalance />
+    </div>
+  )
+}
+
+export function ChartOfAccountsPage({ isAdmin }) {
+  const [accounts, setAccounts] = useState([])
+  const [msg, setMsg]           = useState('')
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
+
+  const loadAccounts = async () => {
+    const { data } = await supabase.from('chart_of_accounts').select('*').eq('is_active', true).order('code')
+    setAccounts(data || [])
+  }
+  useEffect(() => { loadAccounts() }, [])
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
+          <Calculator className="text-forest" /> Chart of Accounts
+        </h1>
+      </div>
+      {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
+      <CoaTab accounts={accounts} reload={loadAccounts} flash={flash} isAdmin={isAdmin} />
+    </div>
+  )
+}
+
+export function FixedAssetsPage({ userName }) {
+  const [accounts, setAccounts] = useState([])
+  const [msg, setMsg]           = useState('')
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
+
+  useEffect(() => {
+    supabase.from('chart_of_accounts').select('*').eq('is_active', true).order('code')
+      .then(({ data }) => setAccounts(data || []))
+  }, [])
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
+          <Calculator className="text-forest" /> Fixed Assets
+        </h1>
+      </div>
+      {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
+      <AssetsTab accounts={accounts} userName={userName} flash={flash} />
+    </div>
+  )
+}
+
+export function OpeningBalancePage({ userName }) {
+  const [accounts, setAccounts] = useState([])
+  const [msg, setMsg]           = useState('')
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
+
+  useEffect(() => {
+    supabase.from('chart_of_accounts').select('*').eq('is_active', true).order('code')
+      .then(({ data }) => setAccounts(data || []))
+  }, [])
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
+          <Calculator className="text-forest" /> Opening Balance
+        </h1>
+      </div>
+      {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
+      <OpeningBalanceTab accounts={accounts} userName={userName} flash={flash} />
+    </div>
+  )
+}
+
+export function TransactionMappingPage({ userName }) {
+  const [accounts, setAccounts] = useState([])
+  const [msg, setMsg]           = useState('')
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
+
+  useEffect(() => {
+    supabase.from('chart_of_accounts').select('*').eq('is_active', true).order('code')
+      .then(({ data }) => setAccounts(data || []))
+  }, [])
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
+          <Calculator className="text-forest" /> Transaction Mapping
+        </h1>
+      </div>
+      {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
+      <TransactionMappingTab accounts={accounts} flash={flash} userName={userName} />
+    </div>
+  )
+}
+
+export function VendorPaymentPage({ role }) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
+          <Calculator className="text-forest" /> Vendor Payments
+        </h1>
+      </div>
+      <VendorPaymentTab role={role} />
+    </div>
+  )
+}
