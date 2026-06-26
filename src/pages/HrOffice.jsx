@@ -20,6 +20,7 @@ const TAB_GROUPS = [
 export default function HrOffice({ userName, role, isAdmin, company }) {
   const [group, setGroup] = useState('employees')
   const [subTab, setSubTab] = useState('Employees')
+  const [msg, setMsg] = useState('')
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
   const canApprove = isAdmin || role === 'MANAGER' || role === 'HR'
 
