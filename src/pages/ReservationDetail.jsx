@@ -715,8 +715,10 @@ function Overview({
     if (quote) {
       await supabase.from('quotations').update(quoteSnapshot).eq('id', quote.id)
     } else {
+      const { data: qSeq } = await supabase.rpc('next_tenant_seq', { p_seq_name: 'quotation' })
+      const quoteNo = `Q-${String(qSeq || 1).padStart(4, '0')}`
       await supabase.from('quotations').insert({
-        reservation_id: res.id, ...quoteSnapshot, status: 'DRAFT', message: '',
+        reservation_id: res.id, quote_no: quoteNo, ...quoteSnapshot, status: 'DRAFT', message: '',
       })
     }
 
