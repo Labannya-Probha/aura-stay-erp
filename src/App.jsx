@@ -62,7 +62,13 @@ const NAV_GROUPS = [
     { id: 'menu-management', label: 'Menu Management', icon: ChefHat },
   ]},
   { title: 'Accounting', items: [
-    { id: 'accounting', label: 'Accounting', icon: Calculator },
+    { id: 'Journal Vouchers',    label: 'Journal Vouchers' },
+    { id: 'Trial Balance',       label: 'Trial Balance' },
+    { id: 'Chart of Accounts',   label: 'Chart of Accounts' },
+    { id: 'Fixed Assets',        label: 'Fixed Assets' },
+    { id: 'Opening Balance',     label: 'Opening Balance',    adminOnly: true },
+    { id: 'Transaction Mapping', label: 'Transaction Mapping', adminOnly: true },
+    { id: 'Vendor Payments',     label: 'Vendor Payments' },
     { id: 'vat',        label: 'VAT Center',  icon: FileSpreadsheet },
   ]},
   { title: 'Inventory', items: [
