@@ -161,7 +161,7 @@ const SIDEBAR_ACCOUNTING_TABS = [
   { id: 'transaction-mapping', label: 'Transaction Mapping', icon: ArrowLeftRight, path: '/accounting/transaction-mapping', adminOnly: true },
   { id: 'vendor-payments',     label: 'Vendor Payments',     icon: CreditCard,     path: '/accounting/vendor-payments' },
   { id: 'vat',                 label: 'VAT Centre',          icon: Wallet,         path: '/vat' },
-  { id: 'vat',                 label: 'VAT Return',          icon: ,         path: '/vat/vat-return' },
+  { id: 'vat-return',          label: 'VAT Return',          icon: FileText,       path: '/vat-return' },
 ]
 
 const SIDEBAR_HR_TABS = [
@@ -347,7 +347,9 @@ function firstAccessiblePath(role, privileges) {
                         .map((s) => ({
                           ...s,
                           active: s.id === 'vat'
-                            ? currentTopId === 'vat'
+                            ? location.pathname === '/vat'
+                            : s.id === 'vat-return'
+                            ? location.pathname === '/vat-return'
                             : location.pathname === s.path,
                         }))
                     } else if (n.id === 'hr') {
@@ -538,7 +540,11 @@ function firstAccessiblePath(role, privileges) {
               <VatCenter userName={userName} company={company} />
             </GuardedRoute>
           } />
-          <Route path="/vat-return" element={<VATReturn />} />
+          <Route path="/vat-return" element={
+            <GuardedRoute role={role} navId="accounting" privileges={privileges}>
+              <VATReturn />
+            </GuardedRoute>
+          } />
           <Route path="/accounting" element={<Navigate to="/accounting/voucher-entry" replace />} />
           <Route path="/accounting/voucher-entry" element={
             <GuardedRoute role={role} navId="accounting" privileges={privileges}>
