@@ -102,7 +102,7 @@ const NAV_GROUPS = [
   { title: 'HR & Payroll', items: [
     { id: 'hr', label: 'HR & Payroll', icon: Users },
   ]},
-  { title: 'Insight', items: [
+  { title: 'Reports', items: [
     { id: 'reports', label: 'Reports', icon: BarChart3 },
   ]},
   { title: 'System', items: [
