@@ -1,6 +1,6 @@
 // src/pages/VATReturn.jsx
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../supabase";
 import {
   FileText, TrendingUp, TrendingDown, DollarSign,
   Download, Calendar, CheckCircle, XCircle, AlertCircle
