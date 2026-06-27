@@ -773,13 +773,6 @@ function IntegratedReportsTab({ integMap, flash }) {
     setLoading(true)
     try {
       const tid = getTenantId()
-      // Fetch internal trial balance data for the period
-      let q = supabase
-        .from('journal_lines')
-        .select('debit, credit, chart_of_accounts(code, name, account_type)')
-        .gte('journal_entries.entry_date', fromDate)
-        .lte('journal_entries.entry_date', toDate)
-      if (tid) q = q.eq('journal_entries.tenant_id', tid)
 
       // Simpler: pull trial balance from the existing accounting module
       let tbq = supabase.from('journal_lines').select(`
