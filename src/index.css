@@ -1,0 +1,581 @@
+/* ============================================================
+   FONTS — Inter
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   AURA STAY — MINIMAL LUXE ERP DESIGN SYSTEM
+   Clean, high-readability UI for dashboards, tables, and forms.
+   ============================================================ */
+
+@layer base {
+  :root {
+    /* ── Tailwind color bridge (RGB channels, no commas) ──────────────
+       Required by the rgb(var(--x) / <alpha-value>) pattern in
+       tailwind.config.js. Without these, ALL brand color classes
+       (text-forest, bg-pine, border-leaf …) render as transparent.   */
+    --color-forest-rgb: 46 125 50;    /* #2E7D32 — primary forest green  */
+    --color-pine-rgb:   27 77 46;     /* #1B4D2E — deep pine             */
+    --color-ink-rgb:    23 23 23;     /* #171717 — near-black text       */
+    --color-paper-rgb:  247 245 242;  /* #F7F5F2 — warm off-white bg     */
+    --color-leaf-rgb:   56 142 60;    /* #388E3C — mid leaf green        */
+    --color-amber-rgb:  212 160 23;   /* #D4A017 — gold accent           */
+
+    /* ── Design tokens ───────────────────────────────────────────────── */
+    --brand-color:        #1F6F78;
+    --card-bg:            #FFFFFF;
+    --surface-muted:      #F1EEE9;
+    --border-color:       #E5DFD6;
+    --text-primary:       #171717;
+    --text-secondary:     #5F5A55;
+    --interactive-glow:   rgba(31, 111, 120, 0.16);
+    --interactive-shadow: 0 16px 36px rgba(23, 23, 23, 0.10);
+    --sidebar-bg:         #1B4D2E;
+
+    /* ── shadcn/ui semantic tokens (HSL) — mapped to brand palette ────
+       These power the Tailwind classes: bg-background, text-foreground,
+       bg-primary, bg-muted, border-border, etc.                        */
+    --background: oklch(1 0 0);   /* #F7F5F2 paper          */
+    --foreground: oklch(0.145 0 0);      /* #171717 ink            */
+    --card: oklch(1 0 0);    /* #FFFFFF                */
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0); /* #1F6F78 brand teal     */
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);  /* #F1EEE9 surface-muted  */
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);   /* #5F5A55                */
+    --accent: oklch(0.97 0 0); /* #1B4D2E pine           */
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);   /* red-500                */
+    --destructive-foreground: 0 0% 100%;
+    --border: oklch(0.922 0 0);  /* #E5DFD6                */
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0); /* brand teal             */
+    --radius: 0.625rem;
+
+    /* ── Motion system ───────────────────────────────────────────────── */
+    --aura-enter-duration:  0.75s;
+    --aura-enter-ease:      cubic-bezier(0.22, 1, 0.36, 1);
+    --aura-stagger-step:    30ms;
+    --aura-loader-duration: 3s;
+
+    /* Aliases — single source of truth, no duplicate hex values */
+    --aura-brand:      var(--brand-color);
+    --aura-brand-soft: var(--interactive-glow);
+    --app-mobile-header-height: 4.25rem;
+    --app-mobile-header-offset: calc(var(--app-mobile-header-height) + env(safe-area-inset-top, 0px));
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    @apply font-sans;
+  }
+
+  body {
+    @apply font-body antialiased bg-background text-foreground;
+    background: #F7F5F2;
+    background-image:
+      radial-gradient(1000px 650px at 8% -10%,  rgba(31,111,120,0.08), transparent 58%),
+      radial-gradient(900px  700px at 112% 0%,  rgba(208,169,104,0.08), transparent 52%),
+      linear-gradient(180deg, #FBFAF8 0%, #F7F5F2 100%);
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    font-size: 14.5px;
+    line-height: 1.5;
+    overflow-x: hidden;
+    background-size: 140% 140%;
+  }
+
+  button, input, select, textarea { min-width: 0; }
+  img, svg, video, canvas, iframe { max-width: 100%; }
+
+  /* Gate animation — no !important override needed in reduced-motion block */
+  @media (prefers-reduced-motion: no-preference) {
+    body {
+      animation: aura-bg-drift 18s ease-in-out infinite alternate;
+    }
+  }
+
+  #root { width: 100%; max-width: 100%; }
+  h1, h2, h3, h4 { line-height: 1.25; }
+  h1 { letter-spacing: -0.01em; }
+
+  @keyframes aura-bg-drift {
+    0%   { background-position: 0% 0%,  100% 0%, 0% 0%; }
+    100% { background-position: 8% 10%, 92% -4%, 0% 0%; }
+  }
+
+  .app-shell {
+    width: 100%;
+    overflow-x: clip;
+  }
+
+  .app-shell-mobile-bar {
+    min-height: var(--app-mobile-header-offset);
+    padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+    padding-bottom: 0.75rem;
+  }
+
+  .app-shell-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: calc(var(--app-mobile-header-offset) + 1rem) 1rem 1rem;
+    overflow-x: clip;
+  }
+
+  .app-shell-banner {
+    position: sticky;
+    top: calc(var(--app-mobile-header-offset) + 0.5rem);
+    z-index: 15;
+    margin: 0 -1rem 1rem;
+  }
+
+  @media (min-width: 1024px) {
+    .app-shell-main {
+      margin-left: 15rem;
+      padding: 2rem;
+    }
+
+    .app-shell-banner {
+      top: 0;
+      margin: 0 0 1rem;
+    }
+  }
+  .theme {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Inter Variable', sans-serif;
+  }
+  .dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+  }
+  * {
+    @apply border-border outline-ring/50;
+  }
+}
+
+/* ============================================================
+   COMPONENTS
+   ============================================================ */
+@layer components {
+
+  .money {
+    @apply font-money tabular-nums;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── CARD ──────────────────────────────────────────────────────── */
+  .card {
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: 0 10px 28px rgba(23, 23, 23, 0.06);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    position: relative;
+    overflow: visible;
+  }
+  .card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .2s ease;
+    background: linear-gradient(
+      120deg,
+      rgba(31,111,120,0.00) 30%,
+      rgba(31,111,120,0.06) 55%,
+      rgba(31,111,120,0.00) 80%
+    );
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(31,111,120,0.28);
+    box-shadow: var(--interactive-shadow);
+  }
+  .card:hover::after { opacity: 1; }
+
+  /* ── FORM LABELS ───────────────────────────────────────────────── */
+  .label {
+    @apply block text-pine/70 mb-1.5;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  /* Reserve 2 lines so inputs align in multi-column grids */
+  .grid .label, .flex .label { min-height: 2.4em; }
+
+  /* ── FORM CONTROLS — shared height baseline ────────────────────── */
+  .input, .btn-primary, .btn-ghost, .btn-amber {
+    height: 38px;
+    box-sizing: border-box;
+    max-width: 100%;
+  }
+  .input {
+    @apply w-full text-ink focus:outline-none;
+    padding: 0 12px;
+    font-size: 14px;
+    border-radius: 10px;
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    transition: border-color .15s, box-shadow .15s, background .15s, transform .15s;
+  }
+  .input::placeholder { color: rgba(95,90,85,0.55); }
+  .input:focus {
+    border-color: var(--brand-color);
+    box-shadow: 0 0 0 3px var(--interactive-glow);
+    background: #fff;
+    transform: translateY(-1px);
+  }
+  /* textarea overrides fixed height */
+  textarea.input {
+    height: auto;
+    min-height: 76px;
+    padding: 9px 12px;
+    line-height: 1.5;
+  }
+  select.input { padding-right: 8px; }
+
+  /* ── BUTTONS ───────────────────────────────────────────────────── */
+  .btn-primary, .btn-ghost, .btn-amber {
+    @apply inline-flex items-center justify-center gap-2 font-semibold
+           disabled:opacity-40 disabled:cursor-not-allowed;
+    padding: 0 16px;
+    font-size: 13.5px;
+    border-radius: 9px;
+    white-space: nowrap;
+    transition:
+      transform      .16s ease,
+      box-shadow     .16s ease,
+      filter         .16s ease,
+      background-color .16s ease,
+      border-color   .16s ease;
+  }
+  .btn-primary {
+    @apply text-white;
+    background: linear-gradient(135deg, #1F6F78, #16565D);
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: 0 8px 18px rgba(31,111,120,0.18);
+  }
+  .btn-primary:hover  { filter: brightness(1.06); box-shadow: 0 12px 26px rgba(31,111,120,0.26); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-ghost {
+    @apply text-pine;
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+  }
+  .btn-ghost:hover  { background: #FAF8F5; transform: translateY(-1px); border-color: rgba(31,111,120,0.30); box-shadow: 0 8px 20px rgba(23,23,23,0.08); }
+  .btn-ghost:active { transform: translateY(0); }
+
+  .btn-amber {
+    @apply text-white;
+    background: linear-gradient(135deg, #C89B5C, #B38443);
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: 0 8px 18px rgba(184,134,11,0.16);
+  }
+  .btn-amber:hover  { filter: brightness(1.05); transform: translateY(-1px); box-shadow: 0 11px 24px rgba(184,134,11,0.24); }
+  .btn-amber:active { transform: translateY(0); }
+
+  .btn-primary svg,
+  .btn-ghost svg,
+  .btn-amber svg { flex-shrink: 0; }
+
+  /* ── TABLES ────────────────────────────────────────────────────── */
+  .th {
+    @apply text-left text-pine/60;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 11px 14px;
+    border-bottom: 1.5px solid var(--border-color);
+    white-space: nowrap;
+    background: #FAF8F5;
+  }
+  .td {
+    @apply text-ink;
+    font-size: 13.5px;
+    padding: 11px 14px;
+    border-bottom: 1px solid rgba(229,223,214,0.9);
+    vertical-align: middle;
+  }
+  /* Numeric columns get tabular figures automatically */
+  .th.text-right,
+  .td.text-right {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Zebra + hover */
+  .card tbody tr { transition: background .14s, box-shadow .14s; }
+  .card tbody tr:hover { background: #F8F4EE; box-shadow: inset 0 0 0 1px rgba(31,111,120,0.10); }
+  .card tbody tr:last-child .td { border-bottom: none; }
+  tfoot .td, tfoot td { border-top: 1.5px solid var(--border-color); }
+
+  /* ── STATUS CHIP ───────────────────────────────────────────────── */
+  .status-chip {
+    @apply inline-flex items-center;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+    transition: transform .14s ease, filter .14s ease;
+  }
+  .status-chip:hover { transform: translateY(-1px); filter: saturate(1.08); }
+
+  /* ── SPACING HELPER ────────────────────────────────────────────── */
+  .card-pad { padding: 20px; }
+
+  .table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ============================================================
+   SCREEN — table reset
+   ============================================================ */
+@media screen {
+  table { border-collapse: collapse; width: 100%; }
+}
+
+@media (max-width: 767px) {
+  .card table,
+  .table-scroll > table,
+  table.table-scroll {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .card table thead,
+  .card table tbody,
+  .card table tfoot,
+  .table-scroll > table thead,
+  .table-scroll > table tbody,
+  .table-scroll > table tfoot,
+  table.table-scroll thead,
+  table.table-scroll tbody,
+  table.table-scroll tfoot {
+    white-space: nowrap;
+  }
+}
+
+/* ============================================================
+   PRINT
+   NOTE: PrintPortal.jsx owns ALL print CSS. Only .no-print here.
+   ============================================================ */
+@media print {
+  .no-print { display: none !important; }
+}
+
+/* ============================================================
+   KEYFRAMES — declared globally (not inside @layer) for
+   broadest browser support with @layer utilities references.
+   ============================================================ */
+@keyframes aura-enter {
+  0% {
+    opacity: var(--aura-enter-opacity, 1);
+    transform:
+      translate3d(var(--aura-enter-x, 0), var(--aura-enter-y, 0), 0)
+      scale3d(var(--aura-enter-scale, 1), var(--aura-enter-scale, 1), 1)
+      rotate(var(--aura-enter-rotate, 0));
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0,0,0) scale3d(1,1,1) rotate(0deg);
+  }
+}
+@keyframes aura-overlay-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes aura-spin          { to   { transform: rotate(360deg); } }
+@keyframes aura-loader-out    { to   { opacity: 0; visibility: hidden; pointer-events: none; } }
+@keyframes aura-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ============================================================
+   MOTION SYSTEM
+   ============================================================ */
+@layer utilities {
+
+  /* ── Entry animation ───────────────────────────────────────────── */
+  .animate-entry {
+    animation-name: aura-enter;
+    animation-duration: var(--aura-enter-duration);
+    animation-timing-function: var(--aura-enter-ease);
+    animation-fill-mode: both;
+    will-change: transform, opacity;
+    /* default: fade + slide down */
+    --aura-enter-opacity: 0;
+    --aura-enter-y:       -18px;
+    --aura-enter-x:       0;
+    --aura-enter-scale:   1;
+    --aura-enter-rotate:  0;
+  }
+
+  /* Direction / style variants */
+  .fade        { --aura-enter-y: 0;     --aura-enter-x: 0; }
+  .slide-down  { --aura-enter-y: -24px; }
+  .slide-up    { --aura-enter-y:  24px; }
+  .slide-left  { --aura-enter-x:  24px; --aura-enter-y: 0; }
+  .slide-right { --aura-enter-x: -24px; --aura-enter-y: 0; }
+  .zoom-in     { --aura-enter-scale: 0.92; --aura-enter-y: 0; }
+  .zoom-out    { --aura-enter-scale: 1.08; --aura-enter-y: 0; }
+  .pop         { --aura-enter-scale: 0.8;  --aura-enter-y: 0; }
+  .spin-in     { --aura-enter-rotate: -8deg; --aura-enter-scale: 0.94; --aura-enter-y: 0; }
+
+  /* Manual delays */
+  .delay-100 { animation-delay: 0.1s; }
+  .delay-200 { animation-delay: 0.2s; }
+  .delay-300 { animation-delay: 0.3s; }
+  .delay-500 { animation-delay: 0.5s; }
+
+  /* ── Stagger — apply to parent ─────────────────────────────────── */
+  .animate-stagger > * {
+    animation-name: aura-enter;
+    animation-duration: var(--aura-enter-duration);
+    animation-timing-function: var(--aura-enter-ease);
+    animation-fill-mode: both;
+    --aura-enter-opacity: 0;
+    --aura-enter-y: -14px;
+  }
+  .animate-stagger > *:nth-child(1)  { animation-delay: calc(var(--aura-stagger-step) * 1);  }
+  .animate-stagger > *:nth-child(2)  { animation-delay: calc(var(--aura-stagger-step) * 2);  }
+  .animate-stagger > *:nth-child(3)  { animation-delay: calc(var(--aura-stagger-step) * 3);  }
+  .animate-stagger > *:nth-child(4)  { animation-delay: calc(var(--aura-stagger-step) * 4);  }
+  .animate-stagger > *:nth-child(5)  { animation-delay: calc(var(--aura-stagger-step) * 5);  }
+  .animate-stagger > *:nth-child(6)  { animation-delay: calc(var(--aura-stagger-step) * 6);  }
+  .animate-stagger > *:nth-child(7)  { animation-delay: calc(var(--aura-stagger-step) * 7);  }
+  .animate-stagger > *:nth-child(8)  { animation-delay: calc(var(--aura-stagger-step) * 8);  }
+  .animate-stagger > *:nth-child(9)  { animation-delay: calc(var(--aura-stagger-step) * 9);  }
+  .animate-stagger > *:nth-child(10) { animation-delay: calc(var(--aura-stagger-step) * 10); }
+
+  /* ── Page loader ───────────────────────────────────────────────── */
+  .aura-loader-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(247, 245, 242, 0.84);
+    backdrop-filter: blur(8px) saturate(120%);
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
+    animation: aura-overlay-fade var(--aura-enter-duration) var(--aura-enter-ease) both;
+  }
+  .aura-spinner {
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    border: 4px solid var(--aura-brand-soft);
+    border-top-color: var(--aura-brand);
+    animation: aura-spin var(--aura-loader-duration) cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+  .aura-loader-overlay.auto-dismiss {
+    animation:
+      aura-overlay-fade var(--aura-enter-duration) var(--aura-enter-ease) both,
+      aura-loader-out 0.4s var(--aura-enter-ease) var(--aura-loader-duration) forwards;
+  }
+
+  /* ── Inline button spinner ─────────────────────────────────────── */
+  .btn-spinner {
+    display: inline-block;
+    width: 1em; height: 1em;
+    margin-right: 0.5em;
+    vertical-align: -0.15em;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.45);
+    border-top-color: #fff;
+    animation: aura-spin 0.7s linear infinite;
+  }
+
+  /* ── Skeleton loaders ──────────────────────────────────────────── */
+  .skeleton {
+    border-radius: 8px;
+    background: linear-gradient(
+      100deg,
+      rgba(31,111,120,0.05) 30%,
+      rgba(31,111,120,0.10) 50%,
+      rgba(31,111,120,0.05) 70%
+    );
+    background-size: 200% 100%;
+    animation: aura-shimmer 1.4s ease-in-out infinite;
+  }
+  .skeleton-line        { height: 14px; margin: 8px 0; }
+  .skeleton-line.short  { width: 60%; }
+
+  /* ── Reduced motion ────────────────────────────────────────────── */
+  /* body animation is already gated via prefers-reduced-motion: no-preference
+     above, so no body override needed here.                          */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-entry,
+    .animate-stagger > *,
+    .aura-loader-overlay,
+    .aura-loader-overlay.auto-dismiss { animation: none !important; }
+
+    .aura-spinner,
+    .btn-spinner,
+    .skeleton { animation-duration: 20s; }
+  }
+}
