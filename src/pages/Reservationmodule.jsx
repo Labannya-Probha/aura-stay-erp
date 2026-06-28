@@ -1877,7 +1877,16 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
 
     let attachmentPayload = null
     if (sendBox.channel === 'WHATSAPP' && !sendBox.file) {
-      showPopover('WhatsApp এর জন্য payment slip/quotation PDF attachment দিন.', 'error')
+      const phone = sendBox.to.replace(/[^\d]/g, '')
+      const intl = phone.startsWith('880') ? phone : phone.startsWith('0') ? `88${phone}` : `880${phone}`
+      window.open(`https://wa.me/${intl}?text=${encodeURIComponent(sendBox.body || '')}`, '_blank')
+      await logAudit({
+        actor: userName, action: 'SEND_WHATSAPP', entity: 'payment',
+        entity_id: parsePaymentReference(sendBox.payment?.reference).paymentNo || sendBox.payment?.id,
+        details: { channel: 'WHATSAPP', to: sendBox.to, reservation_id: res?.id, payment_id: sendBox.payment?.id, mode: 'WA_FALLBACK' },
+      })
+      showPopover('WhatsApp window opened.')
+      setSendBox({ ...sendBox, open: false })
       return
     }
 
@@ -2140,7 +2149,7 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
                 />
                 <p className="text-[11px] text-pine/50 mt-1">
                   {sendBox.channel === 'WHATSAPP'
-                    ? 'WhatsApp এ professional document পাঠাতে PDF attachment বাধ্যতামূলক (max 10MB)।'
+                    ? 'PDF দিলে professional direct dispatch হবে; না দিলে WhatsApp window open হবে (max 10MB)।'
                     : 'Email এর জন্য attachment optional। সর্বোচ্চ 10MB।'}
                 </p>
               </div>

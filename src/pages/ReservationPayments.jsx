@@ -193,10 +193,6 @@ export default function ReservationPayments({ userName, isAdmin }) {
     const pm = sendBox.payment
     if (!pm) return
     if (!sendBox.to?.trim()) { flash('Recipient is required.', 'err'); return }
-    if (sendBox.channel === 'WHATSAPP' && !sendBox.file) {
-      flash('Attach a PDF file for WhatsApp.', 'err')
-      return
-    }
     if (sendBox.file && sendBox.file.size > 10 * 1024 * 1024) {
       flash('Attachment too large. Max 10MB.', 'err')
       return
@@ -208,6 +204,21 @@ export default function ReservationPayments({ userName, isAdmin }) {
 
     setSendBusy(true)
     try {
+      const parsed = parsePaymentReference(pm.reference)
+      if (sendBox.channel === 'WHATSAPP' && !sendBox.file) {
+        const phone = sendBox.to.replace(/[^\d]/g, '')
+        const intl = phone.startsWith('880') ? phone : phone.startsWith('0') ? `88${phone}` : `880${phone}`
+        window.open(`https://wa.me/${intl}?text=${encodeURIComponent(sendBox.body || '')}`, '_blank')
+        await logAudit({
+          actor: userName, action: 'SEND_WHATSAPP', entity: 'payment',
+          entity_id: parsed.paymentNo || pm.id,
+          details: { channel: 'WHATSAPP', to: sendBox.to, reservation_id: pm.reservation_id, payment_id: pm.id, mode: 'WA_FALLBACK' },
+        })
+        flash('WhatsApp window opened.')
+        setSendBox({ ...sendBox, open: false })
+        return
+      }
+
       let attachmentPayload = null
       if (sendBox.file) {
         const base64 = await fileToBase64(sendBox.file)
@@ -219,7 +230,6 @@ export default function ReservationPayments({ userName, isAdmin }) {
         }
       }
 
-      const parsed = parsePaymentReference(pm.reference)
       const { data, error } = await supabase.functions.invoke('send-payment-message', {
         body: {
           channel: sendBox.channel,
@@ -498,7 +508,7 @@ export default function ReservationPayments({ userName, isAdmin }) {
                 />
                 <p className="text-[11px] text-pine/50 mt-1">
                   {sendBox.channel === 'WHATSAPP'
-                    ? 'PDF attachment required for WhatsApp (max 10MB).'
+                    ? 'PDF attach করলে professional direct send হবে; না দিলে normal WhatsApp window open হবে (max 10MB).'
                     : 'Optional attachment (max 10MB).'}
                 </p>
               </div>
