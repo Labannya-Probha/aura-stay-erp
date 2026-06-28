@@ -32,8 +32,6 @@ import AccountingHub, {
   TransactionMappingPage,
   VendorPaymentPage,
 } from './pages/AccountingHub.jsx'
-import AccountingIntegrations from './pages/AccountingIntegrations.jsx'
-import IntegrationCallbackPage from './pages/IntegrationCallbackPage.jsx'
 import HrOffice, {
   HrEmployeeEntryPage,
   HrServiceBookPage,
@@ -65,7 +63,7 @@ import {
   UserCog, CalendarCheck, BadgeDollarSign, FileStack, ClipboardCheck,
   PartyPopper, FileText, FileCheck, LogIn, CheckCircle, TrendingUp, ArrowUpCircle,
   AlertTriangle, MessageSquareWarning, AlertOctagon, ShieldCheck, Award, Briefcase,
-  Banknote, UsersRound, Siren, Plug,
+  Banknote, UsersRound, Siren,
 } from 'lucide-react'
 
 function BrandLogo({ url }) {
@@ -129,7 +127,6 @@ const SIDEBAR_SETTINGS_SECTIONS = [
   { id: 'role-permissions',        label: 'Role Permissions',        adminOnly: false, superuserOnly: true  },
   { id: 'admin-feature-access',    label: 'Admin Feature Access',    adminOnly: false, superuserOnly: true  },
   { id: 'staff',                   label: 'Staff Management',        adminOnly: false, superuserOnly: false },
-  { id: 'accounting-integrations', label: 'Accounting Integrations', adminOnly: true,  superuserOnly: false },
   { id: 'data-system',             label: 'Data & System',           adminOnly: false, superuserOnly: true  },
 ]
 
@@ -166,7 +163,6 @@ const SIDEBAR_ACCOUNTING_TABS = [
   { id: 'opening-balance',     label: 'Opening Balance',     icon: Lock,           path: '/accounting/opening-balance', adminOnly: true },
   { id: 'transaction-mapping', label: 'Transaction Mapping', icon: ArrowLeftRight, path: '/accounting/transaction-mapping', adminOnly: true },
   { id: 'vendor-payments',     label: 'Vendor Payments',     icon: CreditCard,     path: '/accounting/vendor-payments' },
-  { id: 'integrations',        label: 'Integrations',        icon: Plug,           path: '/accounting/integrations', adminOnly: true },
   { id: 'vat',                 label: 'VAT Centre',          icon: Wallet,         path: '/vat' },
   { id: 'vat-return',          label: 'VAT Return',          icon: FileText,       path: '/vat-return' },
 ]
@@ -609,12 +605,6 @@ function firstAccessiblePath(role, privileges) {
              <VendorPaymentPage role={role} />
             </GuardedRoute>
           } />
-          <Route path="/accounting/integrations" element={
-            <GuardedRoute role={role} navId="accounting" privileges={privileges}>
-              <AccountingIntegrations isAdmin={isAdmin} />
-            </GuardedRoute>
-          } />
-          <Route path="/accounting/integrations/callback" element={<IntegrationCallbackPage />} />
 
           {/* HR & Payroll */}
           <Route path="/hr" element={<Navigate to="/hr/employee-entry" replace />} />
