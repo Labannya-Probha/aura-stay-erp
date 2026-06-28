@@ -6,17 +6,52 @@ import { Search, Trash2, UserSearch, X, CheckCircle2 } from 'lucide-react'
 import SearchableSelect from '../components/SearchableSelect.jsx'
 import KPICards from '../components/KPICards.jsx'
 import { Combobox } from '../components/ui/combobox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const STATUSES = ['ALL', 'QUERY', 'QUOTED', 'CONFIRMED', 'NO_SHOW', 'CHECKED_IN', 'CHECKED_OUT', 'SETTLED', 'CANCELLED']
-
+const STATUSES = ['ALL', 'QUERY', 'QUOTED', 'CONFIRMED', 'NO_SHOW', 'CHECKED_IN', 'CHECKED_OUT', 'SETTLED', 'CANCELLED'];
 const STATUS_TO_TAB = {
-  QUERY: 'Overview', QUOTED: 'Overview', CONFIRMED: 'Check-In',
-  NO_SHOW: 'Check-In',
-  CHECKED_IN: 'Billings & Check-Out', CHECKED_OUT: 'Billings & Check-Out',
-  SETTLED: 'Billings & Check-Out', CANCELLED: 'Overview',
+  QUERY: 'Overview',
+  QUOTED: 'Overview',
+  CONFIRMED: 'Overview',
+  NO_SHOW: 'Overview',
+  CHECKED_IN: 'Overview',
+  CHECKED_OUT: 'Payments',
+  SETTLED: 'Payments',
+  CANCELLED: 'Overview',
+};
+
+export function StatusFilter({ q, setQ, filter, setFilter }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+      <div className="relative w-full sm:flex-1 min-w-0">
+        <Search size={15} className="absolute left-3 top-2.5 text-pine/40" />
+        <input
+          className="input pl-9 w-full"
+          placeholder="Search name, phone, RES no, CUST ID…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      </div>
+
+      <div className="w-full sm:w-[220px] sm:shrink-0 relative z-30">
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-full bg-white border-leaf text-pine shadow-sm">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent className="z-[200] bg-white border-leaf shadow-xl">
+            {STATUSES.map((status) => (
+              <SelectItem key={status} value={status}>
+                {status.replace(/_/g, ' ')}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  )
 }
 
-const dayName = (dateStr) => {
+function dayName(dateStr) {
   if (!dateStr) return '—'
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' })
 }
@@ -46,7 +81,7 @@ export default function Reservations({ openReservation, userName, prefill, clear
   )
 
   return (
-    <div>
+    <><div>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
         <div>
           <h1 className="font-display text-2xl font-bold text-pine">Reservations</h1>
@@ -54,21 +89,10 @@ export default function Reservations({ openReservation, userName, prefill, clear
         <div className="text-xs text-pine/50">Create new queries from <span className="font-semibold">Booking Calendar</span>.</div>
       </div>
       <KPICards module="reservations" />
-
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <div className="relative w-full sm:w-72">
-          <Search size={15} className="absolute left-3 top-2.5 text-pine/40" />
-          <input className="input pl-9 w-full" placeholder="Search name, phone, RES no, CUST ID…" value={q} onChange={(e) => setQ(e.target.value)} />
-        </div>
-        {STATUSES.map((s) => (
-          <button key={s} onClick={() => setFilter(s)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold ${filter === s ? 'bg-pine text-white' : 'bg-white border border-leaf text-pine/70 hover:bg-leaf/50'}`}>
-            {s.replace('_', ' ')}
-          </button>
-        ))}
-      </div>
-
-      <div className="card overflow-hidden">
+      <StatusFilter q={q} setQ={setQ} filter={filter} setFilter={setFilter} />
+    </div>
+    
+    <div className="card overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-pine/40 text-sm">Loading reservations…</div>
         ) : (
@@ -101,13 +125,13 @@ export default function Reservations({ openReservation, userName, prefill, clear
                       </td>
                       <td className="td money text-xs">{fmtDate(r.check_in)} → {fmtDate(r.check_out)}</td>
                       <td className="td money text-xs font-semibold">
-                        {(r.reservation_rooms || []).map((x) => x.rooms ? `${x.rooms.room_no}${x.rooms.room_name ? ' ('+x.rooms.room_name+')' : ''}` : null).filter(Boolean).join(', ') || '—'}
+                        {(r.reservation_rooms || []).map((x) => x.rooms ? `${x.rooms.room_no}${x.rooms.room_name ? ' (' + x.rooms.room_name + ')' : ''}` : null).filter(Boolean).join(', ') || '—'}
                       </td>
                       <td className="td money">{(r.pax_adults || 0) + (r.pax_children || 0)}</td>
                       <td className="td text-xs">{r.source || '—'}</td>
                       <td className="td">
                         <button
-                          onClick={(e) => { e.stopPropagation(); openReservation(r.id, STATUS_TO_TAB[r.status] || 'Overview') }}
+                          onClick={(e) => { e.stopPropagation(); openReservation(r.id, STATUS_TO_TAB[r.status] || 'Overview') } }
                           className={`status-chip ${STATUS_COLORS[r.status]} hover:ring-2 hover:ring-offset-1 hover:ring-pine/30 transition-shadow`}
                           title={`Open ${STATUS_TO_TAB[r.status] || 'Overview'} tab`}
                         >
@@ -140,7 +164,7 @@ export default function Reservations({ openReservation, userName, prefill, clear
                       </div>
                     </div>
                     <button
-                      onClick={(e) => { e.stopPropagation(); openReservation(r.id, STATUS_TO_TAB[r.status] || 'Overview') }}
+                      onClick={(e) => { e.stopPropagation(); openReservation(r.id, STATUS_TO_TAB[r.status] || 'Overview') } }
                       className={`status-chip shrink-0 whitespace-nowrap ${STATUS_COLORS[r.status]}`}
                     >
                       {r.status.replace('_', ' ')}
@@ -148,7 +172,7 @@ export default function Reservations({ openReservation, userName, prefill, clear
                   </div>
                   <div className="text-xs text-pine/70 money mb-1">{r.res_no} · {fmtDate(r.check_in)} → {fmtDate(r.check_out)}</div>
                   <div className="text-xs text-pine/60 money mb-1">
-                    {(r.reservation_rooms || []).map((x) => x.rooms ? `${x.rooms.room_no}${x.rooms.room_name ? ' ('+x.rooms.room_name+')' : ''}` : null).filter(Boolean).join(', ') || 'No rooms assigned'}
+                    {(r.reservation_rooms || []).map((x) => x.rooms ? `${x.rooms.room_no}${x.rooms.room_name ? ' (' + x.rooms.room_name + ')' : ''}` : null).filter(Boolean).join(', ') || 'No rooms assigned'}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-pine/50">
                     <span>{(r.pax_adults || 0) + (r.pax_children || 0)} pax</span>
@@ -165,8 +189,8 @@ export default function Reservations({ openReservation, userName, prefill, clear
             </div>
           </>
         )}
-      </div>
-
+      </div></>
+      )
       {showNew && (
         <NewReservation
           prefill={prefill}
@@ -175,14 +199,9 @@ export default function Reservations({ openReservation, userName, prefill, clear
           userName={userName}
         />
       )}
-    </div>
-  )
 }
 
-/* ================================================================== */
-/*  GUEST SEARCH POPUP                                                  */
-/* ================================================================== */
-function GuestSearchPopup({ onSelect, onClose }) {
+function GuestSearchPopup({ onSelect, onClose, onCreateContact }) {
   const [q, setQ]             = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
@@ -232,7 +251,25 @@ function GuestSearchPopup({ onSelect, onClose }) {
         <div className="flex-1 min-h-0">
           {loading && <p className="text-sm text-pine/40 text-center py-6">Searching…</p>}
           {!loading && q.length >= 2 && results.length === 0 && (
-            <p className="text-sm text-pine/40 text-center py-6">No guests found matching "{q}"</p>
+            <div className="py-4 space-y-3">
+              <p className="text-sm text-pine/40 text-center">No guests found matching "{q}"</p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={() => onCreateContact?.(q.trim(), false)}
+                  className="btn-primary flex-1 justify-center !py-2 text-sm"
+                >
+                  Create contact "{q.trim()}"
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onCreateContact?.(q.trim(), true)}
+                  className="btn-ghost flex-1 justify-center !py-2 text-sm"
+                >
+                  Create & edit details
+                </button>
+              </div>
+            </div>
           )}
           {!loading && q.length < 2 && (
             <p className="text-sm text-pine/40 text-center py-6">Type at least 2 characters to search</p>
@@ -334,8 +371,24 @@ function NewReservation({ close, openReservation, userName, prefill }) {
   const [addons, setAddons]                   = useState({})
   const [busy, setBusy]                       = useState(false)
   const [err, setErr]                         = useState('')
+  const guestNameRef = useRef(null)
+  const [focusGuestName, setFocusGuestName]   = useState(false)
 
   const set          = (k, v) => setF((p) => ({ ...p, [k]: v }))
+
+  const writeAudit = async ({ action, entity, entityId, details = {} }) => {
+    try {
+      await supabase.from('audit_log').insert({
+        actor: userName,
+        action,
+        entity,
+        entity_id: entityId || null,
+        details: { ...details, timestamp: new Date().toISOString() },
+      })
+    } catch {
+      // Do not block reservation operations if audit insert fails.
+    }
+  }
   
   useEffect(() => {
     if (!reservationPolicy) return
@@ -423,10 +476,47 @@ function NewReservation({ close, openReservation, userName, prefill }) {
     setShowGuestSearch(false)
   }
 
+  const createContactFromSearch = async (name, openForEdit = false) => {
+    const cleanName = (name || '').trim()
+    if (!cleanName) return
+    const customerId = await generateCustomerId()
+    const { data: g, error } = await supabase.from('guests').insert({
+      full_name: cleanName,
+      customer_id: customerId,
+    }).select().single()
+    if (error) { setErr(error.message); return }
+
+    setLinkedGuest(g)
+    setF((p) => ({
+      ...p,
+      guest_name: g.full_name || cleanName,
+      reservation_name: p.reservation_name || g.full_name || cleanName,
+      phone: g.phone || '',
+      email: g.email || '',
+      address: g.address || '',
+      link_names: false,
+    }))
+    setShowGuestSearch(false)
+    if (openForEdit) setFocusGuestName(true)
+
+    await writeAudit({
+      action: 'CONTACT_CREATE',
+      entity: 'guest',
+      entityId: g.customer_id || g.id,
+      details: { source: 'RESERVATION_QUERY_SEARCH_CREATE', full_name: g.full_name || cleanName },
+    })
+  }
+
   const clearLinkedGuest = () => {
     setLinkedGuest(null)
     setF((p) => ({ ...p, guest_name: '', phone: '', email: '', address: '' }))
   }
+
+  useEffect(() => {
+    if (!focusGuestName) return
+    guestNameRef.current?.focus()
+    setFocusGuestName(false)
+  }, [focusGuestName])
 
   useEffect(() => {
     supabase.from('companies').select('id,name').eq('is_active', true).order('name').then(({ data }) => setCompanies(data || []))
@@ -479,6 +569,12 @@ function NewReservation({ close, openReservation, userName, prefill }) {
     const { data, error } = await supabase.from('companies').insert({ name }).select().single()
     if (error) { setErr(error.message); return null }
     setCompanies((p) => [...p, { id: data.id, name: data.name }].sort((a, b) => a.name.localeCompare(b.name)))
+    await writeAudit({
+      action: 'COMPANY_CREATE',
+      entity: 'company',
+      entityId: data.id,
+      details: { name: data.name, source: 'RESERVATION_QUERY' },
+    })
     return data.id
   }
 
@@ -539,6 +635,12 @@ function NewReservation({ close, openReservation, userName, prefill }) {
           email:     f.email    || linkedGuest.email,
           address:   f.address  || linkedGuest.address,
         }).eq('id', guestId)
+        await writeAudit({
+          action: 'CONTACT_EDIT',
+          entity: 'guest',
+          entityId: linkedGuest?.customer_id || guestId,
+          details: { source: 'RESERVATION_QUERY_SAVE', full_name: f.guest_name },
+        })
       } else {
         const customerId = await generateCustomerId()
         const { data: g, error: ge } = await supabase.from('guests').insert({
@@ -550,6 +652,12 @@ function NewReservation({ close, openReservation, userName, prefill }) {
         }).select().single()
         if (ge) throw ge
         guestId = g.id
+        await writeAudit({
+          action: 'CONTACT_CREATE',
+          entity: 'guest',
+          entityId: g.customer_id || g.id,
+          details: { source: 'RESERVATION_QUERY_SAVE', full_name: g.full_name },
+        })
       }
 
       const firstRoom = validRows.length ? rooms.find((r) => r.id === validRows[0].room_id) : null
@@ -578,6 +686,21 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       }).select().single()
       if (re) throw re
 
+      await writeAudit({
+        action: 'RESERVATION_QUERY_CREATE',
+        entity: 'reservation',
+        entityId: r.res_no || r.id,
+        details: {
+          reservation_id: r.id,
+          reservation_name: r.reservation_name,
+          guest_name: f.guest_name,
+          guest_type: f.guest_type,
+          check_in: overallCI,
+          check_out: overallCO,
+          source: f.source,
+        },
+      })
+
       await supabase.from('reservation_guests').insert({ reservation_id: r.id, guest_name: f.guest_name, is_primary: true })
 
       if (validRows.length > 0) {
@@ -585,6 +708,19 @@ function NewReservation({ close, openReservation, userName, prefill }) {
           const rm = rooms.find((x) => x.id === row.room_id)
           return { reservation_id: r.id, room_id: row.room_id, rate: rm?.base_rate || 0, from_date: row.from_date, to_date: row.to_date }
         }))
+        await writeAudit({
+          action: 'RESERVATION_ROOM_ASSIGN',
+          entity: 'reservation',
+          entityId: r.res_no || r.id,
+          details: {
+            reservation_id: r.id,
+            room_count: validRows.length,
+            rooms: validRows.map((row) => {
+              const rm = rooms.find((x) => x.id === row.room_id)
+              return { room_id: row.room_id, room_no: rm?.room_no || null, from_date: row.from_date, to_date: row.to_date }
+            }),
+          },
+        })
       }
 
       const selectedAddons = facilityItems
@@ -597,6 +733,15 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       if (selectedAddons.length > 0) {
         const { error: ae } = await supabase.from('reservation_addons').insert(selectedAddons)
         if (ae) throw ae
+        await writeAudit({
+          action: 'RESERVATION_ADDON_SELECT',
+          entity: 'reservation',
+          entityId: r.res_no || r.id,
+          details: {
+            reservation_id: r.id,
+            addons: selectedAddons.map((a) => ({ label: a.label, qty: a.qty, price: a.price })),
+          },
+        })
       }
 
       try {
@@ -630,6 +775,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       {showGuestSearch && (
         <GuestSearchPopup
           onSelect={handleGuestSelect}
+          onCreateContact={createContactFromSearch}
           onClose={() => setShowGuestSearch(false)}
         />
       )}
@@ -705,18 +851,19 @@ function NewReservation({ close, openReservation, userName, prefill }) {
 
               <input
                 className="input"
+                ref={guestNameRef}
                 value={f.guest_name}
-                disabled={f.link_names || !!linkedGuest}
+                disabled={f.link_names}
                 onChange={(e) => set('guest_name', e.target.value)}
-                placeholder={linkedGuest ? 'Linked from existing guest' : f.link_names ? 'Pulled from Reservation Name above' : ''}
+                placeholder={linkedGuest ? 'Linked contact selected (editable)' : f.link_names ? 'Pulled from Reservation Name above' : ''}
               />
             </div>
 
             <div><label className="label">Phone (WhatsApp)</label>
-              <input className="input" placeholder="01XXXXXXXXX" value={f.phone} onChange={(e) => set('phone', e.target.value)} disabled={!!linkedGuest} />
+              <input className="input" placeholder="01XXXXXXXXX" value={f.phone} onChange={(e) => set('phone', e.target.value)} />
             </div>
             <div><label className="label">Email</label>
-              <input className="input" value={f.email} onChange={(e) => set('email', e.target.value)} disabled={!!linkedGuest} />
+              <input className="input" value={f.email} onChange={(e) => set('email', e.target.value)} />
             </div>
 
             {f.guest_type === 'Company' && (
@@ -956,7 +1103,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
                 placeholder="Select source…"
               />
             </div>
-            <div className="col-span-2"><label className="label">Address</label><input className="input" value={f.address} onChange={(e) => set('address', e.target.value)} disabled={!!linkedGuest} /></div>
+            <div className="col-span-2"><label className="label">Address</label><input className="input" value={f.address} onChange={(e) => set('address', e.target.value)} /></div>
             <div className="col-span-2"><label className="label">Notes / special requests</label><textarea className="input" rows={2} value={f.notes} onChange={(e) => set('notes', e.target.value)} /></div>
           </div>
 
