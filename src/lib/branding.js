@@ -1,6 +1,8 @@
 /**
  * Branding utilities — theme building, CSS variable application,
  * and resolution from company_settings.
+ * 
+ * Supports dynamic tenant color palette across all UI components.
  */
 
 export const DEFAULT_THEME = {
@@ -27,18 +29,49 @@ export function buildBrandTheme(config = {}) {
 }
 
 /**
+ * Convert hex color to RGB channels (no commas)
+ * @param {string} hex - Hex color value (e.g., "#1F6F78")
+ * @returns {string} RGB channels (e.g., "31 111 120")
+ */
+function hexToRgbChannels(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  if (!result) return '31 111 120' // fallback to default
+  return [
+    parseInt(result[1], 16),
+    parseInt(result[2], 16),
+    parseInt(result[3], 16)
+  ].join(' ')
+}
+
+/**
  * Apply a theme object to the document root as CSS custom properties.
+ * Updates both static color names and dynamic RGB channels for alpha transparency.
  *
  * @param {{ primary: string, accent: string, printPrimary: string, printAccent: string }} theme
  */
 export function applyBrandTheme(theme) {
   if (typeof document === 'undefined') return
   const root = document.documentElement
-  root.style.setProperty('--brand-color',        theme.primary)
-  root.style.setProperty('--brand-accent',        theme.accent)
+  
+  // Primary color and its RGB channels
+  const primaryRgb = hexToRgbChannels(theme.primary)
+  const accentRgb = hexToRgbChannels(theme.accent)
+  const darkRgb = hexToRgbChannels(theme.printPrimary)
+  
+  // Set CSS custom properties
+  root.style.setProperty('--tenant-primary', theme.primary)
+  root.style.setProperty('--tenant-primary-rgb', primaryRgb)
+  root.style.setProperty('--tenant-accent', theme.accent)
+  root.style.setProperty('--tenant-accent-rgb', accentRgb)
+  root.style.setProperty('--tenant-dark', theme.printPrimary)
+  root.style.setProperty('--tenant-dark-rgb', darkRgb)
+  
+  // Legacy properties for backward compatibility
+  root.style.setProperty('--brand-color', theme.primary)
+  root.style.setProperty('--brand-accent', theme.accent)
   root.style.setProperty('--brand-print-primary', theme.printPrimary)
-  root.style.setProperty('--brand-print-accent',  theme.printAccent)
-  root.style.setProperty('--sidebar-bg',          theme.printPrimary)
+  root.style.setProperty('--brand-print-accent', theme.printAccent)
+  root.style.setProperty('--sidebar-bg', theme.printPrimary)
 }
 
 /**

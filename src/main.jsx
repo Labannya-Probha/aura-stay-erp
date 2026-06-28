@@ -4,6 +4,7 @@ import App from './App.jsx'
 import './index.css'
 import { SUPABASE_CONFIGURED } from './supabase.js'
 import { ToastProvider } from './components/Toast'
+import { PopoverProvider } from './contexts/PopoverContext'
 
 // Catch any React render-tree error and show a helpful message rather than a
 // blank page.  Module-level failures (e.g. missing env vars) are handled below
@@ -52,11 +53,13 @@ if (!SUPABASE_CONFIGURED) {
 } else {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-      <ToastProvider>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      </ToastProvider>
+      <PopoverProvider>
+        <ToastProvider>
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+        </ToastProvider>
+      </PopoverProvider>
     </React.StrictMode>
   )
 }

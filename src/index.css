@@ -1,15 +1,16 @@
 /* ============================================================
    FONTS — Inter
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ============================================================
-   AURA STAY — MINIMAL LUXE ERP DESIGN SYSTEM
-   Clean, high-readability UI for dashboards, tables, and forms.
+   AURA STAY — ENTERPRISE LUXE ERP DESIGN SYSTEM
+   Tenant-aware, professional UI with dynamic color theming.
+   Applied tenant color palette across all UI elements.
    ============================================================ */
 
 @layer base {
@@ -25,16 +26,25 @@
     --color-leaf-rgb:   56 142 60;    /* #388E3C — mid leaf green        */
     --color-amber-rgb:  212 160 23;   /* #D4A017 — gold accent           */
 
+    /* ── Dynamic Tenant Colors (overridable via JS) ─────────────────── */
+    --tenant-primary:     #1F6F78;
+    --tenant-primary-rgb: 31 111 120;
+    --tenant-accent:      #2E7D32;
+    --tenant-accent-rgb:  46 125 50;
+    --tenant-dark:        #1B4D2E;
+    --tenant-dark-rgb:    27 77 46;
+
     /* ── Design tokens ───────────────────────────────────────────────── */
-    --brand-color:        #1F6F78;
+    --brand-color:        var(--tenant-primary);
+    --brand-accent:       var(--tenant-accent);
     --card-bg:            #FFFFFF;
-    --surface-muted:      #F1EEE9;
-    --border-color:       #E5DFD6;
+    --surface-muted:      rgba(var(--tenant-primary-rgb), 0.04);
+    --border-color:       rgba(var(--tenant-primary-rgb), 0.12);
     --text-primary:       #171717;
     --text-secondary:     #5F5A55;
-    --interactive-glow:   rgba(31, 111, 120, 0.16);
+    --interactive-glow:   rgba(var(--tenant-primary-rgb), 0.16);
     --interactive-shadow: 0 16px 36px rgba(23, 23, 23, 0.10);
-    --sidebar-bg:         #1B4D2E;
+    --sidebar-bg:         var(--tenant-dark);
 
     /* ── shadcn/ui semantic tokens (HSL) — mapped to brand palette ────
        These power the Tailwind classes: bg-background, text-foreground,
@@ -66,7 +76,18 @@
     --aura-stagger-step:    30ms;
     --aura-loader-duration: 3s;
 
-    /* Aliases — single source of truth, no duplicate hex values */
+    /* ── Z-Index System (Enterprise hierarchy) ──────────────────────── */
+    --z-base:           1;
+    --z-sticky:         10;
+    --z-dropdown:       20;
+    --z-modal-backdrop: 30;
+    --z-modal:          40;
+    --z-tooltip:        50;
+    --z-notification:   60;
+    --z-popover:        70;
+    --z-loader:         9999;
+
+    /* Aliases — single source of truth */
     --aura-brand:      var(--brand-color);
     --aura-brand-soft: var(--interactive-glow);
     --app-mobile-header-height: 4.25rem;
@@ -117,10 +138,18 @@
 
   .app-shell {
     width: 100%;
+    height: 100%;
+    min-height: 100vh;
+    display: flex;
     overflow-x: clip;
   }
 
   .app-shell-mobile-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--z-dropdown);
     min-height: var(--app-mobile-header-offset);
     padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
     padding-bottom: 0.75rem;
@@ -133,16 +162,22 @@
     max-width: 100%;
     padding: calc(var(--app-mobile-header-offset) + 1rem) 1rem 1rem;
     overflow-x: clip;
+    overflow-y: auto;
+    z-index: var(--z-base);
   }
 
   .app-shell-banner {
     position: sticky;
     top: calc(var(--app-mobile-header-offset) + 0.5rem);
-    z-index: 15;
+    z-index: var(--z-sticky);
     margin: 0 -1rem 1rem;
   }
 
   @media (min-width: 1024px) {
+    .app-shell-mobile-bar {
+      display: none;
+    }
+
     .app-shell-main {
       margin-left: 15rem;
       padding: 2rem;
@@ -167,7 +202,7 @@
 
   /* ── CARD ──────────────────────────────────────────────────────── */
   .card {
-    background: #FFFFFF;
+    background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 16px;
     box-shadow: 0 10px 28px rgba(23, 23, 23, 0.06);
@@ -184,27 +219,27 @@
     transition: opacity .2s ease;
     background: linear-gradient(
       120deg,
-      rgba(31,111,120,0.00) 30%,
-      rgba(31,111,120,0.06) 55%,
-      rgba(31,111,120,0.00) 80%
+      rgba(var(--tenant-primary-rgb), 0) 30%,
+      rgba(var(--tenant-primary-rgb), 0.06) 55%,
+      rgba(var(--tenant-primary-rgb), 0) 80%
     );
   }
   .card:hover {
     transform: translateY(-2px);
-    border-color: rgba(31,111,120,0.28);
+    border-color: rgba(var(--tenant-primary-rgb), 0.28);
     box-shadow: var(--interactive-shadow);
   }
   .card:hover::after { opacity: 1; }
 
   /* ── FORM LABELS ───────────────────────────────────────────────── */
   .label {
-    @apply block text-pine/70 mb-1.5;
+    @apply block mb-1.5;
+    color: rgba(var(--tenant-primary-rgb), 0.7);
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
-  /* Reserve 2 lines so inputs align in multi-column grids */
   .grid .label, .flex .label { min-height: 2.4em; }
 
   /* ── FORM CONTROLS — shared height baseline ────────────────────── */
@@ -214,11 +249,12 @@
     max-width: 100%;
   }
   .input {
-    @apply w-full text-ink focus:outline-none;
+    @apply w-full focus:outline-none;
+    color: var(--text-primary);
     padding: 0 12px;
     font-size: 14px;
     border-radius: 10px;
-    background: #FFFFFF;
+    background: var(--card-bg);
     border: 1px solid var(--border-color);
     transition: border-color .15s, box-shadow .15s, background .15s, transform .15s;
   }
@@ -226,10 +262,9 @@
   .input:focus {
     border-color: var(--brand-color);
     box-shadow: 0 0 0 3px var(--interactive-glow);
-    background: #fff;
+    background: var(--card-bg);
     transform: translateY(-1px);
   }
-  /* textarea overrides fixed height */
   textarea.input {
     height: auto;
     min-height: 76px;
@@ -255,19 +290,28 @@
   }
   .btn-primary {
     @apply text-white;
-    background: linear-gradient(135deg, #1F6F78, #16565D);
+    background: linear-gradient(135deg, var(--brand-color), color-mix(in srgb, var(--brand-color) 80%, #000));
     border: 1px solid rgba(255,255,255,0.18);
-    box-shadow: 0 8px 18px rgba(31,111,120,0.18);
+    box-shadow: 0 8px 18px rgba(var(--tenant-primary-rgb), 0.18);
   }
-  .btn-primary:hover  { filter: brightness(1.06); box-shadow: 0 12px 26px rgba(31,111,120,0.26); transform: translateY(-1px); }
+  .btn-primary:hover  { 
+    filter: brightness(1.06); 
+    box-shadow: 0 12px 26px rgba(var(--tenant-primary-rgb), 0.26); 
+    transform: translateY(-1px); 
+  }
   .btn-primary:active { transform: translateY(0); }
 
   .btn-ghost {
-    @apply text-pine;
-    background: #FFFFFF;
+    color: var(--brand-color);
+    background: var(--card-bg);
     border: 1px solid var(--border-color);
   }
-  .btn-ghost:hover  { background: #FAF8F5; transform: translateY(-1px); border-color: rgba(31,111,120,0.30); box-shadow: 0 8px 20px rgba(23,23,23,0.08); }
+  .btn-ghost:hover  { 
+    background: var(--surface-muted); 
+    transform: translateY(-1px); 
+    border-color: rgba(var(--tenant-primary-rgb), 0.30); 
+    box-shadow: 0 8px 20px rgba(23,23,23,0.08); 
+  }
   .btn-ghost:active { transform: translateY(0); }
 
   .btn-amber {
@@ -276,7 +320,11 @@
     border: 1px solid rgba(255,255,255,0.18);
     box-shadow: 0 8px 18px rgba(184,134,11,0.16);
   }
-  .btn-amber:hover  { filter: brightness(1.05); transform: translateY(-1px); box-shadow: 0 11px 24px rgba(184,134,11,0.24); }
+  .btn-amber:hover  { 
+    filter: brightness(1.05); 
+    transform: translateY(-1px); 
+    box-shadow: 0 11px 24px rgba(184,134,11,0.24); 
+  }
   .btn-amber:active { transform: translateY(0); }
 
   .btn-primary svg,
@@ -285,7 +333,8 @@
 
   /* ── TABLES ────────────────────────────────────────────────────── */
   .th {
-    @apply text-left text-pine/60;
+    @apply text-left;
+    color: rgba(var(--tenant-primary-rgb), 0.6);
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -293,7 +342,7 @@
     padding: 11px 14px;
     border-bottom: 1.5px solid var(--border-color);
     white-space: nowrap;
-    background: #FAF8F5;
+    background: var(--surface-muted);
   }
   .td {
     @apply text-ink;
@@ -302,15 +351,16 @@
     border-bottom: 1px solid rgba(229,223,214,0.9);
     vertical-align: middle;
   }
-  /* Numeric columns get tabular figures automatically */
   .th.text-right,
   .td.text-right {
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
-  /* Zebra + hover */
   .card tbody tr { transition: background .14s, box-shadow .14s; }
-  .card tbody tr:hover { background: #F8F4EE; box-shadow: inset 0 0 0 1px rgba(31,111,120,0.10); }
+  .card tbody tr:hover { 
+    background: rgba(var(--tenant-primary-rgb), 0.06); 
+    box-shadow: inset 0 0 0 1px rgba(var(--tenant-primary-rgb), 0.10); 
+  }
   .card tbody tr:last-child .td { border-bottom: none; }
   tfoot .td, tfoot td { border-top: 1.5px solid var(--border-color); }
 
@@ -325,6 +375,8 @@
     letter-spacing: 0.04em;
     line-height: 1.4;
     transition: transform .14s ease, filter .14s ease;
+    background: rgba(var(--tenant-primary-rgb), 0.08);
+    color: var(--brand-color);
   }
   .status-chip:hover { transform: translateY(-1px); filter: saturate(1.08); }
 
@@ -335,6 +387,19 @@
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── MODAL & DROPDOWN OVERLAYS ─────────────────────────────────── */
+  [role="dialog"],
+  .modal,
+  .dropdown {
+    z-index: var(--z-modal);
+  }
+
+  [role="dialog"]::backdrop {
+    background: rgba(23, 23, 23, 0.35);
+    backdrop-filter: blur(4px);
+    z-index: var(--z-modal-backdrop);
   }
 }
 
@@ -461,7 +526,7 @@
 
   /* ── Page loader ───────────────────────────────────────────────── */
   .aura-loader-overlay {
-    position: fixed; inset: 0; z-index: 9999;
+    position: fixed; inset: 0; z-index: var(--z-loader);
     display: flex; align-items: center; justify-content: center;
     background: rgba(247, 245, 242, 0.84);
     backdrop-filter: blur(8px) saturate(120%);

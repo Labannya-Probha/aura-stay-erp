@@ -9,9 +9,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'rounded-[9px] text-white bg-gradient-to-br from-[#1F6F78] to-[#16565D] border border-white/[0.18] shadow-[0_8px_18px_rgba(31,111,120,0.18)] hover:brightness-[1.06] hover:-translate-y-px hover:shadow-[0_12px_26px_rgba(31,111,120,0.26)] active:translate-y-0',
+          'rounded-[9px] text-white border border-white/[0.18] hover:brightness-[1.06] hover:-translate-y-px active:translate-y-0',
         outline:
-          'rounded-[9px] text-pine bg-white border border-[--border-color] hover:bg-[#FAF8F5] hover:-translate-y-px hover:border-[rgba(31,111,120,0.30)] hover:shadow-[0_8px_20px_rgba(23,23,23,0.08)] active:translate-y-0',
+          'rounded-[9px] text-pine bg-white border border-[--border-color] hover:bg-[#FAF8F5] hover:-translate-y-px hover:border-[rgba(var(--tenant-primary-rgb),0.30)] hover:shadow-[0_8px_20px_rgba(23,23,23,0.08)] active:translate-y-0',
         amber:
           'rounded-[9px] text-white bg-gradient-to-br from-[#C89B5C] to-[#B38443] border border-white/[0.18] shadow-[0_8px_18px_rgba(184,134,11,0.16)] hover:brightness-105 hover:-translate-y-px hover:shadow-[0_11px_24px_rgba(184,134,11,0.24)] active:translate-y-0',
         ghost:
@@ -38,12 +38,20 @@ const buttonVariants = cva(
 )
 
 const Button = React.forwardRef(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, style, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button'
+    // Apply dynamic background gradient for default variant using CSS variables
+    const dynamicStyle = variant === 'default' ? {
+      backgroundImage: 'linear-gradient(135deg, var(--brand-color), var(--brand-color))',
+      boxShadow: '0 8px 18px rgba(var(--tenant-primary-rgb), 0.18)',
+      ...style
+    } : style
+    
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        style={dynamicStyle}
         {...props}
       />
     )

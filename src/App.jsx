@@ -54,6 +54,9 @@ import Settings from './pages/Settings.jsx'
 import CmsPortal from './pages/CmsPortal.jsx'
 import TaskManagement from './pages/TaskManagement.jsx'
 import VendorPaymentTab from './components/VendorPaymentTab.jsx'
+import { WelcomePopover } from './components/WelcomePopover.jsx'
+import { PopoverDisplay } from './components/PopoverDisplay.jsx'
+import { useWelcomePopover } from './hooks/useWelcomePopover'
 import {
   Leaf, LayoutDashboard, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
   FileSpreadsheet, Calculator, Users, MoonStar, BarChart3, Settings2, LogOut, BedDouble, Building2,
@@ -658,7 +661,26 @@ function firstAccessiblePath(role, privileges) {
           <div>Powered by <span className="font-semibold text-pine/60">Aura Stay</span></div>
         </footer>
       </main>
+
+      {/* Popover display and welcome */}
+      <PopoverDisplay />
+      <AppWelcome userName={userName} />
     </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  WELCOME POPOVER                                                   */
+/* ------------------------------------------------------------------ */
+function AppWelcome({ userName }) {
+  const { showWelcome, setShowWelcome } = useWelcomePopover()
+
+  return (
+    <WelcomePopover
+      isOpen={showWelcome}
+      userName={userName}
+      onClose={() => setShowWelcome(false)}
+    />
   )
 }
 
