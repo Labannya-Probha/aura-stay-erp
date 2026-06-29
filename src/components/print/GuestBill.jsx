@@ -133,9 +133,15 @@ export default function GuestBill({
           : <div style={{ width: 58, height: 58, borderRadius: 10, background: FOREST, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 23, fontWeight: 800, margin: '0 auto 5px' }}>A</div>}
         <div style={{ fontSize: 22, fontWeight: 800, color: PINE, lineHeight: 1.05 }}>{co.name}</div>
         <div style={{ fontSize: 11.5, color: MUTE, marginTop: 3 }}>{co.address}</div>
-        <div style={{ fontSize: 11, color: MUTE, marginTop: 3 }}>
-          📞 {co.phone} <span style={{ color: LINE }}> | </span> ✉ {co.email} <span style={{ color: LINE }}> | </span> BIN: {co.bin}
-        </div>
+        {(co.phone || co.email || co.bin) && (
+          <div style={{ fontSize: 11, color: MUTE, marginTop: 3 }}>
+            {co.phone && <>📞 {co.phone}</>}
+            {co.phone && (co.email || co.bin) && <span style={{ color: LINE }}> | </span>}
+            {co.email && <>✉ {co.email}</>}
+            {co.email && co.bin && <span style={{ color: LINE }}> | </span>}
+            {co.bin && <>BIN: {co.bin}</>}
+          </div>
+        )}
         {co.website && <div style={{ fontSize: 10.5, color: MUTE, marginTop: 2 }}>{co.website}</div>}
       </header>
 
