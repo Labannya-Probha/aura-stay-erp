@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabase'
 import {
   fmtBDT, fmtDate, todayISO, nightsBetween, eachNight,
-  rateFor, computeCharge, sumCharges, applyRounding, STATUS_COLORS,
+  rateFor, computeCharge, sumCharges, applyRounding, STATUS_COLORS, buildWorkflowDescription,
 } from '../lib/helpers'
 import { canManualCheckIn, getCheckInActionCopy } from '../lib/noShowAutomation'
 import PrintPortal from '../components/PrintPortal.jsx'
@@ -14,7 +14,7 @@ import { exportXLSX } from '../lib/helpers'
 import {
   ArrowLeft, MessageCircle, Mail, CheckCircle2, LogIn, BedDouble,
   Plus, Trash2, Printer, FileDown, Receipt, BadgeCheck, Ban, Pencil, Save,
-  Users, Handshake,
+  Users, Handshake, Send,
 } from 'lucide-react'
 import Quotation from '../components/print/Quotation.jsx'
 import SearchableSelect from '../components/SearchableSelect.jsx'
@@ -544,6 +544,7 @@ function Overview({
   const canConfirm = ['QUERY', 'QUOTED'].includes(res.status)
   const isCompany  = res.guest_type === 'Company'
   const [posting, setPosting] = useState(false)
+  const [clearanceBusy, setClearanceBusy] = useState(false)
 
   // Quotation states
   const [quote, setQuote]               = useState(null)
@@ -780,6 +781,62 @@ function Overview({
     setPosting(false)
   }
 
+  const requestRoomClearance = async () => {
+    if (!resRooms.length) {
+      flash('Assign a room before requesting clearance.')
+      return
+    }
+    setClearanceBusy(true)
+    try {
+      let created = 0
+      for (const rr of resRooms) {
+        const roomNo = rr.rooms?.room_no || rr.room_id
+        const title = `Checkout clearance request - Room ${roomNo}`
+        const { data: existing } = await supabase
+          .from('tasks')
+          .select('id')
+          .eq('source', 'CHECKOUT_CLEARANCE')
+          .eq('title', title)
+          .in('status', ['OPEN', 'IN_PROGRESS'])
+          .limit(1)
+
+        if (existing?.length) continue
+
+        const { error } = await supabase.from('tasks').insert({
+          title,
+          description: buildWorkflowDescription(
+            [
+              'Please inspect and clear room for checkout.',
+              `Reservation: ${res.res_no || '-'}`,
+              `Guest: ${res.reservation_name || guest?.full_name || '-'}`,
+              `Mobile: ${guest?.phone || '-'}`,
+              `Requested by: ${userName}`,
+            ].join('\n'),
+            {
+              department: 'HOUSEKEEPING',
+              stage: 'REQUESTED',
+              workflow: ['REQUESTED', 'QUEUED', 'IN_PROGRESS', 'INSPECTED', 'COMPLETED'],
+              intent: 'Checkout clearance request',
+              reference: `ROOM:${roomNo}`,
+            },
+          ),
+          priority: 'HIGH',
+          status: 'OPEN',
+          due_date: todayISO(),
+          source: 'CHECKOUT_CLEARANCE',
+          created_by: userName,
+        })
+        if (error) throw error
+        created += 1
+      }
+      flash(created > 0 ? `Room clearance request sent for ${created} room(s).` : 'Room clearance request is already pending.')
+    } catch (e) {
+      flash(e.message || 'Failed to request room clearance.')
+    } finally {
+      setClearanceBusy(false)
+    }
+  }
+
   // WhatsApp / Email / Print
   const buildQuoteMsg = () => {
     if (!quote) return ''
@@ -885,6 +942,11 @@ function Overview({
             {['QUERY', 'QUOTED', 'CONFIRMED'].includes(res.status) && (
               <button className="btn-ghost w-full justify-center text-red-600" onClick={() => setStatus('CANCELLED')}>
                 <Ban size={15} /> Cancel reservation
+              </button>
+            )}
+            {res.status === 'CHECKED_IN' && (
+              <button className="btn-ghost w-full justify-center" onClick={requestRoomClearance} disabled={clearanceBusy}>
+                <Send size={15} /> {clearanceBusy ? 'Sending...' : 'Room Clearance Request'}
               </button>
             )}
             <p className="text-xs text-pine/50 pt-2">Advance received: <span className="money font-semibold">{fmtBDT(advance)}</span>.</p>

@@ -65,7 +65,7 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
     const { data: rm } = await supabase.from('rooms').select('id, room_no, room_name, room_type, hk_status, is_active').eq('is_active', true).order('room_no')
     const { data: rr } = await supabase
       .from('reservation_rooms')
-      .select('room_id, reservations!inner(status, res_no, reservation_name, check_in, check_out, guests:primary_guest_id(full_name, phone))')
+      .select('room_id, reservations!inner(id, status, res_no, reservation_name, check_in, check_out, guests:primary_guest_id(full_name, phone))')
       .in('reservations.status', ['CHECKED_IN', 'CONFIRMED'])
     const map = {}
     for (const x of rr || []) {
@@ -79,6 +79,7 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
       else if (arrToday) st = 'ARRIVAL'
       if (st) map[x.room_id] = {
         st,
+        reservation_id: r.id,
         guest: r.reservation_name || r.guests?.full_name,
         phone: r.guests?.phone || '',
         res_no: r.res_no,
@@ -226,7 +227,6 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
     </Card>
   )
 
-  const groups = rooms.reduce((a, r) => { (a[r.room_type] = a[r.room_type] || []).push(r); return a }, {})
   const occCount = (s) => rooms.filter((r) => (occ[r.id] && occ[r.id].st) === s).length
   const hkAttn = rooms.filter((r) => ['Dirty', 'Out of Order'].includes(r.hk_status || 'Clean')).length
 
@@ -308,18 +308,32 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
         <span className="font-semibold text-pine/50 uppercase tracking-wide ml-2">HK need attention: {hkAttn}</span>
       </Card>
 
-      {Object.entries(groups).map(([type, list]) => (
-        <div key={type} className="mb-4">
-          <div className="text-[11px] uppercase tracking-widest text-pine/40 font-semibold mb-2">{type} · {list.length}</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-            {list.map((room) => {
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2">
+            {rooms.map((room) => {
               const o = occ[room.id]
               const occSt = (o && o.st) || 'VACANT'
               const canRequestClearance = occSt === 'DEPARTURE' || occSt === 'OCCUPIED'
+              const canOpenOverview = o?.reservation_id && occSt === 'OCCUPIED'
               const hk = room.hk_status || 'Clean'
               const Icon = HK_ICON[hk] || Sparkles
               return (
-                <Card key={room.id} className="p-0 overflow-hidden border-leaf/60 rounded-xl shadow-sm">
+                <Card
+                  key={room.id}
+                  role={canOpenOverview ? 'button' : undefined}
+                  tabIndex={canOpenOverview ? 0 : undefined}
+                  onClick={() => canOpenOverview && openReservation(o.reservation_id, 'Overview')}
+                  onKeyDown={(e) => {
+                    if (canOpenOverview && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault()
+                      openReservation(o.reservation_id, 'Overview')
+                    }
+                  }}
+                  className={cn(
+                    'p-0 overflow-hidden border-leaf/60 rounded-xl shadow-sm',
+                    canOpenOverview && 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-forest/30',
+                  )}
+                  title={canOpenOverview ? `Open overview for Room ${room.room_no}` : undefined}
+                >
                   <div className={cn('px-2 py-1.5 flex items-center justify-between', OCC_STYLE[occSt])}>
                     <span className="font-bold text-xs flex items-center gap-1"><DoorOpen size={12} /> {room.room_no}</span>
                     <span className="text-[9px] font-medium opacity-90">{OCC_LABEL[occSt]}</span>
@@ -345,7 +359,10 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
                     </Badge>
 
                     <Button
-                      onClick={() => requestCheckoutClearance(room, o)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        requestCheckoutClearance(room, o)
+                      }}
                       disabled={reqBusy[room.id] || !canRequestClearance}
                       variant="outline"
                       size="sm"
@@ -358,9 +375,7 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
                 </Card>
               )
             })}
-          </div>
-        </div>
-      ))}
+      </div>
     </div>
   )
 }

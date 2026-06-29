@@ -37,95 +37,42 @@ const REPORT_CYCLES = [
 
 const REPORT_SECTIONS = [
   { id: 'all', label: 'All Reports', desc: 'Complete reporting catalogue', icon: LayoutDashboard },
-  { id: 'accounts', label: 'Accounts', desc: 'Financial statements, tax, books, ledgers, and aging', icon: Landmark },
-  { id: 'inventory', label: 'Accounts/Inventory', desc: 'Stock, purchase, warehouse, and reorder reporting', icon: BarChart3 },
-  { id: 'admin', label: 'Admin', desc: 'Executive controls, audit, maintenance, and property performance', icon: Building2 },
-  { id: 'housekeeping', label: 'Housekeeping', desc: 'Room status, consumption, and lost/found reporting', icon: BedDouble },
-  { id: 'pos', label: 'Restaurant/POS', desc: 'POS sales, payments, COGS, voids, and day close', icon: HandCoins },
-  { id: 'sales', label: 'Sales', desc: 'Bookings, occupancy, revenue, arrivals, departures, and channels', icon: TrendingUp },
-  { id: 'other', label: 'Other Sales', desc: 'Cross-department sales reports', icon: CalendarCheck2 },
+  { id: 'operations', label: 'Operations', desc: 'Front office, occupancy, guest ledger, agencies, and shareholders', icon: Building2 },
+  { id: 'restaurant', label: 'Restaurant', desc: 'POS, KOT, and F&B daily revenue reports', icon: HandCoins },
+  { id: 'accounting', label: 'Accounting', desc: 'Financial statements, ledgers, cash/bank books, and aging', icon: Landmark },
 ]
 
 const RAW_REPORTS = [
-  ['Accounts', 'Accounts Payable Aging Report'],
-  ['Accounts', 'Accounts Receivable Aging Report'],
-  ['Accounts', 'Balance Sheet'],
-  ['Accounts', 'Bank Book Report'],
-  ['Accounts', 'Bank Reconciliation Report'],
-  ['Accounts', 'Cash Book Report'],
-  ['Accounts', 'Cash Flow Statement'],
-  ['Accounts', 'Depreciation Report'],
-  ['Accounts', 'Due Balance Report'],
-  ['Accounts', 'Expense Report (By Category/Department)'],
-  ['Accounts', 'Ledger Report'],
-  ['Accounts', 'Net Asset Value Report'],
-  ['Accounts', 'Profit & Loss Statement'],
-  ['Accounts', 'Trial Balance Report'],
-  ['Accounts', 'Vat & Tax Collection Report'],
-  ['Accounts', 'Vat & Tax Collection vs. Payment Report'],
-  ['Accounts', 'Vat & Tax Payment Report'],
-  ['Accounts/Inventory', 'Item Wise Stock Report'],
-  ['Accounts/Inventory', 'Low Stock / Reorder Alert Report'],
-  ['Accounts/Inventory', 'Price Comparison Report'],
-  ['Accounts/Inventory', 'Product In Report'],
-  ['Accounts/Inventory', 'Product Out Report'],
-  ['Accounts/Inventory', 'Purchase Report'],
-  ['Accounts/Inventory', 'Warehouse Wise Stock Report'],
-  ['Admin', 'Cost Controller Report'],
-  ['Admin', 'Executive Summary Dashboard (KPI Snapshot)'],
-  ['Admin', 'Multi-Property Consolidated Performance Report'],
-  ['Admin', 'Out-of-Order / Maintenance Room Report'],
-  ['Admin', 'User Activity / Audit Trail Log'],
-  ['Housekeeping', 'Consumption Report'],
-  ['Housekeeping', 'Lost & Found Report'],
-  ['Housekeeping', 'Room Status Report (Live)', true],
-  ['Restaurant/POS', 'Component Wise Sales Summary Report'],
-  ['Restaurant/POS', 'Consumption Report'],
-  ['Restaurant/POS', 'Cost of Goods Sold Report'],
-  ['Restaurant/POS', 'Night Audit/Day Closing Report', true],
-  ['Restaurant/POS', 'Payment Transaction Report'],
-  ['Restaurant/POS', 'Sales Report'],
-  ['Restaurant/POS', 'Table/Section Wise Sales Report'],
-  ['Restaurant/POS', 'Void & Discount Report (POS)'],
-  ['Sales', 'ADR & RevPAR / Hotel KPI Report'],
-  ['Sales', 'Agency Booking Report'],
-  ['Sales', 'Average Daily Revenue Report'],
-  ['Sales', 'Booking Cancellation Income Report'],
-  ['Sales', 'Check-In Log Report'],
-  ['Sales', 'Check-Out Log Report'],
-  ['Sales', 'Complimentary & House-Use Room Report'],
-  ['Sales', 'Component Wise Sales Summary Report'],
-  ['Sales', 'Cost of Room Sold Report'],
-  ['Sales', 'Discount & Void Transaction Report'],
-  ['Sales', 'Group/Block Booking Report'],
-  ['Sales', 'Guest Advance Report'],
-  ['Sales', 'Guest Loyalty & Repeat Stay Report'],
-  ['Sales', 'Guest Refund Report'],
-  ['Sales', 'In-House Guest Report'],
-  ['Sales', 'Night Audit/Day Closing Report', true],
-  ['Sales', 'No Show Charge Report'],
-  ['Sales', 'OTA/Agency Commission Report'],
-  ['Sales', 'Occupancy Report'],
-  ['Sales', 'Payment Transaction Report'],
-  ['Sales', 'Reservation Entry Log Report (Sales Person Wise)'],
-  ['Sales', 'Reservation No History with Missing Reservation Numbers'],
-  ['Sales', 'Revenue Projection Report'],
-  ['Sales', 'Room Type / Rate Plan Wise Sales Report'],
-  ['Sales', 'Rooms on Books / Booking Pace Report'],
-  ['Sales', 'Sales Report'],
-  ['Sales', 'Shareholder Commission Report'],
-  ['Sales', 'Shareholder Entitlement Usage Report'],
-  ['Sales', 'Source/Channel-Wise Booking & Revenue Report'],
-  ['Sales', "Today's Arrival List", true],
-  ['Sales', "Today's Departure List", true],
-  ['Sales/Restaurant/POS', 'Other Items Sales Report (Excluding, Room Sales & Restaurant Sales, Vat & Tax)'],
+  ['Operations', 'Management Dashboard', 'Occupancy %, ADR, RevPAR, Total F&B Rev, Satisfaction Score', true],
+  ['Operations', 'Sales & Reservations', 'Date, Guest Name, Room Type, Source, Status, Total Amount, Deposit, Balance', true],
+  ['Operations', 'Occupancy & RevPAR', 'Date, Rooms Sold, Total Rooms, Occupancy %, Room Revenue, RevPAR', true],
+  ['Operations', 'Guest Ledger', 'Room No., Guest Name, Opening Bal, Room Charges, F&B Charges, Taxes, Payments, Closing Bal'],
+  ['Operations', 'City Ledger', 'Account Name, Invoice Date, Service, Due Date, Amount, Aging (0-30, 31-60, 60+)'],
+  ['Operations', 'Agency Commission', 'Date, Booking Ref, Guest Name, Gross Rev, Comm %, Comm Amount, Net Revenue'],
+  ['Operations', 'Shareholder Entitlement', 'Period, Net Profit, Distribution %, Entitlement Amount, Payout Status'],
+  ['Restaurant', 'POS Sales Summary', 'Category, Qty Sold, Gross Sales, Discount, Net Sales, Taxes, Total', true],
+  ['Restaurant', 'KOT Register', 'Date/Time, KOT No., Table No., Waiter, Item, Qty, Status (Served/Void), Signature'],
+  ['Restaurant', 'F&B Daily Revenue', 'Total POS Sales, Add: Room Service, Less: Comp/Staff Meals, Net F&B Revenue', true],
+  ['Accounting', 'Profit & Loss', 'Revenue, COGS, Gross Profit, Operating Expenses, Net Profit/Loss', true],
+  ['Accounting', 'Balance Sheet', 'Assets (Current/Fixed), Liabilities (Current/Long-term), Equity'],
+  ['Accounting', 'Cash Flow Statement', 'Operating Activities, Investing Activities, Financing Activities, Net Cash Flow'],
+  ['Accounting', 'Trial Balance', 'Account Name, Account Type, Debit Balance, Credit Balance'],
+  ['Accounting', 'General Ledger', 'Date, Ref/Voucher No., Description, Account, Debit, Credit, Balance'],
+  ['Accounting', 'Bank Book', 'Date, Particulars, Chq No., Deposit, Withdrawal, Bank Balance'],
+  ['Accounting', 'Cash Book', 'Date, Particulars, Cash In, Cash Out, Closing Cash Balance'],
+  ['Accounting', 'Bank Reconciliation', 'Book Balance, Bank Statement Balance, Uncleared Chqs, Deposits in Transit'],
+  ['Accounting', 'Retained Earnings', 'Opening Retained Earnings, Net Income, Dividends Paid, Ending Balance'],
+  ['Accounting', 'NAV / Equity Report', 'Total Assets, Total Liabilities, Net Assets, Shares Outstanding, NAV per Share'],
+  ['Accounting', 'AP Aging', 'Vendor Name, Due Date, Total Due, Current, 30 Days, 60 Days, 90+ Days'],
+  ['Accounting', 'AR Aging', 'Customer Name, Invoice Date, Total Due, Current, 30 Days, 60 Days, 90+ Days'],
 ]
 
-const REPORT_CATALOG = RAW_REPORTS.map(([department, name, schedulable], index) => ({
+const REPORT_CATALOG = RAW_REPORTS.map(([department, name, keyFields, schedulable], index) => ({
   id: `report-${index + 1}`,
   code: `RPT-${String(index + 1).padStart(3, '0')}`,
   department,
   name,
+  keyFields,
   cycle: 'Daily / Weekly / Monthly / Quarterly / Half-Yearly / Yearly / Custom Date Range',
   actions: schedulable ? 'Print, Export PDF/Excel, Schedule/Email' : 'Print, Export PDF/Excel',
   schedulable: !!schedulable,
@@ -157,6 +104,13 @@ function emptySnapshot() {
   }
 }
 
+function summarizeQueryErrors(results) {
+  return results
+    .filter((result) => result?.error)
+    .map((result) => result.error.message)
+    .filter(Boolean)
+}
+
 function daysBetweenInclusive(fromDate, toDate) {
   const from = new Date(`${fromDate}T00:00:00`)
   const to = new Date(`${toDate}T00:00:00`)
@@ -169,13 +123,7 @@ function normalizeMethod(method) {
 }
 
 function reportSectionId(department) {
-  if (department === 'Accounts') return 'accounts'
-  if (department === 'Accounts/Inventory') return 'inventory'
-  if (department === 'Admin') return 'admin'
-  if (department === 'Housekeeping') return 'housekeeping'
-  if (department === 'Restaurant/POS') return 'pos'
-  if (department === 'Sales') return 'sales'
-  return 'other'
+  return department.toLowerCase()
 }
 
 function shiftDate(date, days) {
@@ -294,18 +242,17 @@ export default function Reports() {
         supabase.from('day_closes').select('close_date').gte('close_date', fromDate).lte('close_date', toDate),
       ])
 
-      const queryError = [
-        folioRes.error,
-        paymentRes.error,
-        posRes.error,
-        facilityRes.error,
-        invoiceRes.error,
-        reservationRes.error,
-        roomsRes.error,
-        inHouseRes.error,
-        closeRes.error,
-      ].find(Boolean)
-      if (queryError) throw queryError
+      const queryErrors = summarizeQueryErrors([
+        folioRes,
+        paymentRes,
+        posRes,
+        facilityRes,
+        invoiceRes,
+        reservationRes,
+        roomsRes,
+        inHouseRes,
+        closeRes,
+      ])
 
       const folio = folioRes.data || []
       const payments = paymentRes.data || []
@@ -396,6 +343,9 @@ export default function Reports() {
         reservationLines,
         topReceivables,
       })
+      if (queryErrors.length > 0) {
+        setError(`Some report tables are unavailable for this user/tenant, so the snapshot is partial: ${queryErrors.join(' | ')}`)
+      }
     } catch (e) {
       setError(e.message || 'Failed to load enterprise reporting snapshot.')
     } finally {
@@ -446,6 +396,7 @@ export default function Reports() {
       [report.name],
       [`Department: ${report.department}`, `Cycle: ${REPORT_CYCLES.find((c) => c.id === cycle)?.label || cycle}`],
       [`Date Range: ${fmtDate(fromDate)} to ${fmtDate(toDate)}`, `Generated: ${new Date().toLocaleString()}`],
+      ['Key Fields', report.keyFields],
       [],
     ]
 
@@ -664,22 +615,24 @@ export default function Reports() {
               </div>
 
               <div className="mt-3 rounded-lg border border-[--border-color] overflow-hidden">
-                <div className="hidden xl:grid grid-cols-[90px_160px_1fr_160px_230px] bg-leaf/30 px-3 py-2 text-[11px] uppercase tracking-wide text-pine/70">
+                <div className="hidden xl:grid grid-cols-[82px_120px_minmax(190px,0.9fr)_minmax(260px,1.2fr)_105px_minmax(270px,auto)] bg-leaf/30 px-3 py-2 text-[11px] uppercase tracking-wide text-pine/70">
                   <span>Code</span>
                   <span>Department</span>
                   <span>Report Name</span>
+                  <span>Key Fields</span>
                   <span>Cycle</span>
                   <span className="text-right">Actions</span>
                 </div>
                 <div className="divide-y divide-[--border-color] bg-white">
                   {activePanelItems.map((item) => (
-                    <div key={item.code} className="grid grid-cols-1 xl:grid-cols-[90px_160px_1fr_160px_230px] px-3 py-2.5 gap-2 xl:items-center">
+                    <div key={item.code} className="grid grid-cols-1 xl:grid-cols-[82px_120px_minmax(190px,0.9fr)_minmax(260px,1.2fr)_105px_minmax(270px,auto)] px-3 py-2.5 gap-2 xl:items-center">
                       <span className="text-xs font-semibold text-pine/80">{item.code}</span>
                       <div className="text-xs text-pine/60">{item.department}</div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-pine">{item.name}</p>
                         <p className="text-xs text-pine/60">{item.actions}</p>
                       </div>
+                      <div className="text-xs text-pine/60 leading-snug">{item.keyFields}</div>
                       <div className="text-xs text-pine/60">{REPORT_CYCLES.find((c) => c.id === cycle)?.label}</div>
                       <div className="flex flex-wrap justify-start xl:justify-end gap-1.5">
                         <Button size="sm" variant="outline" onClick={() => printReport(item)} disabled={loading}>
@@ -711,7 +664,7 @@ export default function Reports() {
         </CardContent>
       </Card>
 
-      {['all', 'admin'].includes(activeSection) && (
+      {['all', 'operations'].includes(activeSection) && (
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Executive KPI Summary</CardTitle>
@@ -728,7 +681,7 @@ export default function Reports() {
         </Card>
       )}
 
-      {['all', 'accounts', 'pos', 'sales', 'other'].includes(activeSection) && (
+      {['all', 'operations', 'restaurant', 'accounting'].includes(activeSection) && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <Card className="border-0 shadow-sm">
             <CardHeader>
@@ -776,7 +729,7 @@ export default function Reports() {
         </div>
       )}
 
-      {['all', 'admin', 'housekeeping', 'sales'].includes(activeSection) && (
+      {['all', 'operations'].includes(activeSection) && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <Card className="border-0 shadow-sm">
             <CardHeader>
@@ -821,7 +774,7 @@ export default function Reports() {
         </div>
       )}
 
-      {['all', 'accounts'].includes(activeSection) && (
+      {['all', 'accounting'].includes(activeSection) && (
         <Card className="border-0 shadow-sm overflow-hidden">
           <CardHeader>
             <CardTitle className="text-base">Receivables Action Queue</CardTitle>
