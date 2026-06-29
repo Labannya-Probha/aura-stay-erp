@@ -50,7 +50,7 @@ import HrOffice, {
   HrCompliancePage,
 } from './pages/HrOffice.jsx'
 import NightAudit from './pages/NightAudit.jsx'
-import ReportsHub from './pages/ReportsHub.jsx'
+import Reportmodule from './pages/Reportmodule.jsx'
 import Settings from './pages/Settings.jsx'
 import CmsPortal from './pages/CmsPortal.jsx'
 import TaskManagement from './pages/TaskManagement.jsx'
@@ -109,7 +109,7 @@ const NAV_GROUPS = [
     { id: 'hr', label: 'HR & Payroll', icon: Users },
   ]},
   { title: 'Reports', items: [
-    { id: 'reports', label: 'Reports', icon: BarChart3 },
+    { id: 'reports', label: 'Reports Dashboard', icon: BarChart3 },
   ]},
   { title: 'System', items: [
     { id: 'cms',      label: 'Configuration', icon: Building2,  superuserOnly: true },
@@ -641,9 +641,10 @@ function firstAccessiblePath(role, privileges) {
           <Route path="/hr/compliance"          element={<GuardedRoute role={role} navId="hr" privileges={privileges}><HrCompliancePage          role={role} /></GuardedRoute>} />
 
           {/* Reports */}
+          <Route path="/Reports" element={<Navigate to="/reports" replace />} />
           <Route path="/reports" element={
             <GuardedRoute role={role} navId="reports" privileges={privileges}>
-              <ReportsHub userName={userName} role={role} />
+              <Reportmodule userName={userName} role={role} />
             </GuardedRoute>
           } />
 
