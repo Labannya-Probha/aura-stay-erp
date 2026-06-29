@@ -63,7 +63,7 @@ export default function GuestBill({
   const isDraft = !invoice_no
   const invoiceNumber = invoice_no || `INV-${res?.res_no || 'DRAFT'}`
   const issueDate = fmtDate(issued_at || new Date().toISOString())
-  const issueTime = new Date(issued_at || new Date()).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dhaka' })
+  const issueTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dhaka' })
   const nights = res?.check_in && res?.check_out ? nightsBetween(res.check_in, res.check_out) : 0
   const pax = (Number(res?.pax_adults) || 0) + (Number(res?.pax_children) || 0)
 
@@ -285,7 +285,20 @@ export default function GuestBill({
         ))}
       </section>
 
-      {/* ═══ 8. FOOTER ═══ */}
+      {/* ═══ 8. MUSHAK 6.3 DETAILS ═══ */}
+      <section className="print-avoid-break" style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, background: 'rgba(46,125,50,0.03)', pageBreakInside: 'avoid' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: FOREST, marginBottom: 6 }}>Mushak 6.3 Details</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 8, fontSize: 11.5 }}>
+          <span style={{ color: MUTE, fontWeight: 600 }}>Challan No:</span>
+          <span style={{ color: INK, fontWeight: 700 }}>{invoiceNumber}</span>
+          <span style={{ color: MUTE, fontWeight: 600 }}>Issue Date:</span>
+          <span style={{ color: INK, fontWeight: 600 }}>{issueDate}</span>
+          <span style={{ color: MUTE, fontWeight: 600 }}>Issue Time:</span>
+          <span style={{ color: INK, fontWeight: 600 }}>{issueTime}</span>
+        </div>
+      </section>
+
+      {/* ═══ 9. FOOTER ═══ */}
       <footer id="print-footer" className="print-avoid-break" style={{ borderTop: `1px solid ${LINE}`, paddingTop: 9, textAlign: 'center', pageBreakInside: 'avoid' }}>
         <div style={{ fontSize: 11.5, fontWeight: 600, color: FOREST }}>Thank you for staying with {co.name}.</div>
         <div style={{ fontSize: 9, color: MUTE, marginTop: 5, letterSpacing: '0.04em' }}>
