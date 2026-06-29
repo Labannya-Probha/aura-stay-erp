@@ -706,11 +706,9 @@ function AppWelcome({ userName }) {
 /* ------------------------------------------------------------------ */
 /*  GUARDED ROUTE                                                       */
 /* ------------------------------------------------------------------ */
-// FIX 3: Return null while privileges are still loading (null = not yet fetched).
-// Previously this would immediately redirect every protected route on first load,
-// causing a flash/redirect before the role_privileges query completed.
+// Use can() for both loaded privileges and fallback role defaults. This avoids
+// blank guarded pages if the role_privileges query is still loading or fails.
 function GuardedRoute({ role, navId, privileges, children }) {
-  if (privileges === null) return null
   if (!can(role, navId, privileges)) return <Navigate to={firstAccessiblePath(role, privileges)} replace />
   return children
 }
@@ -796,6 +794,11 @@ function AppRoot() {
         const tid = data?.tenant_id || null
         setTenantId(tid)
         loadCompany(tid)
+      })
+      .catch(() => {
+        setProfile({ role: 'FRONT_OFFICE', full_name: session.user.email?.split('@')[0] })
+        setTenantId(null)
+        loadCompany(null)
       })
   }, [session?.user?.id, loadCompany])
 
@@ -904,6 +907,9 @@ function AppRoot() {
 
   if (!session && location.pathname.startsWith('/kiosk/pos')) return <GuestPosKiosk />
   if (!session) return <Login />
+  if (!profile) return (
+    <div className="min-h-screen flex items-center justify-center text-pine/60">Loading profile...</div>
+  )
 
   const role     = profile?.role || 'FRONT_OFFICE'
   const isAdmin  = role === 'ADMIN' || role === 'SUPERUSER'
