@@ -105,3 +105,53 @@ CREATE TABLE IF NOT EXISTS report_print_logs (
 CREATE INDEX IF NOT EXISTS idx_report_templates_category ON report_templates(category_id);
 CREATE INDEX IF NOT EXISTS idx_report_export_logs_report_date ON report_export_logs(report_code, generated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_report_print_logs_report_date ON report_print_logs(report_code, printed_at DESC);
+
+ALTER TABLE report_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_fields ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_filters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_kpis ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_user_access ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_export_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_print_logs ENABLE ROW LEVEL SECURITY;
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT ON report_categories, report_templates, report_fields, report_filters, report_kpis TO anon, authenticated;
+GRANT SELECT ON report_user_access TO authenticated;
+GRANT INSERT ON report_export_logs, report_print_logs TO authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'report_categories' AND policyname = 'report_categories_read_active') THEN
+    CREATE POLICY report_categories_read_active ON report_categories FOR SELECT TO anon, authenticated USING (is_active = true);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'report_templates' AND policyname = 'report_templates_read_active') THEN
+    CREATE POLICY report_templates_read_active ON report_templates FOR SELECT TO anon, authenticated USING (is_active = true);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'report_fields' AND policyname = 'report_fields_read') THEN
+    CREATE POLICY report_fields_read ON report_fields FOR SELECT TO anon, authenticated USING (true);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'report_filters' AND policyname = 'report_filters_read') THEN
+    CREATE POLICY report_filters_read ON report_filters FOR SELECT TO anon, authenticated USING (true);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'report_kpis' AND policyname = 'report_kpis_read') THEN
+    CREATE POLICY report_kpis_read ON report_kpis FOR SELECT TO anon, authenticated USING (true);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'report_user_access' AND policyname = 'report_user_access_read_own_or_role_defaults') THEN
+    CREATE POLICY report_user_access_read_own_or_role_defaults ON report_user_access FOR SELECT TO authenticated USING (user_id = auth.uid() OR user_id IS NULL);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'report_export_logs' AND policyname = 'report_export_logs_insert_own') THEN
+    CREATE POLICY report_export_logs_insert_own ON report_export_logs FOR INSERT TO authenticated WITH CHECK (generated_by = auth.uid() OR generated_by IS NULL);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'report_print_logs' AND policyname = 'report_print_logs_insert_own') THEN
+    CREATE POLICY report_print_logs_insert_own ON report_print_logs FOR INSERT TO authenticated WITH CHECK (printed_by = auth.uid() OR printed_by IS NULL);
+  END IF;
+END $$;

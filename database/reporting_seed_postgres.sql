@@ -6,7 +6,7 @@ INSERT INTO report_categories (code, name, description, sort_order) VALUES
 ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, sort_order = EXCLUDED.sort_order;
 
 WITH category AS (
-  SELECT id, code FROM report_categories
+  SELECT id, code, name FROM report_categories
 ), inserted AS (
   INSERT INTO report_templates (
     category_id, report_code, report_name, report_category, ifrs_reference,
