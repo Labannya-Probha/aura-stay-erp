@@ -2,7 +2,7 @@ import { Search } from 'lucide-react'
 import { STANDARD_FILTERS } from '../../lib/reporting/reportConfig'
 import { Input } from '../ui/input'
 
-export default function ReportFilterPanel({ filters, onChange, search, onSearchChange, activeFilterKeys }) {
+export default function ReportFilterPanel({ filters, onChange, search, onSearchChange, activeFilterKeys, filterOptions = {} }) {
   const fields = STANDARD_FILTERS.filter((filter) => !activeFilterKeys || activeFilterKeys.includes(filter.key))
   return (
     <section className="erp-filter-panel">
@@ -14,7 +14,7 @@ export default function ReportFilterPanel({ filters, onChange, search, onSearchC
               <Input type="date" value={filters[filter.key] || ''} onChange={(e) => onChange(filter.key, e.target.value)} />
             ) : (
               <select value={filters[filter.key] || ''} onChange={(e) => onChange(filter.key, e.target.value)} className="input">
-                {(filter.options || []).map((option) => <option key={option} value={option}>{option}</option>)}
+                {(filterOptions[filter.key] || filter.options || []).map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             )}
           </label>

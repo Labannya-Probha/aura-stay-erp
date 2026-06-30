@@ -12,14 +12,14 @@ import ReportPrintDocument from '../components/reports/ReportPrintDocument'
 import {
   getDefaultFilters,
   REPORT_CATEGORIES,
-  REPORT_TEMPLATES,
 } from '../lib/reporting/reportConfig'
 import { loadLiveReportData } from '../lib/reporting/liveReportData'
 import { exportReportCsv, exportReportExcel, exportReportPdf } from '../lib/reporting/reportExport'
 import { todayISO } from '../lib/helpers'
 import { buildBrandTheme } from '../lib/branding'
+import { getRoleDefaultReportCatalog, getTenantReportContext, loadTenantReportCatalog, logReportExport, logReportPrint } from '../lib/reporting/tenantReporting'
 
-export default function Reports({ userName, company }) {
+export default function Reports({ userName, userId, role, company }) {
   const [activeCode, setActiveCode] = useState('IFRS-PNL')
   const [filters, setFilters] = useState(() => getDefaultFilters(todayISO))
   const [search, setSearch] = useState('')
@@ -27,15 +27,17 @@ export default function Reports({ userName, company }) {
   const [printReport, setPrintReport] = useState(null)
   const [openCategories, setOpenCategories] = useState({ IFRS: true, HOTEL_KPI: false, POS: false, ACCOUNTING: false })
   const [reportData, setReportData] = useState({ rows: [], kpis: {}, sourceCounts: {}, errors: [] })
+  const [tenantReports, setTenantReports] = useState(() => getRoleDefaultReportCatalog(role))
+  const [catalogLoading, setCatalogLoading] = useState(true)
   const [loading, setLoading] = useState(false)
 
   const activeReport = useMemo(
-    () => REPORT_TEMPLATES.find((report) => report.code === activeCode) || REPORT_TEMPLATES[0],
-    [activeCode]
+    () => tenantReports.find((report) => report.code === activeCode) || tenantReports[0],
+    [activeCode, tenantReports]
   )
-  const activeKpiKeys = activeReport.kpis?.length ? activeReport.kpis : ['totalRevenue', 'roomRevenue', 'restaurantRevenue', 'outstandingReceivable']
+  const activeKpiKeys = activeReport?.kpis?.length ? activeReport.kpis : ['totalRevenue', 'roomRevenue', 'restaurantRevenue', 'outstandingReceivable']
   const rows = reportData.rows
-  const totals = useMemo(() => calculateTotals(activeReport.columns, rows), [activeReport, rows])
+  const totals = useMemo(() => activeReport ? calculateTotals(activeReport.columns, rows) : {}, [activeReport, rows])
   const sourceCount = Object.values(reportData.sourceCounts || {}).reduce((sum, count) => sum + Number(count || 0), 0)
   const reportTheme = useMemo(() => buildBrandTheme({
     primary: company?.primary_color || company?.brand_primary,
@@ -48,6 +50,7 @@ export default function Reports({ userName, company }) {
     '--erp-blue-2': reportTheme.primary,
     '--erp-accent': reportTheme.printAccent,
   }
+  const tenantContext = useMemo(() => getTenantReportContext(company, role), [company, role])
   const meta = {
     companyName: company?.software_name || company?.name || 'Aura Stay',
     propertyName: filters.property === 'All Properties' ? company?.name || 'All Properties' : filters.property,
@@ -58,6 +61,24 @@ export default function Reports({ userName, company }) {
   }
 
   useEffect(() => {
+    let cancelled = false
+    setCatalogLoading(true)
+    loadTenantReportCatalog({ role, userId })
+      .then((reports) => {
+        if (cancelled) return
+        setTenantReports(reports)
+        if (!reports.some((report) => report.code === activeCode)) {
+          setActiveCode(reports[0]?.code || 'IFRS-PNL')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [role, userId])
+
+  useEffect(() => {
+    if (!activeReport) return
     let cancelled = false
     setLoading(true)
     loadLiveReportData(activeReport, filters)
@@ -79,13 +100,32 @@ export default function Reports({ userName, company }) {
     setOpenCategories((current) => ({ ...current, [report.category]: true }))
   }
   const toggleCategory = (code) => setOpenCategories((current) => ({ ...current, [code]: !current[code] }))
-  const filteredTemplates = REPORT_TEMPLATES.filter((report) =>
+  const filteredTemplates = tenantReports.filter((report) =>
     !search || `${report.code} ${report.name} ${report.reportCategory}`.toLowerCase().includes(search.toLowerCase())
   )
+  const exportAndLog = async (format) => {
+    if (!activeReport) return
+    await logReportExport({ report: activeReport, format, filters, userId, userName })
+    if (format === 'CSV') return exportReportCsv(activeReport, rows, totals, meta)
+    if (format === 'PDF') return exportReportPdf(activeReport, rows, totals, meta)
+    return exportReportExcel(activeReport, rows, totals, meta)
+  }
+  const openPrint = async () => {
+    if (!activeReport) return
+    await logReportPrint({ report: activeReport, pageSize: printSize, filters, userId, userName })
+    setPrintReport(activeReport)
+  }
 
   return (
     <div className="enterprise-reporting-module" style={reportStyle}>
-      {printReport && (
+      {!activeReport ? (
+        <section className="erp-report-canvas">
+          <div className="erp-report-warning no-print">
+            No reports are assigned to this tenant role. Ask a tenant administrator to grant report access.
+          </div>
+        </section>
+      ) : null}
+      {activeReport && printReport && (
         <PrintPortal
           title={`${printReport.name} - ${printSize} landscape`}
           onClose={() => setPrintReport(null)}
@@ -102,23 +142,23 @@ export default function Reports({ userName, company }) {
       <section className="erp-dashboard-top no-print">
         <div>
           <h1>Reports</h1>
-          <p>{activeReport.code} - {activeReport.name} - Live tenant data</p>
+          <p>{tenantContext.tenantName} - {activeReport?.code || 'No report'} - {activeReport?.name || 'Access required'}</p>
         </div>
         <div className="erp-top-actions">
           <select className="input" value={printSize} onChange={(e) => setPrintSize(e.target.value)}>
             <option value="A4">A4 Landscape</option>
             <option value="A3">A3 Landscape</option>
           </select>
-          <Button variant="outline" onClick={() => exportReportCsv(activeReport, rows, totals, meta)}>
+          <Button variant="outline" disabled={!activeReport?.exportPermission} onClick={() => exportAndLog('CSV')}>
             <Download size={15} /> CSV
           </Button>
-          <Button variant="outline" onClick={() => exportReportPdf(activeReport, rows, totals, meta)}>
+          <Button variant="outline" disabled={!activeReport?.exportPermission} onClick={() => exportAndLog('PDF')}>
             <FileDown size={15} /> PDF
           </Button>
-          <Button variant="outline" onClick={() => setPrintReport(activeReport)}>
+          <Button variant="outline" disabled={!activeReport?.printPermission} onClick={openPrint}>
             <Printer size={15} /> Print
           </Button>
-          <Button onClick={() => exportReportExcel(activeReport, rows, totals, meta)}>
+          <Button disabled={!activeReport?.exportPermission} onClick={() => exportAndLog('EXCEL')}>
             <Download size={15} /> Excel
           </Button>
         </div>
@@ -128,7 +168,7 @@ export default function Reports({ userName, company }) {
         <aside className="erp-report-sidebar no-print">
           <div className="erp-sidebar-title">
             <strong>Report Menu</strong>
-            <span>{REPORT_TEMPLATES.length} reports</span>
+            <span>{catalogLoading ? 'Loading' : `${tenantReports.length} allowed`}</span>
           </div>
           <div className="erp-sidebar-search">
             <Search size={15} />
@@ -172,12 +212,13 @@ export default function Reports({ userName, company }) {
           })}
         </aside>
 
-        <main className="erp-report-canvas">
+        {activeReport && <main className="erp-report-canvas">
           <EnterpriseReportHeader company={company} report={activeReport} filters={filters} generatedBy={userName} />
           <div className="erp-live-report-status no-print">
-            <span className={loading ? 'loading' : 'ready'}>{loading ? 'Loading original records...' : 'Original data source'}</span>
+            <span className={loading ? 'loading' : 'ready'}>{loading ? 'Loading tenant records...' : 'Tenant isolated data'}</span>
             <b>{rows.length} report rows</b>
             <small>{sourceCount} tenant records scanned</small>
+            <small>Role: {role || 'User'}</small>
           </div>
           {reportData.errors?.length > 0 && (
             <div className="erp-report-warning no-print">
@@ -191,10 +232,11 @@ export default function Reports({ userName, company }) {
             search={search}
             onSearchChange={setSearch}
             activeFilterKeys={activeReport.filters}
+            filterOptions={reportData.filterOptions}
           />
           <DynamicReportTable report={activeReport} rows={rows} search={search} />
           <EnterpriseReportFooter printedBy={userName} />
-        </main>
+        </main>}
       </section>
     </div>
   )
