@@ -3,9 +3,12 @@ import { fmtDate } from '../../lib/helpers'
 
 export default function EnterpriseReportHeader({ company, report, filters, generatedBy }) {
   const companyName = company?.software_name || company?.name || 'Aura Stay'
-  const propertyName = filters?.property && filters.property !== 'All Properties'
+  const rawPropertyName = filters?.property && filters.property !== 'All Properties'
     ? filters.property
     : company?.name || 'All Properties'
+  const propertyName = rawPropertyName && rawPropertyName !== companyName && rawPropertyName !== 'All Properties'
+    ? rawPropertyName
+    : ''
   const generatedAt = new Date().toLocaleString()
 
   return (
@@ -16,9 +19,8 @@ export default function EnterpriseReportHeader({ company, report, filters, gener
         </div>
         <div className="erp-title-block">
           <p className="erp-company">{companyName}</p>
-          <p className="erp-property">{propertyName}</p>
           <h1>{report.name}</h1>
-          <p>{report.reportCategory}</p>
+          {propertyName && <p className="erp-property">{propertyName}</p>}
         </div>
       </div>
       <div className="erp-header-meta">

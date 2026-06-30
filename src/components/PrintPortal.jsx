@@ -11,11 +11,28 @@ export default function PrintPortal({ title, onClose, children, type = 'A4', pri
   const brandPrimary = primaryColor || '#1B4D2E'
   const brandAccent = accentColor || '#2E7D32'
 
-  // Supports: A4, thermal, thermal-58, thermal-80
+  // Supports: A4, A4-landscape, A3-landscape, thermal, thermal-58, thermal-80
   const normalizedType = String(type || 'A4').toLowerCase()
   const isThermal = normalizedType === 'thermal' || normalizedType === 'thermal-58' || normalizedType === 'thermal-80'
+  const isA3Landscape = normalizedType === 'a3-landscape'
+  const isA4Landscape = normalizedType === 'a4-landscape'
   const thermalPaperWidth = normalizedType === 'thermal-80' ? '80mm' : '58mm'
   const thermalContentMaxWidth = normalizedType === 'thermal-80' ? '72mm' : '52mm'
+  const pageSize = isThermal
+    ? `${thermalPaperWidth} auto`
+    : isA3Landscape
+      ? 'A3 landscape'
+      : isA4Landscape
+        ? 'A4 landscape'
+        : 'A4'
+  const printRootMaxWidth = isThermal
+    ? thermalContentMaxWidth
+    : isA3Landscape
+      ? '400mm'
+      : isA4Landscape
+        ? '277mm'
+        : '194mm'
+  const modalMaxWidth = isThermal ? '420px' : isA3Landscape ? '1560px' : isA4Landscape ? '1180px' : '900px'
 
   const hexToRgb = (hex, fallback) => {
     const safe = (hex || '').replace('#', '').trim()
@@ -42,7 +59,7 @@ export default function PrintPortal({ title, onClose, children, type = 'A4', pri
     style.innerHTML = `
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;500;600;700;800&display=swap');
       @page {
-        size: ${isThermal ? `${thermalPaperWidth} auto` : 'A4'};
+        size: ${pageSize};
         margin: ${isThermal ? '0' : '8mm'};
       }
       #print-root {
@@ -119,14 +136,14 @@ export default function PrintPortal({ title, onClose, children, type = 'A4', pri
           display: block !important;
           color: var(--print-ink) !important;
           width: 100% !important;
-          max-width: ${isThermal ? thermalContentMaxWidth : '194mm'} !important;
+          max-width: ${printRootMaxWidth} !important;
           margin: 0 auto !important;
           padding: ${isThermal ? '0' : '0 0 8mm'} !important;
           overflow: visible !important;
         }
         #print-root .print-a4-doc {
           width: 100% !important;
-          max-width: 186mm !important;
+          max-width: ${isA3Landscape ? '392mm' : isA4Landscape ? '269mm' : '186mm'} !important;
           margin: 0 auto !important;
         }
         #print-root .mushak-63-doc {
@@ -235,7 +252,7 @@ export default function PrintPortal({ title, onClose, children, type = 'A4', pri
       document.getElementById('__print-portal-page-style__')?.remove()
       if (node.parentNode) node.parentNode.removeChild(node)
     }
-  }, [type, brandPrimary, brandAccent, isThermal, thermalPaperWidth, thermalContentMaxWidth])
+  }, [type, brandPrimary, brandAccent, isThermal, thermalPaperWidth, thermalContentMaxWidth, pageSize, printRootMaxWidth, isA3Landscape, isA4Landscape])
 
   const handleExportPDF = () => {
     window.print();
@@ -248,7 +265,7 @@ export default function PrintPortal({ title, onClose, children, type = 'A4', pri
         className="bg-white w-full my-0 sm:my-4 relative overflow-visible rounded-xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-3rem)] flex flex-col"
         style={{
           border: `1px solid rgba(${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b}, 0.22)`,
-          maxWidth: isThermal ? '420px' : '900px',
+          maxWidth: modalMaxWidth,
         }}
       >
 
