@@ -3,6 +3,7 @@ import {
   BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation,
 } from 'react-router-dom'
 import { supabase } from './supabase'
+import { Analytics } from '@vercel/analytics/react'
 import { applyBrandTheme, buildBrandTheme, DEFAULT_THEME, resolveBrandTheme } from './lib/branding'
 import { setCurrency } from './lib/helpers'
 import { runAutoNoShowSweep } from './lib/noShowAutomation'
@@ -808,6 +809,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppRoot />
+      <Analytics />
     </BrowserRouter>
   )
 }
