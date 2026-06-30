@@ -645,12 +645,12 @@ function firstAccessiblePath(role, privileges) {
           <Route path="/:slug/Reports" caseSensitive element={<TenantReportsRedirect />} />
           <Route path="/:slug/reports" element={
             <GuardedRoute role={role} navId="reports" privileges={privileges}>
-              <Reportmodule userName={userName} role={role} />
+              <Reportmodule userName={userName} role={role} company={company} />
             </GuardedRoute>
           } />
           <Route path="/reports" element={
             <GuardedRoute role={role} navId="reports" privileges={privileges}>
-              <Reportmodule userName={userName} role={role} />
+              <Reportmodule userName={userName} role={role} company={company} />
             </GuardedRoute>
           } />
 
