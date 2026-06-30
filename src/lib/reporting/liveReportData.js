@@ -5,6 +5,7 @@ const n = (value) => Number(value || 0)
 const dateOnly = (value) => value ? String(value).slice(0, 10) : ''
 const shortId = (value, prefix = 'DOC') => value ? `${prefix}-${String(value).slice(0, 8).toUpperCase()}` : ''
 const allValue = (value) => !value || String(value).startsWith('All ')
+const optionList = (label, values) => [label, ...[...new Set(values.filter(Boolean).map(String))].sort((a, b) => a.localeCompare(b))]
 
 function tenantQuery(table, select = '*') {
   let query = supabase.from(table).select(select)
@@ -433,10 +434,26 @@ export function calculateReportKpis(rows, data) {
   }
 }
 
+function buildFilterOptions(rows, data) {
+  return {
+    property: optionList('All Properties', data.properties.map((row) => row.name)),
+    outlet: optionList('All Outlets', data.posOrders.map((row) => row.outlet)),
+    department: optionList('All Departments', rows.map((row) => row.department)),
+    costCenter: optionList('All Cost Centers', rows.map((row) => row.costCenter)),
+    roomType: optionList('All Room Types', data.rooms.map((row) => row.room_type).concat(rows.map((row) => row.roomType))),
+    guestType: optionList('All Guest Types', data.reservations.map((row) => row.guest_type)),
+    reservationSource: optionList('All Sources', data.reservations.map((row) => row.source)),
+    paymentMethod: optionList('All Methods', data.payments.map((row) => row.method).concat(data.posOrders.map((row) => row.payment_method))),
+    status: optionList('All Status', rows.map((row) => row.status)),
+    user: optionList('All Users', rows.map((row) => row.createdBy).concat(data.reservations.map((row) => row.created_by))),
+  }
+}
+
 export async function loadLiveReportData(report, filters) {
   if (!supabase) return { rows: [], kpis: {}, sourceCounts: {}, errors: ['Supabase is not configured.'] }
 
   const data = {
+    properties: await safeQuery('properties', tenantQuery('properties').limit(100)),
     reservations: await safeQuery('reservations', tenantQuery('reservations').gte('check_out', filters.dateFrom).lte('check_in', filters.dateTo).order('created_at', { ascending: false }).limit(1000)),
     reservationRooms: await safeQuery('reservation_rooms', tenantQuery('reservation_rooms').limit(2000)),
     guests: await safeQuery('guests', tenantQuery('guests').limit(2000)),
@@ -456,6 +473,7 @@ export async function loadLiveReportData(report, filters) {
   return {
     rows,
     kpis: calculateReportKpis(rows, data),
+    filterOptions: buildFilterOptions(rows, data),
     sourceCounts,
     errors: [],
   }
