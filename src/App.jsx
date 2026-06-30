@@ -19,6 +19,7 @@ import ReservationPayments from './pages/ReservationPayments.jsx'
 import BookingCalendar from './pages/BookingCalendar.jsx'
 import HousekeepingHub from './pages/HousekeepingHub.jsx'
 import RestaurantPOS, { GuestPosKiosk } from './pages/RestaurantPOS.jsx'
+import PosPrintCenter from './pages/PosPrintCenter.jsx'
 import Facilities from './pages/ServiceBills.jsx'
 import InventoryHub from './pages/InventoryHub.jsx'
 import ConsumptionEntry from './pages/ConsumptionEntry.jsx'
@@ -69,6 +70,7 @@ import {
   PartyPopper, FileText, FileCheck, LogIn, CheckCircle, TrendingUp, ArrowUpCircle,
   AlertTriangle, MessageSquareWarning, AlertOctagon, ShieldCheck, Award, Briefcase,
   Banknote, UsersRound, Siren,
+  Printer,
 } from 'lucide-react'
 
 function BrandLogo({ url }) {
@@ -99,6 +101,7 @@ const NAV_GROUPS = [
   { title: 'Food & Beverage', items: [
     { id: 'pos',             label: 'Restaurant POS',  icon: UtensilsCrossed },
     { id: 'menu-management', label: 'Menu Management', icon: ChefHat },
+    { id: 'pos-print-center', label: 'POS Print Center', icon: Printer },
   ]},
   { title: 'Accounting', items: [
     { id: 'accounting', label: 'Accounting', icon: Calculator },
@@ -159,6 +162,18 @@ const SIDEBAR_INVENTORY_TABS = [
   { id: 'Goods Receipt',    label: 'Goods Receipt' },
   { id: 'Transfers',        label: 'Transfers' },
   { id: 'Returns',          label: 'Returns' },
+]
+
+const SIDEBAR_POS_TABS = [
+  { id: 'orders', label: 'POS Orders', path: '/pos' },
+  { id: 'receipt-preview', label: 'Receipt Preview', path: '/pos/print-center?tab=receipt-preview' },
+  { id: 'kot-bot-preview', label: 'KOT/BOT Preview', path: '/pos/print-center?tab=kot-bot-preview' },
+  { id: 'profiles', label: 'Print Profiles', path: '/pos/print-center?tab=profiles' },
+  { id: 'routing', label: 'Printer Routing', path: '/pos/print-center?tab=routing' },
+  { id: 'designer', label: 'Receipt Designer', path: '/pos/print-center?tab=designer' },
+  { id: 'thermal-test', label: 'Thermal Test', path: '/pos/print-center?tab=thermal-test' },
+  { id: 'logs', label: 'Print Logs', path: '/pos/print-center?tab=logs' },
+  { id: 'menu-management', label: 'Menu Management', path: '/menu-management' },
 ]
 
 const SIDEBAR_ACCOUNTING_TABS = [
@@ -279,8 +294,10 @@ function firstAccessiblePath(role, privileges) {
   useEffect(() => {
     const isAccountingRoute = location.pathname.startsWith('/accounting') || location.pathname === '/vat'
     const isHrRoute = location.pathname.startsWith('/hr')
-    if (['settings', 'cms', 'inventory', 'consumption', 'reports'].includes(currentTopId) || isAccountingRoute || isHrRoute) {
+    const isPosPrintRoute = location.pathname.startsWith('/pos/print-center')
+    if (['settings', 'cms', 'inventory', 'consumption', 'reports'].includes(currentTopId) || isAccountingRoute || isHrRoute || isPosPrintRoute) {
       setOpenSystemMenu(
+        isPosPrintRoute ? 'pos-print-center' :
         ['inventory', 'consumption'].includes(currentTopId) ? 'inventory' :
         isAccountingRoute ? 'accounting' :
         isHrRoute ? 'hr' :
@@ -309,6 +326,7 @@ function firstAccessiblePath(role, privileges) {
             if (n.id === 'ai-tasker')       return can(role, 'tasks', privileges)
             if (n.id === 'cms')             return role === 'SUPERUSER'
             if (n.id === 'menu-management') return isAdmin || role === 'SUPERUSER' || role === 'RESTAURANT'
+            if (n.id === 'pos-print-center') return isAdmin || role === 'SUPERUSER' || role === 'RESTAURANT'
             if (n.id === 'consumption')     return can(role, 'inventory', privileges)
             if (n.id === 'reservation-payments') return can(role, 'reservations', privileges)
             return can(role, n.id, privileges)
@@ -330,7 +348,7 @@ function firstAccessiblePath(role, privileges) {
                   {items.map((n) => {
                     if (n.id === 'consumption' || n.id === 'vat') return null
 
-                    const isExpandable = ['settings', 'cms', 'inventory', 'accounting', 'hr', 'reports'].includes(n.id)
+                    const isExpandable = ['settings', 'cms', 'inventory', 'accounting', 'hr', 'reports', 'pos-print-center'].includes(n.id)
                     if (!isExpandable) {
                       return (
                         <button key={n.id}
@@ -355,6 +373,13 @@ function firstAccessiblePath(role, privileges) {
                       }).map((s) => ({ ...s, path: `/settings?section=${s.id}`, active: currentTopId === 'settings' && location.search.includes(`section=${s.id}`) }))
                     } else if (n.id === 'cms') {
                       nested = SIDEBAR_CMS_ENTITY_TABS.map((s) => ({ ...s, path: `/cms?entity=${s.id}`, active: currentTopId === 'cms' && location.search.includes(`entity=${s.id}`) }))
+                    } else if (n.id === 'pos-print-center') {
+                      nested = SIDEBAR_POS_TABS.map((s) => ({
+                        ...s,
+                        active: s.path === '/pos'
+                          ? location.pathname === '/pos'
+                          : location.pathname === '/pos/print-center' && s.path.includes(new URLSearchParams(location.search).get('tab') || 'receipt-preview'),
+                      }))
                     } else if (n.id === 'inventory') {
                       nested = [
                         ...SIDEBAR_INVENTORY_TABS.map((s) => ({ ...s, path: `/inventory?tab=${encodeURIComponent(s.id)}`, active: currentTopId === 'inventory' && location.search.includes(`tab=${encodeURIComponent(s.id)}`) })),
@@ -564,6 +589,11 @@ function firstAccessiblePath(role, privileges) {
           <Route path="/pos" element={
             <GuardedRoute role={role} navId="pos" privileges={privileges}>
               <RestaurantPOS userName={userName} role={role} isAdmin={isAdmin} />
+            </GuardedRoute>
+          } />
+          <Route path="/pos/print-center" element={
+            <GuardedRoute role={role} navId="pos" privileges={privileges}>
+              <PosPrintCenter company={company} userName={userName} />
             </GuardedRoute>
           } />
           <Route path="/kiosk/pos" element={<GuestPosKiosk />} />
