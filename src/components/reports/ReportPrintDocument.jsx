@@ -33,6 +33,7 @@ function printTotals(columns, rows) {
 
 export default function ReportPrintDocument({ company, report, filters, rows, generatedBy }) {
   const totals = printTotals(report.columns, rows)
+  const totalColumnWidth = report.columns.reduce((sum, column) => sum + Number(column?.width || 120), 0)
   const visibleFilters = Object.entries(filters).filter(([key, value]) => {
     if (!value) return false
     if (key === 'dateFrom' || key === 'dateTo') return false
@@ -54,7 +55,15 @@ export default function ReportPrintDocument({ company, report, filters, rows, ge
         <thead>
           <tr>
             {report.columns.map((column) => (
-              <th key={column.key} style={{ textAlign: column.align || 'left' }}>{column.label}</th>
+              <th
+                key={column.key}
+                style={{
+                  textAlign: column.align || 'left',
+                  width: totalColumnWidth ? `${((Number(column?.width || 120) / totalColumnWidth) * 100).toFixed(2)}%` : undefined,
+                }}
+              >
+                {column.label}
+              </th>
             ))}
           </tr>
         </thead>
