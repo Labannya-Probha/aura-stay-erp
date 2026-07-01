@@ -80,6 +80,17 @@ export default function Reservations({ openReservation, userName, prefill, clear
     (!q || [r.res_no, r.reservation_name, r.guests?.full_name, r.guests?.phone, r.guests?.customer_id].join(' ').toLowerCase().includes(q.toLowerCase()))
   )
 
+  if (showNew) {
+    return (
+      <NewReservation
+        prefill={prefill}
+        close={() => { setShowNew(false); clearPrefill?.(); load() }}
+        openReservation={openReservation}
+        userName={userName}
+      />
+    )
+  }
+
   return (
     <><div>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
@@ -190,14 +201,6 @@ export default function Reservations({ openReservation, userName, prefill, clear
           </>
         )}
       </div>
-      {showNew && (
-        <NewReservation
-          prefill={prefill}
-          close={() => { setShowNew(false); clearPrefill?.(); load() }}
-          openReservation={openReservation}
-          userName={userName}
-        />
-      )}
     </>
   )
 }

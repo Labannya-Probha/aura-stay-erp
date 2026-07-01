@@ -179,8 +179,8 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
         </PrintPortal>
       )}
 
-      {printDoc?.type === 'BILL' && (
-        <PrintPortal title="Guest Bill" onClose={() => setPrintDoc(null)}>
+      {printDoc?.type === 'BILL' && printDoc?.phase !== 'RESORT' && (
+        <PrintPortal title="Guest Bill" onClose={() => { if (window.confirm('Resort copy print করবেন?')) { setPrintDoc((prev) => ({ ...prev, phase: 'RESORT' })) } else { setPrintDoc(null) } }}>
           <GuestBill
             charges={printDoc.invoiceData?.charges ?? []}
             line_snapshot={printDoc.invoiceData?.line_snapshot ?? []}
@@ -196,6 +196,31 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
             buyer_name={printDoc.invoiceData?.buyer_name}
             buyer_address={printDoc.invoiceData?.buyer_address}
             buyer_bin={printDoc.invoiceData?.buyer_bin}
+            copyLabel="Guest Copy"
+            singleCopy
+          />
+        </PrintPortal>
+      )}
+
+      {printDoc?.type === 'BILL' && printDoc?.phase === 'RESORT' && (
+        <PrintPortal title="Guest Bill (Resort Copy)" onClose={() => setPrintDoc(null)}>
+          <GuestBill
+            charges={printDoc.invoiceData?.charges ?? []}
+            line_snapshot={printDoc.invoiceData?.line_snapshot ?? []}
+            totals={printDoc.invoiceData?.totals ?? totals}
+            paid={printDoc.invoiceData?.paid ?? paid}
+            due={printDoc.invoiceData?.due ?? due}
+            res={res}
+            guest={guest}
+            guestCompany={guestCompany}
+            company={company}
+            invoice_no={printDoc.invoiceData?.invoice_no}
+            issued_at={printDoc.invoiceData?.issued_at}
+            buyer_name={printDoc.invoiceData?.buyer_name}
+            buyer_address={printDoc.invoiceData?.buyer_address}
+            buyer_bin={printDoc.invoiceData?.buyer_bin}
+            copyLabel="Resort Copy"
+            singleCopy
           />
         </PrintPortal>
       )}

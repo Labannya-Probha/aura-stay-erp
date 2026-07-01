@@ -98,7 +98,7 @@ export default function GuestBill({
   if (!singleCopy) {
     return (
       <div className="guest-bill-copy-stack">
-        {['Guest Copy', 'Resort Copy', 'Finance Copy'].map((label) => (
+        {['Guest Copy', 'Resort Copy'].map((label) => (
           <GuestBill
             key={label}
             charges={charges}
@@ -284,7 +284,7 @@ export default function GuestBill({
       <section className="print-signature-grid" style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '10px', marginBottom: 10, pageBreakInside: 'avoid' }}>
         {['Prepared By', 'Cashier', 'Checked By', 'Duty Manager', 'Guest Signature'].map((label) => (
           <div key={label} style={{ textAlign: 'center' }}>
-            <div style={{ borderTop: `1px solid ${INK}`, marginTop: '30px', paddingTop: 4, fontSize: 9, color: MUTE }}>{label}</div>
+            <div style={{ borderTop: `1px solid ${INK}`, marginTop: '60px', paddingTop: 4, fontSize: 9, color: MUTE }}>{label}</div>
           </div>
         ))}
       </section>
