@@ -13,7 +13,8 @@ import Facilities from './pages/Facilities.jsx'
 import InventoryHub from './pages/InventoryHub.jsx'
 import VatCenter from './pages/VatCenter.jsx'
 import AccountingHub from './pages/AccountingHub.jsx'
-import HrOffice from './pages/HrOffice.jsx'
+import HrOffice from './pages/HrOffice.jsx' // kept for backward-compat imports
+import HrPayrollPage from './modules/hr/HrPayrollPage.jsx'
 import NightAudit from './pages/NightAudit.jsx'
 import ReportsHub from './pages/ReportsHub.jsx'
 import Settings from './pages/Settings.jsx'
@@ -50,7 +51,7 @@ const NAV_GROUPS = [
     { id: 'inventory', label: 'Inventory', icon: Boxes },
   ]},
   { title: 'HR & Admin', items: [
-    { id: 'hr', label: 'HR & Office', icon: Users },
+    { id: 'hr', label: 'HR & Payroll', icon: Users },
   ]},   
   { title: 'Insight', items: [
     { id: 'reports', label: 'Reports', icon: BarChart3 },
@@ -160,7 +161,7 @@ const NAV_GROUPS = [
         {page === 'inventory' && can(role, 'inventory') && <InventoryHub userName={userName} role={role} isAdmin={isAdmin} />}
         {page === 'vat' && can(role, 'vat') && <VatCenter userName={userName} company={company} />}
         {page === 'accounting' && can(role, 'accounting') && <AccountingHub userName={userName} isAdmin={isAdmin} />}
-        {page === 'hr' && can(role, 'hr') && <HrOffice userName={userName} role={role} isAdmin={isAdmin} company={company} />}
+        {page === 'hr' && can(role, 'hr') && <HrPayrollPage userName={userName} role={role} isAdmin={isAdmin} />}
         {page === 'reports' && can(role, 'reports') && <ReportsHub userName={userName} role={role} />}
         {page === 'settings' && can(role, 'settings') && <Settings userName={userName} role={role} isAdmin={isAdmin} reloadCompany={loadCompany} />}
       </main>
