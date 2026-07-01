@@ -14,8 +14,13 @@ const formatCell = (value, column) => {
 
 export function getReportPrintSettings(report = {}) {
   const columns = Array.isArray(report?.columns) ? report.columns : []
+  const explicitOrientation = report?.printOrientation
   const totalColumnWidth = columns.reduce((sum, column) => sum + Number(column?.width || 120), 0)
-  const orientation = totalColumnWidth > 980 || columns.length > 7 ? 'landscape' : 'portrait'
+  const orientation = explicitOrientation === 'landscape' || explicitOrientation === 'portrait'
+    ? explicitOrientation
+    : totalColumnWidth > 1180 || columns.length > 10
+      ? 'landscape'
+      : 'portrait'
 
   return {
     pageSize: 'A4',

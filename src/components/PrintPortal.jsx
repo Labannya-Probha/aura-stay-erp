@@ -378,20 +378,39 @@ export default function PrintPortal({ title, onClose, children, type = 'A4', pri
   const handlePrint = () => {
     const el = printRootRef.current
     if (!el) return
-    const printWin = window.open('', '_blank', 'width=900,height=700')
-    if (!printWin) { window.print(); return }
     const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map((s) => s.outerHTML).join('\n')
-    // Wrap in #print-portal-container so the @media print rule
-    // `body > div:not(#print-portal-container) { display:none }` does NOT hide
-    // the content in the popup window — which was the cause of blank pages.
-    // Register onload BEFORE document.write to avoid missing the event.
-    printWin.onload = () => {
-      printWin.addEventListener('afterprint', () => printWin.close(), { once: true })
-      printWin.focus()
-      printWin.print()
+    const frame = document.createElement('iframe')
+    frame.setAttribute('title', `${title || 'document'} print frame`)
+    frame.style.position = 'fixed'
+    frame.style.right = '0'
+    frame.style.bottom = '0'
+    frame.style.width = '0'
+    frame.style.height = '0'
+    frame.style.border = '0'
+    frame.style.opacity = '0'
+    frame.style.pointerEvents = 'none'
+
+    const cleanup = () => {
+      window.setTimeout(() => {
+        if (frame.parentNode) frame.parentNode.removeChild(frame)
+      }, 0)
     }
-    printWin.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">${styles}</head><body style="margin:0;padding:0"><div id="print-portal-container">${el.outerHTML}</div></body></html>`)
-    printWin.document.close()
+
+    frame.onload = () => {
+      const printWindow = frame.contentWindow
+      const printDocument = frame.contentDocument
+      if (!printWindow || !printDocument?.getElementById('print-portal-container')) return
+
+      printWindow.addEventListener('afterprint', cleanup, { once: true })
+      window.setTimeout(() => {
+        printWindow.focus()
+        printWindow.print()
+      }, 120)
+      window.setTimeout(cleanup, 60_000)
+    }
+
+    frame.srcdoc = `<!DOCTYPE html><html><head><meta charset="utf-8">${styles}</head><body style="margin:0;padding:0"><div id="print-portal-container">${el.outerHTML}</div></body></html>`
+    document.body.appendChild(frame)
   }
 
   const handleBackdropMouseDown = (event) => {

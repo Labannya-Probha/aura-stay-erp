@@ -2001,12 +2001,23 @@
 
 @media print {
   #print-root.print-doc.print-a4 {
-    max-width: 186mm !important;
+    width: 100% !important;
   }
   .enterprise-print-doc {
     width: 100%;
-    max-width: 186mm;
     margin: 0 auto;
+  }
+  .print-a4-portrait .enterprise-print-doc {
+    max-width: 186mm;
+  }
+  .print-a4-landscape .enterprise-print-doc {
+    max-width: 269mm;
+  }
+  .print-a3-portrait .enterprise-print-doc {
+    max-width: 273mm;
+  }
+  .print-a3-landscape .enterprise-print-doc {
+    max-width: 392mm;
   }
   .enterprise-print-doc .erp-filter-panel,
   .enterprise-print-doc .erp-pagination,
