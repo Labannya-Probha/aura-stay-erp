@@ -10,6 +10,27 @@ import {
 
 
 const TABS = ['Items & Stock', 'Vendors', 'Requisitions', 'Purchase Orders', 'Goods Receipt', 'Transfers', 'Returns']
+const TAB_LABEL_BY_ID = {
+  stock: 'Items & Stock',
+  vendors: 'Vendors',
+  requisitions: 'Requisitions',
+  'purchase-orders': 'Purchase Orders',
+  'goods-receipt': 'Goods Receipt',
+  transfers: 'Transfers',
+  returns: 'Returns',
+}
+const LEGACY_TAB_MAP = {
+  ...TAB_LABEL_BY_ID,
+  'Consumption Entry': null,
+  Consumption: null,
+}
+const TAB_ID_BY_LABEL = Object.entries(TAB_LABEL_BY_ID).reduce((acc, [id, label]) => ({ ...acc, [label]: id }), {})
+
+function normalizeTabLabel(value) {
+  if (!value) return 'Items & Stock'
+  if (TABS.includes(value)) return value
+  return LEGACY_TAB_MAP[value] || 'Items & Stock'
+}
 
 /* ─── shared helpers ─────────────────────────────────────────────────────── */
 function flash_fn(setMsg) {
@@ -70,47 +91,78 @@ function printInventoryDoc({ title, docNo, meta = [], lines = [] }) {
 }
 
 /* ─── main component ─────────────────────────────────────────────────────── */
-export default function InventoryHub({ userName, role, isAdmin }) {
+export default function InventoryHub({
+  userName,
+  role,
+  isAdmin,
+  embedded = false,
+  controlledTabId = null,
+  onTabIdChange = null,
+}) {
   const location = useLocation()
-  const urlTab = new URLSearchParams(location.search).get('tab')
-  const initialTab = TABS.includes(urlTab) ? urlTab : 'Items & Stock'
+  const initialTab = normalizeTabLabel(controlledTabId || new URLSearchParams(location.search).get('tab'))
   const [tab, setTab] = useState(initialTab)
   const [msg, setMsg] = useState(null)
   const flash = flash_fn(setMsg)
   const canApprove = isAdmin || role === 'MANAGER'
 
-  // Sync tab with URL param when navigating via sidebar sub-items
+  const changeTab = (tabLabel) => {
+    setTab(tabLabel)
+    const tabId = TAB_ID_BY_LABEL[tabLabel]
+    if (tabId && onTabIdChange) onTabIdChange(tabId)
+  }
+
+  // Sync tab with external route tab
   useEffect(() => {
-    const t = new URLSearchParams(location.search).get('tab')
-    if (t && TABS.includes(t)) setTab(t)
-  }, [location.search])
+    if (!controlledTabId) return
+    setTab(normalizeTabLabel(controlledTabId))
+  }, [controlledTabId])
+
+  // Sync tab with URL param when used as standalone page
+  useEffect(() => {
+    if (controlledTabId) return
+    const t = normalizeTabLabel(new URLSearchParams(location.search).get('tab'))
+    setTab(t)
+  }, [location.search, controlledTabId])
 
   // Cross-tab navigation: Requisitions can push user to PO or Transfer tab
   // with a pre-selected requisition
   const [navReq, setNavReq] = useState(null) // { id, req_no, type: 'PO'|'TRF' }
-  const goCreatePO = (req) => { setNavReq({ ...req, type: 'PO' }); setTab('Purchase Orders') }
-  const goCreateTRF = (req) => { setNavReq({ ...req, type: 'TRF' }); setTab('Transfers') }
+  const goCreatePO = (req) => { setNavReq({ ...req, type: 'PO' }); changeTab('Purchase Orders') }
+  const goCreateTRF = (req) => { setNavReq({ ...req, type: 'TRF' }); changeTab('Transfers') }
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
-          <Boxes className="text-forest" /> Inventory & Procurement
-        </h1>
-        <p className="text-sm text-pine/60">
-          Requisition → Purchase Order / Transfer → Goods Receipt — fully integrated procurement workflow.
-        </p>
-      </div>
-      <KPICards module="inventory" />
+      {!embedded && (
+        <>
+          <div>
+            <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
+              <Boxes className="text-forest" /> Inventory & Procurement
+            </h1>
+            <p className="text-sm text-pine/60">
+              Requisition → Purchase Order / Transfer → Goods Receipt — fully integrated procurement workflow.
+            </p>
+          </div>
+          <KPICards module="inventory" />
+        </>
+      )}
       <FlashBar msg={msg} />
-      <div className="flex gap-1 border-b border-leaf flex-wrap">
-        {TABS.map((t) => (
-          <button key={t} onClick={() => { setTab(t); if (t !== 'Purchase Orders' && t !== 'Transfers') setNavReq(null) }}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
-            {t}
-          </button>
-        ))}
-      </div>
+      {!embedded && (
+        <div className="flex gap-1 border-b border-leaf flex-wrap">
+          {TABS.map((t) => (
+            <button
+              key={t}
+              onClick={() => {
+                changeTab(t)
+                if (t !== 'Purchase Orders' && t !== 'Transfers') setNavReq(null)
+              }}
+              className={`px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
       {tab === 'Items & Stock'     && <ItemsTab flash={flash} isAdmin={isAdmin} />}
       {tab === 'Vendors'           && <VendorsTab flash={flash} isAdmin={isAdmin} />}
       {tab === 'Requisitions'      && <RequisitionsTab flash={flash} userName={userName} canApprove={canApprove} onCreatePO={goCreatePO} onCreateTRF={goCreateTRF} />}
