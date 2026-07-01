@@ -12,7 +12,7 @@ import { isModuleEnabled } from './lib/saasModules'
 import { REPORT_CATEGORIES } from './lib/reporting/reportConfig'
 import { getRoleDefaultReportCatalog } from './lib/reporting/tenantReporting'
 import { SaasModuleBlocked, SaasModuleFrame } from './components/saas/SaasModuleFrame.jsx'
-import { NAV_GROUPS, ALL_NAV_IDS } from './app/navigation/navGroups'
+import { NAV_GROUPS } from './app/navigation/navGroups'
 import {
   SIDEBAR_SETTINGS_SECTIONS,
   SIDEBAR_CMS_ENTITY_TABS,

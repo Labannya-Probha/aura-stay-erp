@@ -1,5 +1,5 @@
 import {
-  Leaf, LayoutDashboard, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
+  LayoutDashboard, CalendarDays, UtensilsCrossed, ShoppingBasket, Boxes,
   Calculator, Users, MoonStar, BarChart3, Settings2, BedDouble, Building2,
   ListChecks, Bot, ChefHat, ClipboardList, Wallet, Printer, UserSearch,
 } from 'lucide-react'

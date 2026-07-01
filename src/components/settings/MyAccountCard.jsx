@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { supabase } from '../../supabase'
 import { KeyRound, Save, Eye, EyeOff } from 'lucide-react'
 

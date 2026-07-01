@@ -19,7 +19,7 @@ export function InputField({ label, value, onChange, type = 'text' }) {
   return (
     <div>
       <label className="label">{label}</label>
-      <input type={type} className="input" value={value || ''} onChange={(e) => onChange(e.target.value)} />
+      <input type={type} className="input" value={value ?? ''} onChange={(e) => onChange(e.target.value)} />
     </div>
   )
 }
@@ -28,7 +28,7 @@ export function SelectField({ label, value, onChange, options }) {
   return (
     <div>
       <label className="label">{label}</label>
-      <select className="input" value={value || options[0]} onChange={(e) => onChange(e.target.value)}>
+      <select className="input" value={value ?? options?.[0]} onChange={(e) => onChange(e.target.value)}>
         {options.map((option) => <option key={option} value={option}>{option}</option>)}
       </select>
     </div>
