@@ -14,6 +14,7 @@ import {
 } from './routeGuards.jsx'
 
 import Dashboard from './pages/Dashboard.jsx'
+import FrontOfficePage from './modules/front-office/FrontOfficePage.jsx'
 import ReservationsPage from './modules/reservations/ReservationsPage.jsx'
 import HousekeepingHub from './pages/HousekeepingHub.jsx'
 import { GuestPosKiosk } from './pages/RestaurantPOS.jsx'
@@ -79,10 +80,17 @@ export default function AppRoutes({
 
   return (
     <Routes>
-      <Route path={PATHS.ROOT} element={<Navigate to={PATHS.FRONTOFFICE} replace />} />
+      <Route path={PATHS.ROOT} element={<Navigate to={PATHS.FRONT_OFFICE} replace />} />
 
-      {/* Dashboard */}
-      <Route path={PATHS.DASHBOARD} element={<Navigate to={PATHS.FRONTOFFICE} replace />} />
+      {/* Front Office — unified AEDS v2 module page */}
+      <Route path={PATHS.FRONT_OFFICE} element={
+        <SaasModuleRoute moduleId="frontoffice" role={role} navId="dashboard" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
+          <FrontOfficePage openReservation={openFrontOfficeReservation} userName={userName} role={role} isAdmin={isAdmin} company={company} privileges={privileges} />
+        </SaasModuleRoute>
+      } />
+
+      {/* Dashboard / frontoffice legacy routes */}
+      <Route path={PATHS.DASHBOARD} element={<Navigate to={PATHS.FRONT_OFFICE} replace />} />
       <Route path={PATHS.FRONTOFFICE} element={
         <SaasModuleRoute moduleId="frontoffice" role={role} navId="dashboard" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
           <Dashboard openReservation={openFrontOfficeReservation} userName={userName} role={role} isAdmin={isAdmin} company={company} />
