@@ -18,6 +18,7 @@ import { getVisibleSettingsSections } from './app/navigation/settingsSections'
 import { PATHS } from './app/paths'
 import { getTenantId } from './lib/tenant'
 import { firstAccessiblePath } from './app/navigation/helpers'
+import { RESERVATION_TABS, DEFAULT_RESERVATION_TAB } from './modules/reservations/reservations.config'
 import { WelcomePopover } from './components/WelcomePopover.jsx'
 import { PopoverDisplay } from './components/PopoverDisplay.jsx'
 import { useWelcomePopover } from './hooks/useWelcomePopover'
@@ -93,14 +94,15 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
   const location = useLocation()
   const [mobileNavOpen,  setMobileNavOpen]  = useState(false)
   const [openSystemMenu, setOpenSystemMenu] = useState(null)
-  const [openNavGroup,   setOpenNavGroup]   = useState(() => getActiveNavGroupTitle(window.location.pathname.split('/').filter(Boolean)[0] || 'dashboard', window.location.pathname))
+  const [,               setOpenNavGroup]   = useState(() => getActiveNavGroupTitle(window.location.pathname.split('/').filter(Boolean)[0] || 'front-office', window.location.pathname))
   const [modulesEnabled, setModulesEnabled] = useState(null)
   const [sidebarHidden,  setSidebarHidden]  = useState(false)
 
-  const currentTopSegment = location.pathname.split('/').filter(Boolean)[0] || 'dashboard'
-  const currentTopId = currentTopSegment === 'frontoffice' ? 'dashboard' : currentTopSegment === 'restaurant' ? 'pos' : currentTopSegment
+  const currentTopSegment = location.pathname.split('/').filter(Boolean)[0] || 'front-office'
+  const currentTopId = (currentTopSegment === 'frontoffice' || currentTopSegment === 'front-office') ? 'nightaudit' : currentTopSegment === 'restaurant' ? 'pos' : currentTopSegment
   const navPathById = (id) => {
     if (id === 'dashboard') return PATHS.FRONTOFFICE
+    if (id === 'nightaudit') return `${PATHS.FRONT_OFFICE}?tab=in-house`
     if (id === 'pos') return PATHS.RESTAURANT
     if (id === 'pos-print-center') return PATHS.POS_PRINT_CENTER
     return `/${id}`
@@ -161,6 +163,7 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
     )
     const isFrontOfficeRoute = (
       location.pathname.startsWith('/frontoffice') ||
+      location.pathname.startsWith('/front-office') ||
       location.pathname === PATHS.NIGHTAUDIT ||
       location.pathname === PATHS.FACILITIES
     )
@@ -250,8 +253,9 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
                   } else if (n.id === 'reservations') {
                     const resTab = new URLSearchParams(location.search).get('tab')
                     const isResPath = location.pathname === PATHS.RESERVATIONS
-                    const validResTabs = new Set(['list', 'calendar', 'payments', 'crm'])
-                    const isListTab = !resTab || !validResTabs.has(resTab) || resTab === 'list'
+                    const validResTabs = new Set(RESERVATION_TABS.map((tab) => tab.id))
+                    const safeResTab = validResTabs.has(resTab) ? resTab : DEFAULT_RESERVATION_TAB
+                    const isListTab = safeResTab === DEFAULT_RESERVATION_TAB
                     nested = [
                       {
                         id: 'reservations-list',
@@ -279,30 +283,35 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
                       },
                     ]
                   } else if (n.id === 'nightaudit') {
+                    const foTab = new URLSearchParams(location.search).get('tab')
+                    const isFoPath = location.pathname === PATHS.FRONT_OFFICE
+                    const canAccessServiceBills = can(role, 'facilities', privileges)
+                    const canAccessNightAudit = can(role, 'nightaudit', privileges)
                     nested = [
                       {
-                        id: 'frontoffice-module',
-                        label: 'Frontoffice Module',
-                        path: PATHS.FRONTOFFICE,
-                        active: location.pathname.startsWith('/frontoffice'),
+                        id: 'fo-in-house',
+                        label: 'In-House Guests',
+                        path: `${PATHS.FRONT_OFFICE}?tab=in-house`,
+                        active: (isFoPath && (!foTab || foTab === 'in-house')) || location.pathname.startsWith('/frontoffice'),
                       },
                       {
-                        id: 'nightaudit',
-                        label: 'Night Audit',
-                        path: PATHS.NIGHTAUDIT,
-                        active: location.pathname === PATHS.NIGHTAUDIT,
+                        id: 'fo-room-board',
+                        label: 'Room Board',
+                        path: `${PATHS.FRONT_OFFICE}?tab=room-board`,
+                        active: isFoPath && foTab === 'room-board',
                       },
-                      {
-                        id: 'facilities',
+                      ...(canAccessServiceBills ? [{
+                        id: 'fo-service-bills',
                         label: 'Service Bills',
-                        path: PATHS.FACILITIES,
-                        active: location.pathname === PATHS.FACILITIES,
-                      },
-                      {
-                        id: 'verify-bill',
-                        label: 'Verify Bill',
-                        active: location.pathname.startsWith('/verify/pos/'),
-                      },
+                        path: `${PATHS.FRONT_OFFICE}?tab=service-bills`,
+                        active: (isFoPath && foTab === 'service-bills') || location.pathname === PATHS.FACILITIES,
+                      }] : []),
+                      ...(canAccessNightAudit ? [{
+                        id: 'fo-night-audit',
+                        label: 'Night Audit',
+                        path: `${PATHS.FRONT_OFFICE}?tab=night-audit`,
+                        active: (isFoPath && foTab === 'night-audit') || location.pathname === PATHS.NIGHTAUDIT,
+                      }] : []),
                     ]
                   } else if (n.id === 'pos') {
                     nested = [
