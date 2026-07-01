@@ -1280,12 +1280,39 @@
 }
 
 .erp-dashboard-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--erp-blue-2) 14%, #fff);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--erp-accent) 10%, #fff), transparent 28%),
+    linear-gradient(180deg, #ffffff, #f7fbff);
+  box-shadow: 0 10px 24px rgba(15, 58, 95, 0.06);
+}
+
+.erp-dashboard-copy {
+  min-width: 0;
+}
+
+.erp-dashboard-kicker {
+  display: inline-flex;
   align-items: center;
-  margin-bottom: 10px;
-  padding: 0 2px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--erp-blue-2) 10%, #fff);
+  color: var(--erp-blue);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .erp-dashboard-top h1 {
+  margin-top: 10px;
   font-size: 20px;
   letter-spacing: 0;
 }
@@ -1293,6 +1320,25 @@
 .erp-dashboard-top p {
   margin-top: 2px;
   font-size: 12px;
+}
+
+.erp-dashboard-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.erp-dashboard-meta span,
+.erp-report-document-meta span {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: color-mix(in srgb, var(--erp-blue) 8%, #fff);
+  color: var(--erp-blue);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .erp-workspace {
@@ -1806,9 +1852,32 @@
   color: var(--brand-color);
   font-size: 17px;
   font-weight: 900;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.erp-top-actions .button,
+.erp-top-actions button {
+  box-shadow: 0 1px 2px rgba(15, 58, 95, 0.06);
+}
+
+.erp-report-document-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.erp-report-document-meta small {
+  display: block;
+}
+
+.erp-top-actions {
+  display: flex;
+  align-items: center;
 }
 
 .erp-board-legend {
