@@ -20,8 +20,7 @@ import HousekeepingHub from './pages/HousekeepingHub.jsx'
 import { GuestPosKiosk } from './pages/RestaurantPOS.jsx'
 import VerifyBill from './pages/VerifyBill.jsx'
 import Facilities from './pages/ServiceBills.jsx'
-import InventoryHub from './pages/InventoryHub.jsx'
-import ConsumptionEntry from './pages/ConsumptionEntry.jsx'
+import InventoryPage from './modules/inventory/InventoryPage.jsx'
 import VatCenter from './pages/VatCenter.jsx'
 import VATReturn from './pages/VATReturn'
 import {
@@ -170,12 +169,12 @@ export default function AppRoutes({
       {/* Inventory */}
       <Route path={PATHS.INVENTORY} element={
         <SaasModuleRoute moduleId="inventory" role={role} navId="inventory" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <InventoryHub userName={userName} role={role} isAdmin={isAdmin} />
+          <InventoryPage userName={userName} role={role} isAdmin={isAdmin} />
         </SaasModuleRoute>
       } />
       <Route path={PATHS.CONSUMPTION} element={
         <SaasModuleRoute moduleId="consumption" role={role} navId="inventory" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <ConsumptionEntry userName={userName} isAdmin={isAdmin} />
+          <Navigate to={`${PATHS.INVENTORY}?tab=consumption`} replace />
         </SaasModuleRoute>
       } />
 

@@ -99,7 +99,13 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
   const [sidebarHidden,  setSidebarHidden]  = useState(false)
 
   const currentTopSegment = location.pathname.split('/').filter(Boolean)[0] || 'front-office'
-  const currentTopId = (currentTopSegment === 'frontoffice' || currentTopSegment === 'front-office') ? 'nightaudit' : currentTopSegment === 'restaurant' ? 'pos' : currentTopSegment
+  const currentTopId = (currentTopSegment === 'frontoffice' || currentTopSegment === 'front-office')
+    ? 'nightaudit'
+    : currentTopSegment === 'consumption'
+      ? 'inventory'
+      : currentTopSegment === 'restaurant'
+        ? 'pos'
+        : currentTopSegment
   const navPathById = (id) => {
     if (id === 'dashboard') return PATHS.FRONTOFFICE
     if (id === 'nightaudit') return `${PATHS.FRONT_OFFICE}?tab=in-house`
@@ -190,7 +196,7 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
     else if (isReportsRoute) setOpenSystemMenu('reports')
     else if (isHrRoute) setOpenSystemMenu('hr')
     else if (isAccountingRoute) setOpenSystemMenu('accounting')
-    else if (['inventory', 'consumption'].includes(currentTopId)) setOpenSystemMenu('inventory')
+    else if (currentTopId === 'inventory') setOpenSystemMenu('inventory')
     else if (isRestaurantRoute) setOpenSystemMenu('pos')
     else if (isFrontOfficeRoute) setOpenSystemMenu('nightaudit')
     else if (isReservationRoute) setOpenSystemMenu('reservations')
@@ -332,7 +338,6 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
                   } else if (n.id === 'inventory') {
                     nested = [
                       { id: 'inventory', label: 'Inventory', path: PATHS.INVENTORY, active: currentTopId === 'inventory' },
-                      { id: 'consumption', label: 'Consumption Entry', path: PATHS.CONSUMPTION, active: currentTopId === 'consumption' },
                     ]
                   } else if (n.id === 'accounting') {
                     nested = SIDEBAR_ACCOUNTING_TABS
