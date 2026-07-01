@@ -12,7 +12,17 @@ function formatValue(value, column) {
   if (column.type === 'currency') return fmtBDT(value)
   if (column.type === 'date') return fmtDate(value)
   if (column.type === 'percent') return `${Number(value || 0).toFixed(2)}%`
+  if (column.type === 'status') return <span className={`erp-status-pill ${statusTone(value)}`}>{value ?? '-'}</span>
   return value ?? ''
+}
+
+function statusTone(value) {
+  const text = String(value || '').toLowerCase()
+  if (/cancel|dirty|void|failed|overdue/.test(text)) return 'danger'
+  if (/pending|inspect|hold|draft/.test(text)) return 'warning'
+  if (/complete|checked|bill|posted|transfer/.test(text)) return 'info'
+  if (/clean|settled|confirm|approve|balanced|open/.test(text)) return 'success'
+  return 'neutral'
 }
 
 function compareValues(a, b, direction) {
