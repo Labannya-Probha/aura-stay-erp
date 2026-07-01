@@ -12,6 +12,15 @@ const formatCell = (value, column) => {
   return value ?? ''
 }
 
+const statusTone = (value) => {
+  const text = String(value || '').toLowerCase()
+  if (/cancel|dirty|void|failed|overdue/.test(text)) return 'danger'
+  if (/pending|inspect|hold|draft/.test(text)) return 'warning'
+  if (/complete|checked|bill|posted|transfer/.test(text)) return 'info'
+  if (/clean|settled|confirm|approve|balanced|open/.test(text)) return 'success'
+  return 'neutral'
+}
+
 export function getReportPrintSettings(report = {}) {
   const columns = Array.isArray(report?.columns) ? report.columns : []
   const explicitOrientation = report?.printOrientation
@@ -77,7 +86,12 @@ export function exportReportPdf(report, rows, totals, meta) {
   const amount = (v) => fmtBDT(v)
   const tableHead = columns.map((col) => `<th style="text-align:${col.align || 'left'}">${col.label}</th>`).join('')
   const tableBody = rows.map((row) => `<tr>${columns.map((col) => {
-    const val = col.type === 'currency' ? amount(row[col.key]) : formatCell(row[col.key], col)
+    const raw = row[col.key]
+    const val = col.type === 'currency'
+      ? amount(raw)
+      : col.type === 'status'
+        ? `<span class="status ${statusTone(raw)}">${raw || '-'}</span>`
+        : formatCell(raw, col)
     return `<td style="text-align:${col.align || 'left'}">${val}</td>`
   }).join('')}</tr>`).join('')
   const totalRow = `<tr class="grand">${columns.map((col, index) => {
@@ -92,42 +106,56 @@ export function exportReportPdf(report, rows, totals, meta) {
         <title>${report.name}</title>
         <style>
           @page { size: A4 ${printSettings.orientation}; margin: 10mm; }
-          body { font-family: Arial, sans-serif; color: #0f172a; margin:0; font-size: 10px; }
-          .top { border: 1px solid #0f3a5f; border-bottom: 2px solid #0f3a5f; padding: 8px; margin-bottom: 6px; }
-          .brand { text-align:center; color:#0f3a5f; }
-          .brand h2 { margin:0 0 2px; font-size:13px; }
-          .brand h1 { margin:3px 0; font-size:16px; }
-          .meta { display:grid; grid-template-columns: repeat(4, 1fr); gap: 4px; font-size: 8px; margin-top: 6px; background:#eaf4ff; padding: 5px; }
-          table { width:100%; border-collapse: collapse; table-layout: fixed; font-size: 7px; line-height:1.2; }
+          body { font-family: Arial, sans-serif; color: #060606; margin:0; font-size: 11px; }
+          .top { border-bottom: 2px solid #151515; padding-bottom: 10px; margin-bottom: 9px; }
+          .brand { display:grid; grid-template-columns: 1fr auto; gap: 24px; align-items:start; }
+          .brand-left { display:grid; grid-template-columns: 30px 1fr; gap: 9px; align-items:center; }
+          .mark { width:30px; height:30px; border-radius:6px; display:grid; place-items:center; background:#eaf3d9; color:#506f00; font-weight:800; }
+          .brand h2 { margin:0; font-size:14px; line-height:1.05; }
+          .brand small, .meta, footer { color:#5f6970; font-size:10px; }
+          .title { text-align:right; }
+          .brand h1 { margin:0; font-size:17px; line-height:1.1; }
+          .meta { display:flex; justify-content:space-between; gap:16px; padding:9px 0 18px; }
+          table { width:100%; border-collapse: collapse; table-layout: fixed; font-size: 9px; line-height:1.22; }
           thead { display: table-header-group; }
           tfoot { display: table-row-group; }
-          th { background:#0f3a5f; color:white; border:1px solid #bfd7ea; padding:3px; font-weight:700; overflow-wrap:anywhere; }
-          td { border:1px solid #d7e3ee; padding:3px; overflow-wrap:anywhere; vertical-align:top; }
-          tbody tr:nth-child(even) { background:#f8fbff; }
-          .grand td { background:#dbeafe; font-weight:700; }
-          .sign { display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; font-size: 9px; break-inside: avoid; }
-          .sign div { border-top:1px solid #0f172a; padding-top:5px; text-align:center; }
-          footer { position: fixed; bottom: 0; left: 0; right: 0; text-align:center; font-size:9px; color:#64748b; }
+          th { color:#4d555b; border-bottom:1px solid #d0cdc2; padding:6px 5px; font-weight:700; text-transform:uppercase; overflow-wrap:anywhere; }
+          td { border-bottom:1px solid #ebe8df; padding:6px 5px; overflow-wrap:anywhere; vertical-align:top; }
+          .grand td { border-bottom:0; padding-top:10px; font-weight:700; text-transform:uppercase; }
+          .status { display:inline-flex; min-height:16px; align-items:center; padding:2px 8px; border-radius:5px; font-size:10px; line-height:1.1; white-space:nowrap; }
+          .status.success { background:#eaf3d9; color:#2d6100; }
+          .status.info { background:#e5f0fb; color:#23517b; }
+          .status.warning { background:#fff0d8; color:#7a4a00; }
+          .status.danger { background:#fde8e7; color:#8a2b27; }
+          .status.neutral { background:#efeee9; color:#4d555b; }
+          .sign { display:grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-top: 42px; font-size: 10px; break-inside: avoid; color:#5f6970; }
+          .sign div { border-top:1px solid #7b7f79; padding-top:8px; text-align:center; }
+          footer { position: fixed; bottom: 0; left: 0; right: 0; display:flex; justify-content:space-between; border-top:1px solid #dedbd1; padding-top:10px; }
         </style>
       </head>
       <body>
         <section class="top">
           <div class="brand">
-            <h2>${meta.companyName || 'Aura Stay'}</h2>
-            <div>${meta.propertyName || 'All Properties'}</div>
-            <h1>${report.name}</h1>
-            <strong>${report.reportCategory}</strong>
-          </div>
-          <div class="meta">
-            <span>Period: ${fmtDate(meta.dateFrom)} to ${fmtDate(meta.dateTo)}</span>
-            <span>Currency: ${meta.currency || 'BDT'}</span>
-            <span>Print Layout: ${printSettings.title}</span>
-            <span>Generated by: ${meta.generatedBy || 'System'}</span>
+            <div class="brand-left">
+              <div class="mark">⌂</div>
+              <div>
+                <h2>${meta.propertyName || meta.companyName || 'Novem Eco Resort'}</h2>
+                <small>${meta.companyName || 'Aura Stay ERP'}</small>
+              </div>
+            </div>
+            <div class="title">
+              <h1>${report.name}</h1>
+              <small>${fmtDate(meta.dateFrom)} to ${fmtDate(meta.dateTo)}</small>
+            </div>
           </div>
         </section>
+        <div class="meta">
+          <span>Currency: ${meta.currency || 'BDT'} (৳)</span>
+          <span>Generated: ${new Date().toLocaleString()}</span>
+        </div>
         <table><thead><tr>${tableHead}</tr></thead><tbody>${tableBody}${totalRow}</tbody></table>
-        <section class="sign"><div>Prepared by</div><div>Checked by</div><div>Approved by</div><div>Printed by: ${meta.generatedBy || ''}</div></section>
-        <footer>This report is system generated and intended for internal use only.</footer>
+        <section class="sign"><div>Prepared by</div><div>Reviewed by</div><div>Approved by</div></section>
+        <footer><span>Aura Stay ERP · Confidential</span><span>Page 1 of 1</span></footer>
         <script>window.onload = () => window.print()</script>
       </body>
     </html>
