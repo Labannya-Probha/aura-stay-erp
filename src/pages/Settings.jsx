@@ -138,6 +138,11 @@ export default function Settings({ userName, role, isAdmin, reloadCompany }) {
 const PLAN_OPTIONS = ['TRIAL', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE']
 const SUBSCRIPTION_STATUSES = ['TRIALING', 'ACTIVE', 'PAST_DUE', 'SUSPENDED', 'CANCELLED']
 const BILLING_CYCLES = ['MONTHLY', 'QUARTERLY', 'YEARLY']
+const defaultLicenseEndDate = () => {
+  const date = new Date(`${todayISO()}T00:00:00`)
+  date.setMonth(date.getMonth() + 2)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
 
 function SaasTenantAdminCard() {
   const [rows, setRows] = useState([])
@@ -189,7 +194,7 @@ function SaasTenantAdminCard() {
     setForm({
       tenant_id: tenant.id,
       plan_code: sub.plan_code || 'PROFESSIONAL',
-      status: sub.status || (tenant.is_active ? 'ACTIVE' : 'SUSPENDED'),
+      status: sub.status || 'ACTIVE',
       user_limit: sub.user_limit || 25,
       property_limit: sub.property_limit || 1,
       storage_limit_mb: sub.storage_limit_mb || 10240,
@@ -197,7 +202,7 @@ function SaasTenantAdminCard() {
       billing_cycle: sub.billing_cycle || 'MONTHLY',
       monthly_fee: sub.monthly_fee || 0,
       currency: sub.currency || tenant.company?.currency || 'BDT',
-      next_billing_date: sub.next_billing_date || '',
+      next_billing_date: sub.next_billing_date || defaultLicenseEndDate(),
       modules_enabled: sub.modules_enabled || {
         reservations: true, frontOffice: true, pos: true, accounting: true,
         inventory: true, hr: true, reports: true,
@@ -284,8 +289,8 @@ function SaasTenantAdminCard() {
                     </td>
                     <td className="td">{tenant.subscription?.plan_code || 'Not set'}</td>
                     <td className="td text-right money">{tenant.activeUserCount}/{tenant.subscription?.user_limit || '-'}</td>
-                    <td className="td"><span className={`status-chip ${tenant.is_active ? 'bg-forest/15 text-forest' : 'bg-red-50 text-red-600'}`}>{tenant.subscription?.status || (tenant.is_active ? 'ACTIVE' : 'SUSPENDED')}</span></td>
-                    <td className="td text-sm">{tenant.subscription?.next_billing_date || 'Not scheduled'}</td>
+                    <td className="td"><span className={`status-chip ${tenant.subscription?.status === 'SUSPENDED' ? 'bg-red-50 text-red-600' : 'bg-forest/15 text-forest'}`}>{tenant.subscription?.status || 'ACTIVE'}</span></td>
+                    <td className="td text-sm">{tenant.subscription?.next_billing_date || defaultLicenseEndDate()}</td>
                   </tr>
                 ))}
                 {filtered.length === 0 && <tr><td className="td text-pine/40" colSpan={5}>No tenants found.</td></tr>}
