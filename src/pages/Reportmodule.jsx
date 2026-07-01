@@ -13,7 +13,7 @@ import {
   getDefaultFilters,
 } from '../lib/reporting/reportConfig'
 import { loadLiveReportData } from '../lib/reporting/liveReportData'
-import { exportReportCsv, exportReportExcel, exportReportPdf } from '../lib/reporting/reportExport'
+import { exportReportCsv, exportReportExcel, exportReportPdf, getReportPrintSettings } from '../lib/reporting/reportExport'
 import { todayISO } from '../lib/helpers'
 import { buildBrandTheme } from '../lib/branding'
 import { getRoleDefaultReportCatalog, getTenantReportContext, loadTenantReportCatalog, logReportExport, logReportPrint } from '../lib/reporting/tenantReporting'
@@ -24,7 +24,6 @@ export default function Reports({ userName, userId, role, company }) {
   const [activeCode, setActiveCode] = useState(reportParam || 'IFRS-PNL')
   const [filters, setFilters] = useState(() => getDefaultFilters(todayISO))
   const [search, setSearch] = useState('')
-  const [printSize, setPrintSize] = useState('A4')
   const [printReport, setPrintReport] = useState(null)
   const [reportData, setReportData] = useState({ rows: [], kpis: {}, sourceCounts: {}, errors: [] })
   const [tenantReports, setTenantReports] = useState(() => getRoleDefaultReportCatalog(role))
@@ -39,6 +38,8 @@ export default function Reports({ userName, userId, role, company }) {
   const rows = reportData.rows
   const totals = useMemo(() => activeReport ? calculateTotals(activeReport.columns, rows) : {}, [activeReport, rows])
   const sourceCount = Object.values(reportData.sourceCounts || {}).reduce((sum, count) => sum + Number(count || 0), 0)
+  const printSettings = useMemo(() => getReportPrintSettings(activeReport), [activeReport])
+  const previewPrintSettings = useMemo(() => getReportPrintSettings(printReport || activeReport), [printReport, activeReport])
   const reportTheme = useMemo(() => buildBrandTheme({
     primary: company?.primary_color || company?.brand_primary,
     accent: company?.accent_color || company?.brand_accent,
@@ -114,7 +115,7 @@ export default function Reports({ userName, userId, role, company }) {
   }
   const openPrint = async () => {
     if (!activeReport) return
-    await logReportPrint({ report: activeReport, pageSize: printSize, filters, userId, userName })
+    await logReportPrint({ report: activeReport, pageSize: printSettings.title, filters, userId, userName })
     setPrintReport(activeReport)
   }
 
@@ -129,35 +130,30 @@ export default function Reports({ userName, userId, role, company }) {
       ) : null}
       {activeReport && printReport && (
         <PrintPortal
-          title={`${printReport.name} - ${printSize}`}
+          title={`${printReport.name} - ${previewPrintSettings.title}`}
           onClose={() => setPrintReport(null)}
           primaryColor={reportTheme.printPrimary}
           accentColor={reportTheme.printAccent}
-          type={printSize.startsWith('A3') ? 'A3' : 'A4'}
+          type={previewPrintSettings.portalType}
         >
-          <div className={
-            printSize === 'A3L' ? 'print-a3-landscape' :
-            printSize === 'A4L' ? 'print-a4-landscape' :
-            printSize === 'A3'  ? 'print-a3-portrait'  :
-                                  'print-a4-portrait'
-          }>
+          <div className={previewPrintSettings.printClass}>
             <ReportPrintDocument company={company} report={printReport} filters={filters} rows={rows} generatedBy={userName} />
           </div>
         </PrintPortal>
       )}
 
       <section className="erp-dashboard-top no-print">
-        <div>
+        <div className="erp-dashboard-copy">
+          <span className="erp-dashboard-kicker">Enterprise SaaS Reporting</span>
           <h1>Reporting Workbench</h1>
           <p>{tenantContext.tenantName} / {tenantContext.propertyName} / {activeReport?.reportCategory || 'Reports'}</p>
+          <div className="erp-dashboard-meta">
+            <span>{activeReport?.code || 'REPORT'}</span>
+            <span>{printSettings.title}</span>
+            <span>{activeReport?.columns?.length || 0} Columns</span>
+          </div>
         </div>
         <div className="erp-top-actions">
-          <select className="input" value={printSize} onChange={(e) => setPrintSize(e.target.value)}>
-            <option value="A4">A4 Portrait</option>
-            <option value="A4L">A4 Landscape</option>
-            <option value="A3">A3 Portrait</option>
-            <option value="A3L">A3 Landscape</option>
-          </select>
           <Button variant="outline" disabled={!activeReport?.exportPermission} onClick={() => exportAndLog('CSV')}>
             <Download size={15} /> CSV
           </Button>
@@ -180,7 +176,10 @@ export default function Reports({ userName, userId, role, company }) {
               <span>{activeReport.code}</span>
               <strong>{activeReport.name}</strong>
             </div>
-            <small>{catalogLoading ? 'Loading access' : `${tenantReports.length} role reports available in sidebar`}</small>
+            <div className="erp-report-document-meta">
+              <span>{printSettings.title}</span>
+              <small>{catalogLoading ? 'Loading access' : `${tenantReports.length} role reports available in sidebar`}</small>
+            </div>
           </div>
           <EnterpriseReportHeader company={company} report={activeReport} filters={filters} generatedBy={userName} />
           <div className="erp-live-report-status no-print">
