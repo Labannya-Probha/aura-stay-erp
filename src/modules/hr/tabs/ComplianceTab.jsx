@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../supabase'
 import { fmtDate, todayISO } from '../../../lib/helpers'
-import { Plus, AlertTriangle, BookOpen, Users } from 'lucide-react'
+import { Plus, BookOpen, Users } from 'lucide-react'
 
 function IncidentsView({ flash, userName }) {
   const [rows, setRows] = useState([])

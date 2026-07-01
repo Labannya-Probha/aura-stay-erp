@@ -13,7 +13,6 @@ import Facilities from './pages/Facilities.jsx'
 import InventoryHub from './pages/InventoryHub.jsx'
 import VatCenter from './pages/VatCenter.jsx'
 import AccountingHub from './pages/AccountingHub.jsx'
-import HrOffice from './pages/HrOffice.jsx' // kept for backward-compat imports
 import HrPayrollPage from './modules/hr/HrPayrollPage.jsx'
 import NightAudit from './pages/NightAudit.jsx'
 import ReportsHub from './pages/ReportsHub.jsx'
