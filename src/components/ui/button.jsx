@@ -44,7 +44,7 @@ const buttonVariants = cva(
 )
 
 const Button = React.forwardRef(
-  ({ className, variant, size, asChild = false, style, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, style, type, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button'
     // Apply dynamic background gradient for default variant using CSS variables
     const dynamicStyle = variant === 'default' ? {
@@ -57,6 +57,7 @@ const Button = React.forwardRef(
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        type={asChild ? undefined : (type || 'button')}
         style={dynamicStyle}
         {...props}
       />

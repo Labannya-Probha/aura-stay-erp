@@ -26,7 +26,7 @@ function ActionPopoverButton({ message, className, children, disabled = false, .
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <span className="inline-flex" onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide}>
-          <button className={className} disabled={disabled} {...props}>
+          <button type="button" className={className} disabled={disabled} {...props}>
             {children}
           </button>
         </span>

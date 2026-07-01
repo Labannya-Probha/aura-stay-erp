@@ -225,7 +225,10 @@ const SIDEBAR_HR_TABS = [
 function firstAccessiblePath(role, privileges, modulesEnabled = null) {
   for (const id of ALL_NAV_IDS) {
     if (!isModuleEnabled(id, modulesEnabled, role)) continue
-    if (id === 'dashboard' || can(role, id, privileges)) return `/${id}`
+    if (id === 'dashboard' || can(role, id, privileges)) {
+      if (id === 'pos-print-center') return '/pos/print-center'
+      return `/${id}`
+    }
   }
   return '/dashboard'
 }
@@ -458,7 +461,7 @@ function firstAccessiblePath(role, privileges, modulesEnabled = null) {
                             if (!isOpen && ['inventory', 'accounting', 'hr', 'reports'].includes(n.id)) {
                               navigate(`/${n.id}`)
                             } else if (!['inventory', 'accounting', 'hr', 'reports'].includes(n.id)) {
-                              navigate(`/${n.id}`)
+                              navigate(n.id === 'pos-print-center' ? '/pos/print-center' : `/${n.id}`)
                             }
                           }}
                         >
