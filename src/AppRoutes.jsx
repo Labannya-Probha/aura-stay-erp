@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /*  APP ROUTES                                                          */
 /* ------------------------------------------------------------------ */
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { isModuleEnabled } from './lib/saasModules'
 import { firstAccessiblePath } from './app/navigation/helpers'
 import { PATHS } from './app/paths'
@@ -17,13 +17,11 @@ import Dashboard from './pages/Dashboard.jsx'
 import FrontOfficePage from './modules/front-office/FrontOfficePage.jsx'
 import ReservationsPage from './modules/reservations/ReservationsPage.jsx'
 import HousekeepingHub from './pages/HousekeepingHub.jsx'
-import RestaurantPOS, { GuestPosKiosk } from './pages/RestaurantPOS.jsx'
-import PosPrintCenter from './pages/PosPrintCenter.jsx'
+import { GuestPosKiosk } from './pages/RestaurantPOS.jsx'
 import VerifyBill from './pages/VerifyBill.jsx'
 import Facilities from './pages/ServiceBills.jsx'
 import InventoryHub from './pages/InventoryHub.jsx'
 import ConsumptionEntry from './pages/ConsumptionEntry.jsx'
-import MenuManagement from './pages/MenuManagement.jsx'
 import VatCenter from './pages/VatCenter.jsx'
 import VATReturn from './pages/VATReturn'
 import {
@@ -57,10 +55,19 @@ import Reportmodule from './pages/Reportmodule.jsx'
 import Settings from './pages/Settings.jsx'
 import CmsPortal from './pages/CmsPortal.jsx'
 import TaskManagement from './pages/TaskManagement.jsx'
+import RestaurantPage from './modules/restaurant/RestaurantPage.jsx'
 export default function AppRoutes({
   role, isAdmin, userName, userId, company, privileges, modulesEnabled, loadCompany,
   openReservation, openFrontOfficeReservation, startReservation, navigate,
 }) {
+  const location = useLocation()
+  const reservationTab = new URLSearchParams(location.search).get('tab')
+  const reservationNavId = reservationTab === 'calendar'
+    ? 'calendar'
+    : reservationTab === 'crm'
+      ? 'crm'
+      : 'reservations'
+
   return (
     <Routes>
       <Route path={PATHS.ROOT} element={<Navigate to={PATHS.FRONT_OFFICE} replace />} />
@@ -82,7 +89,7 @@ export default function AppRoutes({
 
       {/* Reservations — unified tab page */}
       <Route path={PATHS.RESERVATIONS} element={
-        <SaasModuleRoute moduleId="reservations" role={role} navId="reservations" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
+        <SaasModuleRoute moduleId="reservations" role={role} navId={reservationNavId} privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
           <ReservationsPage
             openReservation={openReservation}
             startReservation={startReservation}
@@ -126,21 +133,26 @@ export default function AppRoutes({
       } />
 
       {/* Restaurant */}
+      <Route path={PATHS.RESTAURANT} element={
+        <SaasModuleRoute moduleId="pos" role={role} navId="pos" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
+          <RestaurantPage userName={userName} role={role} isAdmin={isAdmin} modulesEnabled={modulesEnabled} company={company} />
+        </SaasModuleRoute>
+      } />
       <Route path={PATHS.POS} element={
         <SaasModuleRoute moduleId="pos" role={role} navId="pos" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <RestaurantPOS userName={userName} role={role} isAdmin={isAdmin} />
+          <Navigate to={`${PATHS.RESTAURANT}?tab=pos`} replace />
         </SaasModuleRoute>
       } />
       <Route path={PATHS.POS_PRINT_CENTER} element={
         <SaasModuleRoute moduleId="pos" role={role} navId="pos" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <PosPrintCenter company={company} userName={userName} />
+          <Navigate to={`${PATHS.RESTAURANT}?tab=print`} replace />
         </SaasModuleRoute>
       } />
       <Route path={PATHS.GUEST_KIOSK} element={<GuestPosKiosk />} />
       <Route path={PATHS.VERIFY_BILL} element={<VerifyBill />} />
       <Route path={PATHS.MENU_MANAGEMENT} element={
         (isModuleEnabled('menu-management', modulesEnabled, role) && (isAdmin || role === 'SUPERUSER' || role === 'RESTAURANT'))
-          ? <SaasModuleFrame moduleId="pos" company={company} role={role} userName={userName}><MenuManagement isAdmin={isAdmin} /></SaasModuleFrame>
+          ? <SaasModuleFrame moduleId="pos" company={company} role={role} userName={userName}><Navigate to={`${PATHS.RESTAURANT}?tab=menu`} replace /></SaasModuleFrame>
           : <Navigate to={firstAccessiblePath(role, privileges, modulesEnabled)} replace />
       } />
 

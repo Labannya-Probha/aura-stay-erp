@@ -26,6 +26,7 @@ export const PATHS = {
   CRM: '/crm',
 
   // POS
+  RESTAURANT: '/restaurant',
   POS: '/pos',
   GUEST_KIOSK: '/kiosk/pos',
   MENU_MANAGEMENT: '/menu-management',
