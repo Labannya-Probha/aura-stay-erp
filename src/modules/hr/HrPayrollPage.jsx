@@ -118,10 +118,10 @@ export default function HrPayrollPage({ userName, role, isAdmin }) {
       </div>
 
       {/* Tab content */}
-      {tab === 'employees'  && <EmployeesTab flash={flash} isAdmin={isAdmin} />}
+      {tab === 'employees'  && <EmployeesTab flash={flash} isAdmin={isAdmin} userName={userName} />}
       {tab === 'attendance' && <AttendanceTab flash={flash} />}
       {tab === 'leave'      && <LeaveTab flash={flash} userName={userName} canApprove={canApprove} view={view} setView={setView} />}
-      {tab === 'payroll'    && <PayrollTab view={view} setView={setView} />}
+      {tab === 'payroll'    && <PayrollTab view={view} setView={setView} flash={flash} userName={userName} canApprove={canApprove} />}
       {tab === 'letters'    && <LettersDocumentsTab flash={flash} userName={userName} view={view} setView={setView} />}
       {tab === 'compliance' && <ComplianceTab flash={flash} userName={userName} view={view} setView={setView} />}
     </div>

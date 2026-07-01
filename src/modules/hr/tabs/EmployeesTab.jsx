@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../../supabase'
 import { fmtBDT, todayISO } from '../../../lib/helpers'
 import { Plus } from 'lucide-react'
+import EmployeeProfileDrawer from '../components/EmployeeProfileDrawer'
 
-export default function EmployeesTab({ flash, isAdmin }) {
+export default function EmployeesTab({ flash, isAdmin, userName }) {
   const [rows, setRows] = useState([])
+  const [selected, setSelected] = useState(null)
   const [f, setF] = useState({
     full_name: '', designation: '', department: '',
     join_date: todayISO(), phone: '', gross_salary: '',
@@ -42,13 +44,13 @@ export default function EmployeesTab({ flash, isAdmin }) {
           <thead><tr><th className="th">Code</th><th className="th">Name</th><th className="th">Designation</th><th className="th">Dept</th><th className="th text-right">Gross</th><th className="th">Status</th></tr></thead>
           <tbody>
             {rows.map((e) => (
-              <tr key={e.id}>
+              <tr key={e.id} className="cursor-pointer hover:bg-leaf/10" onClick={() => setSelected(e)}>
                 <td className="td money text-xs">{e.emp_code}</td>
-                <td className="td text-sm font-medium">{e.full_name}</td>
+                <td className="td text-sm font-medium text-forest underline-offset-2 hover:underline">{e.full_name}</td>
                 <td className="td text-sm">{e.designation || '—'}</td>
                 <td className="td text-xs">{e.department || '—'}</td>
                 <td className="td money text-right">{fmtBDT(e.gross_salary)}</td>
-                <td className="td">
+                <td className="td" onClick={(ev) => ev.stopPropagation()}>
                   {isAdmin
                     ? <select className="input !py-1 !w-32" value={e.status} onChange={(ev) => setStatus(e.id, ev.target.value)}>
                         {['ACTIVE', 'RESIGNED', 'TERMINATED'].map((s) => <option key={s}>{s}</option>)}
@@ -61,6 +63,16 @@ export default function EmployeesTab({ flash, isAdmin }) {
           </tbody>
         </table>
       </div>
+
+      {selected && (
+        <EmployeeProfileDrawer
+          emp={selected}
+          userName={userName}
+          flash={flash}
+          onClose={() => setSelected(null)}
+          onSave={() => { load(); setSelected(null) }}
+        />
+      )}
     </div>
   )
 }
