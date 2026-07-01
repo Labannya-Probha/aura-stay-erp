@@ -1636,6 +1636,226 @@
   font-weight: 900;
 }
 
+/* Front Office operational workspace */
+.front-office-page {
+  --fo-line: color-mix(in srgb, var(--brand-color) 16%, #d8e1ea);
+  --fo-soft: color-mix(in srgb, var(--brand-color) 6%, #fff);
+  --fo-accent: var(--brand-color);
+  display: grid;
+  gap: 14px;
+}
+
+.erp-page-header-card,
+.erp-panel-card,
+.erp-control-strip {
+  border-radius: 8px !important;
+  border: 1px solid var(--fo-line) !important;
+  background: #fff !important;
+  box-shadow: 0 6px 18px rgba(15, 40, 60, 0.05) !important;
+}
+
+.erp-page-header-card::after,
+.erp-panel-card::after,
+.erp-control-strip::after {
+  display: none !important;
+}
+
+.erp-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  border-left: 4px solid var(--fo-accent);
+  background: linear-gradient(180deg, #fff, var(--fo-soft));
+}
+
+.erp-page-kicker {
+  margin: 0 0 4px !important;
+  color: var(--fo-accent) !important;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.erp-page-header h1 {
+  margin: 0;
+  color: var(--brand-color);
+  font-size: 24px;
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.erp-page-subtitle {
+  margin: 3px 0 0 !important;
+  color: #64748b !important;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.erp-header-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(82px, 1fr));
+  gap: 8px;
+  min-width: min(520px, 100%);
+}
+
+.erp-header-metrics div {
+  min-width: 0;
+  border: 1px solid var(--fo-line);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.82);
+  padding: 8px 10px;
+}
+
+.erp-header-metrics span {
+  display: block;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.erp-header-metrics strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--brand-color);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.erp-kpi-strip {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.erp-kpi-tile {
+  position: relative;
+  min-width: 0;
+  min-height: 88px;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px 14px 13px;
+  border: 1px solid var(--fo-line);
+  border-left: 4px solid var(--fo-accent);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(15, 40, 60, 0.055);
+  overflow: hidden;
+}
+
+.erp-kpi-tile.is-danger { border-left-color: #dc2626; }
+.erp-kpi-tile.is-warn { border-left-color: #d97706; }
+.erp-kpi-tile.is-info { border-left-color: #0284c7; }
+.erp-kpi-tile.is-muted { border-left-color: #94a3b8; }
+
+.erp-kpi-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--fo-line);
+  background: var(--fo-soft);
+}
+
+.erp-kpi-copy {
+  min-width: 0;
+}
+
+.erp-kpi-label {
+  margin-bottom: 3px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-kpi-value {
+  font-size: 22px;
+  line-height: 1.05;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.erp-kpi-sub {
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.erp-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 2px 0 10px;
+}
+
+.erp-section-header h2 {
+  margin: 0;
+  color: var(--brand-color);
+  font-size: 17px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.erp-board-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 8px !important;
+  border: 1px solid var(--fo-line) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  font-size: 11px;
+}
+
+.erp-board-legend::after {
+  display: none !important;
+}
+
+.erp-room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 9px;
+}
+
+@media (max-width: 1180px) {
+  .erp-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .erp-header-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .erp-kpi-strip {
+    grid-template-columns: 1fr !important;
+  }
+  .erp-room-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .enterprise-print-doc .enterprise-report-header {
   border: 1px solid var(--erp-line);
   border-bottom: 2px solid var(--erp-blue);
@@ -1716,6 +1936,17 @@
   .enterprise-print-doc .erp-pagination,
   .enterprise-print-doc .no-print {
     display: none !important;
+  }
+  .erp-page-header-card,
+  .erp-control-strip,
+  .erp-section-header,
+  .erp-board-legend,
+  .erp-kpi-strip {
+    display: none !important;
+  }
+  .front-office-page,
+  .erp-room-grid {
+    display: block !important;
   }
   .erp-print-table {
     page-break-inside: auto;

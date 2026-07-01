@@ -150,8 +150,8 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
   }
 
   const ReservationList = ({ title, rows, empty }) => (
-    <Card className="border-0 shadow-sm">
-      <CardHeader className="pt-5 pb-3">
+    <Card className="erp-panel-card">
+      <CardHeader className="pt-4 pb-2">
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
@@ -166,8 +166,8 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
                   className="w-full flex items-center justify-between gap-2 p-3 rounded-lg border border-leaf/50 bg-white/80 hover:bg-leaf/20 text-left transition-colors"
                 >
                   <div className="min-w-0">
-                    <div className="font-semibold text-sm truncate">{r.reservation_name || r.guests?.full_name || '—'}</div>
-                    <div className="text-xs text-pine/60 font-mono truncate">{r.res_no} · {fmtDate(r.check_in)} → {fmtDate(r.check_out)}</div>
+                    <div className="font-semibold text-sm truncate">{r.reservation_name || r.guests?.full_name || '-'}</div>
+                    <div className="text-xs text-pine/60 font-mono truncate">{r.res_no} - {fmtDate(r.check_in)} to {fmtDate(r.check_out)}</div>
                   </div>
                   <Badge variant={getStatusBadgeVariant(r.status)} className="shrink-0 whitespace-nowrap">
                     {r.status.replace('_', ' ')}
@@ -183,24 +183,31 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
 
   const occCount = (s) => rooms.filter((r) => (occ[r.id] && occ[r.id].st) === s).length
   const hkAttn = rooms.filter((r) => ['Dirty', 'Out of Order'].includes(r.hk_status || 'Clean')).length
+  const totalRooms = rooms.length
+  const occupiedRooms = occCount('OCCUPIED')
+  const arrivalRooms = occCount('ARRIVAL')
+  const departureRooms = occCount('DEPARTURE')
+  const readyRooms = rooms.filter((r) => !occ[r.id] && (r.hk_status || 'Clean') === 'Clean').length
 
   return (
-    <div>
-      <Card className="mb-6 border-0 bg-gradient-to-br from-white to-forest/5 shadow-sm">
-        <CardContent className="p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="info">Today</Badge>
-                <Badge variant="success">Front Office</Badge>
-                {isAdmin && <Badge variant="warning">Admin</Badge>}
-              </div>
+    <div className="front-office-page">
+      <Card className="erp-page-header-card no-print">
+        <CardContent className="p-0">
+          <div className="erp-page-header">
+            <div className="min-w-0">
+              <p className="erp-page-kicker">Front Office</p>
               <div>
-                <h1 className="font-display text-xl sm:text-2xl font-bold text-pine">
-                  Front Office — {fmtDate(today)}
+                <h1>
+                  Operational Desk
                 </h1>
-                <p className="text-sm text-pine/60 mt-1">The day at a glance.</p>
+                <p className="erp-page-subtitle">{fmtDate(today)} - {userName || 'Current user'}</p>
               </div>
+            </div>
+            <div className="erp-header-metrics" aria-label="Front office room metrics">
+              <div><span>Rooms</span><strong>{totalRooms}</strong></div>
+              <div><span>In-house</span><strong>{occupiedRooms}</strong></div>
+              <div><span>Ready</span><strong>{readyRooms}</strong></div>
+              <div><span>HK Issues</span><strong>{hkAttn}</strong></div>
             </div>
           </div>
         </CardContent>
@@ -208,17 +215,16 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
 
       <KPICards module="dashboard" />
 
-      <Card className="mb-6 border-leaf/70 shadow-sm">
+      <Card className="erp-control-strip mb-5">
         <CardContent className="p-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <div className="font-display font-semibold text-pine flex items-center gap-2">
+              <div className="font-semibold text-pine flex items-center gap-2">
                 <Clock size={15} className="text-amber" /> Front Office Day Close
               </div>
-              <p className="text-xs text-pine/60 mt-1">This closes Front Office (Reservation) day only.</p>
               {foCloseRow && (
                 <p className="text-xs text-pine/50 mt-1">
-                  Closed by {foCloseRow.closed_by || '—'} at {fmtDate(foCloseRow.closed_at || foCloseRow.created_at || today)}.
+                  Closed by {foCloseRow.closed_by || '-'} at {fmtDate(foCloseRow.closed_at || foCloseRow.created_at || today)}.
                 </p>
               )}
             </div>
@@ -244,8 +250,8 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
         <ReservationList title="Due to check out" rows={departures} empty="No departures due today." />
       </div>
 
-      <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-        <h2 className="font-display text-lg font-bold text-pine flex items-center gap-2">
+      <div className="erp-section-header no-print">
+        <h2>
           <DoorOpen size={18} className="text-forest" /> Room Status Board
         </h2>
         <Button variant="outline" size="sm" onClick={loadBoard} disabled={boardBusy}>
@@ -253,16 +259,16 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
         </Button>
       </div>
 
-      <Card className="p-3 mb-3 flex flex-wrap gap-3 text-[11px] text-pine/70 border-0 shadow-sm">
+      <Card className="erp-board-legend no-print">
         <span className="font-semibold text-pine/50 uppercase tracking-wide">Occupancy:</span>
-        <Badge variant="default" className="bg-pine text-white">In-house ({occCount('OCCUPIED')})</Badge>
-        <Badge variant="warning">Arrival ({occCount('ARRIVAL')})</Badge>
-        <Badge variant="info">Departure ({occCount('DEPARTURE')})</Badge>
+        <Badge variant="default" className="bg-pine text-white">In-house ({occupiedRooms})</Badge>
+        <Badge variant="warning">Arrival ({arrivalRooms})</Badge>
+        <Badge variant="info">Departure ({departureRooms})</Badge>
         <Badge variant="success">Vacant</Badge>
         <span className="font-semibold text-pine/50 uppercase tracking-wide ml-2">HK need attention: {hkAttn}</span>
       </Card>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2">
+      <div className="erp-room-grid">
             {rooms.map((room) => {
               const o = occ[room.id]
               const occSt = (o && o.st) || 'VACANT'
@@ -297,9 +303,9 @@ export default function Dashboard({ openReservation, userName, role, isAdmin }) 
                     {o
                       ? (
                         <div className="text-[10px] text-pine leading-tight space-y-0.5">
-                          <div className="truncate"><span className="text-pine/50">Res:</span> <span className="font-medium">{o.res_no || '—'}</span></div>
-                          <div className="truncate"><span className="text-pine/50">Name:</span> {o.guest || '—'}</div>
-                          <div className="truncate"><span className="text-pine/50">Mobile:</span> {o.phone || '—'}</div>
+                          <div className="truncate"><span className="text-pine/50">Res:</span> <span className="font-medium">{o.res_no || '-'}</span></div>
+                          <div className="truncate"><span className="text-pine/50">Name:</span> {o.guest || '-'}</div>
+                          <div className="truncate"><span className="text-pine/50">Mobile:</span> {o.phone || '-'}</div>
                         </div>
                       )
                       : <div className="text-[10px] text-pine/30 h-6">No booking</div>
