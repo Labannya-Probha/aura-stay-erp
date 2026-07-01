@@ -88,7 +88,7 @@ export default function DataTable({
                       type="button"
                       onClick={() => toggleSort(column.key)}
                       className="inline-flex items-center gap-1 hover:text-foreground"
-                      aria-label={`Sort by ${String(column.header)}`}
+                      aria-label={`Sort by ${typeof column.header === 'string' ? column.header : column.key}`}
                     >
                       {column.header}
                       <ArrowDownUp className="size-3.5" />
@@ -107,7 +107,7 @@ export default function DataTable({
               <SkeletonRow columnCount={columnCount} rows={4} />
             ) : data.length ? (
               data.map((row, rowIndex) => {
-                const rowId = bulkActions?.getRowId?.(row, rowIndex) || String(row.id || rowIndex)
+                const rowId = bulkActions?.getRowId?.(row, rowIndex) || String(row.id ?? rowIndex)
                 return (
                   <tr key={rowId} className="border-b border-border/50 last:border-none">
                     {hasBulkActions ? (

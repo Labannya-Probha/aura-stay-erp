@@ -42,7 +42,7 @@ export default function StepWizard({
     <section className={cn('space-y-4 rounded-xl border border-border bg-card p-4', className)} aria-label="Step wizard">
       <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {visibleSteps.map((step, index) => {
-          const isActive = step.id === activeStep
+          const isActive = index === activeIndex
           const isComplete = index < activeIndex
 
           return (

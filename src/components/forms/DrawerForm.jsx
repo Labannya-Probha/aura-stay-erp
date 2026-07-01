@@ -9,10 +9,10 @@ import {
 import { cn } from 'src/lib/utils'
 
 const SIZE_CLASSES = {
-  sm: 'max-w-md',
-  md: 'max-w-xl',
-  lg: 'max-w-2xl',
-  xl: 'max-w-4xl',
+  sm: 'sm:max-w-md',
+  md: 'sm:max-w-xl',
+  lg: 'sm:max-w-2xl',
+  xl: 'sm:max-w-4xl',
 }
 
 /**
@@ -32,7 +32,7 @@ export default function DrawerForm({ open, onOpenChange, title, subtitle, childr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          'left-auto right-0 top-0 h-dvh w-full -translate-x-0 -translate-y-0 rounded-none p-0 sm:max-w-none',
+          'left-auto right-0 top-0 h-dvh w-full -translate-x-0 -translate-y-0 rounded-none p-0',
           SIZE_CLASSES[size] || SIZE_CLASSES.md,
           className
         )}
