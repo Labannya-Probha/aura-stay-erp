@@ -93,13 +93,13 @@ function ReceiptHeader({ order, company, profile, settings, invoiceNo }) {
 
 function ReceiptItemTable({ items = [], settings }) {
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 6 }}>
+    <table className="pos-receipt-items" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 6, tableLayout: 'fixed' }}>
       <thead>
         <tr style={{ borderTop: '1px solid #000', borderBottom: '1px solid #000' }}>
-          <th style={{ ...cell, textAlign: 'left', width: '48%' }}>Item</th>
+          <th style={{ ...cell, textAlign: 'left', width: '46%' }}>Item</th>
           <th style={{ ...cell, textAlign: 'right', width: '12%' }}>Qty</th>
-          <th style={{ ...cell, textAlign: 'right', width: '18%' }}>Rate</th>
-          <th style={{ ...cell, textAlign: 'right', width: '22%' }}>Amount</th>
+          <th style={{ ...cell, textAlign: 'right', width: '19%' }}>Rate</th>
+          <th style={{ ...cell, textAlign: 'right', width: '23%' }}>Amount</th>
         </tr>
       </thead>
       <tbody>
@@ -107,15 +107,15 @@ function ReceiptItemTable({ items = [], settings }) {
           const modifiers = getItemModifiers(item)
           return (
             <tr key={`${item.item_name}-${index}`}>
-              <td style={cell}>
+              <td className="pos-item-name" style={cell}>
                 <div style={{ fontWeight: 700, overflowWrap: 'anywhere' }}>{item.item_name}</div>
                 {modifiers.map((modifier) => (
                   <div key={modifier} style={{ fontSize: 8.5, paddingLeft: 6, overflowWrap: 'anywhere' }}>{modifier}</div>
                 ))}
               </td>
-              <td style={amountCell}>{Number(item.qty || 0)}</td>
-              <td style={amountCell}>{Number(item.rate || item.unit_price || 0).toFixed(2)}</td>
-              <td style={amountCell}>{Number(item.line_total || item.total || 0).toFixed(2)}</td>
+              <td className="pos-num" style={amountCell}>{Number(item.qty || 0)}</td>
+              <td className="pos-num" style={amountCell}>{Number(item.rate || item.unit_price || 0).toFixed(2)}</td>
+              <td className="pos-num" style={amountCell}>{Number(item.line_total || item.total || 0).toFixed(2)}</td>
             </tr>
           )
         })}
@@ -226,7 +226,7 @@ function ThermalFooter({ order, company, settings, profile, verifyUrl, hash }) {
       <QRBlock enabled={settings.showQr} value={verifyUrl} />
       <div style={{ marginTop: 5, fontWeight: 700 }}>{brand.footerMessage}</div>
       {brand.website && <div>{brand.website}</div>}
-      <div>Printed by {order?.printed_by || order?.created_by || 'System'} | {formatPosDate(printedAt, settings.timezone)} {formatPosTime(printedAt, settings.timezone)}</div>
+      <div>Printed by {order?.printed_by || order?.created_by || 'System'} | {formatPosDate(printedAt, settings.timezone)} | {formatPosTime(printedAt, settings.timezone)}</div>
       {profile.code === 'REPRINT_COPY' && <div>Original print: {order?.original_print_time ? `${formatPosDate(order.original_print_time, settings.timezone)} ${formatPosTime(order.original_print_time, settings.timezone)}` : '-'}</div>}
       <div>Powered by Aura ERP | {hash}</div>
     </div>
@@ -244,9 +244,6 @@ export function ThermalReceiptLayout({ order = {}, items = [], company, copyType
       className={`print-copy ${profile.code !== 'CUSTOMER_COPY' ? 'print-copy-break' : ''}`}
       style={{ ...mono, position: 'relative', boxSizing: 'border-box', maxWidth: '100%', width: '100%', margin: '0 auto', color: '#000', background: '#fff', overflowWrap: 'anywhere' }}
     >
-      <div style={{ position: 'absolute', inset: '40% 0 auto', textAlign: 'center', fontSize: 32, fontWeight: 900, opacity: 0.035, transform: 'rotate(-18deg)', pointerEvents: 'none' }}>
-        {profile.watermark}
-      </div>
       <ReceiptHeader order={order} company={company} profile={profile} settings={settings} invoiceNo={invoiceNo} />
       <ReceiptItemTable items={items} settings={settings} />
       <ReceiptSummary order={order} settings={settings} />

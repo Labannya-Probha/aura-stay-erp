@@ -124,6 +124,11 @@ export default function PrintPortal({ title, onClose, children, type = 'A4', pri
         box-sizing: border-box;
         overflow: visible;
       }
+      #print-root.print-pos-58 .print-copy,
+      #print-root.print-pos-80 .print-copy {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
       #print-root.print-pos-58 *,
       #print-root.print-pos-80 * {
         color: #000 !important;
@@ -254,6 +259,22 @@ export default function PrintPortal({ title, onClose, children, type = 'A4', pri
           vertical-align: top !important;
         }
 
+        #print-root.print-pos-58 .pos-receipt-items th:nth-child(n+2),
+        #print-root.print-pos-58 .pos-receipt-items td.pos-num,
+        #print-root.print-pos-80 .pos-receipt-items th:nth-child(n+2),
+        #print-root.print-pos-80 .pos-receipt-items td.pos-num {
+          white-space: nowrap !important;
+          word-break: normal !important;
+          overflow-wrap: normal !important;
+          text-align: right !important;
+        }
+
+        #print-root.print-pos-58 .pos-receipt-items .pos-item-name,
+        #print-root.print-pos-80 .pos-receipt-items .pos-item-name {
+          word-break: normal !important;
+          overflow-wrap: anywhere !important;
+        }
+
         #print-root.print-pos-58 *,
         #print-root.print-pos-80 * {
           box-shadow: none !important;
@@ -279,8 +300,8 @@ export default function PrintPortal({ title, onClose, children, type = 'A4', pri
 
         #print-root.print-pos-58 .print-copy-break,
         #print-root.print-pos-80 .print-copy-break {
-          page-break-before: auto !important;
-          break-before: auto !important;
+          page-break-before: always !important;
+          break-before: page !important;
         }
 
         #print-root .print-footer,
