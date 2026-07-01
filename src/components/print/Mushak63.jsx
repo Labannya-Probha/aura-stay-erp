@@ -58,32 +58,25 @@ export default function Mushak63({
     : +(Number(l.base_amount) - Number(l.discount) + Number(l.service_charge)).toFixed(2)
   const totalValue = lines.reduce((a, l) => a + lineValue(l), 0)
 
-  const copies = ['Guest Copy', 'Resort Copy']
-
   return (
-    <div className="mushak-copy-stack">
-      {copies.map((copyLabel, copyIndex) => (
-        <MushakCopy
-          key={copyLabel}
-          copyLabel={copyLabel}
-          copyIndex={copyIndex}
-          lines={lines}
-          totals={t}
-          totalValue={totalValue}
-          lineValue={lineValue}
-          buyer={buyer}
-          company={company}
-          res={res}
-          refNo={refNo}
-          invNo={invNo}
-          issued={issued}
-          printedAt={printedAt}
-          creator={creator}
-          isLegacy={isLegacy}
-          isVoid={is_void}
-        />
-      ))}
-    </div>
+    <MushakCopy
+      copyLabel={null}
+      copyIndex={0}
+      lines={lines}
+      totals={t}
+      totalValue={totalValue}
+      lineValue={lineValue}
+      buyer={buyer}
+      company={company}
+      res={res}
+      refNo={refNo}
+      invNo={invNo}
+      issued={issued}
+      printedAt={printedAt}
+      creator={creator}
+      isLegacy={isLegacy}
+      isVoid={is_void}
+    />
   )
 }
 
@@ -107,14 +100,10 @@ function MushakCopy({
 
   return (
     <section
-      className={`print-copy mushak-63-doc print-a4-doc ${copyIndex > 0 ? 'print-copy-break' : ''}`}
-      style={{ width: '100%', maxWidth: '194mm', minHeight: '281mm', margin: '0 auto', padding: '0 4mm', color: '#000', background: '#fff', fontFamily: "'Noto Sans Bengali', 'SolaimanLipi', 'Inter', sans-serif", position: 'relative', pageBreakAfter: copyIndex === 0 ? 'always' : 'auto' }}
+      className="print-copy mushak-63-doc print-a4-doc"
+      style={{ width: '100%', maxWidth: '194mm', minHeight: '281mm', margin: '0 auto', padding: '0 4mm', color: '#000', background: '#fff', fontFamily: "'Noto Sans Bengali', 'SolaimanLipi', 'Inter', sans-serif", position: 'relative' }}
     >
       {isVoid && <div style={{ position: 'absolute', top: '41%', left: 0, right: 0, textAlign: 'center', transform: 'rotate(-24deg)', fontSize: 88, fontWeight: 800, color: 'rgba(220,0,0,0.14)', letterSpacing: 8, pointerEvents: 'none' }}>VOID / বাতিল</div>}
-
-      <div style={{ textAlign: 'right', marginBottom: 2 }}>
-        <span className="copy-badge" style={{ display: 'inline-block', border: '1px solid #111', padding: '2px 8px', fontSize: 10, fontWeight: 700 }}>{copyLabel}</span>
-      </div>
 
       <header style={{ position: 'relative', textAlign: 'center', marginBottom: 7 }}>
         <div style={{ position: 'absolute', right: 0, top: 5, border: '2px solid #111', padding: '4px 11px', fontSize: 13, fontWeight: 800 }}>মূসক-৬.৩</div>
