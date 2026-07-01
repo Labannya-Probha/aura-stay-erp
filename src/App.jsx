@@ -6,7 +6,6 @@ import { supabase } from './supabase'
 import { Analytics } from '@vercel/analytics/react'
 import { applyBrandTheme, buildBrandTheme, DEFAULT_THEME, resolveBrandTheme } from './lib/branding'
 import { setCurrency } from './lib/helpers'
-import { runAutoNoShowSweep } from './lib/noShowAutomation'
 import { can, ROLE_LABELS } from './lib/roles'
 import { getTenantId, setTenantId } from './lib/tenant'
 import { isModuleEnabled } from './lib/saasModules'
@@ -878,37 +877,10 @@ function AppRoot() {
     })
   }, [profile?.role, profile?.id])
 
-  useEffect(() => {
-    if (!session || !profile?.role) return
-
-    let running = false
-    const sweep = async () => {
-      if (running) return
-      running = true
-      try {
-        await runAutoNoShowSweep()
-      } catch (error) {
-        console.error('Auto no-show sweep failed:', error.message)
-      } finally {
-        running = false
-      }
-    }
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') sweep()
-    }
-
-    sweep()
-    window.addEventListener('focus', sweep)
-    document.addEventListener('visibilitychange', handleVisibility)
-    const timer = window.setInterval(sweep, 60 * 1000)
-
-    return () => {
-      window.clearInterval(timer)
-      window.removeEventListener('focus', sweep)
-      document.removeEventListener('visibilitychange', handleVisibility)
-    }
-  }, [session?.user?.id, profile?.role])
+  // No-show sweep is now handled server-side via the auto-no-show Supabase
+  // Edge Function scheduled by pg_cron. See:
+  //   supabase/functions/auto-no-show/index.ts
+  //   supabase/migrations/20260701000007_noshow_pg_cron.sql
 
   if (session === undefined) return (
     <div className="min-h-screen flex items-center justify-center text-pine/60">Loading…</div>
