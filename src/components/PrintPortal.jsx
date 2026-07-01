@@ -386,9 +386,9 @@ export default function PrintPortal({ title, onClose, children, type = 'A4', pri
     // the content in the popup window — which was the cause of blank pages.
     // Register onload BEFORE document.write to avoid missing the event.
     printWin.onload = () => {
+      printWin.addEventListener('afterprint', () => printWin.close(), { once: true })
       printWin.focus()
       printWin.print()
-      printWin.addEventListener('afterprint', () => printWin.close())
     }
     printWin.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">${styles}</head><body style="margin:0;padding:0"><div id="print-portal-container">${el.outerHTML}</div></body></html>`)
     printWin.document.close()
