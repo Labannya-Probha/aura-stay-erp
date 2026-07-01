@@ -1,16 +1,17 @@
 /* ------------------------------------------------------------------ */
 /*  FRONT OFFICE PAGE — AEDS v2 unified module page                   */
 /* ------------------------------------------------------------------ */
+import { useEffect } from 'react'
 import PageHeader from '../../components/layout/PageHeader'
 import ModuleTabs from '../../components/layout/ModuleTabs'
 import { can } from '../../lib/roles'
+import { isModuleEnabled } from '../../lib/saasModules'
 import { useFrontOfficeTabs } from './hooks/useFrontOfficeTabs'
 import { FRONT_OFFICE_TABS } from './frontOffice.config'
 import InHouseGuestsTab from './tabs/InHouseGuestsTab'
 import RoomBoardTab from './tabs/RoomBoardTab'
 import ServiceBillsTab from './tabs/ServiceBillsTab'
 import NightAuditTab from './tabs/NightAuditTab'
-import { useEffect } from 'react'
 
 export default function FrontOfficePage({
   openReservation,
@@ -19,10 +20,11 @@ export default function FrontOfficePage({
   isAdmin,
   company,
   privileges,
+  modulesEnabled,
 }) {
   const { activeTab, setActiveTab } = useFrontOfficeTabs()
-  const canAccessServiceBills = can(role, 'facilities', privileges)
-  const canAccessNightAudit = can(role, 'nightaudit', privileges)
+  const canAccessServiceBills = can(role, 'facilities', privileges) && isModuleEnabled('facilities', modulesEnabled, role)
+  const canAccessNightAudit = can(role, 'nightaudit', privileges) && isModuleEnabled('nightaudit', modulesEnabled, role)
   const visibleTabs = FRONT_OFFICE_TABS.filter((tab) => (
     (tab.id !== 'service-bills' || canAccessServiceBills)
     && (tab.id !== 'night-audit' || canAccessNightAudit)

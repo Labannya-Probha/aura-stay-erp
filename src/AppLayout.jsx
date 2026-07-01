@@ -285,8 +285,8 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
                   } else if (n.id === 'nightaudit') {
                     const foTab = new URLSearchParams(location.search).get('tab')
                     const isFoPath = location.pathname === PATHS.FRONT_OFFICE
-                    const canAccessServiceBills = can(role, 'facilities', privileges)
-                    const canAccessNightAudit = can(role, 'nightaudit', privileges)
+                    const canViewFacilities = can(role, 'facilities', privileges) && isModuleEnabled('facilities', modulesEnabled, role)
+                    const canViewNightAudit = can(role, 'nightaudit', privileges) && isModuleEnabled('nightaudit', modulesEnabled, role)
                     nested = [
                       {
                         id: 'fo-in-house',
@@ -300,13 +300,13 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
                         path: `${PATHS.FRONT_OFFICE}?tab=room-board`,
                         active: isFoPath && foTab === 'room-board',
                       },
-                      ...(canAccessServiceBills ? [{
+                      ...(canViewFacilities ? [{
                         id: 'fo-service-bills',
                         label: 'Service Bills',
                         path: `${PATHS.FRONT_OFFICE}?tab=service-bills`,
                         active: (isFoPath && foTab === 'service-bills') || location.pathname === PATHS.FACILITIES,
                       }] : []),
-                      ...(canAccessNightAudit ? [{
+                      ...(canViewNightAudit ? [{
                         id: 'fo-night-audit',
                         label: 'Night Audit',
                         path: `${PATHS.FRONT_OFFICE}?tab=night-audit`,
