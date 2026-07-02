@@ -17,86 +17,108 @@ const FALLBACK = {
 export default function Login({ slug }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [tenantCode, setTenantCode] = useState(slug || DEFAULT_SLUG)
+  const [tenantCode, setTenantCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
-  const [tenant, setTenant] = useState(null)
-  const [company, setCompany] = useState(null)
-  const [logoFailed, setLogoFailed] = useState(false)
-  const [loadingBrand, setLoadingBrand] = useState(true)
+  const [brand, setBrand] = useState({
+    tenantId: null,
+    slug: DEFAULT_SLUG,
+    name: FALLBACK.name,
+    software: FALLBACK.software,
+    logo: FALLBACK.logo,
+    poster: FALLBACK.poster,
+    video: FALLBACK.video,
+  })
 
-  const effectiveSlug = useMemo(() => {
+  const [brandLoading, setBrandLoading] = useState(true)
+  const [logoFailed, setLogoFailed] = useState(false)
+  const [videoReady, setVideoReady] = useState(false)
+
+  const routeSlug = useMemo(() => {
     return String(slug || DEFAULT_SLUG).trim().toLowerCase()
   }, [slug])
 
   useEffect(() => {
     let alive = true
 
-    async function loadTenant() {
-      setLoadingBrand(true)
-      setErr('')
+    async function loadBrand() {
+      setBrandLoading(true)
       setLogoFailed(false)
-      setTenantCode(effectiveSlug)
+      setVideoReady(false)
+      setErr('')
 
-      try {
-        const { data: property } = await supabase
+      let finalProperty = null
+
+      const { data: property } = await supabase
+        .from('properties')
+        .select('id, slug, name, is_active')
+        .eq('slug', routeSlug)
+        .maybeSingle()
+
+      if (property?.is_active) {
+        finalProperty = property
+      }
+
+      if (!finalProperty && routeSlug !== DEFAULT_SLUG) {
+        const { data: fallbackProperty } = await supabase
           .from('properties')
           .select('id, slug, name, is_active')
-          .eq('slug', effectiveSlug)
+          .eq('slug', DEFAULT_SLUG)
           .maybeSingle()
 
-        let finalProperty = property?.is_active ? property : null
-
-        if (!finalProperty && effectiveSlug !== DEFAULT_SLUG) {
-          const { data: fallbackProperty } = await supabase
-            .from('properties')
-            .select('id, slug, name, is_active')
-            .eq('slug', DEFAULT_SLUG)
-            .maybeSingle()
-
-          if (fallbackProperty?.is_active) finalProperty = fallbackProperty
+        if (fallbackProperty?.is_active) {
+          finalProperty = fallbackProperty
         }
-
-        if (!alive) return
-
-        if (finalProperty) {
-          const { data: settings } = await supabase
-            .from('company_settings')
-            .select(
-              'name, software_name, logo_url, login_background_video_url, login_background_poster_url'
-            )
-            .eq('tenant_id', finalProperty.id)
-            .maybeSingle()
-
-          if (!alive) return
-
-          setTenant(finalProperty)
-          setCompany(settings || null)
-          setTenantCode(finalProperty.slug)
-          setLogoFailed(false)
-        }
-      } finally {
-        if (alive) setLoadingBrand(false)
       }
+
+      if (!alive) return
+
+      if (!finalProperty) {
+        setTenantCode(routeSlug)
+        setBrand(prev => ({
+          ...prev,
+          slug: routeSlug,
+        }))
+        setBrandLoading(false)
+        return
+      }
+
+      const { data: settings } = await supabase
+        .from('company_settings')
+        .select(
+          'name, software_name, logo_url, login_background_video_url, login_background_poster_url'
+        )
+        .eq('tenant_id', finalProperty.id)
+        .maybeSingle()
+
+      if (!alive) return
+
+      const nextBrand = {
+        tenantId: finalProperty.id,
+        slug: finalProperty.slug,
+        name: settings?.name || finalProperty.name || FALLBACK.name,
+        software: settings?.software_name || FALLBACK.software,
+        logo: settings?.logo_url || FALLBACK.logo,
+        poster: settings?.login_background_poster_url || FALLBACK.poster,
+        video: settings?.login_background_video_url || FALLBACK.video,
+      }
+
+      setBrand(nextBrand)
+      setTenantCode(finalProperty.slug)
+      setBrandLoading(false)
     }
 
-    loadTenant()
+    loadBrand()
 
     return () => {
       alive = false
     }
-  }, [effectiveSlug])
-
-  const brandName = company?.name || tenant?.name || FALLBACK.name
-  const softwareName = company?.software_name || FALLBACK.software
-  const logoUrl = company?.logo_url || FALLBACK.logo
-  const videoUrl = company?.login_background_video_url || FALLBACK.video
-  const posterUrl = company?.login_background_poster_url || FALLBACK.poster
+  }, [routeSlug])
 
   const tenantSlug =
-    tenantCode.trim().toLowerCase() || tenant?.slug || effectiveSlug || DEFAULT_SLUG
+    tenantCode.trim().toLowerCase() || brand.slug || routeSlug || DEFAULT_SLUG
 
   async function signIn() {
     setBusy(true)
@@ -133,7 +155,7 @@ export default function Login({ slug }) {
     }
   }
 
-  function LogoBox({ mobile = false }) {
+  function BrandLogo({ mobile = false }) {
     return (
       <div
         className={
@@ -142,16 +164,16 @@ export default function Login({ slug }) {
             : 'flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/15 shadow-lg backdrop-blur-xl'
         }
       >
-        {!loadingBrand && !logoFailed && logoUrl ? (
+        {!brandLoading && !logoFailed && brand.logo ? (
           <img
-            key={logoUrl}
-            src={logoUrl}
-            alt={brandName}
+            key={brand.logo}
+            src={brand.logo}
+            alt={brand.name}
             className="h-full w-full object-contain"
             onError={() => setLogoFailed(true)}
           />
         ) : (
-          <span className={mobile ? 'text-xl font-black text-white' : 'text-2xl font-black text-white'}>
+          <span className={mobile ? 'text-xl font-black' : 'text-2xl font-black'}>
             A
           </span>
         )}
@@ -168,11 +190,15 @@ export default function Login({ slug }) {
 
           <div className="relative z-10 flex min-h-screen w-full flex-col justify-between px-12 py-12 xl:px-14">
             <div className="flex items-center gap-4">
-              <LogoBox />
+              <BrandLogo />
 
               <div>
-                <h1 className="text-xl font-black text-white">{softwareName}</h1>
-                <p className="text-sm font-medium text-white/65">{brandName}</p>
+                <h1 className="text-xl font-black text-white">
+                  {brand.software}
+                </h1>
+                <p className="text-sm font-medium text-white/65">
+                  {brand.name}
+                </p>
               </div>
             </div>
 
@@ -209,31 +235,35 @@ export default function Login({ slug }) {
             </div>
 
             <p className="text-sm font-medium text-white/45">
-              © 2026 Aura Stay ERP | Powered by <b>Aura Stay</b>
+              © 2026 {brand.software} | Powered by <b>Aura Stay</b>
             </p>
           </div>
         </aside>
 
         <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-10">
-          {!loadingBrand && (
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-opacity duration-700"
+            style={{ backgroundImage: `url(${brand.poster})` }}
+          />
+
+          {!brandLoading && brand.video && (
             <video
-              key={videoUrl}
+              key={brand.video}
               autoPlay
               loop
               muted
               playsInline
-              preload="metadata"
-              poster={posterUrl}
-              className="absolute inset-0 h-full w-full object-cover"
+              preload="auto"
+              poster={brand.poster}
+              onCanPlay={() => setVideoReady(true)}
+              onError={() => setVideoReady(false)}
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
+                videoReady ? 'opacity-100' : 'opacity-0'
+              }`}
             >
-              <source src={videoUrl} type="video/mp4" />
+              <source src={brand.video} type="video/mp4" />
             </video>
           )}
-
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${posterUrl})` }}
-          />
 
           <div className="absolute inset-0 bg-slate-950/40" />
           <div className="absolute inset-0 bg-gradient-to-br from-slate-950/35 via-transparent to-emerald-950/45" />
@@ -241,16 +271,24 @@ export default function Login({ slug }) {
           <div className="relative z-10 w-full max-w-[490px]">
             <div className="rounded-[28px] border border-white/55 bg-white/82 p-8 shadow-2xl backdrop-blur-2xl">
               <div className="mb-8 flex items-center gap-3 lg:hidden">
-                <LogoBox mobile />
+                <BrandLogo mobile />
 
                 <div>
-                  <h1 className="font-black text-slate-950">{softwareName}</h1>
-                  <p className="text-sm text-slate-500">{brandName}</p>
+                  <h1 className="font-black text-slate-950">
+                    {brand.software}
+                  </h1>
+                  <p className="text-sm text-slate-500">
+                    {brand.name}
+                  </p>
                 </div>
               </div>
 
-              <h2 className="text-3xl font-black text-slate-950">Welcome back</h2>
-              <p className="mt-2 text-slate-500">Sign in to your account to continue</p>
+              <h2 className="text-3xl font-black text-slate-950">
+                Welcome back
+              </h2>
+              <p className="mt-2 text-slate-500">
+                Sign in to your account to continue
+              </p>
 
               <form
                 className="mt-8 space-y-5"
