@@ -503,7 +503,7 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
               .select('slug')
               .eq('id', tenantId)
               .maybeSingle()
-            const slug = prop?.slug
+            const slug = company?.slug || prop?.slug
             window.location.href = slug ? `/${slug}/login` : '/login'
           }} className="text-white/65 hover:text-white shrink-0"><LogOut size={15} /></button>
         </div>
