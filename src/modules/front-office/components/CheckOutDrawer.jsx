@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------ */
-/*  FOLIO DRAWER - shell for the existing reservation folio workflow    */
+/*  CHECK-OUT DRAWER - shell for the existing reservation folio flow    */
 /* ------------------------------------------------------------------ */
-export default function FolioDrawer() {
+export default function CheckOutDrawer() {
   return null
 }

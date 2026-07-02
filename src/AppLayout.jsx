@@ -100,7 +100,7 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
 
   const visibleReservationTabs = getVisibleReservationTabs({ role, isAdmin, privileges })
   const currentTopSegment = location.pathname.split('/').filter(Boolean)[0] || 'front-office'
-  const currentTopId = (currentTopSegment === 'frontoffice' || currentTopSegment === 'front-office')
+  const currentTopId = (currentTopSegment === 'dashboard' || currentTopSegment === 'frontoffice' || currentTopSegment === 'front-office')
     ? 'nightaudit'
     : currentTopSegment === 'consumption'
       ? 'inventory'
@@ -175,6 +175,7 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
     const isFrontOfficeRoute = (
       location.pathname.startsWith('/frontoffice') ||
       location.pathname.startsWith('/front-office') ||
+      location.pathname === PATHS.DASHBOARD ||
       location.pathname === PATHS.NIGHTAUDIT ||
       location.pathname === PATHS.FACILITIES
     )
@@ -296,13 +297,25 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
                         id: 'fo-in-house',
                         label: 'In-House Guests',
                         path: `${PATHS.FRONT_OFFICE}?tab=in-house`,
-                        active: (isFoPath && (!foTab || foTab === 'in-house')) || location.pathname.startsWith('/frontoffice'),
+                        active: (isFoPath && (!foTab || foTab === 'in-house')) || location.pathname.startsWith('/frontoffice') || location.pathname === PATHS.DASHBOARD,
                       },
                       {
                         id: 'fo-room-board',
                         label: 'Room Board',
                         path: `${PATHS.FRONT_OFFICE}?tab=room-board`,
                         active: isFoPath && foTab === 'room-board',
+                      },
+                      {
+                        id: 'fo-check-in-out',
+                        label: 'Check In / Check Out',
+                        path: `${PATHS.FRONT_OFFICE}?tab=check-in-out`,
+                        active: isFoPath && foTab === 'check-in-out',
+                      },
+                      {
+                        id: 'fo-guest-folio',
+                        label: 'Guest Folio',
+                        path: `${PATHS.FRONT_OFFICE}?tab=guest-folio`,
+                        active: isFoPath && foTab === 'guest-folio',
                       },
                       ...(canAccessServiceBills ? [{
                         id: 'fo-service-bills',
@@ -316,6 +329,18 @@ export default function AppShell({ company, role, isAdmin, userName, userId, loa
                         path: `${PATHS.FRONT_OFFICE}?tab=night-audit`,
                         active: (isFoPath && foTab === 'night-audit') || location.pathname === PATHS.NIGHTAUDIT,
                       }] : []),
+                      {
+                        id: 'fo-lost-found',
+                        label: 'Lost & Found',
+                        path: `${PATHS.FRONT_OFFICE}?tab=lost-found`,
+                        active: isFoPath && foTab === 'lost-found',
+                      },
+                      {
+                        id: 'fo-guest-messages',
+                        label: 'Guest Messages',
+                        path: `${PATHS.FRONT_OFFICE}?tab=guest-messages`,
+                        active: isFoPath && foTab === 'guest-messages',
+                      },
                     ]
                   } else if (n.id === 'pos') {
                     nested = [

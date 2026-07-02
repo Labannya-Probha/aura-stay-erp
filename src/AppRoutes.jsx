@@ -3,6 +3,7 @@
 /* ------------------------------------------------------------------ */
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { isModuleEnabled } from './lib/saasModules'
+import { can } from './lib/roles'
 import { firstAccessiblePath } from './app/navigation/helpers'
 import { PATHS } from './app/paths'
 import { SaasModuleBlocked, SaasModuleFrame } from './components/saas/SaasModuleFrame.jsx'
@@ -15,11 +16,11 @@ import {
 
 import DashboardPage from './modules/dashboard/DashboardPage.jsx'
 import FrontOfficePage from './modules/front-office/FrontOfficePage.jsx'
+import { FRONT_OFFICE_LEGACY_TAB_REDIRECTS } from './modules/front-office/frontOffice.config'
 import ReservationsPage from './modules/reservations/ReservationsPage.jsx'
 import HousekeepingHub from './pages/HousekeepingHub.jsx'
 import { GuestPosKiosk } from './pages/RestaurantPOS.jsx'
 import VerifyBill from './pages/VerifyBill.jsx'
-import Facilities from './pages/ServiceBills.jsx'
 import InventoryPage from './modules/inventory/InventoryPage.jsx'
 import VatCenter from './pages/VatCenter.jsx'
 import VATReturn from './pages/VATReturn'
@@ -49,7 +50,6 @@ import {
   HrIncidentsPage,
   HrCompliancePage,
 } from './pages/HrOffice.jsx'
-import NightAudit from './pages/NightAudit.jsx'
 import ReportsCenterPage from './modules/reports/ReportsCenterPage.jsx'
 import Settings from './pages/Settings.jsx'
 import MasterDataPage from './modules/master-data/MasterDataPage.jsx'
@@ -72,24 +72,51 @@ function CmsLegacyRedirect() {
   return <Navigate to={`${PATHS.MASTER_DATA}?${nextParams.toString()}`} replace />
 }
 
+function FrontOfficeLegacyRedirect({ legacyRoute }) {
+  const tab = FRONT_OFFICE_LEGACY_TAB_REDIRECTS[legacyRoute] || FRONT_OFFICE_LEGACY_TAB_REDIRECTS.frontoffice
+  return <Navigate to={`${PATHS.FRONT_OFFICE}?tab=${tab}`} replace />
+}
+
 export default function AppRoutes({
   role, isAdmin, userName, userId, company, privileges, modulesEnabled, loadCompany,
   openReservation, openFrontOfficeReservation, startReservation,
 }) {
   const visibleReservationTabs = getVisibleReservationTabs({ role, isAdmin, privileges })
+  const hasFrontOfficeAccess = (
+    can(role, 'dashboard', privileges) ||
+    can(role, 'nightaudit', privileges) ||
+    can(role, 'facilities', privileges)
+  )
+  const frontOfficeModuleEnabled = (
+    isModuleEnabled('frontoffice', modulesEnabled, role) ||
+    isModuleEnabled('nightaudit', modulesEnabled, role) ||
+    isModuleEnabled('facilities', modulesEnabled, role)
+  )
+  const frontOfficeElement = frontOfficeModuleEnabled && hasFrontOfficeAccess ? (
+    <SaasModuleFrame moduleId="frontoffice" company={company} role={role} userName={userName}>
+      <FrontOfficePage openReservation={openFrontOfficeReservation} userName={userName} role={role} isAdmin={isAdmin} company={company} privileges={privileges} />
+    </SaasModuleFrame>
+  ) : (
+    <Navigate to={firstAccessiblePath(role, privileges, modulesEnabled)} replace />
+  )
+  const frontOfficeReservationElement = frontOfficeModuleEnabled && hasFrontOfficeAccess ? (
+    <SaasModuleFrame moduleId="frontoffice" company={company} role={role} userName={userName}>
+      <FrontOfficeReservationRoute userName={userName} role={role} isAdmin={isAdmin} />
+    </SaasModuleFrame>
+  ) : (
+    <Navigate to={firstAccessiblePath(role, privileges, modulesEnabled)} replace />
+  )
 
   return (
     <Routes>
       <Route path={PATHS.ROOT} element={<Navigate to={PATHS.FRONT_OFFICE} replace />} />
 
       {/* Front Office — unified AEDS v2 module page */}
-      <Route path={PATHS.FRONT_OFFICE} element={
-        <SaasModuleRoute moduleId="frontoffice" role={role} navId="dashboard" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <FrontOfficePage openReservation={openFrontOfficeReservation} userName={userName} role={role} isAdmin={isAdmin} company={company} privileges={privileges} />
-        </SaasModuleRoute>
-      } />
+      <Route path={PATHS.FRONT_OFFICE} element={frontOfficeElement} />
 
       {/* Dashboard / frontoffice legacy routes */}
+      <Route path={PATHS.DASHBOARD} element={<FrontOfficeLegacyRedirect legacyRoute="dashboard" />} />
+      <Route path={PATHS.FRONTOFFICE} element={<FrontOfficeLegacyRedirect legacyRoute="frontoffice" />} />
       <Route path={PATHS.DASHBOARD} element={
         <SaasModuleRoute moduleId="frontoffice" role={role} navId="dashboard" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
           <DashboardPage openReservation={openFrontOfficeReservation} userName={userName} role={role} isAdmin={isAdmin} company={company} />
@@ -126,9 +153,7 @@ export default function AppRoutes({
         </SaasModuleRoute>
       } />
       <Route path={PATHS.FRONTOFFICE_RESERVATION_DETAIL} element={
-        <SaasModuleRoute moduleId="frontoffice" role={role} navId="dashboard" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <FrontOfficeReservationRoute userName={userName} role={role} isAdmin={isAdmin} />
-        </SaasModuleRoute>
+        frontOfficeReservationElement
       } />
 
       {/* Legacy routes — redirect to unified tab page for backward compatibility */}
@@ -139,9 +164,7 @@ export default function AppRoutes({
 
       {/* Front Office */}
       <Route path={PATHS.NIGHTAUDIT} element={
-        <SaasModuleRoute moduleId="nightaudit" role={role} navId="nightaudit" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <NightAudit userName={userName} isAdmin={isAdmin} role={role} />
-        </SaasModuleRoute>
+        <FrontOfficeLegacyRedirect legacyRoute="nightaudit" />
       } />
       <Route path={PATHS.HOUSEKEEPING} element={
         <SaasModuleRoute moduleId="housekeeping" role={role} navId="housekeeping" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
@@ -149,9 +172,7 @@ export default function AppRoutes({
         </SaasModuleRoute>
       } />
       <Route path={PATHS.FACILITIES} element={
-        <SaasModuleRoute moduleId="facilities" role={role} navId="facilities" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <Facilities userName={userName} isAdmin={isAdmin} />
-        </SaasModuleRoute>
+        <FrontOfficeLegacyRedirect legacyRoute="facilities" />
       } />
 
       {/* Restaurant */}
