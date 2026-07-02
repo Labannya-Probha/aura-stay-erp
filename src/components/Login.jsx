@@ -187,7 +187,7 @@ export default function Login({ slug }) {
             </div>
 
             <p className="text-sm font-medium text-white/45">
-              © 2026 {brandName} · Enterprise ERP
+              © 2026 Aura Stay ERP | Powered by <b>Aura Stay</b>
             </p>
           </div>
         </aside>
@@ -311,13 +311,9 @@ export default function Login({ slug }) {
 
               <div className="mt-7 flex items-center justify-center gap-2 text-xs font-medium text-slate-500">
                 <Shield size={14} />
-                Tenant: {tenantSlug} · Secure multi-tenant ERP access
+                Secure multi-tenant ERP access
               </div>
-            </div>
-
-            <p className="mt-7 text-center text-sm font-medium text-white/75">
-              © 2026 {brandName} · Powered by {softwareName}
-            </p>
+            </div>           
           </div>
         </section>
       </section>
