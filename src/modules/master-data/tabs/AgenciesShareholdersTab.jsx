@@ -19,13 +19,14 @@ export default function AgenciesShareholdersTab({ role, isAdmin }) {
 
   return (
     <div className="space-y-3">
-      <div className="inline-flex rounded-lg border border-leaf bg-white p-1">
+      <div role="group" aria-label="Select entity" className="inline-flex rounded-lg border border-leaf bg-white p-1">
         {ENTITY_OPTIONS.map((option) => {
           const active = option.id === entity
           return (
             <button
               key={option.id}
               type="button"
+              aria-pressed={active}
               onClick={() => setEntity(option.id)}
               className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                 active

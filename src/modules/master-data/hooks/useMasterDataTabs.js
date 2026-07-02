@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   DEFAULT_MASTER_DATA_TAB,
@@ -13,7 +14,16 @@ const normalizeTab = (value) => {
 
 export function useMasterDataTabs() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = normalizeTab(searchParams.get('tab'))
+  const rawTab = searchParams.get('tab')
+  const activeTab = normalizeTab(rawTab)
+
+  useEffect(() => {
+    if (rawTab !== activeTab) {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.set('tab', activeTab)
+      setSearchParams(nextParams, { replace: true })
+    }
+  }, [rawTab, activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setActiveTab = (tabId) => {
     const next = normalizeTab(tabId)
