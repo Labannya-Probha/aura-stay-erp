@@ -1,289 +1,313 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
-import { Eye, EyeOff, Shield, LogIn } from 'lucide-react'
+import { Eye, EyeOff, LogIn, Shield } from 'lucide-react'
 
-// Hardcoded fallback — used if the slug lookup fails or no slug is given
-const FALLBACK_LOGO     = null
-const FALLBACK_NAME     = 'Aura Stay'
-const FALLBACK_SOFTWARE = 'Aura Stay ERP'
+const DEFAULT_SLUG = import.meta.env.VITE_DEFAULT_SLUG || 'demo'
 
-// Default slug when accessing the root domain (www.erp.aurastay.bd with no path).
-// Set VITE_DEFAULT_SLUG in your .env (see .env.example) to override.
-const DEFAULT_SLUG = import.meta.env.VITE_DEFAULT_SLUG || 'novemecoresort'
-
-// Fallback background image shown while the video loads or if no video is configured
-const FALLBACK_POSTER = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1920&q=80'
-const DEFAULT_LOGIN_VIDEO_URL = 'https://gwllsoembqacolzfrquu.supabase.co/storage/v1/object/public/branding/Aura_Stay_ERP_er_jonno_Hotel_R.mp4'
+const FALLBACK = {
+  name: 'Aura Stay',
+  software: 'Aura Stay ERP',
+  logo: null,
+  poster:
+    'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1920&q=80',
+  video:
+    'https://gwllsoembqacolzfrquu.supabase.co/storage/v1/object/public/branding/Aura_Stay_ERP_er_jonno_Hotel_R.mp4',
+}
 
 export default function Login({ slug }) {
-  const [email,        setEmail]        = useState('')
-  const [password,     setPassword]     = useState('')
-  const [tenantCode,   setTenantCode]   = useState(slug || DEFAULT_SLUG)
-  const [rememberMe,   setRememberMe]   = useState(false)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [tenantCode, setTenantCode] = useState(slug || DEFAULT_SLUG)
   const [showPassword, setShowPassword] = useState(false)
-  const [err,          setErr]          = useState('')
-  const [busy,         setBusy]         = useState(false)
-  const [company,      setCompany]      = useState(null)
-  const [property,     setProperty]     = useState(null)
-  const [resolvedSlug, setResolvedSlug] = useState(slug || DEFAULT_SLUG)
-  const [imgFailed,    setImgFailed]    = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [tenant, setTenant] = useState(null)
+  const [company, setCompany] = useState(null)
+  const [logoFailed, setLogoFailed] = useState(false)
 
-  // Effective slug: use URL slug if present, otherwise fall back to default property
-  const effectiveSlug = slug || DEFAULT_SLUG
+  const effectiveSlug = useMemo(() => {
+    return String(slug || DEFAULT_SLUG).trim().toLowerCase()
+  }, [slug])
 
   useEffect(() => {
-    setImgFailed(false)
-    setProperty(null)
-    setCompany(null)
-    setResolvedSlug(effectiveSlug)
-    setTenantCode(effectiveSlug)
+    let alive = true
 
-    const loadProperty = async (slugToTry) => {
-      const { data: prop } = await supabase
+    async function loadTenant() {
+      setErr('')
+      setLogoFailed(false)
+      setTenant(null)
+      setCompany(null)
+      setTenantCode(effectiveSlug)
+
+      const { data: property } = await supabase
         .from('properties')
         .select('id, slug, name, is_active')
-        .eq('slug', slugToTry)
+        .eq('slug', effectiveSlug)
         .maybeSingle()
 
-      if (prop?.is_active) {
-        setProperty(prop)
-        setResolvedSlug(prop.slug)
-        const { data: cs } = await supabase
-          .from('company_settings')
-          .select('logo_url, name, software_name, login_background_video_url')
-          .eq('tenant_id', prop.id)
+      let finalProperty = property?.is_active ? property : null
+
+      if (!finalProperty && effectiveSlug !== DEFAULT_SLUG) {
+        const { data: fallbackProperty } = await supabase
+          .from('properties')
+          .select('id, slug, name, is_active')
+          .eq('slug', DEFAULT_SLUG)
           .maybeSingle()
-        if (cs) setCompany(cs)
-        return
+
+        if (fallbackProperty?.is_active) finalProperty = fallbackProperty
       }
 
-      // If the explicit slug wasn't found, fall back to the default property
-      if (slugToTry !== DEFAULT_SLUG) {
-        loadProperty(DEFAULT_SLUG)
+      if (!alive) return
+
+      if (finalProperty) {
+        setTenant(finalProperty)
+        setTenantCode(finalProperty.slug)
+
+        const { data: settings } = await supabase
+          .from('company_settings')
+          .select(
+            'name, software_name, logo_url, login_background_video_url, login_background_poster_url'
+          )
+          .eq('tenant_id', finalProperty.id)
+          .maybeSingle()
+
+        if (alive) setCompany(settings || null)
       }
-      // If DEFAULT_SLUG also fails, the login form shows with fallback branding
     }
 
-    loadProperty(effectiveSlug)
+    loadTenant()
+
+    return () => {
+      alive = false
+    }
   }, [effectiveSlug])
 
-  const signIn = async () => {
-    setBusy(true); setErr('')
+  const brandName = company?.name || tenant?.name || FALLBACK.name
+  const softwareName = company?.software_name || FALLBACK.software
+  const logoUrl = company?.logo_url || FALLBACK.logo
+  const videoUrl = company?.login_background_video_url || FALLBACK.video
+  const posterUrl = company?.login_background_poster_url || FALLBACK.poster
+  const tenantSlug = tenantCode.trim().toLowerCase() || tenant?.slug || effectiveSlug || DEFAULT_SLUG
+
+  async function signIn() {
+    setBusy(true)
+    setErr('')
+
     try {
-      const uname = email.trim().toLowerCase()
-      if (!uname) throw new Error('Enter your email or username')
-      const slugToUse = tenantCode.trim() || resolvedSlug
-      const { data: resolvedEmail, error: re } = await supabase.rpc('email_for_username', {
-        p_username: uname,
-        p_slug:     slugToUse,
+      const input = username.trim().toLowerCase()
+
+      if (!input) throw new Error('Enter your username or email')
+      if (!password) throw new Error('Enter your password')
+      if (!tenantSlug) throw new Error('Enter property / tenant code')
+
+      const { data: resolvedEmail, error: rpcError } = await supabase.rpc(
+        'email_for_username',
+        {
+          p_username: input,
+          p_slug: tenantSlug,
+        }
+      )
+
+      if (rpcError) throw rpcError
+      if (!resolvedEmail) throw new Error('No active account found for this tenant')
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: resolvedEmail,
+        password,
       })
-      if (re) throw re
-      if (!resolvedEmail) throw new Error('No active account found for this username')
-      const { error } = await supabase.auth.signInWithPassword({ email: resolvedEmail, password })
+
       if (error) throw new Error('Wrong username or password')
-    } catch (e) { setErr(e.message) }
-    setBusy(false)
+    } catch (e) {
+      setErr(e.message || 'Unable to sign in')
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const logoUrl = company?.logo_url || FALLBACK_LOGO
-  const videoUrl = company?.login_background_video_url || DEFAULT_LOGIN_VIDEO_URL
-  const brandName = company?.name || property?.name || FALLBACK_NAME
-  const softwareName = company?.software_name || FALLBACK_SOFTWARE
-
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center overflow-hidden bg-[#0a2614]">
-
-      {/* ── Video background ── */}
+    <main className="relative min-h-screen overflow-hidden bg-slate-950">
       <video
         autoPlay
         loop
         muted
         playsInline
-        poster={FALLBACK_POSTER}
-        className="absolute inset-0 w-full h-full object-cover"
-        aria-hidden="true"
+        poster={posterUrl}
+        className="absolute inset-0 h-full w-full object-cover"
       >
         <source src={videoUrl} type="video/mp4" />
       </video>
 
-      {/* ── Dark overlay ── */}
-      <div
-        className="absolute inset-0"
-        style={{ background: 'linear-gradient(135deg, rgba(10,38,20,0.88) 0%, rgba(27,77,46,0.78) 50%, rgba(13,32,32,0.90) 100%)' }}
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/85 via-teal-950/70 to-slate-950/90" />
+      <div className="absolute inset-0 backdrop-blur-[2px]" />
 
-      {/* ── Login card ── */}
-      <div className="relative z-10 w-full max-w-md mx-4 sm:mx-auto animate-fade-in-up">
-
-        {/* Logo + title above the card */}
-        <div className="flex flex-col items-center mb-7">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-xl ring-1 ring-white/20 overflow-hidden"
-            style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)' }}
-          >
-            {!imgFailed && logoUrl ? (
-              <img
-                src={logoUrl}
-                alt="Aura Stay logo"
-                className="w-full h-full object-contain"
-                onError={() => setImgFailed(true)}
-              />
-            ) : (
-              <span className="text-3xl font-extrabold text-white select-none">A</span>
-            )}
-          </div>
-          <span className="text-white font-bold text-2xl tracking-tight">{brandName}</span>
-          <span className="mt-1 text-sm text-white/65">{softwareName}</span>
-        </div>
-
-        {/* Glassmorphism card */}
-        <div
-          className="relative overflow-hidden rounded-3xl border border-white/20 shadow-[0_32px_80px_rgba(0,0,0,0.45)]"
-          style={{ background: 'rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}
-        >
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            poster={FALLBACK_POSTER}
-            className="absolute inset-0 h-full w-full object-cover opacity-30"
-            aria-hidden="true"
-          >
-            <source src={videoUrl} type="video/mp4" />
-          </video>
-          <div
-            className="absolute inset-0"
-            style={{ background: 'linear-gradient(180deg, rgba(10,38,20,0.58) 0%, rgba(10,38,20,0.78) 55%, rgba(10,38,20,0.88) 100%)' }}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 p-8">
-            <h2 className="text-white font-bold text-xl mb-2 leading-tight">
-              Sign in to {softwareName}
-            </h2>
-            <p className="mb-6 text-sm text-white/65">
-              Access your property dashboard securely.
-            </p>
-
-            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); signIn() }}>
-
-              {/* Property / Tenant Code */}
-              <div className="space-y-1.5">
-                <label htmlFor="login-tenant" className="block text-xs font-semibold text-white/60 uppercase tracking-widest">
-                  Property / Tenant Code
-                </label>
-                <input
-                  id="login-tenant"
-                  type="text"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  autoComplete="organization"
-                  value={tenantCode}
-                  onChange={(e) => setTenantCode(e.target.value)}
-                  placeholder="Enter property or tenant code"
-                  className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/35 text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/70 focus:border-transparent transition-all"
-                />
-              </div>
-
-              {/* Email / Username */}
-              <div className="space-y-1.5">
-                <label htmlFor="login-email" className="block text-xs font-semibold text-white/60 uppercase tracking-widest">
-                  Email / Username
-                </label>
-                <input
-                  id="login-email"
-                  type="text"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  autoComplete="username email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email or username"
-                  className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/35 text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/70 focus:border-transparent transition-all"
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-1.5">
-                <label htmlFor="login-password" className="block text-xs font-semibold text-white/60 uppercase tracking-widest">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="login-password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/35 text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/70 focus:border-transparent transition-all pr-10"
+      <section className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-2">
+        <aside className="hidden lg:flex flex-col justify-between border-r border-white/10 bg-white/[0.06] p-14 backdrop-blur-xl">
+          <div>
+            <div className="flex items-center gap-4">
+              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/15 shadow-lg">
+                {!logoFailed && logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={brandName}
+                    className="h-full w-full object-contain"
+                    onError={() => setLogoFailed(true)}
                   />
-                  <button
-                    type="button"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    aria-pressed={showPassword}
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
-                </div>
+                ) : (
+                  <span className="text-3xl font-black text-white">A</span>
+                )}
               </div>
 
-              {/* Remember me + Forgot password */}
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    id="login-remember"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-white/30 bg-white/10 cursor-pointer accent-[#2E7D32]"
-                  />
-                  <span className="text-sm text-white/65">Remember me</span>
-                </label>
-                <button
-                  type="button"
-                  className="text-sm text-white/65 hover:text-white transition-colors underline underline-offset-2 decoration-white/30 hover:decoration-white/70"
-                >
-                  Forgot password?
-                </button>
+              <div>
+                <h1 className="text-2xl font-bold text-white">{softwareName}</h1>
+                <p className="text-white/65">{brandName}</p>
               </div>
+            </div>
 
-              {/* Error */}
-              {err && (
-                <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-300 flex items-start gap-2">
-                  <span className="shrink-0 mt-px" aria-hidden="true">⚠</span>
-                  <span role="alert">{err}</span>
-                </div>
-              )}
+            <div className="mt-28 max-w-xl">
+              <h2 className="text-5xl font-black leading-tight tracking-tight text-white">
+                Hospitality
+                <br />
+                management,
+                <br />
+                simplified.
+              </h2>
 
-              {/* Sign In */}
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-200 shadow-lg disabled:opacity-55 disabled:cursor-not-allowed mt-1"
-                style={{ background: busy || !email || !password ? undefined : 'linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%)' }}
-                disabled={busy || !email || !password}
-              >
-                <LogIn size={16} aria-hidden="true" />
-                {busy ? 'Signing in…' : 'Sign In'}
-              </button>
-            </form>
+              <p className="mt-8 max-w-md text-xl leading-8 text-white/70">
+                A complete ERP platform for hotels, resorts and hospitality groups —
+                from reservations to accounting.
+              </p>
 
-            {/* Security note */}
-            <div className="mt-6 flex items-center justify-center gap-1.5 text-white/35 text-xs">
-              <Shield size={12} aria-hidden="true" />
-              <span>Secure multi-tenant ERP access</span>
+              <div className="mt-12 flex flex-wrap gap-3">
+                {['Front Office', 'Reservations', 'Accounting', 'HR & Payroll', 'Reports'].map(
+                  item => (
+                    <span
+                      key={item}
+                      className="rounded-full border border-white/15 bg-white/10 px-5 py-2 text-sm font-semibold text-white/85 backdrop-blur-md"
+                    >
+                      {item}
+                    </span>
+                  )
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Footer */}
-        <p className="mt-5 text-center text-xs text-white/25">
-          © 2026 Aura Stay{'  ·  '}Powered by Aura Stay ERP
-        </p>
-      </div>
-    </div>
+          <p className="text-sm text-white/45">© 2026 {brandName} · Enterprise ERP</p>
+        </aside>
+
+        <section className="flex items-center justify-center px-5 py-10">
+          <div className="w-full max-w-xl">
+            <div className="rounded-[2rem] border border-white/25 bg-white/15 p-8 shadow-2xl backdrop-blur-2xl">
+              <div className="mb-8 flex items-center gap-3 lg:hidden">
+                <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-white/20 text-xl font-black text-white">
+                  {!logoFailed && logoUrl ? (
+                    <img
+                      src={logoUrl}
+                      alt={brandName}
+                      className="h-full w-full object-contain"
+                      onError={() => setLogoFailed(true)}
+                    />
+                  ) : (
+                    'A'
+                  )}
+                </div>
+
+                <div>
+                  <h1 className="font-bold text-white">{softwareName}</h1>
+                  <p className="text-sm text-white/60">{brandName}</p>
+                </div>
+              </div>
+
+              <h2 className="text-3xl font-black text-white">Welcome back</h2>
+              <p className="mt-2 text-white/65">Sign in to your account to continue</p>
+
+              <form
+                className="mt-8 space-y-5"
+                onSubmit={e => {
+                  e.preventDefault()
+                  signIn()
+                }}
+              >
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-white/70">
+                    Username
+                  </label>
+                  <input
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    placeholder="demo"
+                    autoComplete="username"
+                    className="w-full rounded-2xl border border-white/25 bg-white/20 px-5 py-4 text-white placeholder-white/45 outline-none backdrop-blur-md transition focus:border-white/60 focus:bg-white/25"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-white/70">
+                    Password
+                  </label>
+
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      className="w-full rounded-2xl border border-white/25 bg-white/20 px-5 py-4 pr-12 text-white placeholder-white/45 outline-none backdrop-blur-md transition focus:border-white/60 focus:bg-white/25"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/55 hover:text-white"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-white/70">
+                    Property / Tenant Code
+                  </label>
+                  <input
+                    value={tenantCode}
+                    onChange={e => setTenantCode(e.target.value)}
+                    placeholder="demo"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    autoComplete="organization"
+                    className="w-full rounded-2xl border border-white/25 bg-white/20 px-5 py-4 text-white placeholder-white/45 outline-none backdrop-blur-md transition focus:border-white/60 focus:bg-white/25"
+                  />
+                </div>
+
+                {err && (
+                  <div className="rounded-2xl border border-red-300/30 bg-red-500/15 px-4 py-3 text-sm text-red-100">
+                    {err}
+                  </div>
+                )}
+
+                <button
+                  disabled={busy || !username || !password || !tenantCode}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-700 px-5 py-4 font-bold text-white shadow-xl shadow-teal-950/30 transition hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <LogIn size={19} />
+                  {busy ? 'Signing in…' : 'Sign in'}
+                </button>
+              </form>
+
+              <div className="mt-7 flex items-center justify-center gap-2 text-xs text-white/45">
+                <Shield size={14} />
+                Tenant: {tenantSlug} · Secure multi-tenant ERP access
+              </div>
+            </div>
+
+            <p className="mt-7 text-center text-sm text-white/45">
+              © 2026 {brandName} · Powered by {softwareName}
+            </p>
+          </div>
+        </section>
+      </section>
+    </main>
   )
 }
