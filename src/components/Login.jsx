@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
-import { Eye, EyeOff, LogIn, Shield } from 'lucide-react'
+import { Eye, EyeOff, LogIn, Shield, Loader2 } from 'lucide-react'
 
 const DEFAULT_SLUG = import.meta.env.VITE_DEFAULT_SLUG || 'demo'
 
-const FALLBACK = {
+const FALLBACK_BRAND = {
+  tenantId: null,
+  slug: DEFAULT_SLUG,
   name: 'Aura Stay',
   software: 'Aura Stay ERP',
   logo: null,
@@ -12,113 +14,170 @@ const FALLBACK = {
     'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1920&q=80',
   video:
     'https://gwllsoembqacolzfrquu.supabase.co/storage/v1/object/public/branding/Aura_Stay_ERP_er_jonno_Hotel_R.mp4',
+  themeColor: '#0F766E',
+  loginTitle: 'Welcome back',
+  loginSubtitle: 'Sign in to your account to continue',
 }
 
-export default function Login({ slug }) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [tenantCode, setTenantCode] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
+function cleanSlug(value) {
+  return String(value || DEFAULT_SLUG).trim().toLowerCase()
+}
 
-  const [brand, setBrand] = useState({
-    tenantId: null,
-    slug: DEFAULT_SLUG,
-    name: FALLBACK.name,
-    software: FALLBACK.software,
-    logo: FALLBACK.logo,
-    poster: FALLBACK.poster,
-    video: FALLBACK.video,
-  })
-
-  const [brandLoading, setBrandLoading] = useState(true)
-  const [logoFailed, setLogoFailed] = useState(false)
-  const [videoReady, setVideoReady] = useState(false)
-
-  const routeSlug = useMemo(() => {
-    return String(slug || DEFAULT_SLUG).trim().toLowerCase()
-  }, [slug])
+function useTenantBrand(routeSlug) {
+  const [brand, setBrand] = useState(FALLBACK_BRAND)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
 
-    async function loadBrand() {
-      setBrandLoading(true)
-      setLogoFailed(false)
-      setVideoReady(false)
-      setErr('')
+    async function load() {
+      setLoading(true)
 
-      let finalProperty = null
+      let property = null
 
-      const { data: property } = await supabase
+      const { data: found } = await supabase
         .from('properties')
         .select('id, slug, name, is_active')
         .eq('slug', routeSlug)
         .maybeSingle()
 
-      if (property?.is_active) {
-        finalProperty = property
-      }
+      if (found?.is_active) property = found
 
-      if (!finalProperty && routeSlug !== DEFAULT_SLUG) {
+      if (!property && routeSlug !== DEFAULT_SLUG) {
         const { data: fallbackProperty } = await supabase
           .from('properties')
           .select('id, slug, name, is_active')
           .eq('slug', DEFAULT_SLUG)
           .maybeSingle()
 
-        if (fallbackProperty?.is_active) {
-          finalProperty = fallbackProperty
-        }
+        if (fallbackProperty?.is_active) property = fallbackProperty
       }
 
       if (!alive) return
 
-      if (!finalProperty) {
-        setTenantCode(routeSlug)
-        setBrand(prev => ({
-          ...prev,
-          slug: routeSlug,
-        }))
-        setBrandLoading(false)
+      if (!property) {
+        setBrand({ ...FALLBACK_BRAND, slug: routeSlug })
+        setLoading(false)
         return
       }
 
       const { data: settings } = await supabase
         .from('company_settings')
-        .select(
-          'name, software_name, logo_url, login_background_video_url, login_background_poster_url'
-        )
-        .eq('tenant_id', finalProperty.id)
+        .select(`
+          name,
+          software_name,
+          logo_url,
+          login_background_video_url,
+          login_background_poster_url,
+          login_theme_color,
+          login_title,
+          login_subtitle
+        `)
+        .eq('tenant_id', property.id)
         .maybeSingle()
 
       if (!alive) return
 
-      const nextBrand = {
-        tenantId: finalProperty.id,
-        slug: finalProperty.slug,
-        name: settings?.name || finalProperty.name || FALLBACK.name,
-        software: settings?.software_name || FALLBACK.software,
-        logo: settings?.logo_url || FALLBACK.logo,
-        poster: settings?.login_background_poster_url || FALLBACK.poster,
-        video: settings?.login_background_video_url || FALLBACK.video,
-      }
+      setBrand({
+        tenantId: property.id,
+        slug: property.slug,
+        name: settings?.name || property.name || FALLBACK_BRAND.name,
+        software: settings?.software_name || FALLBACK_BRAND.software,
+        logo: settings?.logo_url || FALLBACK_BRAND.logo,
+        poster: settings?.login_background_poster_url || FALLBACK_BRAND.poster,
+        video: settings?.login_background_video_url || FALLBACK_BRAND.video,
+        themeColor: settings?.login_theme_color || FALLBACK_BRAND.themeColor,
+        loginTitle: settings?.login_title || FALLBACK_BRAND.loginTitle,
+        loginSubtitle: settings?.login_subtitle || FALLBACK_BRAND.loginSubtitle,
+      })
 
-      setBrand(nextBrand)
-      setTenantCode(finalProperty.slug)
-      setBrandLoading(false)
+      setLoading(false)
     }
 
-    loadBrand()
+    load()
 
     return () => {
       alive = false
     }
   }, [routeSlug])
 
-  const tenantSlug =
-    tenantCode.trim().toLowerCase() || brand.slug || routeSlug || DEFAULT_SLUG
+  return { brand, loading }
+}
+
+function usePreloadImage(src) {
+  const [ready, setReady] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    setReady(false)
+    setFailed(false)
+
+    if (!src) return
+
+    let alive = true
+    const image = new Image()
+
+    image.onload = () => {
+      if (alive) setReady(true)
+    }
+
+    image.onerror = () => {
+      if (alive) setFailed(true)
+    }
+
+    image.src = src
+
+    return () => {
+      alive = false
+    }
+  }, [src])
+
+  return { ready, failed }
+}
+
+function BrandLogo({ brand, ready, failed, compact = false }) {
+  return (
+    <div
+      className={[
+        'flex shrink-0 items-center justify-center overflow-hidden border border-white/20 shadow-lg backdrop-blur-xl',
+        compact
+          ? 'h-12 w-12 rounded-xl bg-emerald-950 text-xl'
+          : 'h-14 w-14 rounded-2xl bg-white/15 text-2xl',
+      ].join(' ')}
+    >
+      {brand.logo && ready && !failed ? (
+        <img
+          key={brand.logo}
+          src={brand.logo}
+          alt={brand.name}
+          className="h-full w-full object-contain"
+        />
+      ) : (
+        <span className="font-black text-white">A</span>
+      )}
+    </div>
+  )
+}
+
+export default function Login({ slug }) {
+  const routeSlug = useMemo(() => cleanSlug(slug), [slug])
+  const { brand, loading } = useTenantBrand(routeSlug)
+  const logo = usePreloadImage(brand.logo)
+
+  const [tenantCode, setTenantCode] = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [videoReady, setVideoReady] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  useEffect(() => {
+    setTenantCode(brand.slug || routeSlug)
+    setVideoReady(false)
+  }, [brand.slug, routeSlug, brand.video])
+
+  const tenantSlug = cleanSlug(tenantCode || brand.slug || routeSlug)
 
   async function signIn() {
     setBusy(true)
@@ -131,7 +190,7 @@ export default function Login({ slug }) {
       if (!password) throw new Error('Enter your password')
       if (!tenantSlug) throw new Error('Enter property / tenant code')
 
-      const { data: resolvedEmail, error: rpcError } = await supabase.rpc(
+      const { data: email, error: rpcError } = await supabase.rpc(
         'email_for_username',
         {
           p_username: input,
@@ -140,70 +199,44 @@ export default function Login({ slug }) {
       )
 
       if (rpcError) throw rpcError
-      if (!resolvedEmail) throw new Error('No active account found for this tenant')
+      if (!email) throw new Error('No active account found for this tenant')
 
       const { error } = await supabase.auth.signInWithPassword({
-        email: resolvedEmail,
+        email,
         password,
       })
 
       if (error) throw new Error('Wrong username or password')
-    } catch (e) {
-      setErr(e.message || 'Unable to sign in')
+    } catch (error) {
+      setErr(error.message || 'Unable to sign in')
     } finally {
       setBusy(false)
     }
   }
 
-  function BrandLogo({ mobile = false }) {
-    return (
-      <div
-        className={
-          mobile
-            ? 'flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-emerald-900 text-xl font-black text-white'
-            : 'flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/15 shadow-lg backdrop-blur-xl'
-        }
-      >
-        {!brandLoading && !logoFailed && brand.logo ? (
-          <img
-            key={brand.logo}
-            src={brand.logo}
-            alt={brand.name}
-            className="h-full w-full object-contain"
-            onError={() => setLogoFailed(true)}
-          />
-        ) : (
-          <span className={mobile ? 'text-xl font-black' : 'text-2xl font-black'}>
-            A
-          </span>
-        )}
-      </div>
-    )
-  }
-
   return (
-    <main className="min-h-screen bg-slate-950">
-      <section className="grid min-h-screen grid-cols-1 lg:grid-cols-[430px_1fr] xl:grid-cols-[500px_1fr]">
-        <aside className="relative hidden min-h-screen overflow-hidden bg-emerald-950 lg:flex">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 via-emerald-950 to-slate-950" />
-          <div className="absolute inset-0 bg-black/15" />
+    <main className="min-h-screen bg-[#031713] text-slate-950">
+      <section className="grid min-h-screen grid-cols-1 lg:grid-cols-[480px_1fr]">
+        <aside className="relative hidden min-h-screen overflow-hidden lg:flex">
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(135deg, ${brand.themeColor} 0%, #06372f 48%, #020b12 100%)`,
+            }}
+          />
+          <div className="absolute inset-0 bg-black/18" />
 
-          <div className="relative z-10 flex min-h-screen w-full flex-col justify-between px-12 py-12 xl:px-14">
+          <div className="relative z-10 flex min-h-screen w-full flex-col justify-between px-14 py-12">
             <div className="flex items-center gap-4">
-              <BrandLogo />
-
+              <BrandLogo brand={brand} ready={logo.ready} failed={logo.failed} />
               <div>
-                <h1 className="text-xl font-black text-white">
-                  {brand.software}
-                </h1>
-                <p className="text-sm font-medium text-white/65">
-                  {brand.name}
-                </p>
+                <h1 className="text-xl font-black text-white">{brand.software}</h1>
+                <p className="text-sm font-medium text-white/65">{brand.name}</p>
               </div>
             </div>
 
             <div>
-              <h2 className="text-[44px] font-black leading-[1.12] tracking-tight text-white xl:text-[52px]">
+              <h2 className="text-[52px] font-black leading-[1.1] tracking-tight text-white">
                 Hospitality
                 <br />
                 management,
@@ -211,26 +244,22 @@ export default function Login({ slug }) {
                 simplified.
               </h2>
 
-              <p className="mt-8 max-w-[390px] text-[17px] leading-8 text-white/70">
+              <p className="mt-8 max-w-[390px] text-[17px] leading-8 text-white/72">
                 A complete ERP platform for hotels, resorts and hospitality groups —
                 from reservations to accounting.
               </p>
 
               <div className="mt-10 flex max-w-[390px] flex-wrap gap-2">
-                {[
-                  'Front Office',
-                  'Reservations',
-                  'Accounting',
-                  'HR & Payroll',
-                  'Reports',
-                ].map(item => (
-                  <span
-                    key={item}
-                    className="rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[12px] font-bold text-white/90 backdrop-blur-xl"
-                  >
-                    {item}
-                  </span>
-                ))}
+                {['Front Office', 'Reservations', 'Accounting', 'HR & Payroll', 'Reports'].map(
+                  item => (
+                    <span
+                      key={item}
+                      className="rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[12px] font-bold text-white/90 backdrop-blur-xl"
+                    >
+                      {item}
+                    </span>
+                  )
+                )}
               </div>
             </div>
 
@@ -242,53 +271,53 @@ export default function Login({ slug }) {
 
         <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-10">
           <div
-            className="absolute inset-0 bg-cover bg-center transition-opacity duration-700"
+            className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${brand.poster})` }}
           />
 
-          {!brandLoading && brand.video && (
+          {!loading && brand.video && (
             <video
               key={brand.video}
               autoPlay
-              loop
               muted
+              loop
               playsInline
-              preload="auto"
+              preload="metadata"
               poster={brand.poster}
               onCanPlay={() => setVideoReady(true)}
+              onLoadedData={() => setVideoReady(true)}
               onError={() => setVideoReady(false)}
-              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
-                videoReady ? 'opacity-100' : 'opacity-0'
-              }`}
+              className={[
+                'absolute inset-0 h-full w-full object-cover transition-opacity duration-1000',
+                videoReady ? 'opacity-100' : 'opacity-0',
+              ].join(' ')}
             >
               <source src={brand.video} type="video/mp4" />
             </video>
           )}
 
-          <div className="absolute inset-0 bg-slate-950/40" />
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-950/35 via-transparent to-emerald-950/45" />
+          <div className="absolute inset-0 bg-black/25" />
+          <div className="absolute inset-0 bg-gradient-to-br from-black/25 via-transparent to-emerald-950/40" />
 
-          <div className="relative z-10 w-full max-w-[490px]">
-            <div className="rounded-[28px] border border-white/55 bg-white/82 p-8 shadow-2xl backdrop-blur-2xl">
+          <div className="relative z-10 w-full max-w-[460px] animate-[loginFloat_.65s_ease-out]">
+            <div className="rounded-[30px] border border-white/55 bg-white/84 p-8 shadow-[0_30px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl">
               <div className="mb-8 flex items-center gap-3 lg:hidden">
-                <BrandLogo mobile />
-
+                <BrandLogo
+                  compact
+                  brand={brand}
+                  ready={logo.ready}
+                  failed={logo.failed}
+                />
                 <div>
-                  <h1 className="font-black text-slate-950">
-                    {brand.software}
-                  </h1>
-                  <p className="text-sm text-slate-500">
-                    {brand.name}
-                  </p>
+                  <h1 className="font-black text-slate-950">{brand.software}</h1>
+                  <p className="text-sm text-slate-500">{brand.name}</p>
                 </div>
               </div>
 
               <h2 className="text-3xl font-black text-slate-950">
-                Welcome back
+                {brand.loginTitle}
               </h2>
-              <p className="mt-2 text-slate-500">
-                Sign in to your account to continue
-              </p>
+              <p className="mt-2 text-slate-500">{brand.loginSubtitle}</p>
 
               <form
                 className="mt-8 space-y-5"
@@ -306,7 +335,7 @@ export default function Login({ slug }) {
                     onChange={e => setUsername(e.target.value)}
                     placeholder="demo"
                     autoComplete="username"
-                    className="w-full rounded-2xl border border-slate-200 bg-blue-50/85 px-5 py-4 text-slate-950 outline-none transition focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-700/10"
+                    className="w-full rounded-2xl border border-slate-200 bg-blue-50/90 px-5 py-4 text-slate-950 outline-none transition focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-700/10"
                   />
                 </div>
 
@@ -322,13 +351,13 @@ export default function Login({ slug }) {
                       onChange={e => setPassword(e.target.value)}
                       placeholder="••••••••"
                       autoComplete="current-password"
-                      className="w-full rounded-2xl border border-slate-200 bg-blue-50/85 px-5 py-4 pr-12 text-slate-950 outline-none transition focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-700/10"
+                      className="w-full rounded-2xl border border-slate-200 bg-blue-50/90 px-5 py-4 pr-12 text-slate-950 outline-none transition focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-700/10"
                     />
 
                     <button
                       type="button"
                       onClick={() => setShowPassword(v => !v)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-900"
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -346,7 +375,7 @@ export default function Login({ slug }) {
                     autoCapitalize="none"
                     autoCorrect="off"
                     autoComplete="organization"
-                    className="w-full rounded-2xl border border-slate-200 bg-blue-50/85 px-5 py-4 text-slate-950 outline-none transition focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-700/10"
+                    className="w-full rounded-2xl border border-slate-200 bg-blue-50/90 px-5 py-4 text-slate-950 outline-none transition focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-700/10"
                   />
                 </div>
 
@@ -358,9 +387,17 @@ export default function Login({ slug }) {
 
                 <button
                   disabled={busy || !username || !password || !tenantCode}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-700 px-5 py-4 font-bold text-white shadow-xl shadow-teal-950/20 transition hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ backgroundColor: brand.themeColor }}
+                  className="group flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-4 font-bold text-white shadow-xl shadow-teal-950/20 transition duration-300 hover:scale-[1.01] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
                 >
-                  <LogIn size={19} />
+                  {busy ? (
+                    <Loader2 size={19} className="animate-spin" />
+                  ) : (
+                    <LogIn
+                      size={19}
+                      className="transition group-hover:translate-x-0.5"
+                    />
+                  )}
                   {busy ? 'Signing in…' : 'Sign in'}
                 </button>
               </form>
@@ -373,6 +410,25 @@ export default function Login({ slug }) {
           </div>
         </section>
       </section>
+
+      <style>{`
+        @keyframes loginFloat {
+          from {
+            opacity: 0;
+            transform: translateY(18px) scale(.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        html,
+        body,
+        #root {
+          background: #031713;
+        }
+      `}</style>
     </main>
   )
 }
