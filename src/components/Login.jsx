@@ -84,12 +84,6 @@ export default function Login({ slug }) {
     setBusy(false)
   }
 
-  const signInWithGoogle = () =>
-    supabase.auth.signInWithOAuth({ provider: 'google' })
-
-  const signInWithMicrosoft = () =>
-    supabase.auth.signInWithOAuth({ provider: 'azure' })
-
   const logoUrl   = company?.logo_url || FALLBACK_LOGO
   const videoUrl  = company?.login_background_video_url || null
 
@@ -106,7 +100,7 @@ export default function Login({ slug }) {
         className="absolute inset-0 w-full h-full object-cover"
         aria-hidden="true"
       >
-        {videoUrl && <source src={videoUrl} type="video/mp4" />}
+        {videoUrl && <source src={https://gwllsoembqacolzfrquu.supabase.co/storage/v1/object/public/branding/Aura_Stay_ERP_er_jonno_Hotel_R.mp4} type="video/mp4" />}
       </video>
 
       {/* ── Dark overlay ── */}
