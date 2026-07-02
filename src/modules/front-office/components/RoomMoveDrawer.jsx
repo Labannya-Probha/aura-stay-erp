@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------ */
-/*  FOLIO DRAWER - shell for the existing reservation folio workflow    */
+/*  ROOM MOVE DRAWER - shell for the existing room assignment flow      */
 /* ------------------------------------------------------------------ */
-export default function FolioDrawer() {
+export default function RoomMoveDrawer() {
   return null
 }

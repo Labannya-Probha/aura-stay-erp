@@ -65,5 +65,5 @@ export function ReservationModuleRoute({ userName, role, isAdmin }) {
 export function FrontOfficeReservationRoute({ userName, role, isAdmin }) {
   const { id }   = useParams()
   const navigate = useNavigate()
-  return <Frontofficemodule id={id} back={() => navigate(PATHS.FRONTOFFICE)} userName={userName} role={role} isAdmin={isAdmin} />
+  return <Frontofficemodule id={id} back={() => navigate(PATHS.FRONT_OFFICE)} userName={userName} role={role} isAdmin={isAdmin} />
 }

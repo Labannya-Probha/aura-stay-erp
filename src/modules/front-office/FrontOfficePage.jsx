@@ -8,8 +8,12 @@ import { useFrontOfficeTabs } from './hooks/useFrontOfficeTabs'
 import { FRONT_OFFICE_TABS } from './frontOffice.config'
 import InHouseGuestsTab from './tabs/InHouseGuestsTab'
 import RoomBoardTab from './tabs/RoomBoardTab'
+import CheckInOutTab from './tabs/CheckInOutTab'
+import GuestFolioTab from './tabs/GuestFolioTab'
 import ServiceBillsTab from './tabs/ServiceBillsTab'
 import NightAuditTab from './tabs/NightAuditTab'
+import LostFoundTab from './tabs/LostFoundTab'
+import GuestMessagesTab from './tabs/GuestMessagesTab'
 import { useEffect } from 'react'
 
 export default function FrontOfficePage({
@@ -23,10 +27,7 @@ export default function FrontOfficePage({
   const { activeTab, setActiveTab } = useFrontOfficeTabs()
   const canAccessServiceBills = can(role, 'facilities', privileges)
   const canAccessNightAudit = can(role, 'nightaudit', privileges)
-  const visibleTabs = FRONT_OFFICE_TABS.filter((tab) => (
-    (tab.id !== 'service-bills' || canAccessServiceBills)
-    && (tab.id !== 'night-audit' || canAccessNightAudit)
-  ))
+  const visibleTabs = FRONT_OFFICE_TABS.filter((tab) => can(role, tab.permission || 'dashboard', privileges))
   const effectiveTab = visibleTabs.some((tab) => tab.id === activeTab)
     ? activeTab
     : (visibleTabs[0]?.id || 'in-house')
@@ -72,11 +73,23 @@ export default function FrontOfficePage({
             company={company}
           />
         )}
+        {effectiveTab === 'check-in-out' && (
+          <CheckInOutTab openReservation={openReservation} />
+        )}
+        {effectiveTab === 'guest-folio' && (
+          <GuestFolioTab openReservation={openReservation} />
+        )}
         {effectiveTab === 'service-bills' && canAccessServiceBills && (
           <ServiceBillsTab userName={userName} isAdmin={isAdmin} />
         )}
         {effectiveTab === 'night-audit' && canAccessNightAudit && (
           <NightAuditTab userName={userName} isAdmin={isAdmin} role={role} />
+        )}
+        {effectiveTab === 'lost-found' && (
+          <LostFoundTab />
+        )}
+        {effectiveTab === 'guest-messages' && (
+          <GuestMessagesTab openReservation={openReservation} />
         )}
       </div>
     </div>
