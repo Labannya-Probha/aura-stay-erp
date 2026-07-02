@@ -21,9 +21,11 @@ export default function Login({ slug }) {
   const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+
   const [tenant, setTenant] = useState(null)
   const [company, setCompany] = useState(null)
   const [logoFailed, setLogoFailed] = useState(false)
+  const [loadingBrand, setLoadingBrand] = useState(true)
 
   const effectiveSlug = useMemo(() => {
     return String(slug || DEFAULT_SLUG).trim().toLowerCase()
@@ -33,45 +35,50 @@ export default function Login({ slug }) {
     let alive = true
 
     async function loadTenant() {
+      setLoadingBrand(true)
       setErr('')
       setLogoFailed(false)
-      setTenant(null)
-      setCompany(null)
       setTenantCode(effectiveSlug)
 
-      const { data: property } = await supabase
-        .from('properties')
-        .select('id, slug, name, is_active')
-        .eq('slug', effectiveSlug)
-        .maybeSingle()
-
-      let finalProperty = property?.is_active ? property : null
-
-      if (!finalProperty && effectiveSlug !== DEFAULT_SLUG) {
-        const { data: fallbackProperty } = await supabase
+      try {
+        const { data: property } = await supabase
           .from('properties')
           .select('id, slug, name, is_active')
-          .eq('slug', DEFAULT_SLUG)
+          .eq('slug', effectiveSlug)
           .maybeSingle()
 
-        if (fallbackProperty?.is_active) finalProperty = fallbackProperty
-      }
+        let finalProperty = property?.is_active ? property : null
 
-      if (!alive) return
+        if (!finalProperty && effectiveSlug !== DEFAULT_SLUG) {
+          const { data: fallbackProperty } = await supabase
+            .from('properties')
+            .select('id, slug, name, is_active')
+            .eq('slug', DEFAULT_SLUG)
+            .maybeSingle()
 
-      if (finalProperty) {
-        setTenant(finalProperty)
-        setTenantCode(finalProperty.slug)
+          if (fallbackProperty?.is_active) finalProperty = fallbackProperty
+        }
 
-        const { data: settings } = await supabase
-          .from('company_settings')
-          .select(
-            'name, software_name, logo_url, login_background_video_url, login_background_poster_url'
-          )
-          .eq('tenant_id', finalProperty.id)
-          .maybeSingle()
+        if (!alive) return
 
-        if (alive) setCompany(settings || null)
+        if (finalProperty) {
+          const { data: settings } = await supabase
+            .from('company_settings')
+            .select(
+              'name, software_name, logo_url, login_background_video_url, login_background_poster_url'
+            )
+            .eq('tenant_id', finalProperty.id)
+            .maybeSingle()
+
+          if (!alive) return
+
+          setTenant(finalProperty)
+          setCompany(settings || null)
+          setTenantCode(finalProperty.slug)
+          setLogoFailed(false)
+        }
+      } finally {
+        if (alive) setLoadingBrand(false)
       }
     }
 
@@ -87,6 +94,7 @@ export default function Login({ slug }) {
   const logoUrl = company?.logo_url || FALLBACK.logo
   const videoUrl = company?.login_background_video_url || FALLBACK.video
   const posterUrl = company?.login_background_poster_url || FALLBACK.poster
+
   const tenantSlug =
     tenantCode.trim().toLowerCase() || tenant?.slug || effectiveSlug || DEFAULT_SLUG
 
@@ -125,28 +133,42 @@ export default function Login({ slug }) {
     }
   }
 
+  function LogoBox({ mobile = false }) {
+    return (
+      <div
+        className={
+          mobile
+            ? 'flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-emerald-900 text-xl font-black text-white'
+            : 'flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/15 shadow-lg backdrop-blur-xl'
+        }
+      >
+        {!loadingBrand && !logoFailed && logoUrl ? (
+          <img
+            key={logoUrl}
+            src={logoUrl}
+            alt={brandName}
+            className="h-full w-full object-contain"
+            onError={() => setLogoFailed(true)}
+          />
+        ) : (
+          <span className={mobile ? 'text-xl font-black text-white' : 'text-2xl font-black text-white'}>
+            A
+          </span>
+        )}
+      </div>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-slate-950">
       <section className="grid min-h-screen grid-cols-1 lg:grid-cols-[430px_1fr] xl:grid-cols-[500px_1fr]">
-        {/* LEFT FULL HEIGHT BRAND PANEL */}
         <aside className="relative hidden min-h-screen overflow-hidden bg-emerald-950 lg:flex">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 via-emerald-950 to-slate-950" />
           <div className="absolute inset-0 bg-black/15" />
 
           <div className="relative z-10 flex min-h-screen w-full flex-col justify-between px-12 py-12 xl:px-14">
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/15 shadow-lg backdrop-blur-xl">
-                {!logoFailed && logoUrl ? (
-                  <img
-                    src={logoUrl}
-                    alt={brandName}
-                    className="h-full w-full object-contain"
-                    onError={() => setLogoFailed(true)}
-                  />
-                ) : (
-                  <span className="text-2xl font-black text-white">A</span>
-                )}
-              </div>
+              <LogoBox />
 
               <div>
                 <h1 className="text-xl font-black text-white">{softwareName}</h1>
@@ -192,38 +214,34 @@ export default function Login({ slug }) {
           </div>
         </aside>
 
-        {/* RIGHT SIDE VIDEO BACKGROUND */}
         <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-10">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            poster={posterUrl}
-            className="absolute inset-0 h-full w-full object-cover"
-          >
-            <source src={videoUrl} type="video/mp4" />
-          </video>
+          {!loadingBrand && (
+            <video
+              key={videoUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              poster={posterUrl}
+              className="absolute inset-0 h-full w-full object-cover"
+            >
+              <source src={videoUrl} type="video/mp4" />
+            </video>
+          )}
+
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${posterUrl})` }}
+          />
 
           <div className="absolute inset-0 bg-slate-950/40" />
           <div className="absolute inset-0 bg-gradient-to-br from-slate-950/35 via-transparent to-emerald-950/45" />
 
-          {/* LOGIN CARD - no video inside */}
           <div className="relative z-10 w-full max-w-[490px]">
             <div className="rounded-[28px] border border-white/55 bg-white/82 p-8 shadow-2xl backdrop-blur-2xl">
               <div className="mb-8 flex items-center gap-3 lg:hidden">
-                <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-emerald-900 text-xl font-black text-white">
-                  {!logoFailed && logoUrl ? (
-                    <img
-                      src={logoUrl}
-                      alt={brandName}
-                      className="h-full w-full object-contain"
-                      onError={() => setLogoFailed(true)}
-                    />
-                  ) : (
-                    'A'
-                  )}
-                </div>
+                <LogoBox mobile />
 
                 <div>
                   <h1 className="font-black text-slate-950">{softwareName}</h1>
@@ -313,7 +331,7 @@ export default function Login({ slug }) {
                 <Shield size={14} />
                 Secure multi-tenant ERP access
               </div>
-            </div>           
+            </div>
           </div>
         </section>
       </section>
