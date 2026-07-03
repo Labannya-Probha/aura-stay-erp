@@ -129,9 +129,24 @@ function ReceiptItemTable({ items = [], settings }) {
 }
 
 function ReceiptSummary({ order, settings }) {
+  const discountLabel = (() => {
+    if (Number(order?.discount || 0) <= 0) return 'Discount'
+    const scopeLabel = order?.discount_scope === 'FOOD'
+      ? 'Food discount'
+      : order?.discount_scope === 'BEVERAGE'
+        ? 'Beverage discount'
+        : 'Discount'
+    if (order?.discount_type === 'PERCENT' && Number(order?.discount_value || 0) > 0) {
+      return `${scopeLabel} (${order.discount_value}%)`
+    }
+    if (Number(order?.discount_pct || 0) > 0 && !order?.discount_type) {
+      return `${scopeLabel} (${order.discount_pct}%)`
+    }
+    return scopeLabel
+  })()
   const rows = [
     ['Subtotal', order?.base_amount ?? order?.subtotal],
-    settings.showDiscount && Number(order?.discount || 0) > 0 ? [`Discount${Number(order?.discount_pct || 0) > 0 ? ` (${order.discount_pct}%)` : ''}`, -Number(order.discount || 0)] : null,
+    settings.showDiscount && Number(order?.discount || 0) > 0 ? [discountLabel, -Number(order.discount || 0)] : null,
     settings.showServiceCharge ? ['Service charge', order?.service_charge] : null,
     Number(order?.sd || 0) > 0 ? ['SD', order.sd] : null,
     settings.showVat ? ['VAT', order?.vat] : null,

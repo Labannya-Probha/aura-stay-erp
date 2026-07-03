@@ -178,7 +178,7 @@ async function fetchKPIs(module, today) {
       ])
       const all = orders || []
       const todayOrders = all.filter(o => (o.settled_at || o.created_at || '').slice(0,10) === today)
-      const openOrders = all.filter(o => o.status === 'OPEN').length
+      const openOrders = all.filter(o => ['DRAFT', 'OPEN', 'ACCEPTED', 'READY', 'SERVED'].includes(o.status)).length
       const chargedRoom = all.filter(o => o.status === 'CHARGED_TO_ROOM').length
       const todaySettled = todayOrders.filter(o => o.status === 'SETTLED').reduce((s, o) => s + +o.total, 0)
       const mtdRest = (fc || []).reduce((s, r) => s + +r.total, 0)
