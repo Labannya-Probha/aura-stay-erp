@@ -18,11 +18,20 @@ export default function StaffCard({ isAdminPlus, isSuperuser, currentUserName })
   const [myTenantId, setMyTenantId] = useState(null)
   const [tenantName, setTenantName] = useState('')
 
+  const loadMyUser = async (userId) => {
+    if (!userId) return { data: null, error: null }
+    return supabase
+      .from('app_users')
+      .select('id, tenant_id, full_name, username, properties(name, slug)')
+      .or(`id.eq.${userId},auth_id.eq.${userId}`)
+      .maybeSingle()
+  }
+
   const load = async (tid) => {
     const effectiveTid = tid !== undefined ? tid : myTenantId
     if (!effectiveTid) { setRows([]); return }
     const { data } = await supabase.from('app_users')
-      .select('id, email, full_name, username, role, is_active, created_at, tenant_id')
+      .select('id, email, full_name, username, role, is_active, created_at, created_by_name, tenant_id')
       .eq('tenant_id', effectiveTid)
       .order('created_at')
     setRows(data || [])
@@ -30,7 +39,7 @@ export default function StaffCard({ isAdminPlus, isSuperuser, currentUserName })
   useEffect(() => {
     supabase.auth.getUser().then(({ data: u }) => {
       if (!u?.user?.id) { load(null); return }
-      supabase.from('app_users').select('tenant_id, properties(name, slug)').eq('auth_id', u.user.id).maybeSingle()
+      loadMyUser(u.user.id)
         .then(({ data: row }) => {
           const tid = row?.tenant_id || null
           setMyTenantId(tid)
@@ -50,8 +59,7 @@ export default function StaffCard({ isAdminPlus, isSuperuser, currentUserName })
     setBusy(true)
     try {
       const { data: { user: currentUser } } = await supabase.auth.getUser()
-      const { data: myRow, error: myRowErr } = await supabase
-        .from('app_users').select('tenant_id').eq('auth_id', currentUser?.id).maybeSingle()
+      const { data: myRow, error: myRowErr } = await loadMyUser(currentUser?.id)
       if (myRowErr || !myRow?.tenant_id) { flash('Could not determine your company — please sign out and back in, then try again.'); setBusy(false); return }
 
       const { data: dup } = await supabase
@@ -77,8 +85,16 @@ export default function StaffCard({ isAdminPlus, isSuperuser, currentUserName })
       if (!res.ok) throw new Error(json.error || 'Failed to create user account.')
       const newId = json.user?.id
       if (newId) {
+        const creatorName = currentUserName?.trim() || myRow.full_name?.trim() || myRow.username || 'System'
         await supabase.from('app_users')
-          .update({ role: nu.role, full_name: nu.full_name.trim(), username: uname, tenant_id: myRow.tenant_id })
+          .update({
+            role: nu.role,
+            full_name: nu.full_name.trim(),
+            username: uname,
+            tenant_id: myRow.tenant_id,
+            created_by: myRow.id || currentUser?.id || null,
+            created_by_name: creatorName,
+          })
           .eq('id', newId)
           .eq('tenant_id', myRow.tenant_id)
       }
@@ -177,6 +193,7 @@ export default function StaffCard({ isAdminPlus, isSuperuser, currentUserName })
             <th className="th">Full name</th>
             <th className="th">Username</th>
             <th className="th">Role</th>
+            <th className="th">Created by</th>
             <th className="th">Status</th>
             {isAdminPlus && <th className="th text-center">Actions</th>}
           </tr>
@@ -191,6 +208,7 @@ export default function StaffCard({ isAdminPlus, isSuperuser, currentUserName })
                   {availableRoles.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                 </select>
               </td>
+              <td className="td"><span className="text-xs text-pine/40">—</span></td>
               <td className="td"><span className="text-xs text-pine/40">—</span></td>
               <td className="td">
                 <div className="flex gap-1 justify-center">
@@ -207,6 +225,10 @@ export default function StaffCard({ isAdminPlus, isSuperuser, currentUserName })
                 <span className={`status-chip text-xs ${u.role === 'SUPERUSER' ? 'bg-purple-100 text-purple-700' : u.role === 'ADMIN' ? 'bg-forest/15 text-forest' : 'bg-leaf/50 text-pine'}`}>
                   {ROLE_LABELS[u.role] || u.role}
                 </span>
+              </td>
+              <td className="td text-sm">
+                <div>{u.created_by_name || 'Legacy / unknown'}</div>
+                <div className="text-xs text-pine/45">{u.created_at?.slice(0, 10) || '—'}</div>
               </td>
               <td className="td">
                 <button
