@@ -28,7 +28,7 @@ export default function RestaurantPage({ userName, isAdmin, role, modulesEnabled
 
       const [ordersRes, openRes, menuRes] = await Promise.all([
         supabase.from('pos_orders').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-        supabase.from('pos_orders').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).in('status', ['OPEN', 'ACCEPTED', 'READY']),
+        supabase.from('pos_orders').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).in('status', ['DRAFT', 'OPEN', 'ACCEPTED', 'READY', 'SERVED']),
         supabase.from('menu_items').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('is_active', true),
       ])
 
