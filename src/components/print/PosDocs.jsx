@@ -89,7 +89,7 @@ function ReceiptHeader({ order, company, profile, settings, invoiceNo }) {
   )
 }
 
-function ReceiptItemTable({ items = [], settings }) {
+function ReceiptItemTable({ items = [] }) {
   return (
     <table className="pos-receipt-items" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 6, tableLayout: 'fixed' }}>
       <thead>
@@ -256,7 +256,7 @@ export function ThermalReceiptLayout({ order = {}, items = [], company, copyType
       style={{ ...mono, position: 'relative', boxSizing: 'border-box', maxWidth: '100%', width: '100%', margin: '0 auto', color: '#000', background: '#fff', overflowWrap: 'anywhere' }}
     >
       <ReceiptHeader order={order} company={company} profile={profile} settings={settings} invoiceNo={invoiceNo} />
-      <ReceiptItemTable items={items} settings={settings} />
+      <ReceiptItemTable items={items} />
       <ReceiptSummary order={order} settings={settings} />
       <PaymentSummary order={order} settings={settings} profile={profile} />
       <AuditBlock order={order} profile={profile} />
