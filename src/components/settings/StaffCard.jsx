@@ -148,15 +148,22 @@ export default function StaffCard({ isAdminPlus, isSuperuser, currentUserName })
       {msg && <div className="mb-3 px-3 py-2 rounded-lg bg-forest/10 text-forest text-sm">{msg}</div>}
 
       {isAdminPlus && (
-        <div className="grid grid-cols-5 gap-2 mb-4">
-          <input className="input" placeholder="Full name" value={nu.full_name} onChange={(e) => setNu({ ...nu, full_name: e.target.value })} />
-          <input className="input" placeholder="Username" value={nu.username} onChange={(e) => setNu({ ...nu, username: e.target.value })} />
-          <input type="password" className="input" placeholder="Password (min 6)" value={nu.password} onChange={(e) => setNu({ ...nu, password: e.target.value })} />
+        <form
+          className="grid grid-cols-5 gap-2 mb-4"
+          autoComplete="off"
+          onSubmit={(e) => {
+            e.preventDefault()
+            addStaff()
+          }}
+        >
+          <input className="input" name="staff-full-name" autoComplete="off" placeholder="Full name" value={nu.full_name} onChange={(e) => setNu({ ...nu, full_name: e.target.value })} />
+          <input className="input" name="staff-handle" autoComplete="off" placeholder="Username" value={nu.username} onChange={(e) => setNu({ ...nu, username: e.target.value })} />
+          <input type="password" className="input" name="staff-password" autoComplete="new-password" placeholder="Password (min 6)" value={nu.password} onChange={(e) => setNu({ ...nu, password: e.target.value })} />
           <select className="input" value={nu.role} onChange={(e) => setNu({ ...nu, role: e.target.value })}>
             {availableRoles.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
           </select>
-          <button className="btn-primary justify-center" disabled={busy} onClick={addStaff}><Plus size={15} /> Add</button>
-        </div>
+          <button type="submit" className="btn-primary justify-center" disabled={busy}><Plus size={15} /> Add</button>
+        </form>
       )}
 
       {resetTarget && (
