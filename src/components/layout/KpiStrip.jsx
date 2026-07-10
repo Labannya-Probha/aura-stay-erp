@@ -21,8 +21,16 @@ import { cn } from 'src/lib/utils'
 export default function KpiStrip({ items = [], loading = false, className }) {
   if (!items.length) return null
 
+  const desktopColumnsClass = items.length >= 4
+    ? 'lg:grid-cols-4'
+    : items.length === 3
+      ? 'lg:grid-cols-3'
+      : items.length === 2
+        ? 'lg:grid-cols-2'
+        : 'lg:grid-cols-1'
+
   return (
-    <div className={cn('grid gap-3 sm:grid-cols-2 lg:grid-cols-4', className)}>
+    <div className={cn('grid gap-3 sm:grid-cols-2', desktopColumnsClass, className)}>
       {items.map((item, index) => {
         const Icon = item.icon
         const isLoading = loading || item.loading

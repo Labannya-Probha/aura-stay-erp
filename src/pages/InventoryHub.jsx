@@ -148,7 +148,7 @@ export default function InventoryHub({
       )}
       <FlashBar msg={msg} />
       {!embedded && (
-        <div className="flex gap-1 border-b border-leaf flex-wrap">
+        <div className="tab-strip-responsive border-b border-leaf">
           {TABS.map((t) => (
             <button
               key={t}
@@ -156,7 +156,7 @@ export default function InventoryHub({
                 changeTab(t)
                 if (t !== 'Purchase Orders' && t !== 'Transfers') setNavReq(null)
               }}
-              className={`px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}
+              className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}
             >
               {t}
             </button>

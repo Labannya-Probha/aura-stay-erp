@@ -81,7 +81,7 @@ export const PATHS = {
   HR_COMPLIANCE: '/hr/compliance',
 
   // Reports
-  REPORTS: '/reports',
+  REPORTS: "/reports",
   REPORTS_CASED_ALIAS: '/Reports',
   TENANT_REPORTS: '/:slug/reports',
   TENANT_REPORTS_CASED_ALIAS: '/:slug/Reports',

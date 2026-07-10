@@ -1,80 +1,39 @@
-import { can } from '../../lib/roles'
-
-export const DEFAULT_RESERVATION_TAB = 'list'
-
-const RESERVATION_TAB_DEFINITIONS = [
-  {
-    id: 'list',
-    label: 'Reservations List',
-    canAccess: ({ role, privileges }) => can(role, 'reservations', privileges),
-  },
-  {
-    id: 'calendar',
-    label: 'Booking Calendar',
-    canAccess: ({ role, privileges }) => can(role, 'reservations', privileges) || can(role, 'calendar', privileges),
-  },
-  {
-    id: 'availability',
-    label: 'Availability',
-    canAccess: ({ role, privileges }) => can(role, 'reservations', privileges),
-  },
-  {
-    id: 'new',
-    label: 'New Reservation',
-    canAccess: ({ role, privileges }) => can(role, 'reservations', privileges),
-  },
-  {
-    id: 'payments',
-    label: 'Payments',
-    canAccess: ({ role, privileges }) => can(role, 'reservations', privileges) || can(role, 'accounting', privileges) || role === 'ACCOUNTS',
-  },
-  {
-    id: 'guest-crm',
-    label: 'Guest CRM',
-    canAccess: ({ role, privileges }) => can(role, 'crm', privileges) || can(role, 'reservations', privileges),
-  },
-  {
-    id: 'quotations',
-    label: 'Quotations',
-    canAccess: ({ role, privileges }) => can(role, 'reservations', privileges),
-  },
-  {
-    id: 'history',
-    label: 'History',
-    canAccess: ({ role, privileges }) => can(role, 'reservations', privileges),
-  },
-  {
-    id: 'reports',
-    label: 'Reports',
-    canAccess: ({ role, privileges }) => can(role, 'reservations', privileges),
-  },
+export const RESERVATION_TABS = [
+  { id: "calendar", label: "Booking Calendar", icon: "Calendar", permission: "reservations", default: true },
+  { id: "list", label: "Reservations", icon: "List", permission: "reservations" },
+  { id: "availability", label: "Availability", icon: "Bed", permission: "reservations" },
+  { id: "new", label: "New Reservation", icon: "Plus", permission: "reservations" },
+  { id: "payments", label: "Payments", icon: "CreditCard", permission: "reservations" },
+  { id: "guest-crm", label: "Guest CRM", icon: "Users", permission: "reservations" },
+  { id: "quotations", label: "Quotations", icon: "FileText", permission: "reservations" },
+  { id: "history", label: "History", icon: "History", permission: "reservations" },
+  { id: "reports", label: "Reports", icon: "BarChart3", permission: "reports" },
 ]
+export const DEFAULT_RESERVATION_TAB = "calendar"
+export function getVisibleReservationTabs({ role, isAdmin, privileges } = {}) {
+  if (isAdmin || role === "SUPERUSER") return RESERVATION_TABS
 
-export const RESERVATION_TABS = RESERVATION_TAB_DEFINITIONS.map(({ id, label }) => ({ id, label }))
+  const allowed = new Set(
+    (privileges || [])
+      .filter((item) => item.can_view)
+      .map((item) => item.module)
+  )
 
-export const RESERVATION_TAB_ALIASES = {
-  crm: 'guest-crm',
-  guestcrm: 'guest-crm',
+  const visible = RESERVATION_TABS.filter((tab) => {
+    if (!tab.permission) return true
+    return allowed.has(tab.permission) || allowed.has("reservations")
+  })
+
+  return visible.length > 0 ? visible : RESERVATION_TABS.filter((tab) => tab.id === "calendar")
 }
 
-const RESERVATION_TAB_MAP = new Map(RESERVATION_TAB_DEFINITIONS.map((tab) => [tab.id, tab]))
-
-export function resolveReservationTab(tabId) {
-  const normalized = String(tabId || '').trim().toLowerCase()
-  if (!normalized) return DEFAULT_RESERVATION_TAB
-  return RESERVATION_TAB_ALIASES[normalized] || RESERVATION_TAB_MAP.get(normalized)?.id || DEFAULT_RESERVATION_TAB
-}
-
-export function getReservationTabDefinition(tabId) {
-  return RESERVATION_TAB_MAP.get(resolveReservationTab(tabId)) || RESERVATION_TAB_MAP.get(DEFAULT_RESERVATION_TAB)
-}
-
-export function canAccessReservationTab(tabId, context = {}) {
-  return Boolean(getReservationTabDefinition(tabId)?.canAccess?.(context))
-}
-
-export function getVisibleReservationTabs(context = {}) {
-  return RESERVATION_TAB_DEFINITIONS
-    .filter((tab) => tab.canAccess(context))
-    .map(({ id, label }) => ({ id, label }))
+export function resolveReservationTab(
+  id = DEFAULT_RESERVATION_TAB,
+  visibleTabs = RESERVATION_TABS
+) {
+  return (
+    visibleTabs.find((tab) => tab.id === id) ||
+    visibleTabs.find((tab) => tab.default) ||
+    visibleTabs[0]
+  )
 }

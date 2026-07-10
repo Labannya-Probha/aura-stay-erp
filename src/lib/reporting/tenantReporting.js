@@ -2,77 +2,97 @@ import { supabase } from '../../supabase'
 import { getTenantId } from '../tenant'
 import { REPORT_TEMPLATES } from './reportConfig'
 
-const REPORT_ROLE_ACCESS = {
-  SUPERUSER: () => true,
-  ADMIN: () => true,
-  MANAGER: () => true,
-  ACCOUNTS: (report) => ['IFRS', 'ACCOUNTING'].includes(report.category),
-  FRONT_OFFICE: (report) => report.category === 'HOTEL_KPI',
-  RESTAURANT: (report) => report.category === 'POS',
-  STORE: (report) => ['INV-MOV'].includes(report.code),
-  HR: (report) => ['HOTEL_KPI', 'ACCOUNTING'].includes(report.category),
-  HOUSEKEEPING: (report) => ['HK-STATUS', 'ROOM-AVAIL'].includes(report.code),
+const ROLE_CATEGORY_ACCESS = {
+  SUPERUSER: null,
+  ADMIN: null,
+  MANAGER: null,
+  ACCOUNTS: ['accounts', 'inventory', 'admin'],
+  FRONT_OFFICE: ['sales', 'accounts'],
+  RESTAURANT: ['restaurant', 'inventory'],
+  STORE: ['inventory'],
+  HR: ['sales', 'admin'],
+  HOUSEKEEPING: ['housekeeping', 'sales'],
 }
 
-const permissionFor = (role, report) => (REPORT_ROLE_ACCESS[role] || (() => false))(report)
+function canSeeCategory(role, category) {
+  const allowed = ROLE_CATEGORY_ACCESS[role]
+  if (!allowed) return true
+  return allowed.includes(category)
+}
+
+function normalizeReport(report) {
+  const departmentSlug = report.departmentSlug || report.category || 'reports'
+  const slug = report.slug || String(report.name || report.code)
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+
+  return {
+    ...report,
+    category: departmentSlug,
+    departmentSlug,
+    slug,
+    route: report.route || `/reports/${departmentSlug}/${slug}`,
+  }
+}
 
 export function getRoleDefaultReportCatalog(role = 'FRONT_OFFICE') {
-  return REPORT_TEMPLATES.filter((report) => permissionFor(role, report))
+  return REPORT_TEMPLATES
+    .map(normalizeReport)
+    .filter((report) => canSeeCategory(role, report.category))
 }
 
-export async function loadTenantReportCatalog({ role = 'FRONT_OFFICE', userId = null } = {}) {
-  if (!supabase) {
+export async function loadTenantReportCatalog({ role = 'FRONT_OFFICE' } = {}) {
+  try {
+    const { data, error } = await supabase
+      .from('report_role_access')
+      .select('can_view, can_export, can_print, role, report_catalog(report_code)')
+      .eq('role', role)
+
+    if (error || !data) return getRoleDefaultReportCatalog(role)
+
+    const accessByCode = new Map(
+      data
+        .map((row) => [row.report_catalog?.report_code, row])
+        .filter(([code]) => code)
+    )
+
+    return getRoleDefaultReportCatalog(role)
+      .filter((report) => {
+        const access = accessByCode.get(report.code)
+        return access ? access.can_view !== false : true
+      })
+      .map((report) => {
+        const access = accessByCode.get(report.code)
+        return {
+          ...report,
+          exportPermission: access ? !!access.can_export : report.exportPermission,
+          printPermission: access ? !!access.can_print : report.printPermission,
+        }
+      })
+  } catch {
     return getRoleDefaultReportCatalog(role)
   }
-
-  const { data, error } = await supabase
-    .from('report_user_access')
-    .select('can_view, can_export, can_print, role, user_id, report_templates(report_code)')
-    .or(`role.eq.${role},user_id.eq.${userId || '00000000-0000-0000-0000-000000000000'}`)
-
-  if (error) {
-    console.warn('Tenant report access unavailable, using role defaults.', error.message)
-    return getRoleDefaultReportCatalog(role)
-  }
-
-  const accessByCode = new Map(
-    (data || [])
-      .map((row) => [row.report_templates?.report_code, row])
-      .filter(([code]) => code)
-  )
-
-  return REPORT_TEMPLATES
-    .filter((report) => {
-      const access = accessByCode.get(report.code)
-      return access ? access.can_view !== false : permissionFor(role, report)
-    })
-    .map((report) => {
-      const access = accessByCode.get(report.code)
-      return {
-        ...report,
-        exportPermission: access ? !!access.can_export : report.exportPermission,
-        printPermission: access ? !!access.can_print : report.printPermission,
-      }
-    })
 }
 
 async function getReportTemplateId(reportCode) {
-  if (!supabase) return null
   const { data } = await supabase
-    .from('report_templates')
+    .from('report_catalog')
     .select('id')
     .eq('report_code', reportCode)
     .maybeSingle()
+
   return data?.id || null
 }
 
 export async function logReportExport({ report, format, filters, userId, userName }) {
-  if (!supabase) return
-  const reportTemplateId = await getReportTemplateId(report.code)
   const tenantId = getTenantId()
+  const reportId = await getReportTemplateId(report.code)
+
   await supabase.from('report_export_logs').insert({
     tenant_id: tenantId,
-    report_template_id: reportTemplateId,
+    report_id: reportId,
     report_code: report.code,
     export_format: format,
     filters,
@@ -82,12 +102,12 @@ export async function logReportExport({ report, format, filters, userId, userNam
 }
 
 export async function logReportPrint({ report, pageSize, filters, userId, userName }) {
-  if (!supabase) return
-  const reportTemplateId = await getReportTemplateId(report.code)
   const tenantId = getTenantId()
+  const reportId = await getReportTemplateId(report.code)
+
   await supabase.from('report_print_logs').insert({
     tenant_id: tenantId,
-    report_template_id: reportTemplateId,
+    report_id: reportId,
     report_code: report.code,
     page_size: pageSize,
     filters,

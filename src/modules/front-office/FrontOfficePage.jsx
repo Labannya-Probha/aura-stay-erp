@@ -1,20 +1,24 @@
 /* ------------------------------------------------------------------ */
-/*  FRONT OFFICE PAGE — AEDS v2 unified module page                   */
+/*  FRONT OFFICE PAGE — AEDS v2 Enterprise Operations Workspace         */
 /* ------------------------------------------------------------------ */
-import PageHeader from '../../components/layout/PageHeader'
-import ModuleTabs from '../../components/layout/ModuleTabs'
-import { can } from '../../lib/roles'
-import { useFrontOfficeTabs } from './hooks/useFrontOfficeTabs'
-import { FRONT_OFFICE_TABS } from './frontOffice.config'
-import InHouseGuestsTab from './tabs/InHouseGuestsTab'
-import RoomBoardTab from './tabs/RoomBoardTab'
-import CheckInOutTab from './tabs/CheckInOutTab'
-import GuestFolioTab from './tabs/GuestFolioTab'
-import ServiceBillsTab from './tabs/ServiceBillsTab'
-import NightAuditTab from './tabs/NightAuditTab'
-import LostFoundTab from './tabs/LostFoundTab'
-import GuestMessagesTab from './tabs/GuestMessagesTab'
-import { useEffect } from 'react'
+import PageHeader from "../../components/layout/PageHeader"
+import Breadcrumb from "../../components/layout/Breadcrumb"
+import ModuleTabs from "../../components/layout/ModuleTabs"
+import { Button } from "../../components/ui/button"
+import { can } from "../../lib/roles"
+import { FRONT_OFFICE_TABS } from "./frontOffice.config"
+import { useFrontOfficeTabs } from "./hooks/useFrontOfficeTabs"
+import { useFrontOfficeData } from "./hooks/useFrontOfficeData"
+import FrontOfficeKpiStrip from "./shared/FrontOfficeKpiStrip"
+import ArrivalBoardPage from "./arrival-board/ArrivalBoardPage"
+import DepartureBoardPage from "./departure-board/DepartureBoardPage"
+import InHouseGuestsPage from "./in-house/InHouseGuestsPage"
+import RoomRackPage from "./room-rack/RoomRackPage"
+import GuestFolioPage from "./guest-folio/GuestFolioPage"
+import CashierPage from "./cashier/CashierPage"
+import NightAuditPage from "./night-audit/NightAuditPage"
+import LostFoundPage from "./lost-found/LostFoundPage"
+import GuestMessagesPage from "./guest-messages/GuestMessagesPage"
 
 export default function FrontOfficePage({
   openReservation,
@@ -25,73 +29,85 @@ export default function FrontOfficePage({
   privileges,
 }) {
   const { activeTab, setActiveTab } = useFrontOfficeTabs()
-  const canAccessServiceBills = can(role, 'facilities', privileges)
-  const canAccessNightAudit = can(role, 'nightaudit', privileges)
-  const visibleTabs = FRONT_OFFICE_TABS.filter((tab) => can(role, tab.permission || 'dashboard', privileges))
-  const effectiveTab = visibleTabs.some((tab) => tab.id === activeTab)
-    ? activeTab
-    : (visibleTabs[0]?.id || 'in-house')
+  const {
+    summary,
+    arrivals,
+    departures,
+    inHouse,
+    roomRack,
+    loading,
+    refreshing,
+    error,
+    refresh,
+  } = useFrontOfficeData()
 
-  useEffect(() => {
-    if (activeTab !== effectiveTab) setActiveTab(effectiveTab)
-  }, [activeTab, effectiveTab, setActiveTab])
+  const visibleTabs = FRONT_OFFICE_TABS.filter((tab) => {
+    if (isAdmin || role === "SUPERUSER") return true
+    return can(role, tab.permission || "dashboard", privileges)
+  })
+
+  const currentTab = visibleTabs.some((tab) => tab.id === activeTab)
+    ? activeTab
+    : visibleTabs[0]?.id || "arrival-board"
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <PageHeader
         title="Front Office"
-        breadcrumb={[{ label: 'Front Office', current: true }]}
-        tabs={
-          <ModuleTabs
-            tabs={visibleTabs}
-            activeTab={effectiveTab}
-            onChange={setActiveTab}
-          />
+        subtitle="Arrival, departure, in-house guest, room rack, cashier and night audit command center."
+        breadcrumb={<Breadcrumb items={[{ label: "Modules" }, { label: "Front Office", current: true }]} />}
+        actions={
+          <Button variant="outline" onClick={refresh} disabled={loading || refreshing}>
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </Button>
         }
+        kpiStrip={<FrontOfficeKpiStrip data={summary} loading={loading} />}
+        tabs={<ModuleTabs tabs={visibleTabs} activeTab={currentTab} onChange={setActiveTab} />}
       />
 
-      <div
-        id={`module-tab-panel-${effectiveTab}`}
-        role="tabpanel"
-        aria-labelledby={`module-tab-${effectiveTab}`}
-      >
-        {effectiveTab === 'in-house' && (
-          <InHouseGuestsTab
-            openReservation={openReservation}
-            userName={userName}
-            role={role}
-            isAdmin={isAdmin}
-            company={company}
-          />
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+          {error}
+        </div>
+      )}
+
+      <section id={`module-tab-panel-${currentTab}`} role="tabpanel" aria-labelledby={`module-tab-${currentTab}`}>
+        {currentTab === "arrival-board" && (
+          <ArrivalBoardPage rows={arrivals} loading={loading} openReservation={openReservation} />
         )}
-        {effectiveTab === 'room-board' && (
-          <RoomBoardTab
-            openReservation={openReservation}
-            userName={userName}
-            role={role}
-            isAdmin={isAdmin}
-            company={company}
-          />
+
+        {currentTab === "departure-board" && (
+          <DepartureBoardPage rows={departures} loading={loading} openReservation={openReservation} />
         )}
-        {effectiveTab === 'check-in-out' && (
-          <CheckInOutTab openReservation={openReservation} />
+
+        {currentTab === "in-house" && (
+          <InHouseGuestsPage rows={inHouse} loading={loading} openReservation={openReservation} />
         )}
-        {effectiveTab === 'guest-folio' && (
-          <GuestFolioTab openReservation={openReservation} />
+
+        {currentTab === "room-rack" && (
+          <RoomRackPage rows={roomRack} loading={loading} />
         )}
-        {effectiveTab === 'service-bills' && canAccessServiceBills && (
-          <ServiceBillsTab userName={userName} isAdmin={isAdmin} />
+
+        {currentTab === "guest-folio" && (
+          <GuestFolioPage userName={userName} company={company} />
         )}
-        {effectiveTab === 'night-audit' && canAccessNightAudit && (
-          <NightAuditTab userName={userName} isAdmin={isAdmin} role={role} />
+
+        {currentTab === "cashier" && (
+          <CashierPage userName={userName} company={company} />
         )}
-        {effectiveTab === 'lost-found' && (
-          <LostFoundTab />
+
+        {currentTab === "night-audit" && (
+          <NightAuditPage userName={userName} role={role} />
         )}
-        {effectiveTab === 'guest-messages' && (
-          <GuestMessagesTab openReservation={openReservation} />
+
+        {currentTab === "lost-found" && (
+          <LostFoundPage />
         )}
-      </div>
+
+        {currentTab === "guest-messages" && (
+          <GuestMessagesPage />
+        )}
+      </section>
     </div>
   )
 }

@@ -1,15 +1,20 @@
-import { useSearchParams } from 'react-router-dom'
-import { FRONT_OFFICE_TABS, DEFAULT_FRONT_OFFICE_TAB } from '../frontOffice.config'
-
-const VALID_TAB_IDS = new Set(FRONT_OFFICE_TABS.map((t) => t.id))
+import { useMemo } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
+import { DEFAULT_FRONT_OFFICE_TAB, resolveFrontOfficeTab } from "../frontOffice.config"
+import { PATHS } from "../../../app/paths"
 
 export function useFrontOfficeTabs() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const rawTab = searchParams.get('tab')
-  const activeTab = VALID_TAB_IDS.has(rawTab) ? rawTab : DEFAULT_FRONT_OFFICE_TAB
+  const navigate = useNavigate()
+  const location = useLocation()
 
-  const setActiveTab = (tabId) => {
-    setSearchParams({ tab: tabId }, { replace: true })
+  const activeTab = useMemo(() => {
+    const params = new URLSearchParams(location.search)
+    return resolveFrontOfficeTab(params.get("tab") || DEFAULT_FRONT_OFFICE_TAB)
+  }, [location.search])
+
+  const setActiveTab = (tab) => {
+    const next = resolveFrontOfficeTab(tab)
+    navigate(`${PATHS.FRONT_OFFICE}?tab=${encodeURIComponent(next)}`)
   }
 
   return { activeTab, setActiveTab }

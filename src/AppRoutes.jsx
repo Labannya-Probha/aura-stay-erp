@@ -1,11 +1,9 @@
-/* ------------------------------------------------------------------ */
-/*  APP ROUTES                                                          */
-/* ------------------------------------------------------------------ */
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { isModuleEnabled } from './lib/saasModules'
 import { can } from './lib/roles'
 import { firstAccessiblePath } from './app/navigation/helpers'
 import { PATHS } from './app/paths'
+import Dashboard from './modules/dashboard/DashboardPage.jsx';
 import { SaasModuleBlocked, SaasModuleFrame } from './components/saas/SaasModuleFrame.jsx'
 import {
   SaasModuleRoute,
@@ -13,17 +11,8 @@ import {
   ReservationModuleRoute,
   FrontOfficeReservationRoute,
 } from './routeGuards.jsx'
-
-import DashboardPage from './modules/dashboard/DashboardPage.jsx'
 import FrontOfficePage from './modules/front-office/FrontOfficePage.jsx'
-import { FRONT_OFFICE_LEGACY_TAB_REDIRECTS } from './modules/front-office/frontOffice.config'
-import ReservationsPage from './modules/reservations/ReservationsPage.jsx'
-import HousekeepingHub from './pages/HousekeepingHub.jsx'
-import { GuestPosKiosk } from './pages/RestaurantPOS.jsx'
-import VerifyBill from './pages/VerifyBill.jsx'
-import InventoryPage from './modules/inventory/InventoryPage.jsx'
-import VatCenter from './pages/VatCenter.jsx'
-import VATReturn from './pages/VATReturn'
+import HousekeepingPage from './modules/housekeeping/HousekeepingPage.jsx'
 import {
   VoucherEntryPage,
   TrialBalancePage,
@@ -32,7 +21,9 @@ import {
   OpeningBalancePage,
   TransactionMappingPage,
   VendorPaymentPage,
-} from './pages/AccountingHub.jsx'
+  VatCenterPage,
+  VATReturnPage,
+} from './modules/accounting/routePages.jsx'
 import {
   HrEmployeeEntryPage,
   HrServiceBookPage,
@@ -49,13 +40,18 @@ import {
   HrServiceBookRegPage,
   HrIncidentsPage,
   HrCompliancePage,
-} from './pages/HrOffice.jsx'
+} from './modules/hr/routePages.jsx'
+import { GuestPosKiosk, VerifyBillPage } from './modules/public/routePages.jsx'
+import { FRONT_OFFICE_LEGACY_TAB_REDIRECTS } from './modules/front-office/frontOffice.config'
+import ReservationsPage from './modules/reservations/ReservationsPage.jsx'
+import InventoryPage from './modules/inventory/InventoryPage.jsx'
 import ReportsCenterPage from './modules/reports/ReportsCenterPage.jsx'
-import Settings from './pages/Settings.jsx'
+import { DynamicReportPage } from './modules/reports'
+import Settings from './modules/settings/SettingsPage.jsx'
 import MasterDataPage from './modules/master-data/MasterDataPage.jsx'
 import TasksPage from './modules/tasks/TasksPage.jsx'
+import PosPrintCenterPage from './modules/restaurant/PosPrintCenterPage.jsx'
 import RestaurantPage from './modules/restaurant/RestaurantPage.jsx'
-import PosPrintCenter from './pages/PosPrintCenter.jsx'
 import { getVisibleReservationTabs } from './modules/reservations/reservations.config'
 import { DEFAULT_MASTER_DATA_TAB, MASTER_DATA_LEGACY_TAB_MAP } from './modules/master-data/masterData.config'
 
@@ -109,7 +105,10 @@ export default function AppRoutes({
 
   return (
     <Routes>
-      <Route path={PATHS.ROOT} element={<Navigate to={PATHS.FRONT_OFFICE} replace />} />
+      <Route path="/navigation-v5" element={<NavigationEngineDemo userName={userName} role={role} />} />
+      <Route path="/dashboard-v5" element={<AedsV5Dashboard userName={userName} company={company} />} />
+      <Route  path={PATHS.DASHBOARD}  element={<Dashboard company={company} role={role} userName={userName} />} />
+      <Route  path={PATHS.ROOT} element={<Navigate to={PATHS.FRONT_OFFICE} replace />} />
 
       {/* Front Office — unified AEDS v2 module page */}
       <Route path={PATHS.FRONT_OFFICE} element={frontOfficeElement} />
@@ -158,7 +157,7 @@ export default function AppRoutes({
       } />
       <Route path={PATHS.HOUSEKEEPING} element={
         <SaasModuleRoute moduleId="housekeeping" role={role} navId="housekeeping" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <HousekeepingHub userName={userName} role={role} isAdmin={isAdmin} />
+          <HousekeepingPage userName={userName} role={role} isAdmin={isAdmin} />
         </SaasModuleRoute>
       } />
       <Route path={PATHS.FACILITIES} element={
@@ -178,11 +177,11 @@ export default function AppRoutes({
       } />
       <Route path={PATHS.POS_PRINT_CENTER} element={
         <SaasModuleRoute moduleId="pos" role={role} navId="pos" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <PosPrintCenter company={company} userName={userName} />
+          <PosPrintCenterPage company={company} userName={userName} />
         </SaasModuleRoute>
       } />
       <Route path={PATHS.GUEST_KIOSK} element={<GuestPosKiosk />} />
-      <Route path={PATHS.VERIFY_BILL} element={<VerifyBill />} />
+      <Route path={PATHS.VERIFY_BILL} element={<VerifyBillPage />} />
       <Route path={PATHS.MENU_MANAGEMENT} element={
         (isModuleEnabled('menu-management', modulesEnabled, role) && (isAdmin || role === 'SUPERUSER' || role === 'RESTAURANT'))
           ? <SaasModuleFrame moduleId="pos" company={company} role={role} userName={userName}><Navigate to={`${PATHS.RESTAURANT}?tab=menu`} replace /></SaasModuleFrame>
@@ -204,12 +203,12 @@ export default function AppRoutes({
       {/* Accounting — separate routes per section */}
       <Route path={PATHS.VAT} element={
         <SaasModuleRoute moduleId="accounting" role={role} navId="vat" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <VatCenter userName={userName} company={company} />
+          <VatCenterPage userName={userName} company={company} />
         </SaasModuleRoute>
       } />
       <Route path={PATHS.VAT_RETURN} element={
         <SaasModuleRoute moduleId="accounting" role={role} navId="accounting" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <VATReturn />
+          <VATReturnPage />
         </SaasModuleRoute>
       } />
       <Route path={PATHS.ACCOUNTING} element={<Navigate to={PATHS.ACCOUNTING_VOUCHER} replace />} />
@@ -281,19 +280,89 @@ export default function AppRoutes({
       <Route path="/hr/compliance"          element={<SaasModuleRoute moduleId="hr" role={role} navId="hr" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}><HrCompliancePage          role={role} /></SaasModuleRoute>} />
 
       {/* Reports */}
-      <Route path={PATHS.REPORTS_CASED_ALIAS} caseSensitive element={<Navigate to={PATHS.REPORTS} replace />} />
-      <Route path={PATHS.TENANT_REPORTS_CASED_ALIAS} caseSensitive element={<TenantReportsRedirect />} />
-      <Route path={PATHS.NIGHT_AUDIT_REPORTS} element={<Navigate to={`${PATHS.REPORTS}?category=hotel-operations&report=NIGHT-AUDIT`} replace />} />
-      <Route path={PATHS.TENANT_REPORTS} element={
-        <SaasModuleRoute moduleId="reports" role={role} navId="reports" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <ReportsCenterPage userName={userName} userId={userId} role={role} company={company} />
-        </SaasModuleRoute>
-      } />
-      <Route path={PATHS.REPORTS} element={
-        <SaasModuleRoute moduleId="reports" role={role} navId="reports" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
-          <ReportsCenterPage userName={userName} userId={userId} role={role} company={company} />
-        </SaasModuleRoute>
-      } />
+
+      <Route
+        path={PATHS.REPORTS_CASED_ALIAS}
+        caseSensitive
+        element={<Navigate to={PATHS.REPORTS} replace />}
+      />
+
+      <Route
+        path={PATHS.TENANT_REPORTS_CASED_ALIAS}
+        caseSensitive
+        element={<TenantReportsRedirect />}
+      />
+
+      <Route
+        path={PATHS.NIGHT_AUDIT_REPORTS}
+        element={<Navigate to={PATHS.REPORTS} replace />}
+      />
+
+      <Route
+        path="/reports/:department/:slug"
+        element={
+          <SaasModuleRoute
+            moduleId="reports"
+            role={role}
+            navId="reports"
+            privileges={privileges}
+            modulesEnabled={modulesEnabled}
+            company={company}
+            userName={userName}
+          >
+            <DynamicReportPage
+              company={company}
+              role={role}
+              userName={userName}
+              userId={userId}
+            />
+          </SaasModuleRoute>
+        }
+      />
+
+      <Route
+        path={PATHS.TENANT_REPORTS}
+        element={
+          <SaasModuleRoute
+            moduleId="reports"
+            role={role}
+            navId="reports"
+            privileges={privileges}
+            modulesEnabled={modulesEnabled}
+            company={company}
+            userName={userName}
+          >
+            <ReportsCenterPage
+              company={company}
+              role={role}
+              userName={userName}
+              userId={userId}
+            />
+          </SaasModuleRoute>
+        }
+      />
+
+      <Route
+        path={PATHS.REPORTS}
+        element={
+          <SaasModuleRoute
+            moduleId="reports"
+            role={role}
+            navId="reports"
+            privileges={privileges}
+            modulesEnabled={modulesEnabled}
+            company={company}
+            userName={userName}
+          >
+            <ReportsCenterPage
+              company={company}
+              role={role}
+              userName={userName}
+              userId={userId}
+            />
+          </SaasModuleRoute>
+        }
+      />     
 
       {/* Tasks — unified module */}
       <Route path={PATHS.TASKS} element={

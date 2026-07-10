@@ -1,32 +1,23 @@
-import { useEffect, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { DEFAULT_RESERVATION_TAB, resolveReservationTab } from '../reservations.config'
+import { useCallback, useMemo } from "react"
+import { useSearchParams } from "react-router-dom"
+import { RESERVATION_TABS, resolveReservationTab } from "../reservations.config"
 
-export function useReservationTabs({ visibleTabs = [] } = {}) {
+export function useReservationTabs(visibleTabs = RESERVATION_TABS) {
   const [searchParams, setSearchParams] = useSearchParams()
-  const rawTab = searchParams.get('tab')
-  const normalizedTab = resolveReservationTab(rawTab)
-  const visibleTabIds = useMemo(() => new Set(visibleTabs.map((tab) => tab.id)), [visibleTabs])
-  const fallbackTab = visibleTabs[0]?.id || DEFAULT_RESERVATION_TAB
-  const activeTab = visibleTabIds.has(normalizedTab) ? normalizedTab : fallbackTab
 
-  useEffect(() => {
-    if (!fallbackTab) return
-    if (rawTab === activeTab) return
+  const activeTab = useMemo(() => {
+    const requested = searchParams.get("tab") || "calendar"
+    return resolveReservationTab(requested, visibleTabs).id
+  }, [searchParams, visibleTabs])
 
-    const nextSearchParams = new URLSearchParams(searchParams)
-    nextSearchParams.set('tab', activeTab)
-    setSearchParams(nextSearchParams, { replace: true })
-  }, [activeTab, fallbackTab, rawTab, searchParams, setSearchParams])
-
-  const setActiveTab = (tabId) => {
-    const nextTab = resolveReservationTab(tabId)
-    if (!visibleTabIds.has(nextTab)) return
-
-    const nextSearchParams = new URLSearchParams(searchParams)
-    nextSearchParams.set('tab', nextTab)
-    setSearchParams(nextSearchParams, { replace: true })
-  }
+  const setActiveTab = useCallback(
+    (tabId) => {
+      const next = new URLSearchParams(searchParams)
+      next.set("tab", resolveReservationTab(tabId, visibleTabs).id)
+      setSearchParams(next, { replace: true })
+    },
+    [searchParams, setSearchParams, visibleTabs]
+  )
 
   return { activeTab, setActiveTab }
 }

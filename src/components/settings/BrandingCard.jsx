@@ -4,6 +4,76 @@ import { setCurrency } from '../../lib/helpers'
 import { getTenantId } from '../../lib/tenant'
 import { getCompanySettingsQuery } from '../../lib/companySettings'
 import { Save, Building2, Image, Upload, ChevronDown } from 'lucide-react'
+import { extractLogoPalette } from '../../theme'
+import { darken, getReadableText, mix } from '../../theme/color.utils'
+
+const TENANT_BRANDING_FIELDS = [
+  'logo_url',
+  'primary_color',
+  'secondary_color',
+  'accent_color',
+  'sidebar_bg_color',
+  'sidebar_text_color',
+  'button_color',
+  'table_header_color',
+  'report_header_color',
+  'font_family',
+  'theme_mode',
+]
+
+function mergeTenantBrandingRow(company, branding) {
+  if (!company) return company
+  if (!branding) return company
+
+  const nextCompany = { ...company }
+  TENANT_BRANDING_FIELDS.forEach((field) => {
+    if (branding[field] !== null && branding[field] !== undefined && branding[field] !== '') {
+      nextCompany[field] = branding[field]
+    }
+  })
+  return nextCompany
+}
+
+function toTenantBrandingPayload(company) {
+  return {
+    tenant_id: company.tenant_id,
+    tenant_name: company.software_name || company.name || null,
+    property_name: company.name || null,
+    logo_url: company.logo_url || null,
+    primary_color: company.primary_color || null,
+    secondary_color: company.secondary_color || null,
+    accent_color: company.accent_color || null,
+    sidebar_bg_color: company.sidebar_bg_color || null,
+    sidebar_text_color: company.sidebar_text_color || null,
+    button_color: company.button_color || null,
+    table_header_color: company.table_header_color || null,
+    report_header_color: company.report_header_color || null,
+    font_family: company.font_family || 'Inter',
+    theme_mode: company.theme_mode || 'light',
+    updated_at: new Date().toISOString(),
+  }
+}
+
+function buildLogoBrandingFields(palette = {}) {
+  const primary = palette.primary || '#1F6F78'
+  const accent = palette.accent || palette.secondary || mix(primary, '#22C55E', 0.38)
+  const brandPrimary = darken(primary, 0.34)
+  const secondary = mix(primary, '#FFFFFF', 0.86)
+  const sidebarBg = brandPrimary
+
+  return {
+    primary_color: primary,
+    accent_color: accent,
+    brand_primary: brandPrimary,
+    brand_accent: accent,
+    secondary_color: secondary,
+    sidebar_bg_color: sidebarBg,
+    sidebar_text_color: getReadableText(sidebarBg),
+    button_color: primary,
+    table_header_color: mix(primary, '#FFFFFF', 0.9),
+    report_header_color: brandPrimary,
+  }
+}
 
 function RichTextEditor({ initialHtml, onSave, saveLabel = 'Save' }) {
   const editorRef = useRef(null)
@@ -373,8 +443,11 @@ function BrandingCard({ reloadCompany }) {
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
   const load  = async () => {
     const tenantId = getTenantId()
-    const { data } = await getCompanySettingsQuery('*', tenantId).limit(1).single()
-    setC(data)
+    const [{ data }, { data: branding }] = await Promise.all([
+      getCompanySettingsQuery('*', tenantId).limit(1).single(),
+      supabase.from('tenant_branding').select('*').eq('tenant_id', tenantId).limit(1).maybeSingle(),
+    ])
+    setC(mergeTenantBrandingRow(data, branding))
   }
   useEffect(() => { load() }, [])
   if (!c) return <div className="card p-5 text-pine/50">Loading…</div>
@@ -399,10 +472,38 @@ function BrandingCard({ reloadCompany }) {
     if (upErr) { flash(`Upload failed: ${upErr.message}`); setBusy(false); return }
     const { data: pub } = supabase.storage.from('branding').getPublicUrl(path)
     const url = pub.publicUrl
-    set('logo_url', url)
-    const { error: dbErr } = await supabase.from('company_settings').update({ logo_url: url }).eq('id', c.id)
-    if (dbErr) { flash(`Saved to storage but DB update failed: ${dbErr.message}`); } 
-    else { flash('Logo uploaded successfully.'); reloadCompany?.() }
+    const palette = await extractLogoPalette(url).catch(() => null)
+    const nextBranding = {
+      logo_url: url,
+      ...(palette?.primary ? buildLogoBrandingFields(palette) : {}),
+    }
+
+    setC((prev) => ({ ...prev, ...nextBranding }))
+
+    const companyUpdate = supabase
+      .from('company_settings')
+      .update({
+        ...nextBranding,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', c.id)
+
+    const tenantBrandingUpdate = supabase
+      .from('tenant_branding')
+      .upsert({
+        ...toTenantBrandingPayload({ ...c, ...nextBranding }),
+      }, { onConflict: 'tenant_id' })
+
+    const [{ error: dbErr }, { error: brandingErr }] = await Promise.all([
+      companyUpdate,
+      tenantBrandingUpdate,
+    ])
+
+    if (dbErr || brandingErr) { flash(`Saved to storage but DB update failed: ${(dbErr || brandingErr).message}`); }
+    else {
+      flash(palette?.primary ? 'Logo uploaded and brand colors synced from logo.' : 'Logo uploaded successfully. Logo color sync skipped.')
+      reloadCompany?.()
+    }
   } catch (e) { flash(e.message) }
   setBusy(false)
 }
@@ -410,7 +511,7 @@ function BrandingCard({ reloadCompany }) {
   const save = async () => {
     setBusy(true)
     const supportsRestaurantBranding = Object.prototype.hasOwnProperty.call(c || {}, 'is_restaurant_available')
-    const { error } = await supabase.from('company_settings').update({
+    const companyPayload = {
       name: c.name, legal_name: c.legal_name, address: c.address, phone: c.phone, email: c.email,
       bin: c.bin, vat_circle: c.vat_circle, invoice_footer: c.invoice_footer,
       short_code: c.short_code, software_name: c.software_name, currency: c.currency,
@@ -432,9 +533,14 @@ function BrandingCard({ reloadCompany }) {
         restaurant_name: c.is_restaurant_available ? (c.restaurant_name || null) : null,
       } : {}),
       updated_at: new Date().toISOString(),
-    }).eq('id', c.id)
+    }
+
+    const [{ error }, { error: brandingError }] = await Promise.all([
+      supabase.from('company_settings').update(companyPayload).eq('id', c.id),
+      supabase.from('tenant_branding').upsert(toTenantBrandingPayload(c), { onConflict: 'tenant_id' }),
+    ])
     setBusy(false)
-    if (error) flash(error.message)
+    if (error || brandingError) flash((error || brandingError).message)
     else { setCurrency(c.currency || '৳'); flash('Saved.'); reloadCompany?.() }
   }
 

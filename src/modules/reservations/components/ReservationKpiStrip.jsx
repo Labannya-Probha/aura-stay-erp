@@ -1,47 +1,36 @@
-import { useEffect, useState } from 'react'
-import { BedDouble, CalendarClock, DoorOpen, HandCoins, LogIn, LogOut } from 'lucide-react'
-import KpiStrip from '../../../components/layout/KpiStrip'
-import { getReservationKpis } from '../services/reservationService'
+import { CalendarCheck, CalendarX, CreditCard, Users } from "lucide-react"
+import { useReservationKpis } from "../hooks/useReservationKpis"
 
-const KPI_META = [
-  { key: 'todayArrivals', label: 'Today Arrivals', icon: LogIn },
-  { key: 'todayDepartures', label: 'Today Departures', icon: LogOut },
-  { key: 'inHouse', label: 'In-house', icon: BedDouble },
-  { key: 'availableRooms', label: 'Available Rooms', icon: DoorOpen },
-  { key: 'pendingPayments', label: 'Pending Payments', icon: HandCoins },
-  { key: 'noShows', label: 'No Shows', icon: CalendarClock },
-]
+function Kpi({ label, value, icon: Icon, loading }) {
+  return (
+    <div className="aeds-kpi-card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--tenant-text-muted)" }}>
+            {label}
+          </p>
+          <div className="mt-2 text-2xl font-black" style={{ color: "var(--tenant-text)" }}>
+            {loading ? "..." : value}
+          </div>
+        </div>
+
+        <div className="aeds-icon-tile flex h-11 w-11 items-center justify-center rounded-2xl">
+          <Icon size={20} />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function ReservationKpiStrip() {
-  const [kpis, setKpis] = useState(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    const load = async () => {
-      try {
-        const nextKpis = await getReservationKpis()
-        if (!cancelled) setKpis(nextKpis)
-      } catch {
-        if (!cancelled) setKpis({})
-      }
-    }
-
-    load()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const { data, loading } = useReservationKpis()
 
   return (
-    <KpiStrip
-      loading={!kpis}
-      items={KPI_META.map((item) => ({
-        label: item.label,
-        value: kpis?.[item.key] ?? '—',
-        icon: item.icon,
-      }))}
-    />
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <Kpi label="Today's Arrivals" value={data.arrivals} icon={CalendarCheck} loading={loading} />
+      <Kpi label="Today's Departures" value={data.departures} icon={CalendarX} loading={loading} />
+      <Kpi label="In House" value={data.inHouse} icon={Users} loading={loading} />
+      <Kpi label="Pending Payments" value={data.pendingPayments} icon={CreditCard} loading={loading} />
+    </div>
   )
 }

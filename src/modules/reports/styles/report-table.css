@@ -1,0 +1,384 @@
+.aeds-report-engine {
+  border: 1px solid #dbe4dd;
+  background: #fff;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 18px 60px rgba(15, 23, 42, 0.06);
+}
+
+.aeds-report-engine-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #e5ece7;
+  background: linear-gradient(135deg, rgba(247,244,236,.9), rgba(255,255,255,.9));
+}
+
+.aeds-report-engine-header h2 {
+  margin: 2px 0;
+  font-size: 22px;
+  font-weight: 900;
+  color: #07142f;
+  letter-spacing: -0.035em;
+}
+
+.aeds-report-engine-header p {
+  margin: 0;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.aeds-report-eyebrow {
+  text-transform: uppercase;
+  color: #2e7d32 !important;
+  letter-spacing: .12em;
+  font-size: 11px !important;
+}
+
+.aeds-report-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 24px 0;
+}
+
+.aeds-report-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dbe4dd;
+  background: #f7f4ec;
+  color: #1b4d2e;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.aeds-report-chip strong {
+  color: #07142f;
+}
+
+.aeds-report-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5ece7;
+}
+
+.aeds-report-search {
+  min-width: 260px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #dbe4dd;
+  background: #fff;
+  border-radius: 16px;
+  padding: 0 14px;
+  height: 44px;
+}
+
+.aeds-report-search input {
+  border: 0;
+  outline: 0;
+  flex: 1;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.aeds-toolbar-btn,
+.aeds-toolbar-primary,
+.aeds-report-dropdown summary,
+.aeds-group-select select {
+  border: 1px solid #dbe4dd;
+  background: #fff;
+  height: 44px;
+  border-radius: 16px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.aeds-toolbar-primary {
+  background: #2e7d32;
+  color: white;
+  border-color: #2e7d32;
+}
+
+.aeds-group-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aeds-group-select span {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.aeds-report-dropdown {
+  position: relative;
+}
+
+.aeds-report-dropdown-panel {
+  position: absolute;
+  right: 0;
+  top: 52px;
+  z-index: 30;
+  width: 260px;
+  max-height: 360px;
+  overflow: auto;
+  padding: 10px;
+  background: white;
+  border: 1px solid #dbe4dd;
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, .18);
+}
+
+.aeds-column-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  background: transparent;
+  color: #334155;
+  font-weight: 800;
+  border-radius: 12px;
+  padding: 9px;
+  text-align: left;
+}
+
+.aeds-column-toggle:hover {
+  background: #f7f4ec;
+}
+
+.aeds-report-table-wrap {
+  max-height: 68vh;
+  overflow: auto;
+}
+
+.aeds-report-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.aeds-report-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f7f4ec;
+  color: #1b4d2e;
+  border-bottom: 1px solid #d0d8d2;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 0;
+}
+
+.aeds-th-inner {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+}
+
+.aeds-th-inner button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.aeds-th-title {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.aeds-th-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aeds-resizer {
+  width: 9px;
+  height: 24px;
+  cursor: col-resize;
+  border-right: 2px solid rgba(27, 77, 46, .18);
+}
+
+.aeds-report-cell,
+.aeds-report-table tfoot td,
+.aeds-subtotal-row td {
+  border-bottom: 1px solid #edf2ee;
+  color: #0f172a;
+  font-weight: 650;
+  padding: 12px 14px;
+  background: #fff;
+}
+
+.aeds-report-row:hover td {
+  background: #fbfdfb;
+}
+
+.aeds-frozen-head,
+.aeds-frozen-cell {
+  position: sticky !important;
+  left: 0;
+  z-index: 12 !important;
+  box-shadow: 1px 0 0 #e5ece7;
+}
+
+.aeds-frozen-cell {
+  z-index: 8 !important;
+}
+
+.aeds-align-right {
+  text-align: right;
+}
+
+.aeds-align-center {
+  text-align: center;
+}
+
+.tone-success {
+  color: #15803d;
+  font-weight: 900;
+}
+
+.tone-warning {
+  color: #b45309;
+  font-weight: 900;
+}
+
+.tone-danger {
+  color: #b91c1c;
+  font-weight: 900;
+}
+
+.aeds-group-row td {
+  position: sticky;
+  left: 0;
+  background: #ecfdf3;
+  color: #1b4d2e;
+  font-weight: 950;
+  padding: 10px 14px;
+  border-bottom: 1px solid #cfe7d3;
+}
+
+.aeds-group-row span {
+  margin-left: 10px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.aeds-subtotal-row td {
+  background: #f8fafc;
+  font-weight: 950;
+}
+
+.aeds-report-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 15;
+  background: #f1f5f9;
+  font-weight: 950;
+  border-top: 1px solid #dbe4dd;
+}
+
+.aeds-empty-cell {
+  padding: 42px !important;
+  text-align: center;
+  color: #94a3b8 !important;
+  font-weight: 800 !important;
+}
+
+.aeds-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  border-top: 1px solid #e5ece7;
+}
+
+.aeds-load-more button {
+  border: 1px solid #dbe4dd;
+  background: white;
+  color: #1b4d2e;
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 10px 18px;
+}
+
+.aeds-report-loading {
+  border: 1px solid #dbe4dd;
+  background: #fff;
+  border-radius: 24px;
+  padding: 32px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  color: #64748b;
+  font-weight: 900;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  .aeds-report-toolbar,
+  .aeds-report-filter-chips,
+  .aeds-load-more,
+  aside,
+  .no-print {
+    display: none !important;
+  }
+
+  .aeds-report-engine {
+    box-shadow: none;
+    border: 0;
+  }
+
+  .aeds-report-table-wrap {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .aeds-report-table {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .aeds-report-search,
+  .aeds-group-select,
+  .aeds-group-select select,
+  .aeds-toolbar-btn,
+  .aeds-toolbar-primary,
+  .aeds-report-dropdown summary {
+    width: 100%;
+  }
+}

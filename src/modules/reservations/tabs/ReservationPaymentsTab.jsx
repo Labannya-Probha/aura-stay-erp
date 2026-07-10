@@ -1,5 +1,1 @@
-import ReservationPayments from '../../../pages/ReservationPayments.jsx'
-
-export default function ReservationPaymentsTab({ userName, isAdmin }) {
-  return <ReservationPayments userName={userName} isAdmin={isAdmin} />
-}
+export default function ReservationPaymentsTab() { return <div className="aeds-card p-6"><h2 className="text-xl font-black text-slate-950">Reservation Payments</h2><p className="mt-1 text-sm text-slate-500">Advance, settlement, refund and folio payment tracking.</p></div> }

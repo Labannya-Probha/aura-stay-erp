@@ -1,5 +1,6 @@
-import ReportViewer from './components/ReportViewer'
+import ReportsLandingPage from "./pages/ReportsLandingPage"
+import "./reports.css"
 
-export default function ReportsCenterPage({ userName, userId, role, company }) {
-  return <ReportViewer userName={userName} userId={userId} role={role} company={company} />
+export default function ReportsCenterPage(props) {
+  return <ReportsLandingPage {...props} />
 }

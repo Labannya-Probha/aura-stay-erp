@@ -87,12 +87,12 @@ export default function AccountingHub({ userName, isAdmin, role }) {
       {msg && (
         <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>
       )}
-      <div className="flex gap-1 border-b border-leaf flex-wrap">
+      <div className="tab-strip-responsive border-b border-leaf">
         {TABS.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg ${
+            className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg ${
               tab === t
                 ? 'bg-white border border-leaf border-b-white text-forest -mb-px'
                 : 'text-pine/60 hover:text-pine'

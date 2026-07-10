@@ -261,12 +261,12 @@ export default function PosPrintCenter({ company: shellCompany, userName }) {
         <MetricCard icon={Activity} label="Logs" value={logs.length} />
       </div>
 
-      <div className="flex gap-1 border-b border-leaf overflow-x-auto">
+      <div className="tab-strip-responsive border-b border-leaf overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => openTab(tab.id)}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap flex items-center gap-2 ${
+            className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap flex items-center gap-2 ${
               activeTab === tab.id ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'
             }`}
           >

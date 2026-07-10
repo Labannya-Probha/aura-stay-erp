@@ -32,8 +32,8 @@ export default function VatCenter({ userName, company }) {
       </div>
       <KPICards module="vat" />
       {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
-      <div className="flex gap-1 border-b border-leaf flex-wrap">
-        {TABS.map((t) => (<button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-semibold rounded-t-lg ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>{t}</button>))}
+      <div className="tab-strip-responsive border-b border-leaf">
+        {TABS.map((t) => (<button key={t} onClick={() => setTab(t)} className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>{t}</button>))}
       </div>
       {tab === 'Sales 6.2' && <SalesReg ym={ym} company={company} />}
       {tab === 'Purchase 6.1' && <PurchaseReg ym={ym} company={company} />}

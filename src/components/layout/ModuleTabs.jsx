@@ -22,7 +22,7 @@ export default function ModuleTabs({ tabs = [], activeTab, onChange, className }
   if (!visibleTabs.length) return null
 
   return (
-    <div role="tablist" aria-label="Module tabs" className={cn('flex flex-wrap items-center gap-2', className)}>
+    <div role="tablist" aria-label="Module tabs" className={cn('tab-strip-responsive items-center gap-2', className)}>
       {visibleTabs.map((tab) => {
         const isActive = tab.id === activeTab
         return (
@@ -36,7 +36,7 @@ export default function ModuleTabs({ tabs = [], activeTab, onChange, className }
             disabled={tab.disabled}
             onClick={() => onChange?.(tab.id)}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-[9px] border px-3 py-1.5 text-sm transition-colors',
+              'tab-button-responsive inline-flex items-center gap-1.5 rounded-[9px] border px-3 py-1.5 text-sm transition-colors',
               isActive
                 ? 'border-[rgb(var(--tenant-primary-rgb)_/_0.35)] bg-secondary text-foreground'
                 : 'border-border bg-background text-muted-foreground hover:text-foreground',

@@ -7,9 +7,9 @@ import { isModuleEnabled } from './lib/saasModules'
 import { SaasModuleBlocked, SaasModuleFrame } from './components/saas/SaasModuleFrame.jsx'
 import { firstAccessiblePath } from './app/navigation/helpers'
 import { PATHS } from './app/paths'
-import Reservations from './pages/Reservations.jsx'
-import Reservationmodule from './pages/Reservationmodule.jsx'
-import Frontofficemodule from './pages/Frontofficemodule.jsx'
+import FrontOfficeReservationDetailPage from './modules/front-office/FrontOfficeReservationDetailPage.jsx'
+import LegacyReservationsPage from './modules/reservations/LegacyReservationsPage.jsx'
+import ReservationDetailPage from './modules/reservations/ReservationDetailPage.jsx'
 
 /* ------------------------------------------------------------------ */
 /*  GuardedRoute                                                        */
@@ -53,17 +53,17 @@ export function ReservationsRoute({ openReservation, userName }) {
   const navigate     = useNavigate()
   const prefill      = location.state?.prefill || null
   const clearPrefill = () => navigate(location.pathname, { replace: true, state: {} })
-  return <Reservations openReservation={openReservation} userName={userName} prefill={prefill} clearPrefill={clearPrefill} />
+  return <LegacyReservationsPage openReservation={openReservation} userName={userName} prefill={prefill} clearPrefill={clearPrefill} />
 }
 
 export function ReservationModuleRoute({ userName, role, isAdmin }) {
   const { id }   = useParams()
   const navigate = useNavigate()
-  return <Reservationmodule id={id} back={() => navigate(PATHS.RESERVATIONS)} userName={userName} role={role} isAdmin={isAdmin} />
+  return <ReservationDetailPage id={id} back={() => navigate(PATHS.RESERVATIONS)} userName={userName} role={role} isAdmin={isAdmin} />
 }
 
 export function FrontOfficeReservationRoute({ userName, role, isAdmin }) {
   const { id }   = useParams()
   const navigate = useNavigate()
-  return <Frontofficemodule id={id} back={() => navigate(PATHS.FRONT_OFFICE)} userName={userName} role={role} isAdmin={isAdmin} />
+  return <FrontOfficeReservationDetailPage id={id} back={() => navigate(PATHS.FRONT_OFFICE)} userName={userName} role={role} isAdmin={isAdmin} />
 }

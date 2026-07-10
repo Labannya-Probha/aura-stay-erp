@@ -1,17 +1,28 @@
-import { useLocation, useNavigate } from 'react-router-dom'
-import Reservations from '../../../pages/Reservations.jsx'
+import { useCallback } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 
-export default function NewReservationTab({ openReservation, userName }) {
+import { NewReservation } from "../../../pages/Reservations.jsx"
+
+export default function NewReservationTab({ openReservation, userName, onBackToList }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const prefill = location.state?.prefill || {}
+  const prefill = location.state?.prefill || null
+
+  const clearPrefill = useCallback(() => {
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: {} })
+  }, [location.pathname, location.search, navigate])
+
+  const handleClose = useCallback(() => {
+    clearPrefill()
+    onBackToList?.()
+  }, [clearPrefill, onBackToList])
 
   return (
-    <Reservations
+    <NewReservation
+      close={handleClose}
       openReservation={openReservation}
       userName={userName}
       prefill={prefill}
-      clearPrefill={() => navigate(location.pathname + location.search, { replace: true, state: {} })}
     />
   )
 }

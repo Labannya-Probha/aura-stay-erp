@@ -1,0 +1,358 @@
+.aeds-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(15, 23, 42, .22);
+  backdrop-filter: blur(5px);
+}
+
+.aeds-side-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  width: min(620px, 100vw);
+  background: #fff;
+  border-left: 1px solid #dbe4dd;
+  box-shadow: -24px 0 80px rgba(15, 23, 42, .18);
+  display: flex;
+  flex-direction: column;
+  animation: aedsSlideIn .18s ease-out;
+}
+
+.aeds-side-drawer.sm { width: min(460px, 100vw); }
+.aeds-side-drawer.lg { width: min(820px, 100vw); }
+.aeds-side-drawer.xl { width: min(1080px, 100vw); }
+
+@keyframes aedsSlideIn {
+  from { transform: translateX(24px); opacity: .7; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.aeds-dialog-center-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+.aeds-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px;
+  border-bottom: 1px solid #e5ece7;
+  background: linear-gradient(135deg, rgba(247,244,236,.9), rgba(255,255,255,.95));
+}
+
+.aeds-dialog-eyebrow {
+  margin: 0 0 6px;
+  color: #2e7d32;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+
+.aeds-dialog-header h2 {
+  margin: 0;
+  color: #07142f;
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: -.04em;
+}
+
+.aeds-dialog-header p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.6;
+}
+
+.aeds-dialog-icon-btn {
+  height: 40px;
+  width: 40px;
+  border: 1px solid #dbe4dd;
+  background: #fff;
+  color: #334155;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.aeds-dialog-body {
+  padding: 22px;
+  overflow: auto;
+}
+
+.aeds-dialog-footer {
+  margin-top: auto;
+  border-top: 1px solid #e5ece7;
+  padding: 16px 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: rgba(255,255,255,.86);
+  backdrop-filter: blur(12px);
+}
+
+.aeds-dialog-btn {
+  height: 42px;
+  border: 1px solid #dbe4dd;
+  background: #fff;
+  color: #334155;
+  border-radius: 15px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.aeds-dialog-btn.primary {
+  background: #1b4d2e;
+  border-color: #1b4d2e;
+  color: #fff;
+}
+
+.aeds-dialog-btn.danger {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+
+.aeds-confirm-dialog,
+.aeds-approval-dialog,
+.aeds-preview-dialog,
+.aeds-print-preview {
+  position: relative;
+  z-index: 95;
+  background: #fff;
+  border: 1px solid #dbe4dd;
+  border-radius: 28px;
+  box-shadow: 0 30px 100px rgba(15, 23, 42, .24);
+  overflow: hidden;
+  animation: aedsPopIn .16s ease-out;
+}
+
+@keyframes aedsPopIn {
+  from { transform: translateY(8px) scale(.98); opacity: .6; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.aeds-confirm-dialog {
+  width: min(440px, 100%);
+  padding: 26px;
+  text-align: center;
+}
+
+.aeds-confirm-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.aeds-confirm-icon {
+  width: 62px;
+  height: 62px;
+  margin: 4px auto 18px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+}
+
+.aeds-confirm-icon.success {
+  background: #ecfdf3;
+  color: #15803d;
+}
+
+.aeds-confirm-icon.danger {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.aeds-confirm-dialog h2 {
+  margin: 0;
+  color: #07142f;
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: -.04em;
+}
+
+.aeds-confirm-dialog p {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.6;
+}
+
+.aeds-confirm-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.aeds-preview-dialog {
+  width: min(980px, 96vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.aeds-preview-toolbar {
+  display: flex;
+  gap: 10px;
+  padding: 14px 22px;
+  border-bottom: 1px solid #e5ece7;
+}
+
+.aeds-preview-body {
+  overflow: auto;
+  padding: 22px;
+  background: #f8fafc;
+}
+
+.aeds-approval-dialog {
+  width: min(620px, 96vw);
+}
+
+.aeds-dialog-label {
+  display: grid;
+  gap: 8px;
+}
+
+.aeds-dialog-label span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.aeds-dialog-label textarea {
+  min-height: 120px;
+  border: 1px solid #dbe4dd;
+  border-radius: 16px;
+  padding: 12px 14px;
+  outline: none;
+  font-weight: 700;
+}
+
+.aeds-dialog-label textarea:focus {
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 4px rgba(46, 125, 50, .08);
+}
+
+.aeds-audit-box {
+  margin-top: 16px;
+  border: 1px solid #dbe4dd;
+  border-radius: 18px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.aeds-audit-box strong {
+  color: #07142f;
+  font-weight: 950;
+}
+
+.aeds-audit-box div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.aeds-audit-box em {
+  font-style: normal;
+  color: #94a3b8;
+}
+
+.aeds-print-preview {
+  width: min(1100px, 98vw);
+  max-height: 96vh;
+  display: flex;
+  flex-direction: column;
+  background: #f1f5f9;
+}
+
+.aeds-print-preview-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5ece7;
+}
+
+.aeds-print-preview-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 950;
+}
+
+.aeds-print-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.aeds-print-paper {
+  margin: 22px auto;
+  width: 210mm;
+  min-height: 297mm;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, .16);
+  padding: 18mm;
+}
+
+.aeds-print-preview.thermal .aeds-print-paper {
+  width: 80mm;
+  min-height: 120mm;
+  padding: 6mm;
+}
+
+@media print {
+  @page { size: A4; margin: 10mm; }
+
+  .no-print,
+  .aeds-dialog-backdrop,
+  .aeds-print-preview-header {
+    display: none !important;
+  }
+
+  .aeds-dialog-center-wrap,
+  .aeds-print-preview {
+    position: static;
+    inset: auto;
+    display: block;
+    padding: 0;
+    box-shadow: none;
+    border: 0;
+    background: white;
+  }
+
+  .aeds-print-paper {
+    margin: 0;
+    width: auto;
+    min-height: auto;
+    box-shadow: none;
+    padding: 0;
+  }
+}

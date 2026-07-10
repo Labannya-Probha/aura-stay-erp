@@ -122,6 +122,8 @@
   *, *::before, *::after { box-sizing: border-box; }
 
   html {
+    /* Fluid root scale: compact on small screens, stable on desktop. */
+    font-size: clamp(12px, 0.22vw + 10.4px, 14.5px);
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
@@ -133,7 +135,7 @@
     background: #f1f5f9;
     min-height: 100vh;
     font-family: var(--tenant-font-family);
-    font-size: 14.5px;
+    font-size: 1rem;
     line-height: 1.5;
     overflow-x: hidden;
   }
@@ -268,6 +270,13 @@
     background: #111827;
     color: #F9FAFB;
   }
+
+  @media (min-width: 1024px) and (max-height: 900px) {
+    html {
+      font-size: 12.5px;
+    }
+  }
+
   .dark {
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
@@ -346,6 +355,37 @@
     box-shadow: var(--interactive-shadow);
   }
   .card:hover::after { opacity: 1; }
+
+  .tab-strip-responsive {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .tab-button-responsive {
+    min-width: 0;
+  }
+
+  @media (max-width: 640px) {
+    .tab-strip-responsive {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.5rem;
+      border-bottom: 0 !important;
+      overflow: visible !important;
+    }
+
+    .tab-strip-responsive > .tab-button-responsive {
+      width: 100%;
+      justify-content: center;
+      text-align: center;
+      white-space: normal !important;
+      border-bottom-width: 1px !important;
+      border-radius: 0.75rem;
+      margin-bottom: 0 !important;
+      line-height: 1.2;
+    }
+  }
 
   /* ── FORM LABELS ───────────────────────────────────────────────── */
   .label {
@@ -572,6 +612,7 @@
    ============================================================ */
 @media print {
   .no-print { display: none !important; }
+  .print-only { display: block !important; }
   html,
   body,
   #root {
@@ -624,6 +665,43 @@
   thead { display: table-header-group; }
   tfoot { display: table-footer-group; }
   tr { break-inside: avoid; page-break-inside: avoid; }
+}
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  .report-print-table {
+    width: 100%;
+    border-collapse: collapse !important;
+    table-layout: fixed;
+    font-size: 9.5px !important;
+    line-height: 1.2;
+    border: 1px solid #ced7df;
+  }
+
+  .report-print-table thead {
+    display: table-header-group;
+  }
+
+  .report-print-table tfoot {
+    display: table-row-group;
+  }
+
+  .report-print-table th,
+  .report-print-table td {
+    padding: 6px 5px !important;
+    border: 1px solid #ced7df !important;
+    color: #111827 !important;
+  }
+
+  .report-print-table th {
+    font-size: 9px !important;
+    font-weight: 800;
+    text-transform: uppercase;
+    background: #eef3f7 !important;
+  }
 }
 
 /* ============================================================

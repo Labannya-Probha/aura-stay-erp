@@ -62,10 +62,10 @@ export default function Facilities({ userName, isAdmin }) {
       <h1 className="font-display text-2xl font-bold text-pine mb-1">Service Bills</h1>      
       <KPICards module="facilities" />
 
-      <div className="flex gap-1 border-b border-leaf mb-6 flex-wrap overflow-x-auto">
+      <div className="tab-strip-responsive border-b border-leaf mb-6 flex-wrap overflow-x-auto">
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
+            className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
             {t}
           </button>
         ))}
