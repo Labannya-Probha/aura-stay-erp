@@ -111,6 +111,7 @@ export default function AppRoutes({
 
       {/* Front Office — unified AEDS v2 module page */}
       <Route path={PATHS.FRONT_OFFICE} element={frontOfficeElement} />
+      <Route path={`${PATHS.FRONT_OFFICE}/:tab`} element={frontOfficeElement} />
 
       {/* Dashboard / frontoffice legacy routes */}
       <Route path={PATHS.FRONTOFFICE} element={<FrontOfficeLegacyRedirect legacyRoute="frontoffice" />} />

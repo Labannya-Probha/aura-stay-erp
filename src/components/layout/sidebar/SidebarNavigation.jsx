@@ -102,7 +102,7 @@ function modulePathById(id) {
       return PATHS.DASHBOARD
 
     case "nightaudit":
-      return `${PATHS.FRONT_OFFICE}?tab=in-house`
+      return `${PATHS.FRONT_OFFICE}/in-house`
 
     case "reservations":
       return `${PATHS.RESERVATIONS}?tab=${DEFAULT_RESERVATION_TAB || "calendar"}`
@@ -331,8 +331,8 @@ function buildReservationChildren({ location, visibleReservationTabs }) {
 }
 
 function buildFrontOfficeChildren({ role, privileges, location }) {
-  const foTab = getSearchParam(location, "tab")
-  const isFoPath = location.pathname === PATHS.FRONT_OFFICE
+  const foTab = getSearchParam(location, "tab") || location.pathname.replace(PATHS.FRONT_OFFICE, "").split("/").filter(Boolean)[0]
+  const isFoPath = location.pathname === PATHS.FRONT_OFFICE || location.pathname.startsWith(`${PATHS.FRONT_OFFICE}/`)
   const canAccessServiceBills = can(role, "facilities", privileges)
   const canAccessNightAudit = can(role, "nightaudit", privileges)
 
@@ -340,7 +340,7 @@ function buildFrontOfficeChildren({ role, privileges, location }) {
     {
       id: "fo-in-house",
       label: "In-House Guests",
-      path: `${PATHS.FRONT_OFFICE}?tab=in-house`,
+      path: `${PATHS.FRONT_OFFICE}/in-house`,
       active:
         (isFoPath && (!foTab || foTab === "in-house")) ||
         location.pathname.startsWith("/frontoffice"),
@@ -348,19 +348,19 @@ function buildFrontOfficeChildren({ role, privileges, location }) {
     {
       id: "fo-room-board",
       label: "Room Board",
-      path: `${PATHS.FRONT_OFFICE}?tab=room-board`,
+      path: `${PATHS.FRONT_OFFICE}/room-rack`,
       active: isFoPath && foTab === "room-board",
     },
     {
       id: "fo-check-in-out",
       label: "Check In / Check Out",
-      path: `${PATHS.FRONT_OFFICE}?tab=check-in-out`,
+      path: `${PATHS.FRONT_OFFICE}/check-in-out`,
       active: isFoPath && foTab === "check-in-out",
     },
     {
       id: "fo-guest-folio",
       label: "Guest Folio",
-      path: `${PATHS.FRONT_OFFICE}?tab=guest-folio`,
+      path: `${PATHS.FRONT_OFFICE}/guest-folio`,
       active: isFoPath && foTab === "guest-folio",
     },
     ...(canAccessServiceBills
@@ -368,7 +368,7 @@ function buildFrontOfficeChildren({ role, privileges, location }) {
           {
             id: "fo-service-bills",
             label: "Service Bills",
-            path: `${PATHS.FRONT_OFFICE}?tab=service-bills`,
+            path: `${PATHS.FRONT_OFFICE}/service-bills`,
             active: (isFoPath && foTab === "service-bills") || location.pathname === PATHS.FACILITIES,
           },
         ]
@@ -378,7 +378,7 @@ function buildFrontOfficeChildren({ role, privileges, location }) {
           {
             id: "fo-night-audit",
             label: "Night Audit",
-            path: `${PATHS.FRONT_OFFICE}?tab=night-audit`,
+            path: `${PATHS.FRONT_OFFICE}/night-audit`,
             active: (isFoPath && foTab === "night-audit") || location.pathname === PATHS.NIGHTAUDIT,
           },
         ]
@@ -386,13 +386,13 @@ function buildFrontOfficeChildren({ role, privileges, location }) {
     {
       id: "fo-lost-found",
       label: "Lost & Found",
-      path: `${PATHS.FRONT_OFFICE}?tab=lost-found`,
+      path: `${PATHS.FRONT_OFFICE}/lost-found`,
       active: isFoPath && foTab === "lost-found",
     },
     {
       id: "fo-guest-messages",
       label: "Guest Messages",
-      path: `${PATHS.FRONT_OFFICE}?tab=guest-messages`,
+      path: `${PATHS.FRONT_OFFICE}/guest-messages`,
       active: isFoPath && foTab === "guest-messages",
     },
   ]

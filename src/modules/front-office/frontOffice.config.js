@@ -74,13 +74,11 @@ export function resolveFrontOfficeTab(
   id = DEFAULT_FRONT_OFFICE_TAB,
   visibleTabs = FRONT_OFFICE_TABS
 ) {
-  const normalizedId = FRONT_OFFICE_LEGACY_TAB_REDIRECTS[id] || id
-  const resolved =
-    visibleTabs.find((tab) => tab.id === normalizedId) ||
+  return (
+    visibleTabs.find((tab) => tab.id === id) ||
     visibleTabs.find((tab) => tab.default) ||
     visibleTabs[0]
-
-  return resolved?.id || DEFAULT_FRONT_OFFICE_TAB
+  )
 }
 export const FRONT_OFFICE_LEGACY_TAB_REDIRECTS = {
   "room-board": "room-rack",
@@ -95,6 +93,7 @@ export const FRONT_OFFICE_LEGACY_TAB_REDIRECTS = {
   "guest-folios": "guest-folio",
   "cashier": "cashier",
   "service-bills": "service-bills",
+  "service-bill": "service-bills",
   "night-audit": "night-audit",
   "lost-found": "lost-found",
   "guest-messages": "guest-messages",
