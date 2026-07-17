@@ -18,6 +18,7 @@ import {
 } from "../../../app/navigation/sidebarTabs"
 import { getVisibleSettingsSections } from "../../../app/navigation/settingsSections"
 import { PATHS } from "../../../app/paths"
+import { FRONT_OFFICE_PAGES, frontOfficePath, normalizeFrontOfficeSlug } from "../../../modules/front-office/frontOffice.config"
 import "../../../styles/aeds-v6-migration.css"
 
 import {
@@ -102,7 +103,7 @@ function modulePathById(id) {
       return PATHS.DASHBOARD
 
     case "nightaudit":
-      return `${PATHS.FRONT_OFFICE}/in-house`
+      return `${PATHS.FRONT_OFFICE}?tab=in-house`
 
     case "reservations":
       return `${PATHS.RESERVATIONS}?tab=${DEFAULT_RESERVATION_TAB || "calendar"}`
@@ -330,72 +331,24 @@ function buildReservationChildren({ location, visibleReservationTabs }) {
   }))
 }
 
-function buildFrontOfficeChildren({ role, privileges, location }) {
-  const foTab = getSearchParam(location, "tab") || location.pathname.replace(PATHS.FRONT_OFFICE, "").split("/").filter(Boolean)[0]
-  const isFoPath = location.pathname === PATHS.FRONT_OFFICE || location.pathname.startsWith(`${PATHS.FRONT_OFFICE}/`)
-  const canAccessServiceBills = can(role, "facilities", privileges)
-  const canAccessNightAudit = can(role, "nightaudit", privileges)
+function buildFrontOfficeChildren({ role, isAdmin, privileges, location }) {
+  const pathSlug = location.pathname.startsWith(`${PATHS.FRONT_OFFICE}/`)
+    ? location.pathname.slice(`${PATHS.FRONT_OFFICE}/`.length).split('/')[0]
+    : ''
+  const querySlug = getSearchParam(location, 'tab')
+  const activeSlug = normalizeFrontOfficeSlug(pathSlug || querySlug || 'room-rack')
 
-  return [
-    {
-      id: "fo-in-house",
-      label: "In-House Guests",
-      path: `${PATHS.FRONT_OFFICE}/in-house`,
+  return FRONT_OFFICE_PAGES
+    .filter((page) => isAdmin || role === 'SUPERUSER' || can(role, page.permission || 'dashboard', privileges))
+    .sort((a, b) => a.order - b.order)
+    .map((page) => ({
+      id: `fo-${page.id}`,
+      label: page.label,
+      path: frontOfficePath(page.slug),
       active:
-        (isFoPath && (!foTab || foTab === "in-house")) ||
-        location.pathname.startsWith("/frontoffice"),
-    },
-    {
-      id: "fo-room-board",
-      label: "Room Board",
-      path: `${PATHS.FRONT_OFFICE}/room-rack`,
-      active: isFoPath && foTab === "room-board",
-    },
-    {
-      id: "fo-check-in-out",
-      label: "Check In / Check Out",
-      path: `${PATHS.FRONT_OFFICE}/check-in-out`,
-      active: isFoPath && foTab === "check-in-out",
-    },
-    {
-      id: "fo-guest-folio",
-      label: "Guest Folio",
-      path: `${PATHS.FRONT_OFFICE}/guest-folio`,
-      active: isFoPath && foTab === "guest-folio",
-    },
-    ...(canAccessServiceBills
-      ? [
-          {
-            id: "fo-service-bills",
-            label: "Service Bills",
-            path: `${PATHS.FRONT_OFFICE}/service-bills`,
-            active: (isFoPath && foTab === "service-bills") || location.pathname === PATHS.FACILITIES,
-          },
-        ]
-      : []),
-    ...(canAccessNightAudit
-      ? [
-          {
-            id: "fo-night-audit",
-            label: "Night Audit",
-            path: `${PATHS.FRONT_OFFICE}/night-audit`,
-            active: (isFoPath && foTab === "night-audit") || location.pathname === PATHS.NIGHTAUDIT,
-          },
-        ]
-      : []),
-    {
-      id: "fo-lost-found",
-      label: "Lost & Found",
-      path: `${PATHS.FRONT_OFFICE}/lost-found`,
-      active: isFoPath && foTab === "lost-found",
-    },
-    {
-      id: "fo-guest-messages",
-      label: "Guest Messages",
-      path: `${PATHS.FRONT_OFFICE}/guest-messages`,
-      active: isFoPath && foTab === "guest-messages",
-    },
-  ]
+        (location.pathname === PATHS.FRONT_OFFICE || location.pathname.startsWith(`${PATHS.FRONT_OFFICE}/`)) &&
+        activeSlug === page.slug,
+    }))
 }
 
 function buildPosChildren(location) {

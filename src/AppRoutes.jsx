@@ -70,7 +70,7 @@ function CmsLegacyRedirect() {
 
 function FrontOfficeLegacyRedirect({ legacyRoute }) {
   const tab = FRONT_OFFICE_LEGACY_TAB_REDIRECTS[legacyRoute] || FRONT_OFFICE_LEGACY_TAB_REDIRECTS.frontoffice
-  return <Navigate to={`${PATHS.FRONT_OFFICE}?tab=${tab}`} replace />
+  return <Navigate to={`${PATHS.FRONT_OFFICE}/${tab}`} replace />
 }
 
 export default function AppRoutes({
@@ -111,7 +111,7 @@ export default function AppRoutes({
 
       {/* Front Office — unified AEDS v2 module page */}
       <Route path={PATHS.FRONT_OFFICE} element={frontOfficeElement} />
-      <Route path={`${PATHS.FRONT_OFFICE}/:tab`} element={frontOfficeElement} />
+      <Route path={PATHS.FRONT_OFFICE_PAGE} element={frontOfficeElement} />
 
       {/* Dashboard / frontoffice legacy routes */}
       <Route path={PATHS.FRONTOFFICE} element={<FrontOfficeLegacyRedirect legacyRoute="frontoffice" />} />

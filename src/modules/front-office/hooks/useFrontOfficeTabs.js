@@ -1,38 +1,39 @@
-import { useMemo } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
-
+import { useEffect, useMemo } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
-  DEFAULT_FRONT_OFFICE_TAB,
-  FRONT_OFFICE_LEGACY_TAB_REDIRECTS,
-  resolveFrontOfficeTab,
-} from "../frontOffice.config"
-import { PATHS } from "../../../app/paths"
-
-function normalizeTab(value) {
-  const requested = String(value || "").trim().toLowerCase()
-  const mapped = FRONT_OFFICE_LEGACY_TAB_REDIRECTS[requested] || requested
-  return resolveFrontOfficeTab(mapped)?.id || DEFAULT_FRONT_OFFICE_TAB
-}
+  DEFAULT_FRONT_OFFICE_PAGE,
+  frontOfficePath,
+  getFrontOfficePage,
+  normalizeFrontOfficeSlug,
+} from '../frontOffice.config'
 
 export function useFrontOfficeTabs() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { pageSlug } = useParams()
 
-  const activeTab = useMemo(() => {
+  const querySlug = useMemo(() => {
     const params = new URLSearchParams(location.search)
-    const queryTab = params.get("tab")
-    const pathTab = location.pathname
-      .replace(PATHS.FRONT_OFFICE, "")
-      .split("/")
-      .filter(Boolean)[0]
+    return params.get('tab')
+  }, [location.search])
 
-    return normalizeTab(queryTab || pathTab || DEFAULT_FRONT_OFFICE_TAB)
-  }, [location.pathname, location.search])
+  const activeSlug = normalizeFrontOfficeSlug(pageSlug || querySlug || DEFAULT_FRONT_OFFICE_PAGE)
+  const activePage = getFrontOfficePage(activeSlug)
 
-  const setActiveTab = (tab) => {
-    const nextTab = normalizeTab(typeof tab === "string" ? tab : tab?.id)
-    navigate(`${PATHS.FRONT_OFFICE}/${encodeURIComponent(nextTab)}`)
+  // Canonical URL: /front-office/:pageSlug. Old ?tab= links remain compatible.
+  useEffect(() => {
+    const canonical = frontOfficePath(activeSlug)
+    if (location.pathname !== canonical || location.search) {
+      navigate(canonical, { replace: true })
+    }
+  }, [activeSlug, location.pathname, location.search, navigate])
+
+  const setActiveTab = (slug) => navigate(frontOfficePath(slug))
+
+  return {
+    activeTab: activeSlug,
+    activeSlug,
+    activePage,
+    setActiveTab,
   }
-
-  return { activeTab, setActiveTab }
 }
