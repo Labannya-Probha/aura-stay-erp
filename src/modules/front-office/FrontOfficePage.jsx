@@ -10,6 +10,7 @@ import { useFrontOfficeTabs } from './hooks/useFrontOfficeTabs'
 import { useFrontOfficeData } from './hooks/useFrontOfficeData'
 import FrontOfficeKpiStrip from './shared/FrontOfficeKpiStrip'
 import FrontOfficePageHeader from './shared/FrontOfficePageHeader'
+import FrontOfficeRouteBoundary from './shared/FrontOfficeRouteBoundary'
 import ArrivalBoardPage from './arrival-board/ArrivalBoardPage'
 import DepartureBoardPage from './departure-board/DepartureBoardPage'
 import InHouseGuestsPage from './in-house/InHouseGuestsPage'
@@ -121,13 +122,13 @@ export default function FrontOfficePage({
           </div>
         )
       case 'guest-folio':
-        return <GuestFolioPage userName={userName} company={company} />
+        return <GuestFolioPage rows={inHouse} loading={loading} openReservation={openReservation} />
       case 'service-bills':
         return <ServiceBillsPage userName={userName} isAdmin={isAdmin} />
       case 'cashier':
-        return <CashierPage userName={userName} company={company} />
+        return <CashierPage userName={userName} isAdmin={isAdmin} />
       case 'night-audit':
-        return <NightAuditPage userName={userName} role={role} />
+        return <NightAuditPage userName={userName} isAdmin={isAdmin} role={role} />
       case 'lost-found':
         return <LostFoundPage />
       case 'guest-messages':
@@ -145,7 +146,9 @@ export default function FrontOfficePage({
         </div>
       ) : null}
       <section id={`front-office-page-${currentPage.slug}`} data-front-office-page={currentPage.slug}>
-        {renderPage()}
+        <FrontOfficeRouteBoundary routeKey={currentPage.slug}>
+          {renderPage()}
+        </FrontOfficeRouteBoundary>
       </section>
     </>
   )
