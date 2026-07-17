@@ -43,6 +43,12 @@ export const FRONT_OFFICE_TABS = [
     permission: "front_office",
   },
   {
+    id: "service-bills",
+    label: "Service Bills",
+    icon: "ReceiptText",
+    permission: "facilities",
+  },
+  {
     id: "night-audit",
     label: "Night Audit",
     icon: "MoonStar",
@@ -68,11 +74,13 @@ export function resolveFrontOfficeTab(
   id = DEFAULT_FRONT_OFFICE_TAB,
   visibleTabs = FRONT_OFFICE_TABS
 ) {
-  return (
-    visibleTabs.find((tab) => tab.id === id) ||
+  const normalizedId = FRONT_OFFICE_LEGACY_TAB_REDIRECTS[id] || id
+  const resolved =
+    visibleTabs.find((tab) => tab.id === normalizedId) ||
     visibleTabs.find((tab) => tab.default) ||
     visibleTabs[0]
-  )
+
+  return resolved?.id || DEFAULT_FRONT_OFFICE_TAB
 }
 export const FRONT_OFFICE_LEGACY_TAB_REDIRECTS = {
   "room-board": "room-rack",
@@ -86,6 +94,7 @@ export const FRONT_OFFICE_LEGACY_TAB_REDIRECTS = {
   "guest-folio": "guest-folio",
   "guest-folios": "guest-folio",
   "cashier": "cashier",
+  "service-bills": "service-bills",
   "night-audit": "night-audit",
   "lost-found": "lost-found",
   "guest-messages": "guest-messages",

@@ -16,7 +16,8 @@ import InHouseGuestsPage from "./in-house/InHouseGuestsPage"
 import RoomRackPage from "./room-rack/RoomRackPage"
 import GuestFolioPage from "./guest-folio/GuestFolioPage"
 import CashierPage from "./cashier/CashierPage"
-import NightAuditPage from "./night-audit/NightAuditPage"
+import NightAuditPage from "../../pages/NightAudit"
+import ServiceBills from "../../pages/ServiceBills"
 import LostFoundPage from "./lost-found/LostFoundPage"
 import GuestMessagesPage from "./guest-messages/GuestMessagesPage"
 import CheckInDialog from "./dialog/CheckInDialog"
@@ -59,116 +60,113 @@ export default function FrontOfficePage({
     ? activeTab
     : visibleTabs[0]?.id || "arrival-board"
 
-  return (
+  const renderCurrentPage = () => (
     <>
-      <EnterpriseWorkspace
-        title="Front Office Workspace"
-        subtitle="Arrival, departure, in-house guests, room rack, cashier and night audit command center."
-        eyebrow="Hotel Operations"
-        icon={Hotel}
-        actions={
-          <Button
-            variant="outline"
-            onClick={refresh}
-            disabled={loading || refreshing}
-          >
-            <RefreshCw
-              size={16}
-              className={refreshing ? "animate-spin" : ""}
-            />
-            {refreshing ? "Refreshing..." : "Refresh"}
-          </Button>
-        }
-        kpis={
-          <FrontOfficeKpiStrip
-            data={summary}
-            loading={loading}
-          />
-        }
-        tabs={
-          <ModuleTabs
-            tabs={visibleTabs}
-            activeTab={currentTab}
-            onChange={setActiveTab}
-          />
-        }
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+          {error}
+        </div>
+      )}
+
+      <section
+        id={`module-tab-panel-${currentTab}`}
+        role="tabpanel"
+        aria-labelledby={`module-tab-${currentTab}`}
       >
-        {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-            {error}
-          </div>
+        {currentTab === "arrival-board" && (
+          <ArrivalBoardPage
+            rows={arrivals}
+            loading={loading}
+            openReservation={openReservation}
+            onCheckIn={setCheckInTarget}
+          />
         )}
 
-        <section
-          id={`module-tab-panel-${currentTab}`}
-          role="tabpanel"
-          aria-labelledby={`module-tab-${currentTab}`}
+        {currentTab === "departure-board" && (
+          <DepartureBoardPage
+            rows={departures}
+            loading={loading}
+            openReservation={openReservation}
+            onCheckOut={setCheckOutTarget}
+          />
+        )}
+
+        {currentTab === "in-house" && (
+          <InHouseGuestsPage
+            rows={inHouse}
+            loading={loading}
+            openReservation={openReservation}
+            onRoomMove={setRoomMoveTarget}
+            onStayAmend={setStayAmendTarget}
+          />
+        )}
+
+        {currentTab === "room-rack" && (
+          <RoomRackPage rows={roomRack} loading={loading} />
+        )}
+
+        {currentTab === "guest-folio" && (
+          <GuestFolioPage userName={userName} company={company} />
+        )}
+
+        {currentTab === "cashier" && (
+          <CashierPage userName={userName} company={company} />
+        )}
+
+        {currentTab === "service-bills" && (
+          <ServiceBills userName={userName} isAdmin={isAdmin} />
+        )}
+
+        {currentTab === "night-audit" && (
+          <NightAuditPage userName={userName} role={role} isAdmin={isAdmin} />
+        )}
+
+        {currentTab === "lost-found" && <LostFoundPage />}
+
+        {currentTab === "guest-messages" && <GuestMessagesPage />}
+      </section>
+    </>
+  )
+
+  const showRoomRackWorkspace = currentTab === "room-rack"
+
+  return (
+    <>
+      {showRoomRackWorkspace ? (
+        <EnterpriseWorkspace
+          title="Front Office Workspace"
+          subtitle="Room rack, live room status, arrivals, departures and guest control center."
+          eyebrow="Hotel Operations"
+          icon={Hotel}
+          actions={
+            <Button
+              variant="outline"
+              onClick={refresh}
+              disabled={loading || refreshing}
+            >
+              <RefreshCw
+                size={16}
+                className={refreshing ? "animate-spin" : ""}
+              />
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </Button>
+          }
+          kpis={<FrontOfficeKpiStrip data={summary} loading={loading} />}
+          tabs={
+            <ModuleTabs
+              tabs={visibleTabs}
+              activeTab={currentTab}
+              onChange={setActiveTab}
+            />
+          }
         >
-          {currentTab === "arrival-board" && (
-            <ArrivalBoardPage
-              rows={arrivals}
-              loading={loading}
-              openReservation={openReservation}
-              onCheckIn={setCheckInTarget}
-            />
-          )}
-
-          {currentTab === "departure-board" && (
-            <DepartureBoardPage
-              rows={departures}
-              loading={loading}
-              openReservation={openReservation}
-              onCheckOut={setCheckOutTarget}
-            />
-          )}
-
-          {currentTab === "in-house" && (
-            <InHouseGuestsPage
-              rows={inHouse}
-              loading={loading}
-              openReservation={openReservation}
-              onRoomMove={setRoomMoveTarget}
-              onStayAmend={setStayAmendTarget}
-            />
-          )}
-
-          {currentTab === "room-rack" && (
-            <RoomRackPage
-              rows={roomRack}
-              loading={loading}
-            />
-          )}
-
-          {currentTab === "guest-folio" && (
-            <GuestFolioPage
-              userName={userName}
-              company={company}
-            />
-          )}
-
-          {currentTab === "cashier" && (
-            <CashierPage
-              userName={userName}
-              company={company}
-            />
-          )}
-
-          {currentTab === "night-audit" && (
-            <NightAuditPage
-              userName={userName}
-              role={role}
-            />
-          )}
-
-          {currentTab === "lost-found" && (
-            <LostFoundPage />
-          )}
-
-          {currentTab === "guest-messages" && (
-            <GuestMessagesPage />
-          )}
-        </section>
-      </EnterpriseWorkspace>
+          {renderCurrentPage()}
+        </EnterpriseWorkspace>
+      ) : (
+        <div className="min-w-0 px-4 py-5 sm:px-5 lg:px-6">
+          {renderCurrentPage()}
+        </div>
+      )}
 
       <CheckInDialog
         open={Boolean(checkInTarget)}

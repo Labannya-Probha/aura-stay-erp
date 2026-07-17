@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { fmtBDT, todayISO } from '../lib/helpers'
+import { withTenantScope } from '../lib/companySettings'
 import {
   BedDouble, TrendingUp, TrendingDown, Users, Banknote, Clock,
   AlertTriangle, CheckCircle2, ShoppingCart, Boxes, Calculator, LogOut,
@@ -153,21 +154,35 @@ async function fetchKPIs(module, today) {
     }
 
     case 'nightaudit': {
-      const [{ data: na }, { data: res }, { data: fc }] = await Promise.all([
-        supabase.from('night_audits').select('audit_date, summary').order('audit_date', { ascending: false }).limit(30),
-        supabase.from('reservations').select('status').in('status', ['CHECKED_IN','NO_SHOW']),
-        supabase.from('folio_charges').select('status, total').gte('charge_date', today.slice(0,7) + '-01'),
+      const [{ data: na }, { data: res }] = await Promise.all([
+        withTenantScope(
+          supabase
+            .from('night_audits')
+            .select('audit_date, summary')
+            .order('audit_date', { ascending: false })
+            .limit(30)
+        ),
+        withTenantScope(
+          supabase
+            .from('reservations')
+            .select('id,status,check_in,check_out')
+            .eq('status', 'CHECKED_IN')
+            .lte('check_in', today)
+            .gt('check_out', today)
+        ),
       ])
+
       const lastAudit = (na || [])[0]
-      const daysSince = lastAudit ? Math.floor((new Date(today) - new Date(lastAudit.audit_date)) / 86400000) : null
+      const daysSince = lastAudit
+        ? Math.floor((new Date(today) - new Date(lastAudit.audit_date)) / 86400000)
+        : null
       const auditedDays = (na || []).length
-      const inhouse = (res || []).filter(r => r.status === 'CHECKED_IN').length
-      const dueAmt = (fc || []).filter(r => r.status === 'DUE').reduce((s, r) => s + +r.total, 0)
+      const inhouse = (res || []).length
+
       return [
         { label: 'Last night audit', value: lastAudit ? lastAudit.audit_date : 'Never', sub: daysSince === 0 ? 'Done today' : daysSince === 1 ? 'Yesterday' : daysSince !== null ? `${daysSince} days ago` : 'No audits yet', icon: CalendarCheck, color: daysSince === 0 ? 'green' : daysSince !== null && daysSince > 1 ? 'red' : 'amber' },
         { label: 'Audits this month', value: (na || []).filter(a => a.audit_date >= today.slice(0,7) + '-01').length, sub: `${auditedDays} total`, icon: FileText, color: 'pine' },
         { label: 'In-house tonight', value: inhouse, sub: 'Guests to audit', icon: BedDouble, color: inhouse > 0 ? 'blue' : 'stone' },
-        { label: 'Outstanding due', value: fmtBDT(dueAmt), sub: dueAmt > 0 ? 'Unposted charges' : 'All clear', icon: dueAmt > 0 ? AlertTriangle : CheckCircle2, color: dueAmt > 0 ? 'amber' : 'green' },
       ]
     }
 
