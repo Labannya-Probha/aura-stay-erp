@@ -162,12 +162,10 @@ async function fetchKPIs(module, today) {
       const daysSince = lastAudit ? Math.floor((new Date(today) - new Date(lastAudit.audit_date)) / 86400000) : null
       const auditedDays = (na || []).length
       const inhouse = (res || []).filter(r => r.status === 'CHECKED_IN').length
-      const dueAmt = (fc || []).filter(r => r.status === 'DUE').reduce((s, r) => s + +r.total, 0)
       return [
         { label: 'Last night audit', value: lastAudit ? lastAudit.audit_date : 'Never', sub: daysSince === 0 ? 'Done today' : daysSince === 1 ? 'Yesterday' : daysSince !== null ? `${daysSince} days ago` : 'No audits yet', icon: CalendarCheck, color: daysSince === 0 ? 'green' : daysSince !== null && daysSince > 1 ? 'red' : 'amber' },
         { label: 'Audits this month', value: (na || []).filter(a => a.audit_date >= today.slice(0,7) + '-01').length, sub: `${auditedDays} total`, icon: FileText, color: 'pine' },
         { label: 'In-house tonight', value: inhouse, sub: 'Guests to audit', icon: BedDouble, color: inhouse > 0 ? 'blue' : 'stone' },
-        { label: 'Outstanding due', value: fmtBDT(dueAmt), sub: dueAmt > 0 ? 'Unposted charges' : 'All clear', icon: dueAmt > 0 ? AlertTriangle : CheckCircle2, color: dueAmt > 0 ? 'amber' : 'green' },
       ]
     }
 

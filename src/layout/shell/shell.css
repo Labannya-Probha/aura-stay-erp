@@ -2,6 +2,7 @@
   --aeds-sidebar-width: 300px;
   --aeds-topbar-height: 56px;
   --aeds-mobile-bar-height: 56px;
+  --aeds-footer-height: 44px;
   --aeds-page-max: 1680px;
   --aeds-page-x: clamp(16px, 2vw, 28px);
   --aeds-page-y: clamp(16px, 2vw, 28px);
@@ -46,7 +47,7 @@
   width: 100%;
   max-width: var(--aeds-page-max);
   margin-inline: auto;
-  padding: var(--aeds-page-y) var(--aeds-page-x) 40px;
+  padding: var(--aeds-page-y) var(--aeds-page-x) calc(var(--aeds-footer-height) + 24px);
 }
 
 .aeds-mobile-bar {
@@ -89,5 +90,44 @@
 
   .aeds-page-container {
     padding-bottom: 14px;
+  }
+}
+
+/* Fixed enterprise footer */
+.aeds-fixed-footer {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 35;
+  height: var(--aeds-footer-height);
+  border-top: 1px solid var(--tenant-border, rgb(226 232 240));
+  background: color-mix(in srgb, var(--tenant-surface, #fff) 96%, transparent);
+  box-shadow: 0 -4px 16px rgb(15 23 42 / 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.aeds-fixed-footer__inner {
+  width: 100%;
+  max-width: var(--aeds-page-max);
+  height: 100%;
+  margin-inline: auto;
+  padding-inline: var(--aeds-page-x);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: rgb(100 116 139);
+  font-size: 0.8125rem;
+}
+
+.aeds-shell-content {
+  position: relative;
+  padding-bottom: var(--aeds-footer-height);
+}
+
+@media (max-width: 640px) {
+  .aeds-fixed-footer__inner {
+    font-size: 0.75rem;
   }
 }

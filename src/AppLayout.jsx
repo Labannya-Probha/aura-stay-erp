@@ -120,8 +120,8 @@ export default function AppShell({
         navigate={navigate}
       />
 
-      <footer className="no-print mt-auto shrink-0 border-t border-slate-200 bg-white px-[var(--aeds-page-x)] py-3">
-        <div className="mx-auto flex w-full max-w-[var(--aeds-page-max)] items-center justify-between text-sm text-slate-500">
+      <footer className="aeds-fixed-footer no-print">
+        <div className="aeds-fixed-footer__inner">
           <span>
             © {new Date().getFullYear()} Aura Stay
           </span>
