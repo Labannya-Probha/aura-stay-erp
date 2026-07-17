@@ -1,19 +1,53 @@
-import { useLocation, useNavigate } from 'react-router-dom'
-import Reservations from '../../../pages/Reservations.jsx'
+import { RefreshCw } from "lucide-react"
 
-export default function ReservationsListTab({ openReservation, userName }) {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const prefill = location.state?.prefill || null
-  const clearPrefill = () =>
-    navigate(location.pathname + location.search, { replace: true, state: {} })
+import AedsDataGrid from "../../../components/data-grid/AedsDataGrid"
+import { Button } from "../../../components/ui/button"
+
+import { useReservationsList } from "../hooks/useReservationsList"
+import { reservationListColumns } from "../reservation-list/reservationListColumns"
+
+export default function ReservationsListTab({
+  openReservation,
+}) {
+  const {
+    rows,
+    loading,
+    refreshing,
+    error,
+    refresh,
+  } = useReservationsList()
 
   return (
-    <Reservations
-      openReservation={openReservation}
-      userName={userName}
-      prefill={prefill}
-      clearPrefill={clearPrefill}
-    />
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={refresh}
+          disabled={loading || refreshing}
+        >
+          <RefreshCw
+            size={16}
+            className={refreshing ? "animate-spin" : ""}
+          />
+          {refreshing ? "Refreshing..." : "Refresh"}
+        </Button>
+      </div>
+
+      <AedsDataGrid
+        title="Reservations Register"
+        subtitle="Guest, stay, room assignment, source and folio position"
+        data={rows}
+        columns={reservationListColumns}
+        pageSize={100}
+        loading={loading}
+        error={error}
+        emptyText="No reservation records found."
+        getRowId={(row) => row.id}
+        onRowClick={(row) =>
+          openReservation?.(row.id)
+        }
+      />
+    </div>
   )
 }

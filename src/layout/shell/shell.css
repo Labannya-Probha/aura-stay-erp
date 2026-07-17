@@ -1,0 +1,93 @@
+:root {
+  --aeds-sidebar-width: 300px;
+  --aeds-topbar-height: 56px;
+  --aeds-mobile-bar-height: 56px;
+  --aeds-page-max: 1680px;
+  --aeds-page-x: clamp(16px, 2vw, 28px);
+  --aeds-page-y: clamp(16px, 2vw, 28px);
+}
+
+.aeds-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: var(--aeds-sidebar-width) minmax(0, 1fr);
+  background: var(--tenant-shell-bg);
+  overflow-x: clip;
+  isolation: isolate;
+}
+
+.aeds-shell.no-sidebar {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.aeds-shell-content {
+  min-width: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.aeds-shell-main {
+  min-width: 0;
+  width: 100%;
+  flex: 1;
+  overflow-x: clip;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.aeds-page-container {
+  width: 100%;
+  max-width: var(--aeds-page-max);
+  margin-inline: auto;
+  padding: var(--aeds-page-y) var(--aeds-page-x) 40px;
+}
+
+.aeds-mobile-bar {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .aeds-shell {
+    display: block;
+  }
+
+  .aeds-mobile-bar {
+    position: sticky;
+    top: 0;
+    z-index: 45;
+    display: flex;
+    height: calc(var(--aeds-mobile-bar-height) + env(safe-area-inset-top));
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--tenant-border);
+    background: color-mix(in srgb, var(--tenant-surface) 96%, transparent);
+    padding: env(safe-area-inset-top) 14px 0;
+    box-shadow: var(--aeds-shadow-sm);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .aeds-page-container {
+    padding-top: 16px;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 900px) {
+  :root {
+    --aeds-sidebar-width: 272px;
+    --aeds-topbar-height: 50px;
+    --aeds-page-x: clamp(12px, 1.4vw, 18px);
+    --aeds-page-y: clamp(10px, 1.2vw, 14px);
+  }
+
+  .aeds-page-container {
+    padding-bottom: 14px;
+  }
+}

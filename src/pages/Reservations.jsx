@@ -10,9 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const STATUSES = ['ALL', 'QUERY', 'QUOTED', 'CONFIRMED', 'NO_SHOW', 'CHECKED_IN', 'CHECKED_OUT', 'SETTLED', 'CANCELLED'];
 const STATUS_TO_TAB = {
-  QUERY: 'Overview',
-  QUOTED: 'Overview',
-  CONFIRMED: 'Overview',
+  QUERY: 'Quotations',
+  QUOTED: 'Quotations',
+  CONFIRMED: 'Quotations',
   NO_SHOW: 'Overview',
   CHECKED_IN: 'Overview',
   CHECKED_OUT: 'Payments',
@@ -256,14 +256,14 @@ function GuestSearchPopup({ onSelect, onClose, onCreateContact }) {
           {loading && <p className="text-sm text-pine/40 text-center py-6">Searching…</p>}
           {!loading && q.length >= 2 && results.length === 0 && (
             <div className="py-4 space-y-3">
-              <p className="text-sm text-pine/40 text-center">No guests found matching "{q}"</p>
+              <p className="text-sm text-pine/40 text-center">No guests found matching &quot;{q}&quot;</p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   type="button"
                   onClick={() => onCreateContact?.(q.trim(), false)}
                   className="btn-primary flex-1 justify-center !py-2 text-sm"
                 >
-                  Create contact "{q.trim()}"
+                  Create contact: {q.trim()}
                 </button>
                 <button
                   type="button"
@@ -344,7 +344,7 @@ function ServiceCombobox({ items, addons, onSelect }) {
 /* ================================================================== */
 const SALUTATIONS = ['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Prof.', 'Engr.']
 
-function NewReservation({ close, openReservation, userName, prefill }) {
+export function NewReservation({ close, openReservation, userName, prefill }) {
   const t        = todayISO()
   const tomorrow = (d) => { const dt = new Date(d); dt.setDate(dt.getDate() + 1); return dt.toISOString().slice(0, 10) }
 
@@ -364,7 +364,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
   const [rooms, setRooms]                     = useState([])
   const [companies, setCompanies]             = useState([])
   const [booked, setBooked]                   = useState([])
-  const [roomRows, setRoomRows]               = useState([])
+  const [roomRows, setRoomRows]               = useState(() => [{ room_id: '', from_date: t, to_date: tomorrow(t) }])
   const [taxConfig, setTaxConfig]             = useState([])
   const [facilityItems, setFacilityItems]     = useState([])
   const [reservationCfg, setReservationCfg]   = useState(() => loadReservationConfig())
@@ -406,6 +406,24 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       // Do not block reservation operations if audit insert fails.
     }
   }
+
+  function getPolicyDiscount(dateStr, policy) {
+    if (!policy || !dateStr) return null
+    const blackouts = policy.policy_blackout_dates || []
+    const isBlackout = blackouts.some(b => dateStr >= b.from_date && dateStr <= b.to_date)
+    if (isBlackout) return Number(policy.blackout_discount_pct)
+    const dow = new Date(`${dateStr}T00:00:00`).getDay() // 0=Sun
+    const isWeekend = (policy.weekend_days || [4,5,6]).includes(dow)
+    return isWeekend ? Number(policy.weekend_discount_pct) : Number(policy.weekday_discount_pct)
+  }
+
+  async function generateCustomerId() {
+    try {
+      const { data, error } = await supabase.rpc('generate_customer_id')
+      if (error || !data) return null
+      return data
+    } catch { return null }
+  }
   
   useEffect(() => {
     if (!reservationPolicy) return
@@ -414,7 +432,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       setPolicyDiscountPct(disc)
       setF(p => ({ ...p, discount_val: disc }))
     }
-  }, [reservationPolicy])
+  }, [reservationPolicy, f.check_in, f.discount_type])
   const toggleAddon  = (key) => setAddons((p) => ({ ...p, [key]: { ...p[key], selected: !p[key].selected } }))
   const updAddon     = (key, field, val) => setAddons((p) => ({ ...p, [key]: { ...p[key], [field]: val } }))
 
@@ -436,16 +454,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
     if (!fromDate || !toDate || toDate <= fromDate) return false
     const blocked = new Set(reservationCfg.blackoutDays || [])
     return eachNight(fromDate, toDate).some((d) => blocked.has(d))
-  }
-
-  const getPolicyDiscount = (dateStr, policy) => {
-    if (!policy || !dateStr) return null
-    const blackouts = policy.policy_blackout_dates || []
-    const isBlackout = blackouts.some(b => dateStr >= b.from_date && dateStr <= b.to_date)
-    if (isBlackout) return Number(policy.blackout_discount_pct)
-    const dow = new Date(`${dateStr}T00:00:00`).getDay() // 0=Sun
-    const isWeekend = (policy.weekend_days || [4,5,6]).includes(dow)
-    return isWeekend ? Number(policy.weekend_discount_pct) : Number(policy.weekday_discount_pct)
   }
 
   const setCheckIn = (val) => {
@@ -561,6 +569,10 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       .limit(1)
       .maybeSingle()
       .then(({ data }) => { if (data) setReservationPolicy(data) })
+    supabase.from('facility_items')
+      .select('*')
+      .eq('is_active', true)
+      .order('name')
       .then(({ data }) => {
         const items = data || []
         setFacilityItems(items)
@@ -616,14 +628,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
   const validRows = roomRows.filter((r) => r.room_id && r.from_date && r.to_date && r.to_date > r.from_date)
   const overallCI = validRows.length ? validRows.reduce((m, r) => r.from_date < m ? r.from_date : m, validRows[0].from_date) : f.check_in
   const overallCO = validRows.length ? validRows.reduce((m, r) => r.to_date > m ? r.to_date : m, validRows[0].to_date) : f.check_out
-
-  const generateCustomerId = async () => {
-    try {
-      const { data, error } = await supabase.rpc('generate_customer_id')
-      if (error || !data) return null
-      return data
-    } catch { return null }
-  }
 
   const save = async () => {
     setBusy(true); setErr('')
@@ -797,8 +801,8 @@ function NewReservation({ close, openReservation, userName, prefill }) {
         />
       )}
 
-      <div className="min-h-screen bg-paper py-6 px-3 sm:px-6">
-        <div className="card max-w-4xl w-full p-4 sm:p-8 mx-auto">
+      <div className="py-6 px-3 sm:px-0">
+        <div className="w-full p-4 sm:p-8">
           <h2 className="font-display text-lg font-bold text-pine mb-4">New reservation query</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
@@ -947,7 +951,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
                     </div>
                   )
                 })}
-                {roomRows.length === 0 && <p className="text-xs text-pine/50">No rooms added yet — click "Add room". Leave empty to keep it a query without room assignment.</p>}
+                {roomRows.length === 0 && <p className="text-xs text-pine/50">No rooms added yet — click Add room. Leave empty to keep it a query without room assignment.</p>}
                 {rooms.length === 0 && <p className="text-xs text-amber">No rooms defined — add room inventory in Settings first.</p>}
               </div>
               {validRows.length > 0 && <p className="text-xs text-pine/50 mt-1">Stay window: <b>{overallCI} → {overallCO}</b> · {validRows.length} room booking(s).</p>}
@@ -1125,31 +1129,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
           </div>
 
           {err && <p className="text-sm text-red-600 mt-3">{err}</p>}
-
-          {/* Signature Lines */}
-          <div className="mt-8 pt-6 border-t border-leaf/40">
-            <p className="text-xs text-pine/50 uppercase tracking-widest font-semibold mb-6">Authorisation &amp; Signatures</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-              <div className="flex flex-col gap-2">
-                <div className="h-10 border-b border-pine/30" />
-                <span className="text-xs text-pine/60">Guest / Representative Signature</span>
-                <div className="h-5 border-b border-pine/20 mt-1" />
-                <span className="text-xs text-pine/50">Date</span>
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="h-10 border-b border-pine/30" />
-                <span className="text-xs text-pine/60">Received By (Front Desk)</span>
-                <div className="h-5 border-b border-pine/20 mt-1" />
-                <span className="text-xs text-pine/50">Date</span>
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="h-10 border-b border-pine/30" />
-                <span className="text-xs text-pine/60">Authorised By (Management)</span>
-                <div className="h-5 border-b border-pine/20 mt-1" />
-                <span className="text-xs text-pine/50">Date</span>
-              </div>
-            </div>
-          </div>
 
           <div className="flex justify-end gap-2 mt-6">
             <button className="btn-ghost" onClick={close}>Cancel</button>

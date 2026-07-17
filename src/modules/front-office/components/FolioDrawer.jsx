@@ -1,6 +1,0 @@
-/* ------------------------------------------------------------------ */
-/*  FOLIO DRAWER - shell for the existing reservation folio workflow    */
-/* ------------------------------------------------------------------ */
-export default function FolioDrawer() {
-  return null
-}

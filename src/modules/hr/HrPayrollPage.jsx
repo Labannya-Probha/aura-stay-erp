@@ -101,13 +101,13 @@ export default function HrPayrollPage({ userName, role, isAdmin }) {
       {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
 
       {/* Main tab bar */}
-      <div className="flex gap-0.5 border-b border-leaf flex-wrap">
+      <div className="tab-strip-responsive border-b border-leaf gap-0.5">
         {HR_TABS.map((t) => {
           const Icon = t.icon
           return (
             <button key={t.key}
               onClick={() => setTab(t.key, '')}
-              className={`px-4 py-2 text-sm font-semibold rounded-t-lg flex items-center gap-1.5 transition-colors
+              className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg flex items-center gap-1.5 transition-colors
                 ${tab === t.key
                   ? 'bg-white border border-leaf border-b-white text-forest -mb-px'
                   : 'text-pine/60 hover:text-pine'}`}>

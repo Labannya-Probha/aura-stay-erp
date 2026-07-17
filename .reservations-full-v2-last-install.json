@@ -1,0 +1,20 @@
+﻿{
+    "files":  [
+                  "src\\modules\\reservations\\ReservationsPage.jsx",
+                  "src\\modules\\reservations\\reservations.config.js",
+                  "src\\modules\\reservations\\booking-engine\\BookingCalendarEngine.jsx",
+                  "src\\modules\\reservations\\booking-engine\\utils\\dateRange.js",
+                  "src\\modules\\reservations\\booking-engine\\utils\\timelinePlacement.js",
+                  "src\\modules\\reservations\\booking-engine\\components\\BookingEngineToolbar.jsx",
+                  "src\\modules\\reservations\\booking-engine\\components\\BookingLegend.jsx",
+                  "src\\modules\\reservations\\booking-engine\\booking-engine-month.css",
+                  "src\\modules\\reservations\\tabs\\ReservationPaymentsTab.jsx",
+                  "src\\modules\\reservations\\tabs\\GuestCrmTab.jsx",
+                  "src\\modules\\reservations\\tabs\\QuotationsTab.jsx",
+                  "src\\modules\\reservations\\tabs\\ReservationHistoryTab.jsx",
+                  "src\\modules\\reservations\\tabs\\ReservationReportsTab.jsx",
+                  "src\\modules\\reservations\\tabs\\ChannelManagerTab.jsx"
+              ],
+    "installed_at":  "2026-07-10T20:52:21.6365455+06:00",
+    "backup_path":  "C:\\Users\\Accounts Manager\\Downloads\\aura-stay-erp-aeds-v2\\backups\\reservations-full-v2-20260710-205220"
+}

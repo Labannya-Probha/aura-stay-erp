@@ -1,30 +1,56 @@
-import { useEffect, useState } from 'react'
-import { getReservationCount } from '../services/reservationService'
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
+
+import { getReservationsRegister } from "../services/reservationsList.service"
+import { normalizeReservationListRow } from "../reservation-list/normalizeReservationListRow"
 
 export function useReservationsList() {
-  const [summary, setSummary] = useState({ total: null })
+  const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState("")
 
-  useEffect(() => {
-    let cancelled = false
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (silent) setRefreshing(true)
+    else setLoading(true)
 
-    const load = async () => {
-      try {
-        const total = await getReservationCount()
-        if (!cancelled) setSummary({ total })
-      } catch {
-        if (!cancelled) setSummary({ total: null })
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
+    setError("")
 
-    load()
+    try {
+      const reservations = await getReservationsRegister()
 
-    return () => {
-      cancelled = true
+      setRows(
+        reservations.map(normalizeReservationListRow)
+      )
+    } catch (loadError) {
+      console.error(
+        "Reservations register load failed:",
+        loadError
+      )
+
+      setRows([])
+      setError(
+        loadError?.message ||
+          "Reservations could not be loaded."
+      )
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
     }
   }, [])
 
-  return { summary, loading }
+  useEffect(() => {
+    load()
+  }, [load])
+
+  return {
+    rows,
+    loading,
+    refreshing,
+    error,
+    refresh: () => load({ silent: true }),
+  }
 }

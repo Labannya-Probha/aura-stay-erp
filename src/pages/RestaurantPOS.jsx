@@ -12,6 +12,9 @@ import { getCompanySettingsQuery, withTenantScope } from '../lib/companySettings
 import { PATHS } from 'src/app/paths'
 import RestaurantTableGrid, { TABLE_BLOCKING_STATUSES, normalizeRestaurantTable } from 'src/modules/restaurant/components/RestaurantTableGrid.jsx'
 import { Plus, Minus, Trash2, ChefHat, Banknote, BedDouble, Search, Save, XCircle, RotateCcw, Receipt, Clock, FileText } from 'lucide-react'
+import '../styles/aeds-v6-workspaces.css'
+import '../styles/aeds-v6-restaurant.css'
+import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
 
 const TABS = ['Orders', 'Menu', 'Day Close']
 const PAYMENT_METHODS = ['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER']
@@ -41,9 +44,10 @@ const applyCashRounding = (amount) => {
   }
 }
 
+const NO_TENANT_SENTINEL = '00000000-0000-0000-0000-000000000000'
 const withTenant = (query) => {
   const tenantId = getTenantId()
-  return tenantId ? query.eq('tenant_id', tenantId) : query
+  return query.eq('tenant_id', tenantId || NO_TENANT_SENTINEL)
 }
 
 const isBeverageItem = (item, categoryName = '') => {
@@ -167,17 +171,19 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
   }, [location.search, navigate, openTable])
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div className="aeds-v6-legacy-page">
+      <div className="aeds-v6-legacy-header">
         <div>
-          <h1 className="font-display text-2xl font-bold text-pine">Restaurant POS</h1>          
+          <div className="aeds-v6-workspace-eyebrow">Food & Beverage Operations</div>
+          <h1>Restaurant POS Workspace</h1>
+          <p>Orders, table service, KOT, settlement, menu and day-close operations.</p>
         </div>
       </div>
       <KPICards module="pos" />
       {msg && <div className="mb-4 px-4 py-2 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
-      <div className="flex gap-1 border-b border-leaf mb-6 overflow-x-auto">
+      <div className="aeds-v6-tab-strip">
         {TABS.map((t) => (
-          <button key={t} onClick={() => { setTab(t); if (t !== 'Orders') { setEditOrder(null); setDraftSeed(null); setShowOrderBuilder(false) } }} className={`px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
+          <button key={t} onClick={() => { setTab(t); if (t !== 'Orders') { setEditOrder(null); setDraftSeed(null); setShowOrderBuilder(false) } }} className={tab === t ? 'aeds-v6-tab-active' : ''}>
             {t}
           </button>
         ))}
@@ -394,7 +400,7 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
   setBusy(true)
   try {
     const { order, items: oi } = await persist({ status: 'CHARGED_TO_ROOM' })
-    
+
     const { data: fc, error: fe } = await supabase.from('folio_charges').insert(withTenantInsert({ 
       reservation_id: order.reservation_id, 
       charge_date: todayISO(), 
@@ -409,7 +415,7 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
       invoice_type: 'RESTAURANT',
       created_by: userName 
     })).select().single()
-    
+
     if (fe) throw fe
     await withTenant(supabase.from('pos_orders').update({ folio_charge_id: fc.id }).eq('id', order.id))
     onDone({ type: 'RECEIPT', order: { ...order, status: 'CHARGED_TO_ROOM' }, items: oi })
@@ -718,48 +724,132 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
         <button className="btn-primary !py-1 ml-auto" onClick={() => onNewOrder?.()}><Plus size={14} /> New Order</button>
         <button className="btn-ghost !py-1" onClick={load}><RotateCcw size={13} /> Refresh</button>
       </div>
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th">Order</th>
-              <th className="th">Time</th>
-              <th className="th">Total</th>
-              <th className="th">Status</th>
-              <th className="th text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((o) => (
-              <tr key={o.id} className="hover:bg-leaf/20">
-                <td className="td font-semibold">{o.order_no}</td>
-                <td className="td">{fmtDate(o.created_at)}</td>
-                <td className="td money">{Number(o.total).toFixed(2)}</td>
-                <td className="td"><span className={`status-chip ${chip[o.status] || 'bg-stone-100 text-stone-600'}`}>{o.status}</span></td>
-                <td className="td text-right">
-                  <div className="flex justify-end gap-2">
-                    <button className="btn-ghost !py-1 !px-2 text-forest" onClick={() => printReceipt(o)} title="Print receipt"><Receipt size={14} /></button>
-                    {o.status !== 'CANCELLED' && (<button className="btn-ghost !py-1 !px-2 text-amber" onClick={() => printKot(o)} title="Print KOT"><ChefHat size={14} /></button>)}
-                    {WORKFLOW_NEXT[o.status] && (() => { const wf = WORKFLOW_NEXT[o.status]; 
-                return (
-                        <button
-                          className={`btn-ghost !py-1 !px-2 text-xs font-semibold border ${wf.cls}`}
-                          onClick={async () => { await advanceOrderStatus(o, wf.nextStatus, wf.taskStage, wf.taskStatus); flash(`${o.order_no} — ${wf.label}.`) }}
-                          title={`Mark as ${wf.nextStatus}`}
-                        >{wf.label}</button>
-                      )})()}
-                    {o.invoice_id && (<button className="btn-ghost !py-1 !px-2 text-pine" onClick={() => printMushak(o)} title="Print Mushak-6.3"><FileText size={14} /></button>)}
-                    {canEdit(o) && (<button className="btn-ghost !py-1 !px-2 text-forest" onClick={() => resumeOrder(o)} title="Edit order">Edit</button>)}
-                    {isAdmin && o.status === 'SETTLED' && (<button className="btn-ghost !py-1 !px-2 text-red-500" onClick={() => voidOrder(o)} title="Void order"><XCircle size={14} /></button>)}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="POS Orders"
+        subtitle="Live order queue, KOT workflow, settlement and room-charge control"
+        data={rows.map((order) => ({
+          ...order,
+          order_time: order.created_at,
+          order_context:
+            order.order_type === 'DINE_IN'
+              ? `Table ${order.table_no || '—'}`
+              : order.room_no
+                ? `Room ${order.room_no}`
+                : order.order_type || '—',
+          guest_display: order.guest_name || 'Walk-in',
+          total_amount: Number(order.total || 0),
+        }))}
+        columns={[
+          { accessorKey: 'order_no', header: 'Order', width: 150 },
+          { accessorKey: 'order_time', header: 'Time', type: 'date', width: 145 },
+          { accessorKey: 'order_context', header: 'Context', width: 160 },
+          { accessorKey: 'guest_display', header: 'Guest', width: 200 },
+          { accessorKey: 'payment_method', header: 'Payment', width: 150 },
+          { accessorKey: 'total_amount', header: 'Total', type: 'currency', aggregation: 'sum', width: 150 },
+          { accessorKey: 'status', header: 'Status', type: 'status', width: 150 },
+          {
+            accessorKey: 'actions',
+            header: 'Actions',
+            sortable: false,
+            width: 430,
+            cell: ({ row }) => {
+              const workflow = WORKFLOW_NEXT[row.status]
+
+              return (
+                <div className="flex justify-end gap-1 flex-wrap">
+                  <button
+                    className="btn-ghost !py-1 !px-2 text-forest"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      printReceipt(row)
+                    }}
+                    title="Print receipt"
+                  >
+                    <Receipt size={14} />
+                  </button>
+
+                  {row.status !== 'CANCELLED' && (
+                    <button
+                      className="btn-ghost !py-1 !px-2 text-amber"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        printKot(row)
+                      }}
+                      title="Print KOT"
+                    >
+                      <ChefHat size={14} />
+                    </button>
+                  )}
+
+                  {workflow && (
+                    <button
+                      className={`btn-ghost !py-1 !px-2 text-xs font-semibold border ${workflow.cls}`}
+                      onClick={async (event) => {
+                        event.stopPropagation()
+                        await advanceOrderStatus(
+                          row,
+                          workflow.nextStatus,
+                          workflow.taskStage,
+                          workflow.taskStatus
+                        )
+                        flash(`${row.order_no} — ${workflow.label}.`)
+                      }}
+                      title={`Mark as ${workflow.nextStatus}`}
+                    >
+                      {workflow.label}
+                    </button>
+                  )}
+
+                  {row.invoice_id && (
+                    <button
+                      className="btn-ghost !py-1 !px-2 text-pine"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        printMushak(row)
+                      }}
+                      title="Print Mushak-6.3"
+                    >
+                      <FileText size={14} />
+                    </button>
+                  )}
+
+                  {canEdit(row) && (
+                    <button
+                      className="btn-ghost !py-1 !px-2 text-forest"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        resumeOrder(row)
+                      }}
+                      title="Edit order"
+                    >
+                      Edit
+                    </button>
+                  )}
+
+                  {isAdmin && row.status === 'SETTLED' && (
+                    <button
+                      className="btn-ghost !py-1 !px-2 text-red-500"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        voidOrder(row)
+                      }}
+                      title="Void order"
+                    >
+                      <XCircle size={14} />
+                    </button>
+                  )}
+                </div>
+              )
+            },
+          },
+        ]}
+        pageSize={100}
+        emptyText="No restaurant orders found."
+        getRowId={(row) => row.id}
+        onRowClick={(row) => {
+          if (canEdit(row)) resumeOrder(row)
+        }}
+      />
     </div>
   )
 }
@@ -814,21 +904,86 @@ function MenuManager({ cats, items, reload, isAdmin }) {
           <div><label className="label">Price ৳</label><input type="number" className="input money" value={ni.price} onChange={(e) => setNi({ ...ni, price: e.target.value })} /></div>
           <button className="btn-primary justify-center" onClick={addItem}><Plus size={15} /> Add item</button>
         </div>}
-        <table className="w-full">
-          <thead><tr><th className="th">Item</th><th className="th">Category</th><th className="th text-right">Price (editable)</th><th className="th">Status</th><th className="th"></th></tr></thead>
-          <tbody>
-            {items.map((it) => (
-              <tr key={it.id}>
-                <td className="td font-medium text-sm">{it.name}</td>
-                <td className="td text-xs text-pine/60">{cats.find((c) => c.id === it.category_id)?.name || '—'}</td>
-                <td className="td text-right">{isAdmin ? (<input type="number" defaultValue={it.price} onBlur={(e) => updatePrice(it, e.target.value)} className="input !w-28 !py-1 money text-right inline-block" />) : (<span className="money">{Number(it.price).toFixed(2)}</span>)}</td>
-                <td className="td"><button onClick={() => isAdmin && toggleItem(it)} disabled={!isAdmin} className={`status-chip ${it.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'} ${!isAdmin ? 'cursor-default' : ''}`}>{it.is_active ? 'ACTIVE' : 'OFF'}</button></td>
-                <td className="td text-right">{isAdmin && <button onClick={() => delItem(it)} className="text-red-300 hover:text-red-600"><Trash2 size={14} /></button>}</td>
-              </tr>
-            ))}
-            {items.length === 0 && <tr><td className="td text-pine/50" colSpan={5}>No items yet — add your menu above.</td></tr>}
-          </tbody>
-        </table>
+        <AedsDataGrid
+          title="Menu Items"
+          subtitle="Category, selling price and availability control"
+          data={items.map((item) => ({
+            ...item,
+            category_name:
+              cats.find((category) => category.id === item.category_id)?.name ||
+              '—',
+            menu_status: item.is_active ? 'ACTIVE' : 'OFF',
+          }))}
+          columns={[
+            { accessorKey: 'name', header: 'Item', width: 240 },
+            { accessorKey: 'category_name', header: 'Category', width: 180 },
+            {
+              accessorKey: 'price',
+              header: 'Price',
+              width: 160,
+              cell: ({ row }) => (
+                isAdmin ? (
+                  <input
+                    type="number"
+                    defaultValue={row.price}
+                    onClick={(event) => event.stopPropagation()}
+                    onBlur={(event) => updatePrice(row, event.target.value)}
+                    className="input !w-28 !py-1 money text-right inline-block"
+                  />
+                ) : (
+                  <span className="money">
+                    {Number(row.price || 0).toFixed(2)}
+                  </span>
+                )
+              ),
+            },
+            {
+              accessorKey: 'menu_status',
+              header: 'Status',
+              type: 'status',
+              width: 130,
+              cell: ({ row }) => (
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    if (isAdmin) toggleItem(row)
+                  }}
+                  disabled={!isAdmin}
+                  className={`status-chip ${
+                    row.is_active
+                      ? 'bg-forest/15 text-forest'
+                      : 'bg-stone-200 text-stone-600'
+                  } ${!isAdmin ? 'cursor-default' : ''}`}
+                >
+                  {row.is_active ? 'ACTIVE' : 'OFF'}
+                </button>
+              ),
+            },
+            {
+              accessorKey: 'actions',
+              header: 'Actions',
+              sortable: false,
+              width: 100,
+              cell: ({ row }) => (
+                isAdmin ? (
+                  <button
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      delItem(row)
+                    }}
+                    className="text-red-300 hover:text-red-600"
+                    aria-label={`Delete ${row.name}`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                ) : null
+              ),
+            },
+          ]}
+          pageSize={100}
+          emptyText="No items yet — add your menu above."
+          getRowId={(row) => row.id}
+        />
       </div>
     </div>
   )
@@ -1105,16 +1260,30 @@ function DayClose({ flash, isAdmin, userName, role }) {
             <div className="flex justify-between"><span>Settled orders:</span><span>{restOrders.filter((o) => o.status === 'SETTLED').length}</span></div>
             <div className="flex justify-between"><span>Open orders:</span><span className="text-amber">{restOrders.filter((o) => POS_ACTIVE_STATUSES.includes(o.status)).length}</span></div>
           </div>
-          <div className="max-h-64 overflow-auto space-y-1">
-            {restOrders.map((o) => (
-              <div key={o.id} className="flex justify-between text-xs py-1 border-b border-leaf/30">
-                <span className="font-medium">{o.order_no}</span>
-                <span className="money">{Number(o.total).toFixed(2)}</span>
-                <span className={`status-chip text-xs ${o.status === 'SETTLED' ? 'bg-forest/15 text-forest' : 'bg-amber/20 text-amber'}`}>{o.status}</span>
-              </div>
-            ))}
-            {restOrders.length === 0 && <p className="text-xs text-pine/50 py-4">No orders for this day.</p>}
-          </div>
+          <AedsDataGrid
+            title="Restaurant Day Orders"
+            subtitle={`Walk-in order register for ${fmtDate(day)}`}
+            data={restOrders.map((order) => ({
+              ...order,
+              total_amount: Number(order.total || 0),
+              order_context:
+                order.table_no
+                  ? `Table ${order.table_no}`
+                  : order.order_type || 'Walk-in',
+            }))}
+            columns={[
+              { accessorKey: 'order_no', header: 'Order', width: 150 },
+              { accessorKey: 'created_at', header: 'Time', type: 'date', width: 140 },
+              { accessorKey: 'order_context', header: 'Context', width: 160 },
+              { accessorKey: 'guest_name', header: 'Guest', width: 200 },
+              { accessorKey: 'payment_method', header: 'Payment', width: 140 },
+              { accessorKey: 'total_amount', header: 'Total', type: 'currency', aggregation: 'sum', width: 150 },
+              { accessorKey: 'status', header: 'Status', type: 'status', width: 140 },
+            ]}
+            pageSize={50}
+            emptyText="No orders for this day."
+            getRowId={(row) => row.id}
+          />
         </div>
       </div>
       {isAdmin && (

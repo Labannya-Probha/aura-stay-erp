@@ -1,0 +1,357 @@
+{
+  "generatedAt": "2026-07-10T10:59:32.758Z",
+  "totalFiles": 566,
+  "byTopFolder": {
+    "app": 7,
+    "App.jsx": 1,
+    "AppLayout.jsx": 1,
+    "AppRoutes.jsx": 1,
+    "AppSession.jsx": 1,
+    "components": 189,
+    "contexts": 1,
+    "core": 3,
+    "design-system": 5,
+    "enterprise": 37,
+    "eslint.config.js": 1,
+    "hooks": 4,
+    "index.css": 1,
+    "layout": 2,
+    "lib": 28,
+    "main.jsx": 1,
+    "modules": 230,
+    "navigation.config.js": 1,
+    "offline": 4,
+    "pages": 25,
+    "platform": 9,
+    "routeGuards.jsx": 1,
+    "styles": 3,
+    "supabase.js": 1,
+    "theme": 9
+  },
+  "legacyPages": [
+    {
+      "file": "src/pages/AccountingHub.jsx",
+      "lines": 1667
+    },
+    {
+      "file": "src/pages/InventoryHub.jsx",
+      "lines": 1498
+    },
+    {
+      "file": "src/pages/RestaurantPOS.jsx",
+      "lines": 1319
+    },
+    {
+      "file": "src/pages/Reservations.jsx",
+      "lines": 1142
+    },
+    {
+      "file": "src/pages/Frontofficemodule.jsx",
+      "lines": 917
+    },
+    {
+      "file": "src/pages/HrOffice.jsx",
+      "lines": 916
+    },
+    {
+      "file": "src/pages/Reservationmodule.jsx",
+      "lines": 805
+    },
+    {
+      "file": "src/pages/GuestCRM.jsx",
+      "lines": 680
+    },
+    {
+      "file": "src/pages/PosPrintCenter.jsx",
+      "lines": 639
+    },
+    {
+      "file": "src/pages/VATReturn.jsx",
+      "lines": 620
+    },
+    {
+      "file": "src/pages/ServiceBills.jsx",
+      "lines": 598
+    },
+    {
+      "file": "src/pages/CmsPortal.jsx",
+      "lines": 592
+    },
+    {
+      "file": "src/pages/NightAudit.jsx",
+      "lines": 531
+    },
+    {
+      "file": "src/pages/ReservationPayments.jsx",
+      "lines": 529
+    },
+    {
+      "file": "src/pages/ReservationQuotationTab.jsx",
+      "lines": 515
+    },
+    {
+      "file": "src/pages/TaskManagement.jsx",
+      "lines": 480
+    },
+    {
+      "file": "src/pages/MenuManagement.jsx",
+      "lines": 416
+    },
+    {
+      "file": "src/pages/BookingCalendar.jsx",
+      "lines": 295
+    },
+    {
+      "file": "src/pages/VatCenter.jsx",
+      "lines": 256
+    },
+    {
+      "file": "src/pages/ConsumptionEntry.jsx",
+      "lines": 241
+    },
+    {
+      "file": "src/pages/HousekeepingHub.jsx",
+      "lines": 122
+    },
+    {
+      "file": "src/pages/VerifyBill.jsx",
+      "lines": 115
+    },
+    {
+      "file": "src/pages/ChallanForm.jsx",
+      "lines": 57
+    },
+    {
+      "file": "src/pages/Dashboard.jsx",
+      "lines": 13
+    },
+    {
+      "file": "src/pages/Settings.jsx",
+      "lines": 4
+    }
+  ],
+  "largeFiles": [
+    {
+      "file": "src/index.css",
+      "lines": 2519
+    },
+    {
+      "file": "src/pages/AccountingHub.jsx",
+      "lines": 1667
+    },
+    {
+      "file": "src/pages/InventoryHub.jsx",
+      "lines": 1498
+    },
+    {
+      "file": "src/pages/RestaurantPOS.jsx",
+      "lines": 1319
+    },
+    {
+      "file": "src/pages/Reservations.jsx",
+      "lines": 1142
+    },
+    {
+      "file": "src/pages/Frontofficemodule.jsx",
+      "lines": 917
+    },
+    {
+      "file": "src/pages/HrOffice.jsx",
+      "lines": 916
+    },
+    {
+      "file": "src/lib/reporting/reportConfig.js",
+      "lines": 837
+    },
+    {
+      "file": "src/pages/Reservationmodule.jsx",
+      "lines": 805
+    },
+    {
+      "file": "src/components/layout/sidebar/SidebarNavigation.jsx",
+      "lines": 775
+    },
+    {
+      "file": "src/components/reservation/BillingsAndCheckOutTab.jsx",
+      "lines": 707
+    },
+    {
+      "file": "src/pages/GuestCRM.jsx",
+      "lines": 680
+    },
+    {
+      "file": "src/components/data-grid/AedsDataGrid.jsx",
+      "lines": 660
+    },
+    {
+      "file": "src/components/settings/BrandingCard.jsx",
+      "lines": 641
+    },
+    {
+      "file": "src/pages/PosPrintCenter.jsx",
+      "lines": 639
+    },
+    {
+      "file": "src/pages/VATReturn.jsx",
+      "lines": 620
+    },
+    {
+      "file": "src/pages/ServiceBills.jsx",
+      "lines": 598
+    },
+    {
+      "file": "src/pages/CmsPortal.jsx",
+      "lines": 592
+    },
+    {
+      "file": "src/components/reports/DynamicReportTable.jsx",
+      "lines": 576
+    },
+    {
+      "file": "src/pages/NightAudit.jsx",
+      "lines": 531
+    },
+    {
+      "file": "src/pages/ReservationPayments.jsx",
+      "lines": 529
+    },
+    {
+      "file": "src/pages/ReservationQuotationTab.jsx",
+      "lines": 515
+    },
+    {
+      "file": "src/lib/reporting/liveReportData.js",
+      "lines": 502
+    }
+  ],
+  "duplicateBasenames": [
+    {
+      "basename": "helpers.js",
+      "locations": [
+        "src/app/navigation/helpers.js",
+        "src/lib/helpers.js"
+      ]
+    },
+    {
+      "basename": "ComplianceTab.jsx",
+      "locations": [
+        "src/components/ComplianceTab.jsx",
+        "src/modules/hr/tabs/ComplianceTab.jsx"
+      ]
+    },
+    {
+      "basename": "index.js",
+      "locations": [
+        "src/components/dashboard-engine/index.js",
+        "src/components/data-grid/index.js",
+        "src/components/dialog-engine/index.js",
+        "src/components/filter-engine/index.js",
+        "src/components/form-engine/index.js",
+        "src/components/layout/topbar/index.js",
+        "src/components/navigation-engine/index.js",
+        "src/components/notification-engine/index.js",
+        "src/components/report-engine/index.js",
+        "src/components/workflow-engine/index.js",
+        "src/design-system/page/index.js",
+        "src/enterprise/index.js",
+        "src/modules/accounting-engine/index.js",
+        "src/modules/executive-bi/index.js",
+        "src/modules/front-office-engine/index.js",
+        "src/modules/hr-payroll-engine/index.js",
+        "src/modules/inventory-engine/index.js",
+        "src/modules/mobile-companion/index.js",
+        "src/modules/production-toolkit/index.js",
+        "src/modules/reservation-engine/index.js",
+        "src/modules/reservations/index.js",
+        "src/modules/restaurant-pos-engine/index.js",
+        "src/platform/index.js",
+        "src/theme/index.js"
+      ]
+    },
+    {
+      "basename": "CommandPalette.jsx",
+      "locations": [
+        "src/components/layout/topbar/CommandPalette.jsx",
+        "src/enterprise/command-palette/CommandPalette.jsx"
+      ]
+    },
+    {
+      "basename": "useCommandPalette.js",
+      "locations": [
+        "src/components/layout/topbar/hooks/useCommandPalette.js",
+        "src/enterprise/command-palette/useCommandPalette.js"
+      ]
+    },
+    {
+      "basename": "NotificationCenter.jsx",
+      "locations": [
+        "src/components/layout/topbar/NotificationCenter.jsx",
+        "src/enterprise/notifications/NotificationCenter.jsx"
+      ]
+    },
+    {
+      "basename": "OnlineStatusBadge.jsx",
+      "locations": [
+        "src/components/layout/topbar/OnlineStatusBadge.jsx",
+        "src/components/system/OnlineStatusBadge.jsx"
+      ]
+    },
+    {
+      "basename": "utils.js",
+      "locations": [
+        "src/components/reservation/utils.js",
+        "src/lib/utils.js"
+      ]
+    },
+    {
+      "basename": "ActivityTimeline.jsx",
+      "locations": [
+        "src/enterprise/activity/ActivityTimeline.jsx",
+        "src/modules/dashboard/widgets/ActivityTimeline.jsx"
+      ]
+    },
+    {
+      "basename": "routePages.jsx",
+      "locations": [
+        "src/modules/accounting/routePages.jsx",
+        "src/modules/hr/routePages.jsx",
+        "src/modules/public/routePages.jsx"
+      ]
+    },
+    {
+      "basename": "Dashboard.jsx",
+      "locations": [
+        "src/modules/dashboard/Dashboard.jsx",
+        "src/pages/Dashboard.jsx"
+      ]
+    },
+    {
+      "basename": "VendorsTab.jsx",
+      "locations": [
+        "src/modules/inventory/tabs/VendorsTab.jsx",
+        "src/modules/master-data/tabs/VendorsTab.jsx"
+      ]
+    },
+    {
+      "basename": "AvailabilityTab.jsx",
+      "locations": [
+        "src/modules/reservations/AvailabilityTab.jsx",
+        "src/modules/reservations/tabs/AvailabilityTab.jsx"
+      ]
+    },
+    {
+      "basename": "useReservationPayments.js",
+      "locations": [
+        "src/modules/reservations/booking-engine/hooks/useReservationPayments.js",
+        "src/modules/reservations/hooks/useReservationPayments.js"
+      ]
+    },
+    {
+      "basename": "useReservationsList.js",
+      "locations": [
+        "src/modules/reservations/booking-engine/hooks/useReservationsList.js",
+        "src/modules/reservations/hooks/useReservationsList.js"
+      ]
+    }
+  ]
+}

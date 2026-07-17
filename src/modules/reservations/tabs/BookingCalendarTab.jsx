@@ -1,14 +1,21 @@
-import { useNavigate } from 'react-router-dom'
-import BookingCalendar from '../../../pages/BookingCalendar.jsx'
-import { PATHS } from '../../../app/paths'
+import BookingCalendarEngine from "../booking-engine/BookingCalendarEngine"
 
-export default function BookingCalendarTab({ openReservation, onNewReservation }) {
-  const navigate = useNavigate()
+export default function BookingCalendarTab({
+  company,
+  openReservation,
+  onNewReservation,
+  canCreate = false,
+  canEdit = false,
+  canCancel = false,
+}) {
   return (
-    <BookingCalendar
-      openReservation={openReservation}
+    <BookingCalendarEngine
+      company={company}
+      canCreate={canCreate}
+      canEdit={canEdit}
+      canCancel={canCancel}
       onNewReservation={onNewReservation}
-      onOpenReservations={() => navigate(`${PATHS.RESERVATIONS}?tab=list`)}
+      onOpenReservation={openReservation}
     />
   )
 }

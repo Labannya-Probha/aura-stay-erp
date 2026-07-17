@@ -1,204 +1,836 @@
 import {
-  BarChart3,
   BedDouble,
-  Building2,
-  CalendarCheck2,
-  ClipboardList,
-  CreditCard,
-  FileSpreadsheet,
-  HandCoins,
+  Boxes,
+  CalendarDays,
   Landmark,
-  PackageCheck,
-  Receipt,
-  TrendingUp,
-  Wallet,
+  ShieldCheck,
+  Utensils,
+  Workflow,
 } from 'lucide-react'
 
-export const CONFIDENTIAL_NOTE = 'This report is system generated and intended for internal use only.'
-
 export const REPORT_CATEGORIES = [
-  { code: 'IFRS', name: 'IFRS Financial Reports', icon: Landmark, description: 'IAS/IFRS presentation reports for management and statutory review.' },
-  { code: 'HOTEL_KPI', name: 'Hotel KPI & Operations', icon: BedDouble, description: 'Occupancy, rooms, reservations, guest ledger, and night audit reports.' },
-  { code: 'POS', name: 'Restaurant POS', icon: Receipt, description: 'Restaurant sales, KOT, outlet collection, and cashier control reports.' },
-  { code: 'ACCOUNTING', name: 'Accounting Control', icon: FileSpreadsheet, description: 'Ledger, receivable, payable, tax, payment, and voucher reports.' },
+  { code: 'accounts', name: 'Accounts', slug: 'accounts', icon: Landmark },
+  { code: 'inventory', name: 'Inventory', slug: 'inventory', icon: Boxes },
+  { code: 'admin', name: 'Admin & Audit', slug: 'admin', icon: ShieldCheck },
+  { code: 'housekeeping', name: 'Housekeeping', slug: 'housekeeping', icon: BedDouble },
+  { code: 'restaurant', name: 'Restaurant POS', slug: 'restaurant', icon: Utensils },
+  { code: 'sales', name: 'Sales & Reservations', slug: 'sales', icon: CalendarDays },
+  { code: 'cross-module', name: 'Cross Module', slug: 'cross-module', icon: Workflow },
 ]
 
-export const STANDARD_FILTERS = [
-  { key: 'dateFrom', label: 'Date From', type: 'date', defaultValue: 'monthStart' },
-  { key: 'dateTo', label: 'Date To', type: 'date', defaultValue: 'today' },
-  { key: 'property', label: 'Property', type: 'select', options: ['All Properties', 'Aura Stay Demo', 'City Branch'] },
-  { key: 'outlet', label: 'Outlet', type: 'select', options: ['All Outlets', 'Restaurant', 'Room Service', 'Banquet'] },
-  { key: 'department', label: 'Department', type: 'select', options: ['All Departments', 'Rooms', 'Restaurant', 'Accounting', 'Housekeeping', 'Inventory'] },
-  { key: 'costCenter', label: 'Cost Center', type: 'select', options: ['All Cost Centers', 'ROOMS', 'F&B', 'ADMIN', 'HK'] },
-  { key: 'roomType', label: 'Room Type', type: 'select', options: ['All Room Types', 'Deluxe', 'Suite', 'Family Villa'] },
-  { key: 'guestType', label: 'Guest Type', type: 'select', options: ['All Guest Types', 'FIT', 'Corporate', 'OTA', 'Group'] },
-  { key: 'currency', label: 'Currency', type: 'select', options: ['BDT', 'USD'] },
-  { key: 'paymentMethod', label: 'Payment Method', type: 'select', options: ['All Methods', 'Cash', 'Card', 'Mobile Banking', 'Bank Transfer'] },
-  { key: 'reservationSource', label: 'Reservation Source', type: 'select', options: ['All Sources', 'Direct', 'OTA', 'Corporate', 'Walk-in'] },
-  { key: 'user', label: 'User', type: 'select', options: ['All Users'] },
-  { key: 'status', label: 'Status', type: 'select', options: ['All Status', 'Open', 'Approved', 'Posted', 'Settled', 'Cancelled'] },
-  { key: 'businessUnit', label: 'Business Unit', type: 'select', options: ['All Business Units', 'Hospitality', 'Shared Services'] },
-  { key: 'segment', label: 'Segment', type: 'select', options: ['All Segments', 'Rooms', 'Food & Beverage', 'Corporate', 'Group'] },
-  { key: 'tags', label: 'Tags', type: 'select', options: ['All Tags', 'IFRS', 'Month End', 'Audit Review', 'Operations'] },
+const REPORT_TEMPLATE_DEFINITIONS = [
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Accounts Payable Aging",
+    "title": "Accounts Payable Aging",
+    "slug": "accounts-payable-aging",
+    "route": "/reports/accounts/accounts-payable-aging",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Accounts Receivable Aging",
+    "title": "Accounts Receivable Aging",
+    "slug": "accounts-receivable-aging",
+    "route": "/reports/accounts/accounts-receivable-aging",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Balance Sheet",
+    "title": "Balance Sheet",
+    "slug": "balance-sheet",
+    "route": "/reports/accounts/balance-sheet",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Bank Book",
+    "title": "Bank Book",
+    "slug": "bank-book",
+    "route": "/reports/accounts/bank-book",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Bank Reconciliation",
+    "title": "Bank Reconciliation",
+    "slug": "bank-reconciliation",
+    "route": "/reports/accounts/bank-reconciliation",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Cash Book",
+    "title": "Cash Book",
+    "slug": "cash-book",
+    "route": "/reports/accounts/cash-book",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Cash Flow Statement",
+    "title": "Cash Flow Statement",
+    "slug": "cash-flow-statement",
+    "route": "/reports/accounts/cash-flow-statement",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Depreciation",
+    "title": "Depreciation",
+    "slug": "depreciation",
+    "route": "/reports/accounts/depreciation",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Due Balance",
+    "title": "Due Balance",
+    "slug": "due-balance",
+    "route": "/reports/accounts/due-balance",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Expense By Category Department",
+    "title": "Expense By Category Department",
+    "slug": "expense-by-category-department",
+    "route": "/reports/accounts/expense-by-category-department",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Ledger",
+    "title": "Ledger",
+    "slug": "ledger",
+    "route": "/reports/accounts/ledger",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Net Asset Value",
+    "title": "Net Asset Value",
+    "slug": "net-asset-value",
+    "route": "/reports/accounts/net-asset-value",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Profit & Loss Statement",
+    "title": "Profit & Loss Statement",
+    "slug": "profit-and-loss-statement",
+    "route": "/reports/accounts/profit-and-loss-statement",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "Trial Balance",
+    "title": "Trial Balance",
+    "slug": "trial-balance",
+    "route": "/reports/accounts/trial-balance",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "VAT & Tax Collection",
+    "title": "VAT & Tax Collection",
+    "slug": "vat-tax-collection",
+    "route": "/reports/accounts/vat-tax-collection",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "VAT & Tax Collection vs Payment",
+    "title": "VAT & Tax Collection vs Payment",
+    "slug": "vat-tax-collection-vs-payment",
+    "route": "/reports/accounts/vat-tax-collection-vs-payment",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "accounts",
+    "department": "Accounts",
+    "departmentSlug": "accounts",
+    "name": "VAT & Tax Payment",
+    "title": "VAT & Tax Payment",
+    "slug": "vat-tax-payment",
+    "route": "/reports/accounts/vat-tax-payment",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "inventory",
+    "department": "Inventory",
+    "departmentSlug": "inventory",
+    "name": "Item Wise Stock",
+    "title": "Item Wise Stock",
+    "slug": "item-wise-stock",
+    "route": "/reports/inventory/item-wise-stock",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "inventory",
+    "department": "Inventory",
+    "departmentSlug": "inventory",
+    "name": "Low Stock Reorder Alert",
+    "title": "Low Stock Reorder Alert",
+    "slug": "low-stock-reorder-alert",
+    "route": "/reports/inventory/low-stock-reorder-alert",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "inventory",
+    "department": "Inventory",
+    "departmentSlug": "inventory",
+    "name": "Price Comparison",
+    "title": "Price Comparison",
+    "slug": "price-comparison",
+    "route": "/reports/inventory/price-comparison",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "inventory",
+    "department": "Inventory",
+    "departmentSlug": "inventory",
+    "name": "Product In",
+    "title": "Product In",
+    "slug": "product-in",
+    "route": "/reports/inventory/product-in",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "inventory",
+    "department": "Inventory",
+    "departmentSlug": "inventory",
+    "name": "Product Out",
+    "title": "Product Out",
+    "slug": "product-out",
+    "route": "/reports/inventory/product-out",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "inventory",
+    "department": "Inventory",
+    "departmentSlug": "inventory",
+    "name": "Purchase",
+    "title": "Purchase",
+    "slug": "purchase",
+    "route": "/reports/inventory/purchase",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "inventory",
+    "department": "Inventory",
+    "departmentSlug": "inventory",
+    "name": "Warehouse Wise Stock",
+    "title": "Warehouse Wise Stock",
+    "slug": "warehouse-wise-stock",
+    "route": "/reports/inventory/warehouse-wise-stock",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "admin",
+    "department": "Admin & Audit",
+    "departmentSlug": "admin",
+    "name": "Cost Controller",
+    "title": "Cost Controller",
+    "slug": "cost-controller",
+    "route": "/reports/admin/cost-controller",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "admin",
+    "department": "Admin & Audit",
+    "departmentSlug": "admin",
+    "name": "Executive Summary Dashboard KPI Snapshot",
+    "title": "Executive Summary Dashboard KPI Snapshot",
+    "slug": "executive-summary-dashboard-kpi-snapshot",
+    "route": "/reports/admin/executive-summary-dashboard-kpi-snapshot",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "admin",
+    "department": "Admin & Audit",
+    "departmentSlug": "admin",
+    "name": "Multi Property Consolidated Performance",
+    "title": "Multi Property Consolidated Performance",
+    "slug": "multi-property-consolidated-performance",
+    "route": "/reports/admin/multi-property-consolidated-performance",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "admin",
+    "department": "Admin & Audit",
+    "departmentSlug": "admin",
+    "name": "Out Of Order Maintenance Room",
+    "title": "Out Of Order Maintenance Room",
+    "slug": "out-of-order-maintenance-room",
+    "route": "/reports/admin/out-of-order-maintenance-room",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "admin",
+    "department": "Admin & Audit",
+    "departmentSlug": "admin",
+    "name": "User Activity Audit Trail Log",
+    "title": "User Activity Audit Trail Log",
+    "slug": "user-activity-audit-trail-log",
+    "route": "/reports/admin/user-activity-audit-trail-log",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "housekeeping",
+    "department": "Housekeeping",
+    "departmentSlug": "housekeeping",
+    "name": "Consumption",
+    "title": "Consumption",
+    "slug": "consumption",
+    "route": "/reports/housekeeping/consumption",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "housekeeping",
+    "department": "Housekeeping",
+    "departmentSlug": "housekeeping",
+    "name": "Lost And Found",
+    "title": "Lost And Found",
+    "slug": "lost-and-found",
+    "route": "/reports/housekeeping/lost-and-found",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "housekeeping",
+    "department": "Housekeeping",
+    "departmentSlug": "housekeeping",
+    "name": "Room Status Live",
+    "title": "Room Status Live",
+    "slug": "room-status-live",
+    "route": "/reports/housekeeping/room-status-live",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "restaurant",
+    "department": "Restaurant POS",
+    "departmentSlug": "restaurant",
+    "name": "Component Wise Sales Summary",
+    "title": "Component Wise Sales Summary",
+    "slug": "component-wise-sales-summary",
+    "route": "/reports/restaurant/component-wise-sales-summary",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "restaurant",
+    "department": "Restaurant POS",
+    "departmentSlug": "restaurant",
+    "name": "Consumption",
+    "title": "Consumption",
+    "slug": "consumption",
+    "route": "/reports/restaurant/consumption",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "restaurant",
+    "department": "Restaurant POS",
+    "departmentSlug": "restaurant",
+    "name": "Cost Of Goods Sold",
+    "title": "Cost Of Goods Sold",
+    "slug": "cost-of-goods-sold",
+    "route": "/reports/restaurant/cost-of-goods-sold",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "restaurant",
+    "department": "Restaurant POS",
+    "departmentSlug": "restaurant",
+    "name": "Night Audit Day Closing",
+    "title": "Night Audit Day Closing",
+    "slug": "night-audit-day-closing",
+    "route": "/reports/restaurant/night-audit-day-closing",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "restaurant",
+    "department": "Restaurant POS",
+    "departmentSlug": "restaurant",
+    "name": "Payment Transaction",
+    "title": "Payment Transaction",
+    "slug": "payment-transaction",
+    "route": "/reports/restaurant/payment-transaction",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "restaurant",
+    "department": "Restaurant POS",
+    "departmentSlug": "restaurant",
+    "name": "Sales",
+    "title": "Sales",
+    "slug": "sales",
+    "route": "/reports/restaurant/sales",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "restaurant",
+    "department": "Restaurant POS",
+    "departmentSlug": "restaurant",
+    "name": "Table Section Wise Sales",
+    "title": "Table Section Wise Sales",
+    "slug": "table-section-wise-sales",
+    "route": "/reports/restaurant/table-section-wise-sales",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "restaurant",
+    "department": "Restaurant POS",
+    "departmentSlug": "restaurant",
+    "name": "Void And Discount POS",
+    "title": "Void And Discount POS",
+    "slug": "void-and-discount-pos",
+    "route": "/reports/restaurant/void-and-discount-pos",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "ADR RevPAR Hotel KPI",
+    "title": "ADR RevPAR Hotel KPI",
+    "slug": "adr-revpar-hotel-kpi",
+    "route": "/reports/sales/adr-revpar-hotel-kpi",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Agency Booking",
+    "title": "Agency Booking",
+    "slug": "agency-booking",
+    "route": "/reports/sales/agency-booking",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Average Daily Revenue",
+    "title": "Average Daily Revenue",
+    "slug": "average-daily-revenue",
+    "route": "/reports/sales/average-daily-revenue",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Booking Cancellation Income",
+    "title": "Booking Cancellation Income",
+    "slug": "booking-cancellation-income",
+    "route": "/reports/sales/booking-cancellation-income",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Check In Log",
+    "title": "Check In Log",
+    "slug": "check-in-log",
+    "route": "/reports/sales/check-in-log",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Check Out Log",
+    "title": "Check Out Log",
+    "slug": "check-out-log",
+    "route": "/reports/sales/check-out-log",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Complimentary And House Use Room",
+    "title": "Complimentary And House Use Room",
+    "slug": "complimentary-and-house-use-room",
+    "route": "/reports/sales/complimentary-and-house-use-room",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Component Wise Sales Summary",
+    "title": "Component Wise Sales Summary",
+    "slug": "component-wise-sales-summary",
+    "route": "/reports/sales/component-wise-sales-summary",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Cost Of Room Sold",
+    "title": "Cost Of Room Sold",
+    "slug": "cost-of-room-sold",
+    "route": "/reports/sales/cost-of-room-sold",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Discount And Void Transaction",
+    "title": "Discount And Void Transaction",
+    "slug": "discount-and-void-transaction",
+    "route": "/reports/sales/discount-and-void-transaction",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Group Block Booking",
+    "title": "Group Block Booking",
+    "slug": "group-block-booking",
+    "route": "/reports/sales/group-block-booking",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Guest Advance",
+    "title": "Guest Advance",
+    "slug": "guest-advance",
+    "route": "/reports/sales/guest-advance",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Guest Loyalty And Repeat Stay",
+    "title": "Guest Loyalty And Repeat Stay",
+    "slug": "guest-loyalty-and-repeat-stay",
+    "route": "/reports/sales/guest-loyalty-and-repeat-stay",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Guest Refund",
+    "title": "Guest Refund",
+    "slug": "guest-refund",
+    "route": "/reports/sales/guest-refund",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "In House Guest",
+    "title": "In House Guest",
+    "slug": "in-house-guest",
+    "route": "/reports/sales/in-house-guest",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Night Audit Day Closing",
+    "title": "Night Audit Day Closing",
+    "slug": "night-audit-day-closing",
+    "route": "/reports/sales/night-audit-day-closing",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "No Show Charge",
+    "title": "No Show Charge",
+    "slug": "no-show-charge",
+    "route": "/reports/sales/no-show-charge",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "OTA Agency Commission",
+    "title": "OTA Agency Commission",
+    "slug": "ota-agency-commission",
+    "route": "/reports/sales/ota-agency-commission",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Occupancy",
+    "title": "Occupancy",
+    "slug": "occupancy",
+    "route": "/reports/sales/occupancy",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Payment Transaction",
+    "title": "Payment Transaction",
+    "slug": "payment-transaction",
+    "route": "/reports/sales/payment-transaction",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Reservation Entry Log Sales Person Wise",
+    "title": "Reservation Entry Log Sales Person Wise",
+    "slug": "reservation-entry-log-sales-person-wise",
+    "route": "/reports/sales/reservation-entry-log-sales-person-wise",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Reservation No History Missing Numbers",
+    "title": "Reservation No History Missing Numbers",
+    "slug": "reservation-no-history-missing-numbers",
+    "route": "/reports/sales/reservation-no-history-missing-numbers",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Revenue Projection",
+    "title": "Revenue Projection",
+    "slug": "revenue-projection",
+    "route": "/reports/sales/revenue-projection",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Room Type Rate Plan Wise Sales",
+    "title": "Room Type Rate Plan Wise Sales",
+    "slug": "room-type-rate-plan-wise-sales",
+    "route": "/reports/sales/room-type-rate-plan-wise-sales",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Rooms On Books Booking Pace",
+    "title": "Rooms On Books Booking Pace",
+    "slug": "rooms-on-books-booking-pace",
+    "route": "/reports/sales/rooms-on-books-booking-pace",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Sales",
+    "title": "Sales",
+    "slug": "sales",
+    "route": "/reports/sales/sales",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Shareholder Commission",
+    "title": "Shareholder Commission",
+    "slug": "shareholder-commission",
+    "route": "/reports/sales/shareholder-commission",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Shareholder Entitlement Usage",
+    "title": "Shareholder Entitlement Usage",
+    "slug": "shareholder-entitlement-usage",
+    "route": "/reports/sales/shareholder-entitlement-usage",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Source Channel Wise Booking Revenue",
+    "title": "Source Channel Wise Booking Revenue",
+    "slug": "source-channel-wise-booking-revenue",
+    "route": "/reports/sales/source-channel-wise-booking-revenue",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Today's Arrival List",
+    "title": "Today's Arrival List",
+    "slug": "todays-arrival-list",
+    "route": "/reports/sales/todays-arrival-list",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "sales",
+    "department": "Sales & Reservations",
+    "departmentSlug": "sales",
+    "name": "Today's Departure List",
+    "title": "Today's Departure List",
+    "slug": "todays-departure-list",
+    "route": "/reports/sales/todays-departure-list",
+    "exportPermission": true,
+    "printPermission": true
+  },
+  {
+    "category": "cross-module",
+    "department": "Cross Module",
+    "departmentSlug": "cross-module",
+    "name": "Other Items Sales",
+    "title": "Other Items Sales",
+    "slug": "other-items-sales",
+    "route": "/reports/cross-module/other-items-sales",
+    "exportPermission": true,
+    "printPermission": true
+  }
 ]
 
-export const STANDARD_COLUMNS = [
-  { key: 'slNo', label: 'SL No', type: 'number', align: 'center', width: 72 },
-  { key: 'transactionDate', label: 'Transaction Date', type: 'date', align: 'center', width: 130 },
-  { key: 'documentNo', label: 'Document No', type: 'code', align: 'center', width: 130 },
-  { key: 'voucherNo', label: 'Voucher No', type: 'code', align: 'center', width: 130 },
-  { key: 'reservationNo', label: 'Reservation No', type: 'code', align: 'center', width: 140 },
-  { key: 'guestId', label: 'Guest ID', type: 'code', align: 'center', width: 110 },
-  { key: 'guestName', label: 'Guest Name', type: 'text', align: 'left', width: 180 },
-  { key: 'roomNo', label: 'Room No', type: 'code', align: 'center', width: 95 },
-  { key: 'roomType', label: 'Room Type', type: 'text', align: 'left', width: 130 },
-  { key: 'department', label: 'Department', type: 'text', align: 'left', width: 140 },
-  { key: 'costCenter', label: 'Cost Center', type: 'code', align: 'center', width: 120 },
-  { key: 'accountCode', label: 'Account Code', type: 'code', align: 'center', width: 120 },
-  { key: 'accountName', label: 'Account Name', type: 'text', align: 'left', width: 180 },
-  { key: 'description', label: 'Description', type: 'text', align: 'left', width: 220 },
-  { key: 'quantity', label: 'Quantity', type: 'number', align: 'right', width: 95 },
-  { key: 'rate', label: 'Rate', type: 'currency', align: 'right', width: 110, total: false },
-  { key: 'grossAmount', label: 'Gross Amount', type: 'currency', align: 'right', width: 130, total: true },
-  { key: 'discount', label: 'Discount', type: 'currency', align: 'right', width: 115, total: true },
-  { key: 'vat', label: 'VAT', type: 'currency', align: 'right', width: 110, total: true },
-  { key: 'serviceCharge', label: 'Service Charge', type: 'currency', align: 'right', width: 130, total: true },
-  { key: 'netAmount', label: 'Net Amount', type: 'currency', align: 'right', width: 130, total: true },
-  { key: 'debit', label: 'Debit', type: 'currency', align: 'right', width: 120, total: true },
-  { key: 'credit', label: 'Credit', type: 'currency', align: 'right', width: 120, total: true },
-  { key: 'balance', label: 'Balance', type: 'currency', align: 'right', width: 130, total: true },
-  { key: 'paymentMethod', label: 'Payment Method', type: 'text', align: 'left', width: 145 },
-  { key: 'reservationSource', label: 'Reservation Source', type: 'text', align: 'left', width: 160 },
-  { key: 'guestType', label: 'Guest Type', type: 'text', align: 'left', width: 130 },
-  { key: 'createdBy', label: 'Created By', type: 'text', align: 'left', width: 130 },
-  { key: 'approvedBy', label: 'Approved By', type: 'text', align: 'left', width: 130 },
-  { key: 'status', label: 'Status', type: 'status', align: 'center', width: 110 },
-  { key: 'remarks', label: 'Remarks', type: 'text', align: 'left', width: 200 },
-]
+const toReportCode = (index) => `RPT-${String(index + 1).padStart(3, '0')}`
 
-const c = (key) => STANDARD_COLUMNS.find((col) => col.key === key)
-
-const baseColumns = [
-  c('slNo'), c('transactionDate'), c('documentNo'), c('reservationNo'), c('guestName'),
-  c('roomNo'), c('department'), c('accountName'), c('description'), c('grossAmount'),
-  c('discount'), c('vat'), c('serviceCharge'), c('netAmount'), c('paymentMethod'), c('status'),
-]
-
-const financialColumns = [
-  c('slNo'), c('accountCode'), c('accountName'), c('description'), c('debit'), c('credit'), c('balance'), c('remarks'),
-]
-
-const hotelColumns = [
-  c('slNo'), c('transactionDate'), c('reservationNo'), c('guestId'), c('guestName'), c('roomNo'), c('roomType'),
-  c('reservationSource'), c('grossAmount'), c('netAmount'), c('status'),
-].filter(Boolean)
-
-const posColumns = [
-  c('slNo'), c('transactionDate'), c('documentNo'), c('department'), c('costCenter'), c('description'),
-  c('quantity'), c('rate'), c('grossAmount'), c('discount'), c('vat'), c('serviceCharge'), c('netAmount'),
-  c('paymentMethod'), c('createdBy'), c('status'),
-]
-
-export const DASHBOARD_KPIS = [
-  { key: 'totalRevenue', label: 'Total Revenue', type: 'currency', icon: TrendingUp },
-  { key: 'roomRevenue', label: 'Room Revenue', type: 'currency', icon: BedDouble },
-  { key: 'restaurantRevenue', label: 'Restaurant Revenue', type: 'currency', icon: Receipt },
-  { key: 'otherRevenue', label: 'Other Revenue', type: 'currency', icon: Wallet },
-  { key: 'occupancy', label: 'Occupancy %', type: 'percent', icon: Building2 },
-  { key: 'adr', label: 'ADR', type: 'currency', icon: BarChart3 },
-  { key: 'revpar', label: 'RevPAR', type: 'currency', icon: CalendarCheck2 },
-  { key: 'totalGuests', label: 'Total Guests', type: 'number', icon: BedDouble },
-  { key: 'checkIns', label: 'Check-ins', type: 'number', icon: ClipboardList },
-  { key: 'checkOuts', label: 'Check-outs', type: 'number', icon: ClipboardList },
-  { key: 'cancellations', label: 'Cancellations', type: 'number', icon: ClipboardList },
-  { key: 'noShows', label: 'No-shows', type: 'number', icon: ClipboardList },
-  { key: 'cashCollection', label: 'Cash Collection', type: 'currency', icon: HandCoins },
-  { key: 'cardCollection', label: 'Card Collection', type: 'currency', icon: CreditCard },
-  { key: 'mobileCollection', label: 'Mobile Banking Collection', type: 'currency', icon: Wallet },
-  { key: 'outstandingReceivable', label: 'Outstanding Receivable', type: 'currency', icon: FileSpreadsheet },
-  { key: 'vatPayable', label: 'VAT Payable', type: 'currency', icon: Landmark },
-  { key: 'netProfit', label: 'Net Profit', type: 'currency', icon: TrendingUp },
-  { key: 'gop', label: 'GOP', type: 'currency', icon: PackageCheck },
-  { key: 'ebitdaMargin', label: 'EBITDA Margin', type: 'percent', icon: BarChart3 },
-]
-
-const ifrsNotes = {
-  'IAS 1': 'Presents assets, liabilities, equity, income, expenses, and comparatives with clear subtotals.',
-  'IFRS 15': 'Recognizes hotel revenue when performance obligations are satisfied.',
-  'IAS 2': 'Reports inventory movements at cost with consumption and closing stock controls.',
-  'IAS 16': 'Tracks fixed assets, capitalization, depreciation, and carrying value.',
-  'IFRS 16': 'Separates lease liability, finance cost, and right-of-use asset movement.',
-  'IAS 7': 'Classifies cash flows into operating, investing, and financing activities.',
-}
-
-const makeTemplate = (code, name, category, columns, options = {}) => ({
-  code,
-  name,
-  category,
-  reportCategory: REPORT_CATEGORIES.find((x) => x.code === category)?.name || category,
-  description: options.description || '',
-  ifrsReference: options.ifrsReference || null,
-  ifrsNote: options.ifrsReference ? ifrsNotes[options.ifrsReference] : null,
-  columns,
-  filters: options.filters || STANDARD_FILTERS.map((f) => f.key),
-  kpis: options.kpis || ['totalRevenue', 'netAmount', 'outstandingReceivable'],
-  grouping: options.grouping || 'department',
-  defaultSort: options.defaultSort || { key: 'transactionDate', direction: 'desc' },
-  exportPermission: true,
-  printPermission: true,
-  dataSource: options.dataSource || 'reporting.vw_enterprise_report_rows',
+export const REPORT_TEMPLATES = REPORT_TEMPLATE_DEFINITIONS.map((report, index) => {
+  const reportCode = toReportCode(index)
+  return {
+    ...report,
+    code: reportCode,
+    reportCode,
+  }
 })
 
-export const REPORT_TEMPLATES = [
-  makeTemplate('IFRS-SFP', 'Statement of Financial Position', 'IFRS', financialColumns, { ifrsReference: 'IAS 1', grouping: 'classification', description: 'Assets, liabilities, and equity at reporting date.' }),
-  makeTemplate('IFRS-PNL', 'Statement of Profit or Loss', 'IFRS', financialColumns, { ifrsReference: 'IAS 1', grouping: 'statementLine', description: 'Revenue, expenses, GOP, EBITDA, and net profit.' }),
-  makeTemplate('IFRS-CFS', 'Statement of Cash Flows', 'IFRS', financialColumns, { ifrsReference: 'IAS 7', grouping: 'cashFlowClass', description: 'Operating, investing, and financing cash flow.' }),
-  makeTemplate('IFRS-SCE', 'Statement of Changes in Equity', 'IFRS', financialColumns, { ifrsReference: 'IAS 1', grouping: 'equityComponent' }),
-  makeTemplate('IFRS-REV-REC', 'Revenue Recognition Report', 'IFRS', baseColumns, { ifrsReference: 'IFRS 15', grouping: 'performanceObligation' }),
-  makeTemplate('IFRS-DEF-REV', 'Deferred Revenue Report', 'IFRS', baseColumns, { ifrsReference: 'IFRS 15', grouping: 'status' }),
-  makeTemplate('INV-MOV', 'Inventory Movement Report', 'IFRS', [...financialColumns, c('quantity')].filter(Boolean), { ifrsReference: 'IAS 2', grouping: 'itemCategory' }),
-  makeTemplate('FA-REG', 'Fixed Asset Register', 'IFRS', financialColumns, { ifrsReference: 'IAS 16', grouping: 'assetClass' }),
-  makeTemplate('FA-DEP', 'Depreciation Schedule', 'IFRS', financialColumns, { ifrsReference: 'IAS 16', grouping: 'assetClass' }),
-  makeTemplate('LEASE-LIAB', 'Lease Liability Schedule', 'IFRS', financialColumns, { ifrsReference: 'IFRS 16', grouping: 'leaseContract' }),
-  makeTemplate('AR-AGING', 'Accounts Receivable Aging', 'ACCOUNTING', financialColumns, { grouping: 'agingBucket' }),
-  makeTemplate('AP-AGING', 'Accounts Payable Aging', 'ACCOUNTING', financialColumns, { grouping: 'agingBucket' }),
-  makeTemplate('OCC-RPT', 'Occupancy Report', 'HOTEL_KPI', hotelColumns, { kpis: ['occupancy', 'totalGuests', 'roomRevenue'], grouping: 'roomType' }),
-  makeTemplate('ADR-RPT', 'ADR Report', 'HOTEL_KPI', hotelColumns, { kpis: ['adr', 'roomRevenue', 'occupancy'], grouping: 'roomType' }),
-  makeTemplate('REVPAR-RPT', 'RevPAR Report', 'HOTEL_KPI', hotelColumns, { kpis: ['revpar', 'adr', 'occupancy'], grouping: 'roomType' }),
-  makeTemplate('ROOM-REV', 'Room Revenue Report', 'HOTEL_KPI', hotelColumns, { kpis: ['roomRevenue', 'adr', 'revpar'], grouping: 'roomType' }),
-  makeTemplate('GUEST-LEDGER', 'Guest Ledger Report', 'HOTEL_KPI', baseColumns, { grouping: 'guestName' }),
-  makeTemplate('RES-RPT', 'Reservation Report', 'HOTEL_KPI', hotelColumns, { grouping: 'reservationSource' }),
-  makeTemplate('CHECKIN-RPT', 'Check-in Report', 'HOTEL_KPI', hotelColumns, { kpis: ['checkIns', 'totalGuests'], grouping: 'roomType' }),
-  makeTemplate('CHECKOUT-RPT', 'Check-out Report', 'HOTEL_KPI', hotelColumns, { kpis: ['checkOuts', 'totalGuests'], grouping: 'roomType' }),
-  makeTemplate('NOSHOW-RPT', 'No-show Report', 'HOTEL_KPI', hotelColumns, { kpis: ['noShows'], grouping: 'reservationSource' }),
-  makeTemplate('CANCEL-RPT', 'Cancellation Report', 'HOTEL_KPI', hotelColumns, { kpis: ['cancellations'], grouping: 'reservationSource' }),
-  makeTemplate('HK-STATUS', 'Housekeeping Status Report', 'HOTEL_KPI', hotelColumns, { grouping: 'status' }),
-  makeTemplate('ROOM-AVAIL', 'Room Availability Report', 'HOTEL_KPI', hotelColumns, { grouping: 'roomType' }),
-  makeTemplate('REST-SALES', 'Restaurant Sales Report', 'POS', posColumns, { kpis: ['restaurantRevenue', 'vatPayable', 'cashCollection'], grouping: 'outlet' }),
-  makeTemplate('POS-COLL', 'POS Collection Report', 'POS', posColumns, { kpis: ['cashCollection', 'cardCollection', 'mobileCollection'], grouping: 'paymentMethod' }),
-  makeTemplate('PAY-SUM', 'Payment Summary Report', 'ACCOUNTING', baseColumns, { kpis: ['cashCollection', 'cardCollection', 'mobileCollection'], grouping: 'paymentMethod' }),
-  makeTemplate('DAILY-SALES', 'Daily Sales Report', 'ACCOUNTING', baseColumns, { kpis: ['totalRevenue', 'roomRevenue', 'restaurantRevenue'], grouping: 'department' }),
-  makeTemplate('NIGHT-AUDIT', 'Night Audit Report', 'ACCOUNTING', baseColumns, { kpis: ['totalRevenue', 'cashCollection', 'outstandingReceivable'], grouping: 'department' }),
-]
-
-export function getDefaultFilters(todayISO) {
-  const today = todayISO()
-  return {
-    dateFrom: `${today.slice(0, 8)}01`,
-    dateTo: today,
-    property: 'All Properties',
-    outlet: 'All Outlets',
-    department: 'All Departments',
-    costCenter: 'All Cost Centers',
-    roomType: 'All Room Types',
-    guestType: 'All Guest Types',
-    reservationSource: 'All Sources',
-    paymentMethod: 'All Methods',
-    status: 'All Status',
-    user: 'All Users',
-    currency: 'BDT',
-    businessUnit: 'All Business Units',
-    segment: 'All Segments',
-    tags: 'All Tags',
-  }
+export function getReportByCode(code) {
+  return REPORT_TEMPLATES.find((report) => report.code === code || report.reportCode === code) || null
 }
+
+export function getReportByRoute(departmentSlug, reportSlug) {
+  return REPORT_TEMPLATES.find(
+    (report) => report.departmentSlug === departmentSlug && report.slug === reportSlug
+  ) || null
+}
+

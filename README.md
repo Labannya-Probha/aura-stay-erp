@@ -1,5 +1,7 @@
 # emotet-malware-killer
+
 ## Use at your own risk
+
 This software utilizes autorunsc to check processes and services against Virus Total, if it reaches the set threshold it will auto-nuke the malware.
 
 ## Team editor note (Tailwind CSS)
@@ -84,10 +86,12 @@ npx wrangler deploy    # Upload dist/ to Cloudflare Workers
 The GitHub Actions workflow `.github/workflows/deploy.yml` runs this automatically on every push to `main`.
 
 Configuration lives in `wrangler.jsonc`:
+
 - `assets.directory = './dist'` — serves the Vite output
 - `name` — your Workers service name
 
 Required Cloudflare secrets in GitHub Actions:
+
 ```
 CLOUDFLARE_API_TOKEN
 CLOUDFLARE_ACCOUNT_ID

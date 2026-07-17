@@ -53,9 +53,9 @@ export default function RolePrivilegesCard() {
       <p className="text-xs text-pine/50 mb-4">Controls which modules each role can view, and whether they can create, edit, or delete within that module. Superuser and Administrator always have full access everywhere, so they're not listed here. Changes apply immediately — no redeploy needed.</p>
       {msg && <div className="mb-3 px-3 py-2 rounded-lg bg-forest/10 text-forest text-sm">{msg}</div>}
 
-      <div className="flex gap-1 border-b border-leaf flex-wrap mb-4">
+      <div className="tab-strip-responsive border-b border-leaf mb-4">
         {editableRoles.map((r) => (
-          <button key={r} onClick={() => setActiveRole(r)} className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg ${activeRole === r ? 'bg-forest/10 border border-leaf border-b-white text-forest -mb-px' : 'text-pine/50 hover:text-pine'}`}>
+          <button key={r} onClick={() => setActiveRole(r)} className={`tab-button-responsive px-3 py-1.5 text-xs font-semibold rounded-t-lg ${activeRole === r ? 'bg-forest/10 border border-leaf border-b-white text-forest -mb-px' : 'text-pine/50 hover:text-pine'}`}>
             {ROLE_LABELS[r] || r}
           </button>
         ))}

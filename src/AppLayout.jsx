@@ -1,83 +1,22 @@
 /* ------------------------------------------------------------------ */
-/*  APP LAYOUT — sidebar shell, mobile nav, AppWelcome                 */
+/*  APP LAYOUT — AEDS v3 shell                                         */
 /* ------------------------------------------------------------------ */
-import { useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { supabase } from './supabase'
-import { can, ROLE_LABELS } from './lib/roles'
-import { isModuleEnabled } from './lib/saasModules'
-import { REPORT_CATEGORIES } from './lib/reporting/reportConfig'
-import { getRoleDefaultReportCatalog } from './lib/reporting/tenantReporting'
-import { NAV_GROUPS } from './app/navigation/navGroups'
-import {
-  SIDEBAR_ACCOUNTING_TABS,
-  SIDEBAR_HR_TABS,
-  SIDEBAR_MASTER_DATA_TABS,
-} from './app/navigation/sidebarTabs'
-import { getActiveNavGroupTitle } from './app/navigation/helpers'
-import { getVisibleSettingsSections } from './app/navigation/settingsSections'
-import { PATHS } from './app/paths'
-import { getTenantId } from './lib/tenant'
-import { DEFAULT_RESERVATION_TAB, getVisibleReservationTabs, resolveReservationTab } from './modules/reservations/reservations.config'
-import { WelcomePopover } from './components/WelcomePopover.jsx'
-import { PopoverDisplay } from './components/PopoverDisplay.jsx'
-import { useWelcomePopover } from './hooks/useWelcomePopover'
-import AppRoutes from './AppRoutes.jsx'
-import AppTopBar from './components/layout/AppTopBar.jsx'
-import {
-  LogOut, Menu, X, ChevronDown,
-} from 'lucide-react'
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { supabase } from "./supabase"
+import { PATHS } from "./app/paths"
+import { getTenantId } from "./lib/tenant"
+import { WelcomePopover } from "./components/WelcomePopover.jsx"
+import { PopoverDisplay } from "./components/PopoverDisplay.jsx"
+import { useWelcomePopover } from "./hooks/useWelcomePopover"
+import AppRoutes from "./AppRoutes.jsx"
+import AedsShell from "./layout/shell/AedsShell.jsx"
+import "./layout/shell/shell.css"
+import { useTheme } from "./theme"
 
-/* ------------------------------------------------------------------ */
-/*  BrandLogo                                                           */
-/* ------------------------------------------------------------------ */
-function BrandLogo({ url, softwareName }) {
-  const [ok, setOk] = useState(true)
-  if (url && ok) return <img src={url} alt="logo" onError={() => setOk(false)} className="w-9 h-9 rounded-xl object-contain bg-white p-1 ring-1 ring-black/5" />
-  const abbr = (softwareName || 'AS').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
-  return <div className="w-9 h-9 rounded-xl bg-white text-slate-700 flex items-center justify-center shadow-sm ring-1 ring-white/20 flex-shrink-0"><span className="font-bold text-sm leading-none">{abbr}</span></div>
-}
-
-/* ------------------------------------------------------------------ */
-/*  HrSubGroup                                                          */
-/* ------------------------------------------------------------------ */
-function HrSubGroup({ grp, navigate }) {
-  const [open, setOpen] = useState(grp.active)
-  return (
-    <div>
-      <button
-        onClick={() => setOpen((p) => !p)}
-        className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors flex items-center justify-between gap-2 ${
-          grp.active ? 'text-white font-semibold' : 'text-white/75 hover:text-white'
-        }`}>
-        <span className="flex items-center gap-2">
-          {grp.icon && <grp.icon size={12} className="shrink-0 opacity-70" />}
-          {grp.label}
-        </span>
-        <ChevronDown size={10} className={`transition-transform ${open ? '' : '-rotate-90'}`} />
-      </button>
-      {open && (
-        <div className="ml-4 space-y-0.5 mt-0.5">
-          {grp.children.map((c) => (
-            <button key={c.id}
-              className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors flex items-center gap-2 ${
-                c.active ? 'bg-white/18 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
-              }`}
-              onClick={() => navigate(c.path)}>
-              {c.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/*  AppWelcome                                                          */
-/* ------------------------------------------------------------------ */
 export function AppWelcome({ userName }) {
   const { showWelcome, setShowWelcome } = useWelcomePopover()
+
   return (
     <WelcomePopover
       isOpen={showWelcome}
@@ -87,511 +26,114 @@ export function AppWelcome({ userName }) {
   )
 }
 
-/* ------------------------------------------------------------------ */
-/*  AppShell                                                            */
-/* ------------------------------------------------------------------ */
-export default function AppShell({ company, role, isAdmin, userName, userId, loadCompany, privileges }) {
+export default function AppShell({
+  company,
+  role,
+  isAdmin,
+  userName,
+  userId,
+  loadCompany,
+  privileges,
+}) {
   const navigate = useNavigate()
-  const location = useLocation()
-  const [mobileNavOpen,  setMobileNavOpen]  = useState(false)
-  const [openSystemMenu, setOpenSystemMenu] = useState(null)
-  const [,               setOpenNavGroup]   = useState(() => getActiveNavGroupTitle(window.location.pathname.split('/').filter(Boolean)[0] || 'front-office', window.location.pathname))
+  const { setCompany } = useTheme()
   const [modulesEnabled, setModulesEnabled] = useState(null)
-  const [sidebarHidden,  setSidebarHidden]  = useState(false)
 
-  const visibleReservationTabs = getVisibleReservationTabs({ role, isAdmin, privileges })
-  const currentTopSegment = location.pathname.split('/').filter(Boolean)[0] || 'front-office'
-  const currentTopId = (currentTopSegment === 'dashboard' || currentTopSegment === 'frontoffice' || currentTopSegment === 'front-office')
-    ? 'nightaudit'
-    : currentTopSegment === 'consumption'
-      ? 'inventory'
-      : currentTopSegment === 'cms' || currentTopSegment === 'master-data'
-        ? 'master-data'
-      : currentTopSegment === 'night-audit-reports'
-        ? 'reports'
-      : currentTopSegment === 'restaurant'
-        ? 'pos'
-        : currentTopSegment
-  const navPathById = (id) => {
-    if (id === 'dashboard') return PATHS.FRONTOFFICE
-    if (id === 'nightaudit') return `${PATHS.FRONT_OFFICE}?tab=in-house`
-    if (id === 'pos') return PATHS.RESTAURANT
-    if (id === 'pos-print-center') return PATHS.POS_PRINT_CENTER
-    return `/${id}`
-  }
-  const withId = (template, id) => template.replace(':id', encodeURIComponent(id))
+  const withId = (template, id) => template.replace(":id", encodeURIComponent(id))
 
   const openReservation = (id, tab) => {
-    const q = tab ? `?tab=${encodeURIComponent(tab)}` : ''
+    const q = tab ? `?tab=${encodeURIComponent(tab)}` : ""
     navigate(`${withId(PATHS.RESERVATION_DETAIL, id)}${q}`)
   }
+
   const openFrontOfficeReservation = (id, tab) => {
-    const q = tab ? `?tab=${encodeURIComponent(tab)}` : ''
+    const q = tab ? `?tab=${encodeURIComponent(tab)}` : ""
     navigate(`${withId(PATHS.FRONTOFFICE_RESERVATION_DETAIL, id)}${q}`)
   }
-  const startReservation = (prefill = {}) => navigate(`${PATHS.RESERVATIONS}?tab=new`, { state: { prefill } })
 
-  const softwareName    = company?.software_name || 'Aura Stay'
-  const sidebarThemeStyle = { background: 'var(--sidebar-bg)' }
-  const activeReportCode = new URLSearchParams(location.search).get('report')
-  const sidebarReportCatalog = getRoleDefaultReportCatalog(role)
+  const startReservation = (prefill = {}) => {
+    navigate(`${PATHS.RESERVATIONS}?tab=new`, { state: { prefill } })
+  }
 
   useEffect(() => {
+    setCompany(company || null)
+  }, [company, setCompany])
+
+  useEffect(() => {
+    let active = true
     const tenantId = getTenantId()
-    if (!tenantId || role === 'SUPERUSER') {
-      setModulesEnabled(null)
-      return
-    }
+
+    if (!tenantId || role === "SUPERUSER") return undefined
+
     supabase
-      .from('tenant_subscriptions')
-      .select('modules_enabled,status')
-      .eq('tenant_id', tenantId)
+      .from("tenant_subscriptions")
+      .select("modules_enabled,status")
+      .eq("tenant_id", tenantId)
       .maybeSingle()
       .then(({ data }) => {
-        if (!data || data.status === 'SUSPENDED') {
-          setModulesEnabled(data?.status === 'SUSPENDED' ? {} : null)
+        if (!active) return
+        if (!data || data.status === "SUSPENDED") {
+          setModulesEnabled(data?.status === "SUSPENDED" ? {} : null)
           return
         }
         setModulesEnabled(data.modules_enabled || null)
       })
-      .catch(() => setModulesEnabled(null))
+      .catch(() => {
+        if (active) setModulesEnabled(null)
+      })
+
+    return () => {
+      active = false
+    }
   }, [role, company?.tenant_id])
 
-  useEffect(() => { setMobileNavOpen(false) }, [location.pathname])
-  useEffect(() => {
-    setSidebarHidden(location.pathname === PATHS.CALENDAR)
-  }, [location.pathname])
-  useEffect(() => {
-    const activeNavGroup = getActiveNavGroupTitle(currentTopId, location.pathname)
-    if (activeNavGroup) setOpenNavGroup(activeNavGroup)
-  }, [currentTopId, location.pathname])
-  useEffect(() => {
-    const isReservationRoute = (
-      location.pathname.startsWith('/reservations') ||
-      location.pathname === PATHS.RESERVATION_PAYMENTS ||
-      location.pathname === PATHS.CALENDAR ||
-      location.pathname === PATHS.BOOKING_CALENDAR ||
-      location.pathname === PATHS.CRM
-    )
-    const isFrontOfficeRoute = (
-      location.pathname.startsWith('/frontoffice') ||
-      location.pathname.startsWith('/front-office') ||
-      location.pathname === PATHS.DASHBOARD ||
-      location.pathname === PATHS.NIGHTAUDIT ||
-      location.pathname === PATHS.FACILITIES
-    )
-    const isRestaurantRoute = (
-      location.pathname.startsWith('/restaurant') ||
-      location.pathname === PATHS.POS ||
-      location.pathname === PATHS.MENU_MANAGEMENT ||
-      location.pathname.startsWith('/pos/print-center') ||
-      location.pathname === PATHS.GUEST_KIOSK ||
-      location.pathname.startsWith('/verify/pos/')
-    )
-    const isAccountingRoute = location.pathname.startsWith('/accounting') || location.pathname === PATHS.VAT || location.pathname === PATHS.VAT_RETURN
-    const isHrRoute = location.pathname.startsWith('/hr')
-    const isReportsRoute = (
-      location.pathname === PATHS.REPORTS ||
-      location.pathname === PATHS.REPORTS_CASED_ALIAS ||
-      location.pathname === PATHS.NIGHT_AUDIT_REPORTS ||
-      location.pathname.endsWith('/reports') ||
-      location.pathname.endsWith('/Reports')
-    )
-    const isTasksRoute = location.pathname === PATHS.TASKS || location.pathname === PATHS.AI_TASKER
-
-    if (currentTopId === 'settings') setOpenSystemMenu('settings')
-    else if (currentTopId === 'master-data') setOpenSystemMenu('master-data')
-    else if (isTasksRoute) setOpenSystemMenu('tasks')
-    else if (isReportsRoute) setOpenSystemMenu('reports')
-    else if (isHrRoute) setOpenSystemMenu('hr')
-    else if (isAccountingRoute) setOpenSystemMenu('accounting')
-    else if (currentTopId === 'inventory') setOpenSystemMenu('inventory')
-    else if (isRestaurantRoute) setOpenSystemMenu('pos')
-    else if (isFrontOfficeRoute) setOpenSystemMenu('nightaudit')
-    else if (isReservationRoute) setOpenSystemMenu('reservations')
-    else setOpenSystemMenu(null)
-  }, [currentTopId, location.pathname])
-
-  const SidebarContent = (
-    <>
-      <div className="px-5 py-5 flex items-center gap-3 border-b border-white/15">
-        <BrandLogo url={company?.logo_url} softwareName={softwareName} />
-        <div className="min-w-0 flex-1">
-          <div className="font-display font-bold leading-tight truncate text-white">{softwareName}</div>
-          <div className="text-[11px] text-white/70 truncate">{company?.name || ''}</div>
-        </div>
-        <button onClick={() => setMobileNavOpen(false)} className="lg:hidden text-white/50 hover:text-white shrink-0">
-          <X size={20} />
-        </button>
-      </div>
-
-      <nav className="flex-1 py-3 px-3 overflow-y-auto">
-        {NAV_GROUPS.map((g, gi) => {
-          const items = g.items.filter((n) => {
-            if (!isModuleEnabled(n.id, modulesEnabled, role)) return false
-            if (n.id === 'nightaudit') return (
-              can(role, 'dashboard', privileges) ||
-              can(role, 'nightaudit', privileges) ||
-              can(role, 'facilities', privileges)
-            )
-            if (n.id === 'reservations') return visibleReservationTabs.length > 0
-            if (n.id === 'master-data') return role === 'SUPERUSER' && can(role, 'cms', privileges)
-            return can(role, n.id, privileges)
-          })
-          if (items.length === 0) return null
-          return (
-            <div key={g.title} className={gi > 0 ? 'mt-1 pt-1 border-t border-white/[0.08]' : ''}>
-              <div className="space-y-0.5">
-                {items.map((n) => {
-                  const isExpandable = ['reservations', 'nightaudit', 'pos', 'inventory', 'accounting', 'hr', 'reports', 'tasks', 'master-data', 'settings'].includes(n.id)
-                  if (!isExpandable) {
-                    return (
-                      <button key={n.id}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-w-0 ${
-                          currentTopId === n.id
-                            ? 'bg-white text-slate-900 ring-1 ring-white/40 shadow-sm'
-                            : 'text-white/80 hover:bg-white/12 hover:text-white'
-                        }`}
-                        onClick={() => navigate(navPathById(n.id))}>
-                        <n.icon size={17} className="shrink-0" />
-                        <span className="min-w-0 truncate whitespace-nowrap">{n.label}</span>
-                      </button>
-                    )
-                  }
-
-                  const isOpen = openSystemMenu === n.id
-                  let nested = []
-                  if (n.id === 'settings') {
-                    nested = getVisibleSettingsSections({ role, isAdmin }).map((s) => ({
-                      ...s,
-                      path: `${PATHS.SETTINGS}?section=${s.id}`,
-                      active: currentTopId === 'settings' && location.search.includes(`section=${s.id}`),
-                    }))
-                  } else if (n.id === 'master-data') {
-                    const mdTab = new URLSearchParams(location.search).get('tab') || 'companies'
-                    nested = SIDEBAR_MASTER_DATA_TABS.map((tab) => ({
-                      ...tab,
-                      active: (location.pathname === PATHS.MASTER_DATA || location.pathname === PATHS.CMS) && mdTab === tab.id,
-                    }))
-                  } else if (n.id === 'reservations') {
-                    const resTab = resolveReservationTab(new URLSearchParams(location.search).get('tab'))
-                    const isResPath = location.pathname === PATHS.RESERVATIONS
-                    nested = visibleReservationTabs.map((tab) => ({
-                      id: `reservations-${tab.id}`,
-                      label: tab.label,
-                      path: `${PATHS.RESERVATIONS}?tab=${tab.id}`,
-                      active: (() => {
-                        if (tab.id === DEFAULT_RESERVATION_TAB) return isResPath && resTab === DEFAULT_RESERVATION_TAB
-                        if (tab.id === 'calendar') return (isResPath && resTab === 'calendar') || location.pathname === PATHS.CALENDAR || location.pathname === PATHS.BOOKING_CALENDAR
-                        if (tab.id === 'payments') return (isResPath && resTab === 'payments') || location.pathname === PATHS.RESERVATION_PAYMENTS
-                        if (tab.id === 'guest-crm') return (isResPath && resTab === 'guest-crm') || location.pathname === PATHS.CRM
-                        return isResPath && resTab === tab.id
-                      })(),
-                    }))
-                  } else if (n.id === 'nightaudit') {
-                    const foTab = new URLSearchParams(location.search).get('tab')
-                    const isFoPath = location.pathname === PATHS.FRONT_OFFICE
-                    const canAccessServiceBills = can(role, 'facilities', privileges)
-                    const canAccessNightAudit = can(role, 'nightaudit', privileges)
-                    nested = [
-                      {
-                        id: 'fo-in-house',
-                        label: 'In-House Guests',
-                        path: `${PATHS.FRONT_OFFICE}?tab=in-house`,
-                        active: (isFoPath && (!foTab || foTab === 'in-house')) || location.pathname.startsWith('/frontoffice') || location.pathname === PATHS.DASHBOARD,
-                      },
-                      {
-                        id: 'fo-room-board',
-                        label: 'Room Board',
-                        path: `${PATHS.FRONT_OFFICE}?tab=room-board`,
-                        active: isFoPath && foTab === 'room-board',
-                      },
-                      {
-                        id: 'fo-check-in-out',
-                        label: 'Check In / Check Out',
-                        path: `${PATHS.FRONT_OFFICE}?tab=check-in-out`,
-                        active: isFoPath && foTab === 'check-in-out',
-                      },
-                      {
-                        id: 'fo-guest-folio',
-                        label: 'Guest Folio',
-                        path: `${PATHS.FRONT_OFFICE}?tab=guest-folio`,
-                        active: isFoPath && foTab === 'guest-folio',
-                      },
-                      ...(canAccessServiceBills ? [{
-                        id: 'fo-service-bills',
-                        label: 'Service Bills',
-                        path: `${PATHS.FRONT_OFFICE}?tab=service-bills`,
-                        active: (isFoPath && foTab === 'service-bills') || location.pathname === PATHS.FACILITIES,
-                      }] : []),
-                      ...(canAccessNightAudit ? [{
-                        id: 'fo-night-audit',
-                        label: 'Night Audit',
-                        path: `${PATHS.FRONT_OFFICE}?tab=night-audit`,
-                        active: (isFoPath && foTab === 'night-audit') || location.pathname === PATHS.NIGHTAUDIT,
-                      }] : []),
-                      {
-                        id: 'fo-lost-found',
-                        label: 'Lost & Found',
-                        path: `${PATHS.FRONT_OFFICE}?tab=lost-found`,
-                        active: isFoPath && foTab === 'lost-found',
-                      },
-                      {
-                        id: 'fo-guest-messages',
-                        label: 'Guest Messages',
-                        path: `${PATHS.FRONT_OFFICE}?tab=guest-messages`,
-                        active: isFoPath && foTab === 'guest-messages',
-                      },
-                    ]
-                  } else if (n.id === 'pos') {
-                    nested = [
-                      {
-                        id: 'restaurant',
-                        label: 'Restaurant',
-                        path: PATHS.RESTAURANT,
-                        active: (
-                          location.pathname.startsWith('/restaurant') ||
-                          location.pathname === PATHS.POS ||
-                          location.pathname === PATHS.MENU_MANAGEMENT ||
-                          location.pathname.startsWith('/pos/print-center') ||
-                          location.pathname === PATHS.GUEST_KIOSK ||
-                          location.pathname.startsWith('/verify/pos/')
-                        ),
-                      },
-                    ]
-                  } else if (n.id === 'inventory') {
-                    nested = [
-                      { id: 'inventory', label: 'Inventory', path: PATHS.INVENTORY, active: currentTopId === 'inventory' },
-                    ]
-                  } else if (n.id === 'accounting') {
-                    nested = SIDEBAR_ACCOUNTING_TABS
-                      .filter((s) => !s.adminOnly || isAdmin || role === 'SUPERUSER')
-                      .map((s) => ({
-                        ...s,
-                        active: s.id === 'vat'
-                          ? location.pathname === '/vat'
-                          : s.id === 'vat-return'
-                          ? location.pathname === '/vat-return'
-                          : location.pathname === s.path,
-                      }))
-                  } else if (n.id === 'hr') {
-                    const groupByIds = (id) => SIDEBAR_HR_TABS.find((tab) => tab.id === id)
-                    const toChild = (tab) => ({
-                      id: tab.id,
-                      label: tab.label,
-                      path: tab.path,
-                      icon: tab.icon,
-                      active: location.pathname === tab.path,
-                    })
-                    const groups = [
-                      { id: 'employee', label: 'Employee', tabIds: ['employee-entry', 'service-book', 'nominee'] },
-                      { id: 'attendance', label: 'Attendance', tabIds: ['attendance-register', 'employee-register', 'service-book-reg'] },
-                      { id: 'leave', label: 'Leave', tabIds: ['leave-entry', 'comp-leave', 'festival-leave'] },
-                      { id: 'payroll', label: 'Payroll', tabIds: ['payroll-config', 'payroll-gen', 'payroll-register'] },
-                      {
-                        id: 'letters',
-                        label: 'Letters',
-                        tabIds: [
-                          'offer-letter', 'appointment-letter', 'joining-letter', 'confirmation-letter',
-                          'increment-letter', 'promotion-letter', 'objection-letter', 'show-cause',
-                          'warning-letter', 'dismissal-letter', 'noc', 'experience-cert',
-                          'employment-cert', 'final-payment',
-                        ],
-                      },
-                      { id: 'compliance', label: 'Compliance', tabIds: ['incidents', 'compliance'] },
-                    ]
-                    nested = groups.map((grp) => {
-                      const children = grp.tabIds.map(groupByIds).filter(Boolean).map(toChild)
-                      return {
-                        id: grp.id,
-                        label: grp.label,
-                        active: children.some((child) => child.active),
-                        children,
-                      }
-                    })
-                  } else if (n.id === 'reports') {
-                    nested = REPORT_CATEGORIES
-                      .map((category) => ({
-                        id: category.code,
-                        label: category.name,
-                        icon: category.icon,
-                        active: currentTopId === 'reports' && sidebarReportCatalog.some((report) => report.category === category.code && report.code === activeReportCode),
-                        children: sidebarReportCatalog
-                          .filter((report) => report.category === category.code)
-                          .map((report) => ({
-                            id: report.code,
-                            label: report.name,
-                            path: `/reports?report=${encodeURIComponent(report.code)}`,
-                            active: currentTopId === 'reports' && activeReportCode === report.code,
-                          })),
-                      }))
-                      .filter((category) => category.children.length > 0)
-                  } else if (n.id === 'tasks') {
-                    const VALID_TASK_TABS = new Set(['my', 'all', 'ai'])
-                    const taskSearch = new URLSearchParams(location.search)
-                    const rawTab = taskSearch.get('tab') || 'my'
-                    const taskTab = VALID_TASK_TABS.has(rawTab) ? rawTab : 'my'
-                    const onTasksPath = location.pathname === PATHS.TASKS
-                    nested = [
-                      { id: 'tasks-my',  label: 'My Tasks',  path: `${PATHS.TASKS}?tab=my`,  active: onTasksPath && taskTab === 'my'  },
-                      { id: 'tasks-all', label: 'All Tasks', path: `${PATHS.TASKS}?tab=all`, active: onTasksPath && taskTab === 'all' },
-                      { id: 'tasks-ai',  label: 'AI Tasker', path: `${PATHS.TASKS}?tab=ai`,  active: (onTasksPath && taskTab === 'ai') || location.pathname === PATHS.AI_TASKER },
-                    ]
-                  }
-
-                  return (
-                    <div key={n.id} className="space-y-1">
-                      <button
-                        className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          isOpen ? 'bg-white text-slate-900 ring-1 ring-white/40 shadow-sm' : 'text-white/80 hover:bg-white/12 hover:text-white'
-                        }`}
-                        onClick={() => {
-                          setOpenSystemMenu(isOpen ? null : n.id)
-                          if (!isOpen) {
-                            navigate(navPathById(n.id))
-                          }
-                        }}
-                      >
-                        <span className="flex items-center gap-3 min-w-0">
-                          <n.icon size={17} className="shrink-0" />
-                          <span className="min-w-0 truncate whitespace-nowrap">{n.label}</span>
-                        </span>
-                        <ChevronDown size={13} className={`transition-transform ${isOpen ? '' : '-rotate-90'}`} />
-                      </button>
-                      {isOpen && (
-                        <div className="ml-6 space-y-0.5">
-                          {nested.map((child) => child.children ? (
-                            <HrSubGroup key={child.id} grp={child} navigate={navigate} />
-                          ) : (
-                            <button
-                              key={child.id}
-                              className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors flex items-center gap-2 ${
-                                child.active
-                                  ? 'bg-white/18 text-white'
-                                  : child.path
-                                  ? 'text-white/75 hover:bg-white/10 hover:text-white'
-                                  : 'text-white/50 cursor-default'
-                              }`}
-                              onClick={() => child.path && navigate(child.path)}
-                            >
-                              {child.icon && <child.icon size={13} aria-hidden="true" className="shrink-0 opacity-70" />}
-                              {child.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
-      </nav>
-
-      <div className="px-5 py-4 border-t border-white/15 text-xs text-white/70">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div className="truncate font-semibold text-white">{userName}</div>
-            <div className="text-[10px] text-white/60">{ROLE_LABELS[role] || role}</div>
-          </div>
-          <button title="Sign out" onClick={async () => {
-            const tenantId = getTenantId()
-            await supabase.auth.signOut()
-            const { data: prop } = await supabase
-              .from('properties')
-              .select('slug')
-              .eq('id', tenantId)
-              .maybeSingle()
-            const slug = company?.slug || prop?.slug
-            window.location.href = slug ? `/${slug}/login` : '/login'
-          }} className="text-white/65 hover:text-white shrink-0"><LogOut size={15} /></button>
-        </div>
-      </div>
-    </>
-  )
-
   return (
-    <div className="min-h-screen flex app-shell">
-      {/* Desktop sidebar — hidden on Booking Calendar for full-page view */}
-      {!sidebarHidden && (
-        <aside style={sidebarThemeStyle} className="hidden lg:flex w-64 text-white flex-col fixed inset-y-0 overflow-y-auto z-30 border-r border-white/15 shadow-[0_12px_34px_rgba(15,23,42,0.28)]">
-          {SidebarContent}
-        </aside>
-      )}
-
-      {/* Floating toggle to restore sidebar (desktop, Booking Calendar only) */}
-      {sidebarHidden && (
-        <button
-          onClick={() => setSidebarHidden(false)}
-          title="Show sidebar"
-          className="hidden lg:flex fixed top-4 left-4 z-40 items-center justify-center w-9 h-9 rounded-lg bg-slate-900/80 hover:bg-slate-900 text-white shadow-lg transition-colors"
+    <AedsShell
+      company={company}
+      role={role}
+      isAdmin={isAdmin}
+      userName={userName}
+      privileges={privileges}
+      modulesEnabled={modulesEnabled}
+    >
+      {company?.maintenance_mode && (
+        <div
+          className="no-print mb-4 rounded-2xl px-4 py-2 text-center text-sm font-bold text-white"
+          style={{ background: "var(--tenant-danger)" }}
         >
-          <Menu size={18} />
-        </button>
-      )}
-
-      {/* Mobile drawer */}
-      {mobileNavOpen && (
-        <div className="lg:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]" onClick={() => setMobileNavOpen(false)} />
-          <aside style={sidebarThemeStyle} className="absolute inset-y-0 left-0 w-72 max-w-[85vw] text-white flex flex-col shadow-2xl border-r border-white/15">
-            {SidebarContent}
-          </aside>
+          ⚠ Maintenance mode — posting &amp; edits are locked while accounts reconcile.
         </div>
       )}
 
-      {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 inset-x-0 z-20 bg-white/95 backdrop-blur text-slate-900 flex items-center gap-3 px-4 shadow-sm border-b border-slate-200 app-shell-mobile-bar">
-        <button onClick={() => setMobileNavOpen(true)} className="text-slate-600 hover:text-slate-900">
-          <Menu size={22} />
-        </button>
-        <BrandLogo url={company?.logo_url} softwareName={softwareName} />
-        <div className="min-w-0 flex-1">
-          <div className="font-display font-bold leading-tight truncate text-sm">{softwareName}</div>
+      <AppRoutes
+        role={role}
+        isAdmin={isAdmin}
+        userName={userName}
+        userId={userId}
+        company={company}
+        privileges={privileges}
+        modulesEnabled={modulesEnabled}
+        loadCompany={loadCompany}
+        openReservation={openReservation}
+        openFrontOfficeReservation={openFrontOfficeReservation}
+        startReservation={startReservation}
+        navigate={navigate}
+      />
+
+      <footer className="no-print mt-auto shrink-0 border-t border-slate-200 bg-white px-[var(--aeds-page-x)] py-3">
+        <div className="mx-auto flex w-full max-w-[var(--aeds-page-max)] items-center justify-between text-sm text-slate-500">
+          <span>
+            © {new Date().getFullYear()} Aura Stay
+          </span>
+
+          <span className="font-semibold text-slate-700">
+            Powered by Aura Stay
+          </span>
         </div>
-      </div>
+      </footer>
 
-      <main className="app-shell-main" style={sidebarHidden ? { marginLeft: 0 } : undefined}>
-        <AppTopBar userName={userName} role={role} company={company} />
-
-        {company?.maintenance_mode && (
-          <div className="no-print app-shell-banner" style={{ background:'#b91c1c',
-            color:'#fff', textAlign:'center', padding:'6px', fontWeight:600, fontSize:13 }}>
-            ⚠ Maintenance mode — posting &amp; edits are locked while accounts reconcile.
-          </div>
-        )}
-
-        <AppRoutes
-          role={role}
-          isAdmin={isAdmin}
-          userName={userName}
-          userId={userId}
-          company={company}
-          privileges={privileges}
-          modulesEnabled={modulesEnabled}
-          loadCompany={loadCompany}
-          openReservation={openReservation}
-          openFrontOfficeReservation={openFrontOfficeReservation}
-          startReservation={startReservation}
-          navigate={navigate}
-        />
-
-        <footer className="no-print mt-12 pt-4 border-t border-slate-200/80 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between text-xs text-slate-400">
-          <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-slate-500">Aura Stay ERP</span>
-            <span className="text-slate-300">·</span>
-            <span>© {new Date().getFullYear()} Aura Stay</span>
-          </div>
-          <div className="text-slate-400">
-            {company?.name && <span className="font-medium text-slate-500">{company.name}</span>}
-          </div>
-        </footer>
-      </main>
-
-      {/* Popover display and welcome */}
       <PopoverDisplay />
       <AppWelcome userName={userName} />
-    </div>
+    </AedsShell>
   )
 }

@@ -47,9 +47,9 @@ export default function EmployeeProfile({ employee, company, userName, back }) {
         )}
       </div>
 
-      <div className="flex gap-1 border-b border-leaf flex-wrap">
+      <div className="tab-strip-responsive border-b border-leaf">
         {TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`px-4 py-2 text-sm font-semibold rounded-t-lg ${tab === t.key ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>{t.label}</button>
+          <button key={t.key} onClick={() => setTab(t.key)} className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg ${tab === t.key ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>{t.label}</button>
         ))}
       </div>
 

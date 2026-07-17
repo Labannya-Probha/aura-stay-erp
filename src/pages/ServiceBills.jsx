@@ -12,9 +12,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popove
 import { Plus, Minus, Trash2, Banknote, BedDouble, Leaf, Printer } from 'lucide-react'
 
 const TABS = ['New Sale', 'Sales', 'Items']
+const NO_TENANT_SENTINEL = '00000000-0000-0000-0000-000000000000'
 const withTenant = (q) => {
   const tenantId = getTenantId()
-  return tenantId ? q.eq('tenant_id', tenantId) : q
+  return q.eq('tenant_id', tenantId || NO_TENANT_SENTINEL)
 }
 
 function ActionPopoverButton({ message, className, children, disabled = false, ...props }) {
@@ -62,10 +63,10 @@ export default function Facilities({ userName, isAdmin }) {
       <h1 className="font-display text-2xl font-bold text-pine mb-1">Service Bills</h1>      
       <KPICards module="facilities" />
 
-      <div className="flex gap-1 border-b border-leaf mb-6 flex-wrap overflow-x-auto">
+      <div className="tab-strip-responsive border-b border-leaf mb-6 flex-wrap overflow-x-auto">
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
+            className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
             {t}
           </button>
         ))}
@@ -200,6 +201,7 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
         await supabase.from('payments').insert(withTenantInsert({
           reservation_id: order.reservation_id, received_date: todayISO(), amount: t.total,
           method: primaryMethod, reference: order.order_no, received_by: userName, notes: catMeta.outlet,
+          payment_class: 'SETTLEMENT',
         }))
         await withTenant(supabase.from('pos_orders').update({ folio_charge_id: fc.id })).eq('id', order.id)
       } else if (issueMushak) {

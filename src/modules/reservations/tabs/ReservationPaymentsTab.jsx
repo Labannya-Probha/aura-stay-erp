@@ -1,5 +1,13 @@
-import ReservationPayments from '../../../pages/ReservationPayments.jsx'
+import ReservationPayments from "../../../pages/ReservationPayments"
 
-export default function ReservationPaymentsTab({ userName, isAdmin }) {
-  return <ReservationPayments userName={userName} isAdmin={isAdmin} />
+export default function ReservationPaymentsTab({
+  userName,
+  isAdmin,
+}) {
+  return (
+    <ReservationPayments
+      userName={userName}
+      isAdmin={isAdmin}
+    />
+  )
 }

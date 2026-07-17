@@ -1,3 +1,5 @@
+import { supabase } from '../supabase.js'
+
 export const NO_SHOW_CUTOFF_HOUR = 12
 export const NO_SHOW_CUTOFF_MINUTE = 5
 const CHECK_IN_BLOCKED_STATUSES = ['CHECKED_IN', 'CHECKED_OUT', 'SETTLED']
@@ -38,7 +40,6 @@ export function shouldAutoNoShow({ status, check_in }, now = new Date()) {
 }
 
 export async function runAutoNoShowSweep(runAt = new Date()) {
-  const { supabase } = await import('../supabase.js')
   const { data, error } = await supabase.rpc('auto_mark_reservation_no_shows', {
     p_now: runAt.toISOString(),
   })

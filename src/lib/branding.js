@@ -89,6 +89,30 @@ function saturation([r, g, b]) {
   return max === 0 ? 0 : (max - min) / max
 }
 
+/**
+ * Ensure a color is dark enough to host white text at a safe contrast
+ * ratio (~4.5:1 WCAG AA for normal text). If it's too light, progressively
+ * darken it toward black until the contrast target is met.
+ *
+ * @param {string} hex
+ * @param {number} minContrast - target contrast ratio against white (default 4.5)
+ * @returns {string} hex color, darkened if necessary
+ */
+function ensureWhiteTextSafe(hex, minContrast = 4.5) {
+  let current = hex
+  let guard = 0
+  while (guard < 12) {
+    const rgb = hexToRgb(current)
+    const l = luminance(rgb)
+    // Contrast of white (L=1) against background L, per WCAG formula
+    const contrast = (1 + 0.05) / (l + 0.05)
+    if (contrast >= minContrast) return current
+    current = mixHex(current, '#000000', 0.14)
+    guard += 1
+  }
+  return current
+}
+
 const logoPaletteCache = new Map()
 
 async function extractLogoPalette(logoUrl) {
@@ -137,9 +161,11 @@ async function extractLogoPalette(logoUrl) {
           printPrimary: dark,
           printAccent: accent,
           sidebarBg: dark,
-          buttonColor: primary,
+          // buttonColor and reportHeader always host white text (.btn-primary,
+          // erp report header bars), so guard against a too-light auto-pick.
+          buttonColor: ensureWhiteTextSafe(primary),
           tableHeader: mixHex(primary, '#ffffff', 0.88),
-          reportHeader: dark,
+          reportHeader: ensureWhiteTextSafe(dark),
           secondary: mixHex(primary, '#ffffff', 0.92),
         })
       } catch {
@@ -215,17 +241,23 @@ export function applyBrandTheme(theme) {
 export async function resolveBrandTheme(company) {
   const logoPalette = await extractLogoPalette(company?.logo_url)
   const fallback = logoPalette || DEFAULT_THEME
+  const rawSidebarBg = company?.sidebar_bg_color || company?.brand_primary || fallback.sidebarBg
+  const rawButtonColor = company?.button_color || company?.primary_color || fallback.buttonColor
+  const rawReportHeader = company?.report_header_color || company?.brand_primary || fallback.reportHeader
   return buildBrandTheme({
     primary:      company?.primary_color  || fallback.primary,
     secondary:    company?.secondary_color || fallback.secondary,
     accent:       company?.accent_color   || fallback.accent,
     printPrimary: company?.brand_primary  || fallback.printPrimary,
     printAccent:  company?.brand_accent   || fallback.printAccent,
-    sidebarBg:    company?.sidebar_bg_color || company?.brand_primary || fallback.sidebarBg,
+    // sidebarBg, buttonColor, and reportHeader all host white text in the UI
+    // (sidebar nav, .btn-primary, report header bars) — guard against colors
+    // (auto-extracted OR manually entered) that are too light for that to read.
+    sidebarBg:    ensureWhiteTextSafe(rawSidebarBg),
     sidebarText:  company?.sidebar_text_color || DEFAULT_THEME.sidebarText,
-    buttonColor:  company?.button_color || company?.primary_color || fallback.buttonColor,
+    buttonColor:  ensureWhiteTextSafe(rawButtonColor),
     tableHeader:  company?.table_header_color || fallback.tableHeader,
-    reportHeader: company?.report_header_color || company?.brand_primary || fallback.reportHeader,
+    reportHeader: ensureWhiteTextSafe(rawReportHeader),
     fontFamily:   company?.font_family || DEFAULT_THEME.fontFamily,
     themeMode:    company?.theme_mode || DEFAULT_THEME.themeMode,
   })
