@@ -5,6 +5,7 @@ import SearchableSelect from '../components/SearchableSelect.jsx'
 import { Receipt, Trash2, Pencil, MessageCircle, Mail, Printer, X } from 'lucide-react'
 import { generateReservationPaymentNo, parsePaymentReference, toPaymentReference } from '../lib/paymentNumber'
 import { logAudit } from '../lib/pms.api.js'
+import { runSingleFlight } from '../lib/singleFlight'
 
 export default function ReservationPayments({ userName, isAdmin }) {
   const [reservations, setReservations] = useState([])
@@ -36,7 +37,7 @@ export default function ReservationPayments({ userName, isAdmin }) {
   const [sendBusy, setSendBusy] = useState(false)
 
   const loadAll = async () => {
-    const [{ data: rs }, { data: pm }] = await Promise.all([
+    const [{ data: rs }, { data: pm }] = await runSingleFlight('payments:reservation-list', () => Promise.all([
       supabase
         .from('reservations')
         .select('id,res_no,reservation_name, guests:primary_guest_id(full_name,phone,email)')
@@ -47,7 +48,7 @@ export default function ReservationPayments({ userName, isAdmin }) {
         .select('id,reservation_id,received_date,amount,method,reference,received_by,paid_by_party,payment_class,reservations(res_no,reservation_name,primary_guest_id,guests:primary_guest_id(full_name,phone,email))')
         .order('received_date', { ascending: false })
         .limit(500),
-    ])
+    ]))
     setReservations(rs || [])
     setPayments(pm || [])
   }
