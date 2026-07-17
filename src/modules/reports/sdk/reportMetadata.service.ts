@@ -121,12 +121,31 @@ export async function loadReportDefinition(department, slug, role = "FRONT_OFFIC
   }
 }
 
-export async function runMetadataReport(department, slug, filters) {
+export async function searchFilterOptions(sourceHint, search = "", tenantId) {
+  if (!tenantId) return []
+  try {
+    const { data, error } = await supabase.rpc("aeds_filter_options", {
+      p_source_hint: sourceHint,
+      p_search: search,
+      p_tenant_id: tenantId,
+    })
+    if (!error && Array.isArray(data)) return data
+    return []
+  } catch {
+    return []
+  }
+}
+
+export async function runMetadataReport(department, slug, filters, tenantId) {
+  if (!tenantId) {
+    return { rows: [], summary: { error: "missing tenant context" } }
+  }
   try {
     const { data, error } = await supabase.rpc("aeds_run_report", {
       p_department_slug: department,
       p_report_slug: slug,
       p_filters: filters,
+      p_tenant_id: tenantId,
     })
     if (!error && data) return data
   } catch {
@@ -134,11 +153,7 @@ export async function runMetadataReport(department, slug, filters) {
   }
 
   return {
-    rows: [
-      { transaction_date: "2026-07-05", reference_no: "JV-0001", account_name: "Cash", particulars: "Opening balance", debit: 25000, credit: 0, balance: 25000, status: "Posted" },
-      { transaction_date: "2026-07-05", reference_no: "JV-0002", account_name: "Room Revenue", particulars: "Room sales posted", debit: 0, credit: 18000, balance: 7000, status: "Posted" },
-      { transaction_date: "2026-07-05", reference_no: "JV-0003", account_name: "Restaurant Revenue", particulars: "POS sales posted", debit: 0, credit: 7200, balance: -200, status: "Posted" },
-    ],
-    summary: { demoMode: true },
+    rows: [],
+    summary: { error: "report engine unavailable" },
   }
 }

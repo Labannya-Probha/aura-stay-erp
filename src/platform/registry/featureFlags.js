@@ -1,0 +1,15 @@
+export const AEDS_FEATURE_FLAGS = Object.freeze({
+  metadataForms: true,
+  metadataLists: true,
+  workflowEngine: true,
+  approvalTimeline: true,
+  notificationCenter: true,
+  activityTimeline: true,
+  dashboardPersonalization: true,
+  universalSearch: true,
+  commandPalette: true,
+  reportBuilder: true,
+  offlineQueue: true,
+  auditTrail: false,
+  aiAssistant: false,
+})

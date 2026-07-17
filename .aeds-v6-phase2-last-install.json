@@ -1,0 +1,10 @@
+﻿{
+    "files":  [
+                  "src\\components\\layout\\sidebar\\SidebarNavigation.jsx",
+                  "src\\modules\\dashboard\\Dashboard.jsx",
+                  "src\\modules\\reports\\pages\\ReportsLandingPage.tsx",
+                  "src\\styles\\aeds-v6-migration.css"
+              ],
+    "installed_at":  "2026-07-10T13:17:15.0701084+06:00",
+    "backup_path":  "C:\\Users\\Accounts Manager\\Downloads\\aura-stay-erp-aeds-v2\\backups\\aeds-v6-phase2-20260710-131714"
+}

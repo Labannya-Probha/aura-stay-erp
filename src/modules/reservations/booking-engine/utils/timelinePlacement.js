@@ -1,30 +1,85 @@
-export function getReservationGridPlacement(reservation, days) {
-  if (!reservation?.checkIn || !reservation?.checkOut || !days?.length) return null
+export function getReservationGridPlacement(
+  reservation,
+  days
+) {
+  if (
+    !reservation?.checkIn ||
+    !reservation?.checkOut ||
+    !days?.length
+  ) {
+    return null
+  }
 
-  const start = normalize(reservation.checkIn)
-  const end = normalize(reservation.checkOut)
+  const checkIn = toUtcDay(reservation.checkIn)
+  const checkOutExclusive = toUtcDay(
+    reservation.checkOut
+  )
 
-  const first = normalize(days[0].iso)
-  const last = normalize(days[days.length - 1].iso)
+  const calendarStart = toUtcDay(days[0].iso)
+  const calendarEndExclusive =
+    addUtcDays(
+      toUtcDay(days.at(-1).iso),
+      1
+    )
 
-  if (end < first || start > last) return null
+  if (
+    checkOutExclusive <= calendarStart ||
+    checkIn >= calendarEndExclusive
+  ) {
+    return null
+  }
 
-  const visibleStart = start < first ? first : start
-  const visibleEnd = end > last ? last : end
+  const visibleStart =
+    checkIn < calendarStart
+      ? calendarStart
+      : checkIn
 
-  const startIndex = days.findIndex((day) => normalize(day.iso) >= visibleStart)
-  const endIndex = days.findIndex((day) => normalize(day.iso) >= visibleEnd)
+  const visibleEndExclusive =
+    checkOutExclusive > calendarEndExclusive
+      ? calendarEndExclusive
+      : checkOutExclusive
 
-  if (startIndex < 0) return null
+  const startIndex = differenceInDays(
+    visibleStart,
+    calendarStart
+  )
+
+  const span = Math.max(
+    1,
+    differenceInDays(
+      visibleEndExclusive,
+      visibleStart
+    )
+  )
 
   return {
     startIndex,
-    span: Math.max((endIndex >= 0 ? endIndex : days.length - 1) - startIndex + 1, 1),
+    span,
+    nights: differenceInDays(
+      checkOutExclusive,
+      checkIn
+    ),
   }
 }
 
-function normalize(value) {
-  const d = new Date(value)
-  d.setHours(0, 0, 0, 0)
-  return d
+function toUtcDay(value) {
+  const [year, month, day] = String(value)
+    .slice(0, 10)
+    .split("-")
+    .map(Number)
+
+  return new Date(Date.UTC(year, month - 1, day))
+}
+
+function addUtcDays(date, amount) {
+  const next = new Date(date)
+  next.setUTCDate(next.getUTCDate() + amount)
+  return next
+}
+
+function differenceInDays(later, earlier) {
+  return Math.round(
+    (later.getTime() - earlier.getTime()) /
+      86_400_000
+  )
 }

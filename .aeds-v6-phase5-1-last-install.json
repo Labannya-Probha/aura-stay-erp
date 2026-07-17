@@ -1,0 +1,12 @@
+﻿{
+    "files":  [
+                  "src\\components\\data-grid\\AedsDataGrid.jsx",
+                  "src\\components\\data-grid\\aeds-v6-phase5-grid.css",
+                  "src\\modules\\reservations\\tabs\\ReservationsListTab.jsx",
+                  "src\\modules\\front-office\\arrival-board\\ArrivalBoardPage.jsx",
+                  "src\\modules\\front-office\\departure-board\\DepartureBoardPage.jsx",
+                  "src\\modules\\front-office\\in-house\\InHouseGuestsPage.jsx"
+              ],
+    "installed_at":  "2026-07-10T13:47:05.3775275+06:00",
+    "backup_path":  "C:\\Users\\Accounts Manager\\Downloads\\aura-stay-erp-aeds-v2\\backups\\aeds-v6-phase5-1-20260710-134705"
+}

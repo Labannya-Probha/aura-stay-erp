@@ -1,0 +1,6 @@
+export { default as AedsPlatformProvider } from "./AedsPlatformProvider"
+export { useAedsPlatform } from "./AedsPlatformProvider"
+export { AEDS_MODULE_REGISTRY } from "./registry/moduleRegistry"
+export { AEDS_PAGE_REGISTRY } from "./registry/pageRegistry"
+export { AEDS_FEATURE_FLAGS } from "./registry/featureFlags"
+export { getModuleDefinition, getPageDefinition } from "./registry/registryHelpers"

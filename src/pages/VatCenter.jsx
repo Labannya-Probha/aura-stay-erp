@@ -6,6 +6,8 @@ import { FileSpreadsheet, Plus, FileDown, Printer, Trash2, Pencil } from 'lucide
 import PrintPortal from '../components/PrintPortal.jsx'
 import VdsCertificate from '../components/print/VdsCertificate.jsx'
 import ChallanForm from './ChallanForm'
+import '../styles/aeds-v6-workspaces.css'
+import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
 
 const TABS = ['Sales 6.2', 'Purchase 6.1', 'VDS 6.6', 'Monthly 9.1', 'Over-threshold 6.10', 'A-Challan']
 const monthBounds = (ym) => { const [y, m] = ym.split('-').map(Number); const start = `${ym}-01`; const end = new Date(y, m, 0); return { start, end: `${ym}-${String(end.getDate()).padStart(2, '0')}` } }
@@ -18,22 +20,29 @@ export default function VatCenter({ userName, company }) {
   const [printCert, setPrintCert] = useState(null)
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
   return (
-    <div className="space-y-5">
+    <div className="aeds-v6-legacy-page">
       {printCert && (
         <PrintPortal title={`Mushak-6.6 — ${printCert.cert_no || 'VDS'}`} onClose={() => setPrintCert(null)} primaryColor={company?.primary_color || company?.brand_primary} accentColor={company?.accent_color || company?.brand_accent}>
           <VdsCertificate cert={printCert} company={company} />
         </PrintPortal>
       )}      
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="aeds-v6-legacy-header">
         <div>
-          <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2"><FileSpreadsheet className="text-forest" /> VAT Center</h1>
+          <div className="aeds-v6-workspace-eyebrow">Bangladesh VAT Compliance</div>
+          <h1 className="flex items-center gap-2">
+            <FileSpreadsheet className="text-forest" /> VAT Workspace
+          </h1>
+          <p>Sales, purchases, VDS certificates, monthly return and Mushak compliance.</p>
         </div>
-        <div className="flex items-center gap-2"><span className="label !mb-0">Month</span><input type="month" className="input !w-44" value={ym} onChange={(e) => setYm(e.target.value)} /></div>
+        <div className="flex items-center gap-2">
+          <span className="label !mb-0">Tax month</span>
+          <input type="month" className="input !w-44" value={ym} onChange={(e) => setYm(e.target.value)} />
+        </div>
       </div>
       <KPICards module="vat" />
       {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
-      <div className="tab-strip-responsive border-b border-leaf">
-        {TABS.map((t) => (<button key={t} onClick={() => setTab(t)} className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>{t}</button>))}
+      <div className="aeds-v6-tab-strip">
+        {TABS.map((t) => (<button key={t} onClick={() => setTab(t)} className={tab === t ? 'aeds-v6-tab-active' : ''}>{t}</button>))}
       </div>
       {tab === 'Sales 6.2' && <SalesReg ym={ym} company={company} />}
       {tab === 'Purchase 6.1' && <PurchaseReg ym={ym} company={company} />}
@@ -51,18 +60,28 @@ function SalesReg({ ym, company }) {
   const tot = rows.reduce((a, r) => ({ tv: a.tv + +r.taxable_value, sd: a.sd + +r.sd, vat: a.vat + +r.vat, total: a.total + +r.total }), { tv: 0, sd: 0, vat: 0, total: 0 })
   const xls = () => exportXLSX(`Mushak_6.2_${ym}.xlsx`, [{ name: '6.2 Sales', rows: [[`${company?.name || ''} — Mushak-6.2 Sales Register`], [`Month: ${ym}`, `BIN: ${company?.bin || ''}`], [], ['Date', 'Invoice', 'Buyer', 'Buyer BIN', 'Taxable Value', 'SD', 'VAT', 'Total'], ...rows.map((r) => [r.issue_date, r.invoice_no, r.buyer_name, r.buyer_bin, +r.taxable_value, +r.sd, +r.vat, +r.total]), [], ['', '', '', 'TOTAL', tot.tv, tot.sd, tot.vat, tot.total]] }])
   return (
-    <div className="card overflow-hidden">
-      <div className="px-4 py-3 border-b border-leaf flex items-center justify-between"><span className="font-display font-semibold text-pine">Sales Register (Mushak-6.2)</span><button className="btn-ghost !py-1" onClick={xls}><FileDown size={14} /> Excel</button></div>
-      <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead><tr><th className="th">Date</th><th className="th">Invoice</th><th className="th">Buyer</th><th className="th text-right">Taxable</th><th className="th text-right">SD</th><th className="th text-right">VAT</th><th className="th text-right">Total</th></tr></thead>
-        <tbody>
-          {rows.map((r) => (<tr key={r.id}><td className="td money text-xs">{fmtDate(r.issue_date)}</td><td className="td money text-xs">{r.invoice_no}</td><td className="td text-sm">{r.buyer_name || '—'}</td><td className="td money text-right">{(+r.taxable_value).toFixed(2)}</td><td className="td money text-right">{(+r.sd).toFixed(2)}</td><td className="td money text-right">{(+r.vat).toFixed(2)}</td><td className="td money text-right font-semibold">{(+r.total).toFixed(2)}</td></tr>))}
-          {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={7}>No sales this month.</td></tr>}
-        </tbody>
-        <tfoot><tr className="bg-leaf/40 font-bold money"><td className="td" colSpan={3}>TOTAL</td><td className="td text-right">{tot.tv.toFixed(2)}</td><td className="td text-right">{tot.sd.toFixed(2)}</td><td className="td text-right">{tot.vat.toFixed(2)}</td><td className="td text-right">{tot.total.toFixed(2)}</td></tr></tfoot>
-      </table>
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <button className="btn-ghost !py-1" onClick={xls}><FileDown size={14} /> Excel</button>
       </div>
+      <AedsDataGrid
+        title="Sales Register (Mushak-6.2)"
+        subtitle={`Month ${ym} · Taxable ${fmtBDT(tot.tv)} · VAT ${fmtBDT(tot.vat)}`}
+        data={rows}
+        columns={[
+          { accessorKey: 'issue_date', header: 'Date', type: 'date', width: 130 },
+          { accessorKey: 'invoice_no', header: 'Invoice', width: 150 },
+          { accessorKey: 'buyer_name', header: 'Buyer', width: 230 },
+          { accessorKey: 'buyer_bin', header: 'Buyer BIN', width: 170 },
+          { accessorKey: 'taxable_value', header: 'Taxable', type: 'currency', aggregation: 'sum', width: 150 },
+          { accessorKey: 'sd', header: 'SD', type: 'currency', aggregation: 'sum', width: 130 },
+          { accessorKey: 'vat', header: 'VAT', type: 'currency', aggregation: 'sum', width: 130 },
+          { accessorKey: 'total', header: 'Total', type: 'currency', aggregation: 'sum', width: 150 },
+        ]}
+        pageSize={100}
+        emptyText="No sales this month."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -73,18 +92,31 @@ function PurchaseReg({ ym, company }) {
   const tot = rows.reduce((a, r) => ({ tv: a.tv + +r.taxable_value, vat: a.vat + +r.vat_amount, reb: a.reb + (r.rebateable ? +r.vat_amount : 0), total: a.total + +r.total }), { tv: 0, vat: 0, reb: 0, total: 0 })
   const xls = () => exportXLSX(`Mushak_6.1_${ym}.xlsx`, [{ name: '6.1 Purchase', rows: [[`${company?.name || ''} — Mushak-6.1 Purchase Register`], [`Month: ${ym}`], [], ['Date', 'Vendor', 'Vendor BIN', 'Invoice', 'Taxable Value', 'VAT', 'Rebateable', 'Total'], ...rows.map((r) => [r.entry_date, r.vendor_name, r.vendor_bin, r.invoice_no, +r.taxable_value, +r.vat_amount, r.rebateable ? 'Yes' : 'No', +r.total]), [], ['', '', '', 'TOTAL', tot.tv, tot.vat, `Rebateable ${tot.reb.toFixed(2)}`, tot.total]] }])
   return (
-    <div className="card overflow-hidden">
-      <div className="px-4 py-3 border-b border-leaf flex items-center justify-between"><span className="font-display font-semibold text-pine">Purchase Register (Mushak-6.1)</span><button className="btn-ghost !py-1" onClick={xls}><FileDown size={14} /> Excel</button></div>
-      <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead><tr><th className="th">Date</th><th className="th">Vendor</th><th className="th">Invoice</th><th className="th text-right">Taxable</th><th className="th text-right">VAT</th><th className="th">Rebate</th><th className="th text-right">Total</th></tr></thead>
-        <tbody>
-          {rows.map((r) => (<tr key={r.id}><td className="td money text-xs">{fmtDate(r.entry_date)}</td><td className="td text-sm">{r.vendor_name || '—'}</td><td className="td money text-xs">{r.invoice_no || '—'}</td><td className="td money text-right">{(+r.taxable_value).toFixed(2)}</td><td className="td money text-right">{(+r.vat_amount).toFixed(2)}</td><td className="td text-xs">{r.rebateable ? 'Yes' : 'No'}</td><td className="td money text-right font-semibold">{(+r.total).toFixed(2)}</td></tr>))}
-          {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={7}>No purchases this month.</td></tr>}
-        </tbody>
-        <tfoot><tr className="bg-leaf/40 font-bold money"><td className="td" colSpan={3}>TOTAL · Rebateable VAT {tot.reb.toFixed(2)}</td><td className="td text-right">{tot.tv.toFixed(2)}</td><td className="td text-right">{tot.vat.toFixed(2)}</td><td className="td"></td><td className="td text-right">{tot.total.toFixed(2)}</td></tr></tfoot>
-      </table>
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <button className="btn-ghost !py-1" onClick={xls}><FileDown size={14} /> Excel</button>
       </div>
+      <AedsDataGrid
+        title="Purchase Register (Mushak-6.1)"
+        subtitle={`Month ${ym} · Input VAT ${fmtBDT(tot.vat)} · Rebateable ${fmtBDT(tot.reb)}`}
+        data={rows.map((row) => ({
+          ...row,
+          rebate_status: row.rebateable ? 'REBATEABLE' : 'NON-REBATEABLE',
+        }))}
+        columns={[
+          { accessorKey: 'entry_date', header: 'Date', type: 'date', width: 130 },
+          { accessorKey: 'vendor_name', header: 'Vendor', width: 230 },
+          { accessorKey: 'vendor_bin', header: 'Vendor BIN', width: 170 },
+          { accessorKey: 'invoice_no', header: 'Invoice', width: 150 },
+          { accessorKey: 'taxable_value', header: 'Taxable', type: 'currency', aggregation: 'sum', width: 150 },
+          { accessorKey: 'vat_amount', header: 'VAT', type: 'currency', aggregation: 'sum', width: 140 },
+          { accessorKey: 'rebate_status', header: 'Rebate', type: 'status', width: 150 },
+          { accessorKey: 'total', header: 'Total', type: 'currency', aggregation: 'sum', width: 150 },
+        ]}
+        pageSize={100}
+        emptyText="No purchases this month."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -133,35 +165,38 @@ function VdsTab({ ym, userName, flash, onPrint }) {
         <button className="btn-primary justify-center col-span-3" onClick={save}><Plus size={15} /> {editId ? 'Update certificate' : 'Add VDS certificate'}</button>
         {editId && <button className="btn-ghost justify-center" onClick={() => { setF(blank); setEditId(null) }}>Cancel edit</button>}
       </div>
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead><tr><th className="th">Date</th><th className="th">Dir</th><th className="th">Cert</th><th className="th">Party</th><th className="th text-right">Base</th><th className="th text-right">Rate</th><th className="th text-right">VDS</th><th className="th">Challan</th><th className="th text-right">Actions</th></tr></thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td className="td money text-xs">{fmtDate(r.cert_date)}</td>
-                <td className="td text-xs">{r.direction}</td>
-                <td className="td money text-xs">{r.cert_no || '—'}</td>
-                <td className="td text-sm">{r.party_name || '—'}</td>
-                <td className="td money text-right">{(+r.base_amount).toFixed(2)}</td>
-                <td className="td money text-right">{(+r.vds_rate).toFixed(1)}%</td>
-                <td className="td money text-right font-semibold">{(+r.vds_amount).toFixed(2)}</td>
-                <td className="td money text-xs">{r.challan_no || '—'}</td>
-                <td className="td">
-                  <div className="flex justify-end gap-1">
-                    <button className="btn-ghost !py-1" title="Print Mushak-6.6" onClick={() => onPrint(r)}><Printer size={13} /></button>
-                    <button className="btn-ghost !py-1" title="Edit" onClick={() => edit(r)}><Pencil size={13} /></button>
-                    <button className="btn-ghost !py-1 text-red-600" title="Delete" onClick={() => del(r.id)}><Trash2 size={13} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={9}>No VDS certificates this month.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="VDS Certificates (Mushak-6.6)"
+        subtitle={`Month ${ym} · Withholding certificate register`}
+        data={rows}
+        columns={[
+          { accessorKey: 'cert_date', header: 'Date', type: 'date', width: 130 },
+          { accessorKey: 'direction', header: 'Direction', type: 'status', width: 140 },
+          { accessorKey: 'cert_no', header: 'Certificate', width: 160 },
+          { accessorKey: 'party_name', header: 'Party', width: 230 },
+          { accessorKey: 'party_bin', header: 'Party BIN', width: 170 },
+          { accessorKey: 'base_amount', header: 'Base', type: 'currency', aggregation: 'sum', width: 150 },
+          { accessorKey: 'vds_rate', header: 'Rate', type: 'percent', width: 110 },
+          { accessorKey: 'vds_amount', header: 'VDS', type: 'currency', aggregation: 'sum', width: 150 },
+          { accessorKey: 'challan_no', header: 'Challan', width: 150 },
+          {
+            accessorKey: 'actions',
+            header: 'Actions',
+            sortable: false,
+            width: 180,
+            cell: ({ row }) => (
+              <div className="flex justify-end gap-1">
+                <button className="btn-ghost !py-1" title="Print Mushak-6.6" onClick={(event) => { event.stopPropagation(); onPrint(row) }}><Printer size={13} /></button>
+                <button className="btn-ghost !py-1" title="Edit" onClick={(event) => { event.stopPropagation(); edit(row) }}><Pencil size={13} /></button>
+                <button className="btn-ghost !py-1 text-red-600" title="Delete" onClick={(event) => { event.stopPropagation(); del(row.id) }}><Trash2 size={13} /></button>
+              </div>
+            ),
+          },
+        ]}
+        pageSize={100}
+        emptyText="No VDS certificates this month."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -201,17 +236,20 @@ function Mushak610({ company }) {
   useEffect(() => { supabase.from('v_mushak_610').select('*').order('issue_date', { ascending: false }).then(({ data }) => setRows((data || []).filter((r) => !r.is_void))) }, [])
   const threshold = company?.mushak610_threshold || 200000
   return (
-    <div className="card overflow-hidden">
-      <div className="px-4 py-3 border-b border-leaf font-display font-semibold text-pine">Over-threshold tax invoices (Mushak-6.10 trigger) — ≥ {fmtBDT(threshold)}</div>
-      <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead><tr><th className="th">Date</th><th className="th">Invoice</th><th className="th">Buyer</th><th className="th">Buyer BIN</th><th className="th text-right">Grand total</th></tr></thead>
-        <tbody>
-          {rows.map((r) => (<tr key={r.id}><td className="td money text-xs">{fmtDate(r.issue_date)}</td><td className="td money text-xs">{r.invoice_no}</td><td className="td text-sm">{r.buyer_name || '—'}</td><td className="td money text-xs">{r.buyer_bin || '—'}</td><td className="td money text-right font-semibold">{fmtBDT(r.grand_total)}</td></tr>))}
-          {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={5}>No invoices over the threshold.</td></tr>}
-        </tbody>
-      </table>
-      </div>
-    </div>
+    <AedsDataGrid
+      title="Over-threshold Tax Invoices"
+      subtitle={`Mushak-6.10 trigger · Threshold ${fmtBDT(threshold)}`}
+      data={rows}
+      columns={[
+        { accessorKey: 'issue_date', header: 'Date', type: 'date', width: 130 },
+        { accessorKey: 'invoice_no', header: 'Invoice', width: 160 },
+        { accessorKey: 'buyer_name', header: 'Buyer', width: 240 },
+        { accessorKey: 'buyer_bin', header: 'Buyer BIN', width: 180 },
+        { accessorKey: 'grand_total', header: 'Grand Total', type: 'currency', aggregation: 'sum', width: 170 },
+      ]}
+      pageSize={100}
+      emptyText="No invoices over the threshold."
+      getRowId={(row) => row.id}
+    />
   )
 }

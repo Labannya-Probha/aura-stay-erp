@@ -16,7 +16,9 @@
     "lint:strict": "eslint src --max-warnings=0",
     "test": "vitest",
     "test:run": "vitest run",
-    "lint:metrics": "node scripts/lint-metrics.mjs"
+    "lint:metrics": "node scripts/lint-metrics.mjs",
+    "architecture:report": "node scripts/aeds-architecture-report.mjs",
+    "quality": "npm run lint && npm run test:run && npm run build"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

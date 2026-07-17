@@ -1,10 +1,71 @@
+import {
+  BarChart3,
+  BedDouble,
+  CalendarCheck,
+  ClipboardList,
+  Moon,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react"
+import { useNavigate } from "react-router-dom"
+
+import { PATHS } from "../../app/paths"
 import DashboardHeader from "./DashboardHeader"
 import KPIGrid from "./widgets/KPIGrid"
 import RevenueChart from "./widgets/RevenueChart"
 import OccupancyChart from "./widgets/OccupancyChart"
 import ArrivalsDeparturesWidget from "./widgets/ArrivalsDeparturesWidget"
 import NotificationsWidget from "./widgets/NotificationsWidget"
-import { CalendarCheck, BedDouble, ClipboardList, Moon, BarChart3 } from "lucide-react"
+import "../../styles/aeds-v6-migration.css"
+
+function numericValue(value, fallback = 0) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : fallback
+}
+
+function OperationalPulse({ summary, housekeeping, restaurant, tasks }) {
+  const cards = [
+    {
+      label: "Rooms to inspect",
+      value: numericValue(
+        housekeeping?.inspectionPending ??
+          housekeeping?.pending ??
+          summary?.dirtyRooms
+      ),
+      detail: "Housekeeping queue",
+    },
+    {
+      label: "Restaurant open orders",
+      value: numericValue(
+        restaurant?.openOrders ??
+          restaurant?.pendingOrders ??
+          summary?.restaurantOrders
+      ),
+      detail: "Live POS operation",
+    },
+    {
+      label: "Pending approvals",
+      value: Array.isArray(tasks)
+        ? tasks.length
+        : numericValue(tasks?.pending ?? summary?.pendingTasks),
+      detail: "Needs management action",
+    },
+  ]
+
+  return (
+    <div className="aeds-v6-pulse-grid">
+      {cards.map((card) => (
+        <article key={card.label} className="aeds-v6-pulse-card">
+          <div>
+            <span>{card.label}</span>
+            <strong>{card.value.toLocaleString("en-BD")}</strong>
+          </div>
+          <small>{card.detail}</small>
+        </article>
+      ))}
+    </div>
+  )
+}
 
 export default function Dashboard({
   company,
@@ -21,15 +82,67 @@ export default function Dashboard({
   activities,
   refresh,
 }) {
+  const navigate = useNavigate()
+
+  const quickLinks = [
+    {
+      label: "New Reservation",
+      icon: CalendarCheck,
+      path: `${PATHS.RESERVATIONS}?tab=new`,
+    },
+    {
+      label: "Room Board",
+      icon: BedDouble,
+      path: `${PATHS.FRONT_OFFICE}?tab=room-board`,
+    },
+    {
+      label: "In-House Guests",
+      icon: ClipboardList,
+      path: `${PATHS.FRONT_OFFICE}?tab=in-house`,
+    },
+    {
+      label: "Night Audit",
+      icon: Moon,
+      path: `${PATHS.FRONT_OFFICE}?tab=night-audit`,
+    },
+    {
+      label: "Reports Center",
+      icon: BarChart3,
+      path: PATHS.REPORTS,
+    },
+  ]
+
   return (
-    <section className="aeds-dashboard">
-      <DashboardHeader
-        company={company}
-        userName={userName}
-        loading={loading}
-        refreshing={refreshing}
-        onRefresh={refresh}
-      />
+    <section className="aeds-dashboard aeds-v6-dashboard">
+      <div className="aeds-v6-dashboard-hero">
+        <div className="aeds-v6-dashboard-hero-copy">
+          <div className="aeds-v6-eyebrow">
+            <Sparkles size={14} />
+            AEDS v6 Management Workspace
+          </div>
+
+          <DashboardHeader
+            company={company}
+            userName={userName}
+            loading={loading}
+            refreshing={refreshing}
+            onRefresh={refresh}
+          />
+        </div>
+
+        <button
+          type="button"
+          className="aeds-v6-refresh-button"
+          onClick={refresh}
+          disabled={loading || refreshing}
+        >
+          <RefreshCw
+            size={16}
+            className={refreshing ? "animate-spin" : ""}
+          />
+          Refresh data
+        </button>
+      </div>
 
       {error && (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
@@ -39,42 +152,66 @@ export default function Dashboard({
 
       <KPIGrid loading={loading} data={summary} />
 
+      <OperationalPulse
+        summary={summary}
+        housekeeping={housekeeping}
+        restaurant={restaurant}
+        tasks={tasks}
+      />
+
       <div className="grid min-w-0 gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-6">
-          <RevenueChart loading={loading} data={revenueTrend} summary={summary} />
+        <div className="xl:col-span-7">
+          <RevenueChart
+            loading={loading}
+            data={revenueTrend}
+            summary={summary}
+          />
         </div>
-        <div className="xl:col-span-3">
-          <OccupancyChart loading={loading} data={occupancyTrend} summary={summary} housekeeping={housekeeping} />
-        </div>
-        <div className="space-y-4 xl:col-span-3">
-          <ArrivalsDeparturesWidget loading={loading} summary={summary} />
-          <NotificationsWidget loading={loading} data={activities} />
+
+        <div className="xl:col-span-5">
+          <OccupancyChart
+            loading={loading}
+            data={occupancyTrend}
+            summary={summary}
+            housekeeping={housekeeping}
+          />
         </div>
       </div>
 
-      <div className="aeds-card flex flex-wrap items-center gap-2.5 px-3 py-2.5">
-        <div className="pr-2 text-sm font-black" style={{ color: "var(--tenant-text, #0F172A)" }}>Quick Links</div>
-        {[
-          { label: "New Reservation", icon: CalendarCheck },
-          { label: "Room Board", icon: BedDouble },
-          { label: "In-House Guests", icon: ClipboardList },
-          { label: "Night Audit", icon: Moon },
-          { label: "Reports Center", icon: BarChart3 },
-        ].map(({ label, icon: Icon }) => (
-          <button
-            key={label}
-            type="button"
-            className="inline-flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-[11px] font-bold transition"
-            style={{
-              borderColor: "var(--tenant-border, rgb(var(--tenant-primary-rgb, 31 111 120) / 0.16))",
-              background: "var(--tenant-surface, #fff)",
-              color: "var(--tenant-text-muted, #64748B)",
-            }}
-          >
-            <Icon size={14} />
-            {label}
-          </button>
-        ))}
+      <div className="grid min-w-0 gap-4 xl:grid-cols-12">
+        <div className="xl:col-span-7">
+          <ArrivalsDeparturesWidget
+            loading={loading}
+            summary={summary}
+          />
+        </div>
+
+        <div className="xl:col-span-5">
+          <NotificationsWidget
+            loading={loading}
+            data={activities}
+          />
+        </div>
+      </div>
+
+      <div className="aeds-v6-quick-links">
+        <div className="aeds-v6-quick-links-title">
+          <span>Quick actions</span>
+          <small>Frequently used operations</small>
+        </div>
+
+        <div className="aeds-v6-quick-links-list">
+          {quickLinks.map(({ label, icon: Icon, path }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => navigate(path)}
+            >
+              <Icon size={15} />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
     </section>
   )

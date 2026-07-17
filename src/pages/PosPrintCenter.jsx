@@ -22,9 +22,10 @@ const TABS = [
   { id: 'logs', label: 'Print Logs', icon: Activity },
 ]
 
+const NO_TENANT_SENTINEL = '00000000-0000-0000-0000-000000000000'
 const withTenant = (query) => {
   const tenantId = getTenantId()
-  return tenantId ? query.eq('tenant_id', tenantId) : query
+  return query.eq('tenant_id', tenantId || NO_TENANT_SENTINEL)
 }
 
 const safeArray = (value) => Array.isArray(value) ? value : []

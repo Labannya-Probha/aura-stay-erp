@@ -1,0 +1,11 @@
+﻿{
+    "files":  [
+                  "src\\modules\\reservations\\services\\reservationsList.service.js",
+                  "src\\modules\\reservations\\reservation-list\\normalizeReservationListRow.js",
+                  "src\\modules\\reservations\\reservation-list\\reservationListColumns.js",
+                  "src\\modules\\reservations\\hooks\\useReservationsList.js",
+                  "src\\modules\\reservations\\tabs\\ReservationsListTab.jsx"
+              ],
+    "installed_at":  "2026-07-10T17:12:58.6600576+06:00",
+    "backup_path":  "C:\\Users\\Accounts Manager\\Downloads\\aura-stay-erp-aeds-v2\\backups\\aeds-v7-reservations-20260710-171258"
+}

@@ -123,7 +123,7 @@
 
   html {
     /* Fluid root scale: compact on small screens, stable on desktop. */
-    font-size: clamp(12px, 0.22vw + 10.4px, 14.5px);
+    font-size: clamp(14px, 0.15vw + 13px, 16px);
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
@@ -137,6 +137,7 @@
     font-family: var(--tenant-font-family);
     font-size: 1rem;
     line-height: 1.5;
+    color: var(--tenant- text, #172033);
     overflow-x: hidden;
   }
 

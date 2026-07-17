@@ -1,12 +1,18 @@
 import { useMemo, useState } from "react"
+
 import BookingEngineHeader from "./components/BookingEngineHeader"
 import BookingEngineToolbar from "./components/BookingEngineToolbar"
 import BookingEngineKpiStrip from "./components/BookingEngineKpiStrip"
-import BookingRoomCardBoard from "./components/BookingRoomCardBoard"
+import BookingTimelineGrid from "./components/BookingTimelineGrid"
+import BookingLegend from "./components/BookingLegend"
 import BookingDetailsDrawer from "./components/BookingDetailsDrawer"
 import { useBookingEngine } from "./hooks/useBookingEngine"
-import { buildDateRange } from "./utils/dateRange"
+import {
+  buildMonthDateRange,
+  startOfMonth,
+} from "./utils/dateRange"
 import "./booking-engine.css"
+import "./booking-engine-month.css"
 
 export default function BookingCalendarEngine({
   company,
@@ -16,26 +22,56 @@ export default function BookingCalendarEngine({
   onNewReservation,
   onOpenReservation,
 }) {
-  const [viewMode, setViewMode] = useState("14D")
-  const [selectedReservation, setSelectedReservation] = useState(null)
+  const [monthCursor, setMonthCursor] = useState(
+    startOfMonth()
+  )
+
+  const [
+    selectedReservation,
+    setSelectedReservation,
+  ] = useState(null)
+
   const [filters, setFilters] = useState({
     search: "",
     roomType: "ALL",
     status: "ALL",
-    floor: "ALL",
   })
 
-  const days = useMemo(() => buildDateRange(viewMode), [viewMode])
+  const days = useMemo(
+    () => buildMonthDateRange(monthCursor),
+    [monthCursor]
+  )
 
   const {
     loading,
     refreshing,
+    moving,
     error,
     rooms,
     reservations,
+    conflicts,
     kpis,
     refresh,
-  } = useBookingEngine({ days, filters })
+    moveBooking,
+  } = useBookingEngine({
+    days,
+    filters,
+  })
+
+  const roomTypes = useMemo(
+    () =>
+      [
+        ...new Set(
+          rooms
+            .map(
+              (room) =>
+                room.type || room.name
+            )
+            .filter(Boolean)
+        ),
+      ].sort(),
+    [rooms]
+  )
 
   return (
     <section className="aeds-booking-engine">
@@ -44,14 +80,19 @@ export default function BookingCalendarEngine({
         loading={loading}
         refreshing={refreshing}
         onRefresh={refresh}
-        onNewReservation={canCreate ? onNewReservation : undefined}
+        onNewReservation={
+          canCreate
+            ? onNewReservation
+            : undefined
+        }
       />
 
       <BookingEngineToolbar
         filters={filters}
         setFilters={setFilters}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
+        monthCursor={monthCursor}
+        setMonthCursor={setMonthCursor}
+        roomTypes={roomTypes}
       />
 
       {error && (
@@ -60,16 +101,50 @@ export default function BookingCalendarEngine({
         </div>
       )}
 
-      <BookingEngineKpiStrip data={kpis} loading={loading} />
+      {conflicts.length > 0 && (
+        <div className="aeds-booking-conflict">
+          <strong>
+            {conflicts.length} overlapping
+            room assignment
+            {conflicts.length > 1 ? "s" : ""}
+          </strong>
 
-      <BookingRoomCardBoard
+          <span>
+            Resolve conflicts before confirming
+            availability to external channels.
+          </span>
+        </div>
+      )}
+
+      {moving && (
+        <div className="aeds-booking-moving">
+          Moving reservation and validating
+          availability...
+        </div>
+      )}
+
+      <BookingEngineKpiStrip
+        data={{
+          ...kpis,
+          conflicts: conflicts.length,
+        }}
         loading={loading}
+      />
+
+      <BookingLegend
+        reservations={reservations}
+      />
+
+      <BookingTimelineGrid
+        loading={loading}
+        days={days}
         rooms={rooms}
         reservations={reservations}
-        onSelectReservation={(reservation) => {
-          setSelectedReservation(reservation)
-          if (onOpenReservation) onOpenReservation(reservation.id)
-        }}
+        canEdit={canEdit}
+        onSelectReservation={
+          setSelectedReservation
+        }
+        onMoveReservation={moveBooking}
       />
 
       <BookingDetailsDrawer
@@ -77,7 +152,12 @@ export default function BookingCalendarEngine({
         reservation={selectedReservation}
         canEdit={canEdit}
         canCancel={canCancel}
-        onClose={() => setSelectedReservation(null)}
+        onClose={() =>
+          setSelectedReservation(null)
+        }
+        onEdit={(reservationId) =>
+          onOpenReservation?.(reservationId)
+        }
       />
     </section>
   )

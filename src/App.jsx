@@ -5,13 +5,16 @@ import { BrowserRouter } from "react-router-dom"
 import { Analytics } from "@vercel/analytics/react"
 import AppSession from "./AppSession"
 import { ThemeProvider } from "./theme"
+import { AedsPlatformProvider } from "./platform"
 
 export default function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <AppSession />
-        <Analytics />
+        <AedsPlatformProvider>
+          <AppSession />
+          <Analytics />
+        </AedsPlatformProvider>
       </ThemeProvider>
     </BrowserRouter>
   )

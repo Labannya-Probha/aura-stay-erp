@@ -8,6 +8,8 @@ import PrintPortal from '../components/PrintPortal.jsx'
 import ComplianceTab from '../components/ComplianceTab'
 import EmployeeProfile from '../components/EmployeeProfile.jsx'
 import HrLetterDoc from '../components/print/HrLetterDoc.jsx'
+import '../styles/aeds-v6-workspaces.css'
+import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
 
 /* ─── shared flash helper ─── */
 function useFlash() {
@@ -19,12 +21,16 @@ function useFlash() {
 /* ─── page wrapper ─── */
 function HrPage({ title, subtitle, children }) {
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
-          <Users className="text-forest" /> {title}
-        </h1>
-        {subtitle && <p className="text-sm text-pine/60">{subtitle}</p>}
+    <div className="aeds-v6-legacy-page">
+      <div className="aeds-v6-legacy-header">
+        <div>
+          <div className="aeds-v6-workspace-eyebrow">People & Compliance</div>
+          <h1 className="flex items-center gap-2">
+            <Users className="text-forest" /> {title}
+          </h1>
+          {subtitle && <p>{subtitle}</p>}
+        </div>
+        <span className="aeds-core-badge">HR workspace</span>
       </div>
       {children}
     </div>
@@ -301,24 +307,44 @@ function EmployeesTab({ flash, isAdmin, userName, company }) {
         <input type="number" className="input money" placeholder="Gross salary" value={f.gross_salary} onChange={(e) => setF({ ...f, gross_salary: e.target.value })} />
         <button className="btn-primary justify-center" onClick={add}><Plus size={15} /> Add</button>
       </div>
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead><tr><th className="th">Code</th><th className="th">Name</th><th className="th">Designation</th><th className="th">Dept</th><th className="th text-right">Gross</th><th className="th">Status</th></tr></thead>
-          <tbody>
-            {rows.map((e) => (
-              <tr key={e.id} className="hover:bg-leaf/20 cursor-pointer" onClick={() => setViewing(e)}>
-                <td className="td money text-xs">{e.emp_code}</td><td className="td text-sm font-medium">{e.full_name}</td>
-                <td className="td text-sm">{e.designation || '—'}</td><td className="td text-xs">{e.department || '—'}</td>
-                <td className="td money text-right">{fmtBDT(e.gross_salary)}</td>
-                <td className="td" onClick={(ev) => ev.stopPropagation()}>{isAdmin ? <select className="input !py-1 !w-32" value={e.status} onChange={(ev) => setStatus(e.id, ev.target.value)}>{['ACTIVE', 'RESIGNED', 'TERMINATED'].map((s) => <option key={s}>{s}</option>)}</select> : <span className={`status-chip ${e.status === 'ACTIVE' ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-700'}`}>{e.status}</span>}</td>
-              </tr>
-            ))}
-            {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={6}>No employees yet.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="Employee Register"
+        subtitle="Employee master, designation, department and salary status"
+        data={rows}
+        columns={[
+          { accessorKey: 'emp_code', header: 'Code', width: 130 },
+          { accessorKey: 'full_name', header: 'Employee', width: 240 },
+          { accessorKey: 'designation', header: 'Designation', width: 190 },
+          { accessorKey: 'department', header: 'Department', width: 170 },
+          { accessorKey: 'join_date', header: 'Joining Date', type: 'date', width: 140 },
+          { accessorKey: 'phone', header: 'Phone', width: 150 },
+          { accessorKey: 'gross_salary', header: 'Gross Salary', type: 'currency', aggregation: 'sum', width: 160 },
+          {
+            accessorKey: 'status',
+            header: 'Status',
+            type: 'status',
+            width: 150,
+            cell: ({ row }) => (
+              isAdmin ? (
+                <select
+                  className="input !py-1 !w-32"
+                  value={row.status}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={(event) => setStatus(row.id, event.target.value)}
+                >
+                  {['ACTIVE', 'RESIGNED', 'TERMINATED'].map((status) => (
+                    <option key={status}>{status}</option>
+                  ))}
+                </select>
+              ) : row.status
+            ),
+          },
+        ]}
+        pageSize={100}
+        emptyText="No employees yet."
+        getRowId={(row) => row.id}
+        onRowClick={(row) => setViewing(row)}
+      />
     </div>
   )
 }
@@ -345,22 +371,53 @@ function AttendanceTab({ flash }) {
   return (
     <div className="space-y-4">
       <div className="card p-4 flex items-center gap-3"><CalendarDays size={16} className="text-forest" /><span className="label !mb-0">Date</span><input type="date" className="input !w-44" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead><tr><th className="th">Code</th><th className="th">Employee</th><th className="th">Mark</th></tr></thead>
-          <tbody>
-            {emps.map((e) => (
-              <tr key={e.id}>
-                <td className="td money text-xs">{e.emp_code}</td><td className="td text-sm font-medium">{e.full_name}</td>
-                <td className="td"><div className="flex gap-1">{STAT.map(([s, label]) => (<button key={s} onClick={() => mark(e.id, s)} title={label} className={`px-2.5 py-1 rounded text-xs font-bold ${recs[e.id] === s ? (s === 'A' ? 'bg-red-500 text-white' : 'bg-forest text-white') : 'bg-leaf/50 text-pine/70 hover:bg-leaf'}`}>{s}</button>))}</div></td>
-              </tr>
-            ))}
-            {emps.length === 0 && <tr><td className="td text-pine/40" colSpan={3}>No active employees.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="Daily Attendance"
+        subtitle={`Attendance marking for ${fmtDate(date)}`}
+        data={emps.map((employee) => ({
+          ...employee,
+          attendance_status: recs[employee.id] || 'UNMARKED',
+        }))}
+        columns={[
+          { accessorKey: 'emp_code', header: 'Code', width: 130 },
+          { accessorKey: 'full_name', header: 'Employee', width: 260 },
+          { accessorKey: 'department', header: 'Department', width: 170 },
+          { accessorKey: 'designation', header: 'Designation', width: 190 },
+          { accessorKey: 'attendance_status', header: 'Status', type: 'status', width: 150 },
+          {
+            accessorKey: 'mark',
+            header: 'Mark Attendance',
+            sortable: false,
+            width: 330,
+            cell: ({ row }) => (
+              <div className="flex gap-1 flex-wrap">
+                {STAT.map(([status, label]) => (
+                  <button
+                    key={status}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      mark(row.id, status)
+                    }}
+                    title={label}
+                    className={`px-2.5 py-1 rounded text-xs font-bold ${
+                      recs[row.id] === status
+                        ? status === 'A'
+                          ? 'bg-red-500 text-white'
+                          : 'bg-forest text-white'
+                        : 'bg-leaf/50 text-pine/70 hover:bg-leaf'
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            ),
+          },
+        ]}
+        pageSize={100}
+        emptyText="No active employees."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -394,24 +451,63 @@ function LeaveTab({ flash, userName, canApprove }) {
         <input type="date" className="input" value={f.to_date} onChange={(e) => setF({ ...f, to_date: e.target.value })} />
         <button className="btn-primary justify-center" onClick={apply}><Plus size={15} /> Apply</button>
       </div>
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead><tr><th className="th">Employee</th><th className="th">Type</th><th className="th">From → To</th><th className="th text-right">Days</th><th className="th text-right">Balance</th><th className="th">Status</th><th className="th"></th></tr></thead>
-          <tbody>
-            {rows.map((r) => { const bal = (+r.leave_types?.annual_days || 0) - taken(r.employee_id, r.leave_type_id); return (
-              <tr key={r.id}>
-                <td className="td text-sm">{r.employees?.full_name}</td><td className="td text-xs">{r.leave_types?.name}</td>
-                <td className="td money text-xs">{fmtDate(r.from_date)} → {fmtDate(r.to_date)}</td><td className="td money text-right">{r.days}</td>
-                <td className="td money text-right">{bal}</td>
-                <td className="td"><span className={`status-chip ${r.status === 'APPROVED' ? 'bg-forest/15 text-forest' : r.status === 'REJECTED' ? 'bg-red-100 text-red-600' : 'bg-amber/20 text-amber'}`}>{r.status}</span></td>
-                <td className="td">{r.status === 'PENDING' && canApprove && (<div className="flex gap-1"><button className="text-forest" onClick={() => setStatus(r.id, 'APPROVED')}><Check size={15} /></button><button className="text-red-500" onClick={() => setStatus(r.id, 'REJECTED')}><X size={15} /></button></div>)}</td>
-              </tr>) })}
-            {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={7}>No leave applications.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="Leave Applications"
+        subtitle="Leave request, entitlement balance and approval workflow"
+        data={rows.map((row) => ({
+          ...row,
+          employee_name: row.employees?.full_name || '—',
+          leave_type_name: row.leave_types?.name || '—',
+          leave_period: `${fmtDate(row.from_date)} → ${fmtDate(row.to_date)}`,
+          balance:
+            (Number(row.leave_types?.annual_days) || 0) -
+            taken(row.employee_id, row.leave_type_id),
+        }))}
+        columns={[
+          { accessorKey: 'employee_name', header: 'Employee', width: 240 },
+          { accessorKey: 'leave_type_name', header: 'Leave Type', width: 170 },
+          { accessorKey: 'leave_period', header: 'Period', width: 230 },
+          { accessorKey: 'days', header: 'Days', type: 'number', aggregation: 'sum', width: 100 },
+          { accessorKey: 'balance', header: 'Balance', type: 'number', width: 110 },
+          { accessorKey: 'reason', header: 'Reason', width: 280 },
+          { accessorKey: 'status', header: 'Status', type: 'status', width: 140 },
+          {
+            accessorKey: 'actions',
+            header: 'Actions',
+            sortable: false,
+            width: 150,
+            cell: ({ row }) => (
+              row.status === 'PENDING' && canApprove ? (
+                <div className="flex gap-2">
+                  <button
+                    className="text-forest"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setStatus(row.id, 'APPROVED')
+                    }}
+                    title="Approve"
+                  >
+                    <Check size={15} />
+                  </button>
+                  <button
+                    className="text-red-500"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setStatus(row.id, 'REJECTED')
+                    }}
+                    title="Reject"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+              ) : null
+            ),
+          },
+        ]}
+        pageSize={100}
+        emptyText="No leave applications."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -437,17 +533,46 @@ function CompLeaveTab({ flash }) {
         <input className="input" placeholder="Reason (worked on holiday)" value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} />
         <button className="btn-primary justify-center" onClick={add}><Plus size={15} /> Earn</button>
       </div>
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead><tr><th className="th">Employee</th><th className="th">Earned</th><th className="th text-right">Days</th><th className="th">Reason</th><th className="th">Used</th></tr></thead>
-          <tbody>
-            {rows.map((r) => (<tr key={r.id}><td className="td text-sm">{r.employees?.full_name}</td><td className="td money text-xs">{fmtDate(r.earned_date)}</td><td className="td money text-right">{r.days}</td><td className="td text-xs">{r.reason || '—'}</td><td className="td"><button onClick={() => toggle(r)} className={`status-chip ${r.used ? 'bg-stone-200 text-stone-700' : 'bg-forest/15 text-forest'}`}>{r.used ? `Used ${r.used_date ? fmtDate(r.used_date) : ''}` : 'Available'}</button></td></tr>))}
-            {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={5}>No compensatory leave recorded.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="Compensatory Leave Register"
+        subtitle="Earned leave, usage status and available balance"
+        data={rows.map((row) => ({
+          ...row,
+          employee_name: row.employees?.full_name || '—',
+          usage_status: row.used ? 'USED' : 'AVAILABLE',
+        }))}
+        columns={[
+          { accessorKey: 'employee_name', header: 'Employee', width: 240 },
+          { accessorKey: 'earned_date', header: 'Earned Date', type: 'date', width: 140 },
+          { accessorKey: 'days', header: 'Days', type: 'number', aggregation: 'sum', width: 100 },
+          { accessorKey: 'reason', header: 'Reason', width: 300 },
+          { accessorKey: 'used_date', header: 'Used Date', type: 'date', width: 140 },
+          {
+            accessorKey: 'usage_status',
+            header: 'Status',
+            type: 'status',
+            width: 150,
+            cell: ({ row }) => (
+              <button
+                onClick={(event) => {
+                  event.stopPropagation()
+                  toggle(row)
+                }}
+                className={`status-chip ${
+                  row.used
+                    ? 'bg-stone-200 text-stone-700'
+                    : 'bg-forest/15 text-forest'
+                }`}
+              >
+                {row.used ? 'USED' : 'AVAILABLE'}
+              </button>
+            ),
+          },
+        ]}
+        pageSize={100}
+        emptyText="No compensatory leave recorded."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -567,42 +692,78 @@ function PayrollTab({ flash, userName, canApprove, isAdmin, company }) {
           </div>
         </div>
         {locked && <div className="px-4 py-2 rounded-lg bg-amber/10 text-amber text-sm">This run is {active.status.toLowerCase()} — amounts are locked.</div>}
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead><tr>
-              <th className="th">Employee</th><th className="th text-right">Gross</th>
-              <th className="th text-right">Basic</th><th className="th text-right">House Rent</th>
-              <th className="th text-right">Transport</th><th className="th text-right">Medical</th>
-              <th className="th text-right">Internet</th>
-              <th className="th text-right">Absent</th><th className="th text-right">Absent ded.</th>
-              <th className="th text-right">Advance ded.</th><th className="th text-right">Other ded.</th>
-              <th className="th text-right">Net payable</th><th className="th text-right">Print</th>
-            </tr></thead>
-            <tbody>
-              {slips.map((s) => (
-                <tr key={s.id}>
-                  <td className="td text-sm font-medium">{s.full_name}<div className="text-xs text-pine/40">{s.emp_code} · {s.designation}</div></td>
-                  <td className="td money text-right">{fmtBDT(s.gross_salary)}</td>
-                  <td className="td money text-right">{fmtBDT(s.basic)}</td>
-                  <td className="td money text-right">{fmtBDT(s.house_rent)}</td>
-                  <td className="td money text-right">{fmtBDT(s.conveyance)}</td>
-                  <td className="td money text-right">{fmtBDT(s.medical)}</td>
-                  <td className="td money text-right">{fmtBDT(s.internet_allowance)}</td>
-                  <td className="td money text-right">{s.absent_days}</td>
-                  <td className="td money text-right">{fmtBDT(s.absent_deduction)}</td>
-                  <td className="td text-right">{locked ? fmtBDT(s.advance_deduction) : <input type="number" className="input !w-24 !py-1 money text-right" defaultValue={s.advance_deduction} onBlur={(e) => updateSlip(s, 'advance_deduction', +e.target.value || 0)} />}</td>
-                  <td className="td text-right">{locked ? fmtBDT(s.other_deduction) : <input type="number" className="input !w-24 !py-1 money text-right" defaultValue={s.other_deduction} onBlur={(e) => updateSlip(s, 'other_deduction', +e.target.value || 0)} />}</td>
-                  <td className="td money text-right font-bold text-forest">{fmtBDT(s.net_payable)}</td>
-                  <td className="td text-right"><button className="btn-ghost !py-1" onClick={() => setPrintSlip(s)}><Printer size={13} /></button></td>
-                </tr>
-              ))}
-              {slips.length === 0 && <tr><td className="td text-pine/40" colSpan={13}>No payslips in this run.</td></tr>}
-            </tbody>
-            {slips.length > 0 && <tfoot><tr className="bg-leaf/40 font-bold money"><td className="td" colSpan={11}>Total net payable</td><td className="td text-right">{fmtBDT(totalNet)}</td><td className="td"></td></tr></tfoot>}
-          </table>
-          </div>
-        </div>
+        <AedsDataGrid
+          title="Payroll Register"
+          subtitle={`${MONTH_NAMES[active.period_month - 1]} ${active.period_year} · Net payable ${fmtBDT(totalNet)}`}
+          data={slips}
+          columns={[
+            { accessorKey: 'emp_code', header: 'Code', width: 120 },
+            { accessorKey: 'full_name', header: 'Employee', width: 230 },
+            { accessorKey: 'department', header: 'Department', width: 160 },
+            { accessorKey: 'designation', header: 'Designation', width: 180 },
+            { accessorKey: 'gross_salary', header: 'Gross', type: 'currency', aggregation: 'sum', width: 150 },
+            { accessorKey: 'basic', header: 'Basic', type: 'currency', aggregation: 'sum', width: 140 },
+            { accessorKey: 'house_rent', header: 'House Rent', type: 'currency', aggregation: 'sum', width: 150 },
+            { accessorKey: 'conveyance', header: 'Transport', type: 'currency', aggregation: 'sum', width: 140 },
+            { accessorKey: 'medical', header: 'Medical', type: 'currency', aggregation: 'sum', width: 140 },
+            { accessorKey: 'internet_allowance', header: 'Internet', type: 'currency', aggregation: 'sum', width: 140 },
+            { accessorKey: 'absent_days', header: 'Absent Days', type: 'number', aggregation: 'sum', width: 120 },
+            { accessorKey: 'absent_deduction', header: 'Absent Ded.', type: 'currency', aggregation: 'sum', width: 150 },
+            {
+              accessorKey: 'advance_deduction',
+              header: 'Advance Ded.',
+              width: 160,
+              cell: ({ row }) => (
+                locked ? fmtBDT(row.advance_deduction) : (
+                  <input
+                    type="number"
+                    className="input !w-24 !py-1 money text-right"
+                    defaultValue={row.advance_deduction}
+                    onClick={(event) => event.stopPropagation()}
+                    onBlur={(event) => updateSlip(row, 'advance_deduction', +event.target.value || 0)}
+                  />
+                )
+              ),
+            },
+            {
+              accessorKey: 'other_deduction',
+              header: 'Other Ded.',
+              width: 150,
+              cell: ({ row }) => (
+                locked ? fmtBDT(row.other_deduction) : (
+                  <input
+                    type="number"
+                    className="input !w-24 !py-1 money text-right"
+                    defaultValue={row.other_deduction}
+                    onClick={(event) => event.stopPropagation()}
+                    onBlur={(event) => updateSlip(row, 'other_deduction', +event.target.value || 0)}
+                  />
+                )
+              ),
+            },
+            { accessorKey: 'net_payable', header: 'Net Payable', type: 'currency', aggregation: 'sum', width: 170 },
+            {
+              accessorKey: 'print',
+              header: 'Print',
+              sortable: false,
+              width: 90,
+              cell: ({ row }) => (
+                <button
+                  className="btn-ghost !py-1"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setPrintSlip(row)
+                  }}
+                >
+                  <Printer size={13} />
+                </button>
+              ),
+            },
+          ]}
+          pageSize={100}
+          emptyText="No payslips in this run."
+          getRowId={(row) => row.id}
+        />
         {printSlip && <PrintPortal title={`Payslip — ${printSlip.full_name}`} onClose={() => setPrintSlip(null)}><PayslipDoc slip={printSlip} run={active} company={company} /></PrintPortal>}
       </div>
     )
@@ -615,17 +776,41 @@ function PayrollTab({ flash, userName, canApprove, isAdmin, company }) {
         <div><label className="label">Year</label><input type="number" className="input !w-28 money" value={year} onChange={(e) => setYear(+e.target.value)} /></div>
         {canApprove && <button className="btn-primary" disabled={busy} onClick={generateRun}><Wallet size={15} /> {busy ? 'Generating…' : 'Generate payroll'}</button>}
       </div>
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead><tr><th className="th">Period</th><th className="th">Status</th><th className="th">Generated by</th><th className="th text-right">Open</th></tr></thead>
-          <tbody>
-            {runs.map((r) => (<tr key={r.id} className="hover:bg-leaf/20 cursor-pointer" onClick={() => openRun(r)}><td className="td text-sm font-medium">{MONTH_NAMES[r.period_month - 1]} {r.period_year}</td><td className="td"><span className={`status-chip ${r.status === 'PAID' ? 'bg-forest/15 text-forest' : r.status === 'APPROVED' ? 'bg-amber/20 text-amber' : 'bg-stone-200 text-stone-700'}`}>{r.status}</span></td><td className="td text-xs">{r.generated_by || '—'}</td><td className="td text-right"><button className="btn-ghost !py-1" onClick={() => openRun(r)}>Open →</button></td></tr>))}
-            {runs.length === 0 && <tr><td className="td text-pine/40" colSpan={4}>No payroll runs yet.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="Payroll Runs"
+        subtitle="Monthly payroll generation, approval and payment status"
+        data={runs.map((run) => ({
+          ...run,
+          period_label: `${MONTH_NAMES[run.period_month - 1]} ${run.period_year}`,
+        }))}
+        columns={[
+          { accessorKey: 'period_label', header: 'Period', width: 180 },
+          { accessorKey: 'status', header: 'Status', type: 'status', width: 140 },
+          { accessorKey: 'generated_by', header: 'Generated By', width: 190 },
+          { accessorKey: 'created_at', header: 'Created At', type: 'date', width: 140 },
+          {
+            accessorKey: 'open',
+            header: 'Open',
+            sortable: false,
+            width: 110,
+            cell: ({ row }) => (
+              <button
+                className="btn-ghost !py-1"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  openRun(row)
+                }}
+              >
+                Open →
+              </button>
+            ),
+          },
+        ]}
+        pageSize={60}
+        emptyText="No payroll runs yet."
+        getRowId={(row) => row.id}
+        onRowClick={(row) => openRun(row)}
+      />
     </div>
   )
 }
@@ -689,17 +874,42 @@ function IncidentsTab({ flash, userName }) {
         <input className="input" placeholder="Action taken" value={f.action_taken} onChange={(e) => setF({ ...f, action_taken: e.target.value })} />
         <button className="btn-primary justify-center" onClick={add}><Plus size={15} /> Log</button>
       </div>
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead><tr><th className="th">Date</th><th className="th">Category</th><th className="th">Description</th><th className="th">Action</th><th className="th">By</th><th className="th">Status</th></tr></thead>
-          <tbody>
-            {rows.map((r) => (<tr key={r.id}><td className="td money text-xs">{fmtDate(r.incident_date)}</td><td className="td text-xs">{r.category}</td><td className="td text-sm">{r.description}</td><td className="td text-xs">{r.action_taken || '—'}</td><td className="td text-xs">{r.reported_by}</td><td className="td"><button onClick={() => toggle(r)} className={`status-chip ${r.status === 'OPEN' ? 'bg-amber/20 text-amber' : 'bg-forest/15 text-forest'}`}>{r.status}</button></td></tr>))}
-            {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={6}>No incidents logged.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="Incident Register"
+        subtitle="Employee incidents, action taken and resolution status"
+        data={rows}
+        columns={[
+          { accessorKey: 'incident_date', header: 'Date', type: 'date', width: 140 },
+          { accessorKey: 'category', header: 'Category', width: 150 },
+          { accessorKey: 'description', header: 'Description', width: 320 },
+          { accessorKey: 'action_taken', header: 'Action Taken', width: 260 },
+          { accessorKey: 'reported_by', header: 'Reported By', width: 170 },
+          {
+            accessorKey: 'status',
+            header: 'Status',
+            type: 'status',
+            width: 130,
+            cell: ({ row }) => (
+              <button
+                onClick={(event) => {
+                  event.stopPropagation()
+                  toggle(row)
+                }}
+                className={`status-chip ${
+                  row.status === 'OPEN'
+                    ? 'bg-amber/20 text-amber'
+                    : 'bg-forest/15 text-forest'
+                }`}
+              >
+                {row.status}
+              </button>
+            ),
+          },
+        ]}
+        pageSize={100}
+        emptyText="No incidents logged."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }

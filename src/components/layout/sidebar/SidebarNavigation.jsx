@@ -3,7 +3,7 @@
 /* ------------------------------------------------------------------ */
 import { useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, Search, X } from "lucide-react"
 
 import { can } from "../../../lib/roles"
 import { isModuleEnabled } from "../../../lib/saasModules"
@@ -18,6 +18,7 @@ import {
 } from "../../../app/navigation/sidebarTabs"
 import { getVisibleSettingsSections } from "../../../app/navigation/settingsSections"
 import { PATHS } from "../../../app/paths"
+import "../../../styles/aeds-v6-migration.css"
 
 import {
   DEFAULT_RESERVATION_TAB,
@@ -575,6 +576,7 @@ function buildNestedChildren(id, context) {
   }
 }
 
+
 export default function SidebarNavigation({
   role,
   isAdmin,
@@ -585,6 +587,7 @@ export default function SidebarNavigation({
   const navigate = useNavigate()
   const location = useLocation()
   const [manualSystemMenu, setManualSystemMenu] = useState(null)
+  const [searchQuery, setSearchQuery] = useState("")
 
   const visibleReservationTabs = useMemo(
     () => getVisibleReservationTabs({ role, isAdmin, privileges }),
@@ -593,7 +596,10 @@ export default function SidebarNavigation({
 
   const currentTopId = getCurrentTopId(location.pathname)
   const effectiveModulesEnabled = role === "SUPERUSER" ? null : modulesEnabled
-  const routeSystemMenu = buildRouteSystemMenu({ pathname: location.pathname, currentTopId })
+  const routeSystemMenu = buildRouteSystemMenu({
+    pathname: location.pathname,
+    currentTopId,
+  })
   const openSystemMenu = manualSystemMenu ?? routeSystemMenu
 
   const context = {
@@ -605,30 +611,93 @@ export default function SidebarNavigation({
     location,
   }
 
+  const normalizedSearch = searchQuery.trim().toLowerCase()
+
   const goTo = (path) => {
     onNavigate?.()
     navigate(path)
   }
 
-  return (
-    <nav className="flex-1 overflow-y-auto px-3 py-3">
-      {NAV_GROUPS.map((group, groupIndex) => {
-        const items = group.items.filter((item) =>
-          isModuleVisible(item, context)
-        )
+  const matchesSearch = (item, nested) => {
+    if (!normalizedSearch) return true
 
-        if (items.length === 0) return null
+    const moduleMatch = String(item.label || "")
+      .toLowerCase()
+      .includes(normalizedSearch)
+
+    const childMatch = (nested || []).some((child) => {
+      if (child.children) {
+        return (
+          String(child.label || "").toLowerCase().includes(normalizedSearch) ||
+          child.children.some((nestedChild) =>
+            String(nestedChild.label || "")
+              .toLowerCase()
+              .includes(normalizedSearch)
+          )
+        )
+      }
+
+      return String(child.label || "")
+        .toLowerCase()
+        .includes(normalizedSearch)
+    })
+
+    return moduleMatch || childMatch
+  }
+
+  return (
+    <nav className="aeds-v6-sidebar-nav flex-1 overflow-y-auto px-3 pb-4 pt-2">
+      <div className="aeds-v6-sidebar-search">
+        <Search size={15} aria-hidden="true" />
+        <input
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Find module or page"
+          aria-label="Search navigation"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery("")}
+            aria-label="Clear navigation search"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      {NAV_GROUPS.map((group, groupIndex) => {
+        const preparedItems = group.items
+          .filter((item) => isModuleVisible(item, context))
+          .map((item) => ({
+            item,
+            nested: EXPANDABLE_MODULES.has(item.id)
+              ? buildNestedChildren(item.id, context)
+              : [],
+          }))
+          .filter(({ item, nested }) => matchesSearch(item, nested))
+
+        if (preparedItems.length === 0) return null
 
         return (
-          <div
+          <section
             key={group.title}
-            className={groupIndex > 0 ? "mt-1 border-t border-white/[0.08] pt-1" : ""}
+            className={`aeds-v6-nav-group ${
+              groupIndex > 0 ? "mt-3 border-t border-white/[0.08] pt-3" : ""
+            }`}
           >
-            <div className="space-y-0.5">
-              {items.map((item) => {
+            <div className="aeds-v6-nav-group-title">{group.title}</div>
+
+            <div className="space-y-1">
+              {preparedItems.map(({ item, nested }) => {
                 const expandable = EXPANDABLE_MODULES.has(item.id)
-                const open = openSystemMenu === item.id
-                const active = currentTopId === item.id || routeSystemMenu === item.id
+                const searchForcesOpen = Boolean(normalizedSearch && nested.length)
+                const open =
+                  searchForcesOpen ||
+                  openSystemMenu === item.id
+                const active =
+                  currentTopId === item.id ||
+                  routeSystemMenu === item.id
 
                 if (!expandable) {
                   return (
@@ -643,8 +712,6 @@ export default function SidebarNavigation({
                   )
                 }
 
-                const nested = buildNestedChildren(item.id, context)
-
                 return (
                   <div key={item.id} className="space-y-1">
                     <NavButton
@@ -654,17 +721,27 @@ export default function SidebarNavigation({
                       expandable
                       onClick={() => {
                         setManualSystemMenu(open ? null : item.id)
-                        if (!open) goTo(modulePathById(item.id))
+                        if (!open && !normalizedSearch) {
+                          goTo(modulePathById(item.id))
+                        }
                       }}
                     />
 
                     {open && (
-                      <div className="ml-6 space-y-0.5">
+                      <div className="aeds-v6-nav-children ml-6 space-y-0.5">
                         {nested.map((child) =>
                           child.children ? (
-                            <SubGroup key={child.id} group={child} onNavigate={goTo} />
+                            <SubGroup
+                              key={child.id}
+                              group={child}
+                              onNavigate={goTo}
+                            />
                           ) : (
-                            <ChildButton key={child.id} child={child} onNavigate={goTo} />
+                            <ChildButton
+                              key={child.id}
+                              child={child}
+                              onNavigate={goTo}
+                            />
                           )
                         )}
                       </div>
@@ -673,9 +750,25 @@ export default function SidebarNavigation({
                 )
               })}
             </div>
-          </div>
+          </section>
         )
       })}
+
+      {normalizedSearch &&
+        NAV_GROUPS.every((group) =>
+          group.items
+            .filter((item) => isModuleVisible(item, context))
+            .every((item) => {
+              const nested = EXPANDABLE_MODULES.has(item.id)
+                ? buildNestedChildren(item.id, context)
+                : []
+              return !matchesSearch(item, nested)
+            })
+        ) && (
+          <div className="aeds-v6-sidebar-empty">
+            No matching module or page.
+          </div>
+        )}
     </nav>
   )
 }

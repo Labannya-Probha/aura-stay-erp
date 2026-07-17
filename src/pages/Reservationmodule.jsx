@@ -348,10 +348,10 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
     received_date: todayISO(),
     received_by: userName,
     paid_by_party: '',
-    payment_class: 'SETTLEMENT',
+    payment_class: 'ADVANCE',
   })
   const [editRow, setEditRow] = useState(null)
-  const [editForm, setEditForm] = useState({ amount: '', method: 'CASH', reference: '', received_date: todayISO(), paid_by_party: '', payment_class: 'SETTLEMENT' })
+  const [editForm, setEditForm] = useState({ amount: '', method: 'CASH', reference: '', received_date: todayISO(), paid_by_party: '', payment_class: 'ADVANCE' })
   const [sendBox, setSendBox] = useState({ open: false, channel: 'WHATSAPP', to: '', subject: '', body: '', file: null, payment: null })
   const [deliveryLogs, setDeliveryLogs] = useState([])
   const [actionPopover, setActionPopover] = useState({ open: false, kind: 'success', message: '' })
@@ -384,13 +384,16 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
       received_date: p.received_date,
       received_by: p.received_by,
       paid_by_party: p.paid_by_party || null,
-      payment_class: p.payment_class || 'SETTLEMENT',
+      // Reservation-module payments are always pre-checkin/deposit money —
+      // never a folio settlement — so they are always recorded (and
+      // journaled) as ADVANCE, regardless of what the form field held.
+      payment_class: 'ADVANCE',
     })
     if (error) {
       showPopover(error.message || 'Payment save failed.', 'error')
       return
     }
-    setP({ amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName, paid_by_party: '', payment_class: 'SETTLEMENT' })
+    setP({ amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName, paid_by_party: '', payment_class: 'ADVANCE' })
     await reload()
     showPopover('Payment recorded.')
   }
@@ -430,7 +433,7 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
         reference: toPaymentReference(paymentNo, editForm.reference),
         received_date: editForm.received_date,
         paid_by_party: editForm.paid_by_party || null,
-        payment_class: editForm.payment_class || 'SETTLEMENT',
+        payment_class: 'ADVANCE',
       })
       .eq('id', editRow.id)
     if (error) { showPopover(error.message || 'Update failed.', 'error'); return }
@@ -632,16 +635,7 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
           </div>
           <div>
             <label className="label !text-xs">Payment class</label>
-            <SearchableSelect
-              value={p.payment_class || 'SETTLEMENT'}
-              onChange={v => setP({ ...p, payment_class: v })}
-              options={[
-                { value: 'ADVANCE', label: 'Advance' },
-                { value: 'SETTLEMENT', label: 'Settlement' },
-                { value: 'PARTIAL', label: 'Partial' },
-              ]}
-              placeholder="Class…"
-            />
+            <input className="input" value="Advance" disabled title="All reservation-module payments are recorded as Advance — settle the actual bill from Front Office → Billings & Check-out." />
           </div>
           <div className="sm:col-span-4 flex justify-end">
             <button className="btn-primary" onClick={addPayment} disabled={!p.amount || +p.amount <= 0}>
@@ -748,7 +742,7 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
               <div><label className="label !text-xs">Date</label><input type="date" className="input" value={editForm.received_date} onChange={(e) => setEditForm({ ...editForm, received_date: e.target.value })} /></div>
               <div><label className="label !text-xs">Reference</label><input className="input" value={editForm.reference} onChange={(e) => setEditForm({ ...editForm, reference: e.target.value })} /></div>
               <div><label className="label !text-xs">Paid by</label><input className="input" value={editForm.paid_by_party} onChange={(e) => setEditForm({ ...editForm, paid_by_party: e.target.value })} /></div>
-              <div><label className="label !text-xs">Class</label><SearchableSelect value={editForm.payment_class} onChange={(v) => setEditForm({ ...editForm, payment_class: v })} options={['ADVANCE', 'SETTLEMENT', 'PARTIAL']} /></div>
+              <div><label className="label !text-xs">Class</label><input className="input" value="ADVANCE" disabled title="Reservation-module payments are always recorded as Advance." /></div>
             </div>
             <div className="flex justify-end gap-2">
               <button className="btn-ghost" onClick={() => setEditRow(null)}>Cancel</button>

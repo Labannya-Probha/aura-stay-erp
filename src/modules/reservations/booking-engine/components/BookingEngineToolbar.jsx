@@ -1,19 +1,28 @@
-import { Search } from "lucide-react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  Search,
+} from "lucide-react"
 
-const VIEW_OPTIONS = [
-  { id: "7D", label: "7 days" },
-  { id: "14D", label: "14 days" },
-  { id: "30D", label: "30 days" },
-]
+import {
+  addMonths,
+  monthFromInput,
+  monthInputValue,
+  monthLabel,
+} from "../utils/dateRange"
 
 export default function BookingEngineToolbar({
   filters,
   setFilters,
-  viewMode,
-  setViewMode,
+  monthCursor,
+  setMonthCursor,
+  roomTypes = [],
 }) {
   function updateFilter(key, value) {
-    setFilters((prev) => ({ ...prev, [key]: value }))
+    setFilters((previous) => ({
+      ...previous,
+      [key]: value,
+    }))
   }
 
   return (
@@ -22,37 +31,106 @@ export default function BookingEngineToolbar({
         <Search size={16} />
         <input
           value={filters.search}
-          onChange={(e) => updateFilter("search", e.target.value)}
-          placeholder="Search guest, room, confirmation..."
+          onChange={(event) =>
+            updateFilter(
+              "search",
+              event.target.value
+            )
+          }
+          placeholder="Search guest, room, reservation, source..."
         />
       </div>
 
-      <select value={filters.roomType} onChange={(e) => updateFilter("roomType", e.target.value)}>
+      <select
+        value={filters.roomType}
+        onChange={(event) =>
+          updateFilter(
+            "roomType",
+            event.target.value
+          )
+        }
+      >
         <option value="ALL">All room types</option>
-        <option value="DELUXE">Deluxe</option>
-        <option value="SUITE">Suite</option>
-        <option value="VILLA">Villa</option>
+
+        {roomTypes.map((roomType) => (
+          <option
+            key={roomType}
+            value={roomType}
+          >
+            {roomType}
+          </option>
+        ))}
       </select>
 
-      <select value={filters.status} onChange={(e) => updateFilter("status", e.target.value)}>
-        <option value="ALL">All status</option>
-        <option value="CONFIRMED">Confirmed</option>
-        <option value="CHECKED_IN">In-house</option>
-        <option value="TENTATIVE">Tentative</option>
+      <select
+        value={filters.status}
+        onChange={(event) =>
+          updateFilter(
+            "status",
+            event.target.value
+          )
+        }
+      >
+        <option value="ALL">All statuses</option>
+        <option value="QUERY">Query</option>
+        <option value="QUOTED">Quoted</option>
+        <option value="TENTATIVE">
+          Tentative
+        </option>
+        <option value="CONFIRMED">
+          Confirmed
+        </option>
+        <option value="CHECKED_IN">
+          In-house
+        </option>
+        <option value="CHECKED_OUT">
+          Checked out
+        </option>
+        <option value="SETTLED">Settled</option>
+        <option value="NO_SHOW">No show</option>
         <option value="BLOCKED">Blocked</option>
       </select>
 
-      <div className="aeds-view-switcher">
-        {VIEW_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => setViewMode(option.id)}
-            className={viewMode === option.id ? "active" : ""}
-          >
-            {option.label}
-          </button>
-        ))}
+      <div className="aeds-month-control">
+        <button
+          type="button"
+          onClick={() =>
+            setMonthCursor((current) =>
+              addMonths(current, -1)
+            )
+          }
+          aria-label="Previous month"
+        >
+          <ChevronLeft size={16} />
+        </button>
+
+        <label>
+          <span>{monthLabel(monthCursor)}</span>
+
+          <input
+            type="month"
+            value={monthInputValue(monthCursor)}
+            onChange={(event) =>
+              setMonthCursor(
+                monthFromInput(
+                  event.target.value
+                )
+              )
+            }
+          />
+        </label>
+
+        <button
+          type="button"
+          onClick={() =>
+            setMonthCursor((current) =>
+              addMonths(current, 1)
+            )
+          }
+          aria-label="Next month"
+        >
+          <ChevronRight size={16} />
+        </button>
       </div>
     </div>
   )

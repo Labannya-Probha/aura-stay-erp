@@ -1,1 +1,15 @@
-export default function GuestCrmTab() { return <div className="aeds-card p-6"><h2 className="text-xl font-black text-slate-950">Guest CRM</h2><p className="mt-1 text-sm text-slate-500">Guest profiles, history, preferences and communication records.</p></div> }
+import GuestCRM from "../../../pages/GuestCRM"
+
+export default function GuestCrmTab({
+  userName,
+  isAdmin,
+  role,
+}) {
+  return (
+    <GuestCRM
+      userName={userName}
+      isAdmin={isAdmin}
+      role={role}
+    />
+  )
+}

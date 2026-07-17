@@ -11,6 +11,8 @@ import {
 import PrintPortal from '../components/PrintPortal.jsx'
 import VoucherDoc from '../components/print/VoucherDoc.jsx'
 import VendorPaymentTab from '../components/VendorPaymentTab.jsx'
+import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
+import '../styles/aeds-v6-workspaces.css'
 
 /* ------------------------------------------------------------------ */
 /*  RETAINED EARNINGS account code — offsetting account for OB entries  */
@@ -75,28 +77,28 @@ export default function AccountingHub({ userName, isAdmin, role }) {
   }, [location.search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
-          <Calculator className="text-forest" /> Accounting
-        </h1>
-        <p className="text-sm text-pine/60">
-          Double-entry journals (IFRS), trial balance, chart of accounts and fixed-asset depreciation.
-        </p>
+    <div className="aeds-v6-legacy-page">
+      <div className="aeds-v6-legacy-header">
+        <div>
+          <div className="aeds-v6-workspace-eyebrow">Finance & Control</div>
+          <h1 className="flex items-center gap-2">
+            <Calculator className="text-forest" /> Accounting Workspace
+          </h1>
+          <p>
+            Double-entry journals, IFRS controls, account structure, assets and vendor payments.
+          </p>
+        </div>
+        <span className="aeds-core-badge">Live finance workspace</span>
       </div>
       {msg && (
         <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>
       )}
-      <div className="tab-strip-responsive border-b border-leaf">
+      <div className="aeds-v6-tab-strip">
         {TABS.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg ${
-              tab === t
-                ? 'bg-white border border-leaf border-b-white text-forest -mb-px'
-                : 'text-pine/60 hover:text-pine'
-            }`}
+            className={tab === t ? 'aeds-v6-tab-active' : ''}
           >
             {t === 'Opening Balance' && (
               <span className="inline-flex items-center gap-1">
@@ -432,61 +434,38 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
         )}
       </div>
 
-      {/* ── Posted OB entries list ── */}
-      {postedList.length > 0 && (
-        <div className="card overflow-hidden">
-          <div className="px-5 py-3 border-b border-leaf flex items-center gap-2">
-            <Lock size={15} className="text-amber-600" />
-            <span className="font-display font-semibold text-pine text-sm">
-              Posted Opening Balances ({postedList.length})
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr>
-                <th className="th">Voucher No</th>
-                <th className="th">As at Date</th>
-                <th className="th">Narration</th>
-                <th className="th text-right">Total Dr</th>
-                <th className="th">Accounts</th>
-                <th className="th text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {postedList.map((r) => {
-                const totalAmt = (r.journal_lines || []).reduce((s, l) => s + +l.debit, 0)
-                const acctNames = (r.journal_lines || [])
-                  .map((l) => l.chart_of_accounts?.name)
-                  .filter(Boolean)
-                return (
-                  <tr key={r.id}>
-                    <td className="td money font-semibold text-sm">{r.jv_no}</td>
-                    <td className="td text-sm">{fmtDate(r.ob_date || r.jv_date)}</td>
-                    <td className="td text-sm max-w-[200px] truncate">{r.narration}</td>
-                    <td className="td money text-right">{fmtBDT(totalAmt)}</td>
-                    <td className="td text-xs text-pine/60 max-w-[200px]">
-                      <div className="truncate">{acctNames.slice(0, 3).join(', ')}{acctNames.length > 3 ? ` +${acctNames.length - 3} more` : ''}</div>
-                    </td>
-                    <td className="td text-center">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700">
-                        <Lock size={10} /> Locked
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-          </div>
-        </div>
-      )}
+      <AedsDataGrid
+        title="Posted Opening Balances"
+        subtitle="Locked commencement entries and retained earnings offsets"
+        data={postedList.map((entry) => {
+          const totalDebit = (entry.journal_lines || []).reduce(
+            (sum, line) => sum + Number(line.debit || 0),
+            0
+          )
+          const accountNames = (entry.journal_lines || [])
+            .map((line) => line.chart_of_accounts?.name)
+            .filter(Boolean)
 
-      {postedList.length === 0 && (
-        <div className="text-center text-pine/40 text-sm py-6">
-          No opening balance entries posted yet.
-        </div>
-      )}
+          return {
+            ...entry,
+            entry_date: entry.ob_date || entry.jv_date,
+            total_debit: totalDebit,
+            accounts_summary: accountNames.join(', '),
+            lock_status: 'LOCKED',
+          }
+        })}
+        columns={[
+          { accessorKey: 'jv_no', header: 'Voucher No', width: 160 },
+          { accessorKey: 'entry_date', header: 'As at Date', type: 'date', width: 140 },
+          { accessorKey: 'narration', header: 'Narration', width: 300 },
+          { accessorKey: 'total_debit', header: 'Total Debit', type: 'currency', aggregation: 'sum', width: 160 },
+          { accessorKey: 'accounts_summary', header: 'Accounts', width: 320 },
+          { accessorKey: 'lock_status', header: 'Status', type: 'status', width: 120 },
+        ]}
+        pageSize={50}
+        emptyText="No opening balance entries posted yet."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -685,57 +664,51 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th">Voucher No</th>
-              <th className="th">Date</th>
-              <th className="th">Narration</th>
-              <th className="th text-right">Amount</th>
-              <th className="th text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const amt = (r.journal_lines || []).reduce((a, l) => a + +l.debit, 0)
-              return (
-                <tr key={r.id}>
-                  <td className="td font-semibold money">{r.jv_no}</td>
-                  <td className="td text-xs">{fmtDate(r.jv_date)}</td>
-                  <td className="td text-sm">{r.narration}</td>
-                  <td className="td money text-right">{fmtBDT(amt)}</td>
-                  <td className="td text-right">
-                    <div className="flex gap-1 justify-end items-center flex-wrap">
-                      <button className="btn-ghost !py-1" title="Print voucher" onClick={() => openVoucher(r)}>
-                        <Printer size={13} /> Voucher
-                      </button>
-                      <button className="btn-ghost !py-1" title="Edit" onClick={() => edit(r)}>
-                        <Pencil size={13} />
-                      </button>
-                      {isAdmin && !r.is_locked && (
-                        <button className="btn-ghost !py-1 text-red-600" title="Delete" onClick={() => del(r.id)}>
-                          <Trash2 size={13} />
-                        </button>
-                      )}
-                      {r.is_locked && (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200">
-                          <Lock size={9} /> Locked
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-            {rows.length === 0 && (
-              <tr><td className="td text-pine/40" colSpan={5}>No vouchers yet.</td></tr>
-            )}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="Journal Vouchers"
+        subtitle="Manual vouchers, source documents and posting controls"
+        data={rows.map((entry) => ({
+          ...entry,
+          voucher_type: voucherTypeFromNo(entry.jv_no || ''),
+          amount: (entry.journal_lines || []).reduce(
+            (sum, line) => sum + Number(line.debit || 0),
+            0
+          ),
+          posting_status: entry.is_locked ? 'LOCKED' : 'POSTED',
+        }))}
+        columns={[
+          { accessorKey: 'jv_no', header: 'Voucher No', width: 160 },
+          { accessorKey: 'jv_date', header: 'Date', type: 'date', width: 130 },
+          { accessorKey: 'voucher_type', header: 'Type', type: 'status', width: 120 },
+          { accessorKey: 'narration', header: 'Narration', width: 320 },
+          { accessorKey: 'amount', header: 'Amount', type: 'currency', aggregation: 'sum', width: 160 },
+          { accessorKey: 'posting_status', header: 'Status', type: 'status', width: 120 },
+          {
+            accessorKey: 'actions',
+            header: 'Actions',
+            sortable: false,
+            width: 220,
+            cell: ({ row }) => (
+              <div className="flex gap-1 justify-end items-center flex-wrap">
+                <button className="btn-ghost !py-1" title="Print voucher" onClick={(event) => { event.stopPropagation(); openVoucher(row) }}>
+                  <Printer size={13} /> Voucher
+                </button>
+                <button className="btn-ghost !py-1" title="Edit" onClick={(event) => { event.stopPropagation(); edit(row) }}>
+                  <Pencil size={13} />
+                </button>
+                {isAdmin && !row.is_locked && (
+                  <button className="btn-ghost !py-1 text-red-600" title="Delete" onClick={(event) => { event.stopPropagation(); del(row.id) }}>
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+            ),
+          },
+        ]}
+        pageSize={60}
+        emptyText="No vouchers yet."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -769,39 +742,33 @@ function TrialBalance() {
 
   const tot = rows.reduce((a, r) => ({ d: a.d + r.dr, c: a.c + r.cr }), { d: 0, c: 0 })
 
+  const trialBalanceColumns = [
+    { accessorKey: 'code', header: 'Code', width: 120 },
+    { accessorKey: 'name', header: 'Account', width: 300 },
+    { accessorKey: 'type', header: 'Type', type: 'status', width: 130 },
+    { accessorKey: 'dr', header: 'Debit', type: 'currency', aggregation: 'sum', width: 160 },
+    { accessorKey: 'cr', header: 'Credit', type: 'currency', aggregation: 'sum', width: 160 },
+    {
+      accessorKey: 'balance',
+      header: 'Balance',
+      type: 'currency',
+      width: 160,
+    },
+  ]
+
   return (
-    <div className="card overflow-hidden">
-      <div className="px-4 py-3 border-b border-leaf font-display font-semibold text-pine">Trial Balance</div>
-      <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr>
-            <th className="th">Code</th>
-            <th className="th">Account</th>
-            <th className="th text-right">Debit</th>
-            <th className="th text-right">Credit</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.code}>
-              <td className="td money text-xs">{r.code}</td>
-              <td className="td text-sm">{r.name}</td>
-              <td className="td money text-right">{r.dr.toFixed(2)}</td>
-              <td className="td money text-right">{r.cr.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr className="bg-leaf/40 font-bold money">
-            <td className="td" colSpan={2}>TOTAL</td>
-            <td className="td text-right">{tot.d.toFixed(2)}</td>
-            <td className="td text-right">{tot.c.toFixed(2)}</td>
-          </tr>
-        </tfoot>
-      </table>
-      </div>
-    </div>
+    <AedsDataGrid
+      title="Trial Balance"
+      subtitle={`Debit ${fmtBDT(tot.d)} · Credit ${fmtBDT(tot.c)}`}
+      data={rows.map((row) => ({
+        ...row,
+        balance: Number(row.dr || 0) - Number(row.cr || 0),
+      }))}
+      columns={trialBalanceColumns}
+      pageSize={100}
+      emptyText="No posted journal balances found."
+      getRowId={(row) => row.code}
+    />
   )
 }
 
@@ -961,44 +928,20 @@ function CoaTab({ accounts, reload, flash, isAdmin }) {
         )}
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th w-12 text-center">Sel</th>
-              <th className="th">Code</th>
-              <th className="th">Account</th>
-              <th className="th">Type</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((a) => (
-              <tr
-                key={a.id}
-                className={selectedId === a.id ? 'bg-forest/5' : ''}
-                onClick={() => setSelectedId(a.id)}
-              >
-                <td className="td text-center">
-                  <input
-                    type="radio"
-                    name="coa-select"
-                    checked={selectedId === a.id}
-                    onChange={() => setSelectedId(a.id)}
-                  />
-                </td>
-                <td className="td money text-xs">{a.code}</td>
-                <td className="td text-sm">{a.name}</td>
-                <td className="td text-xs">{a.type}</td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr><td className="td text-pine/40" colSpan={4}>No accounts found.</td></tr>
-            )}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="Chart of Accounts"
+        subtitle="IFRS-aware account master and classification"
+        data={filtered}
+        columns={[
+          { accessorKey: 'code', header: 'Code', width: 130 },
+          { accessorKey: 'name', header: 'Account', width: 320 },
+          { accessorKey: 'type', header: 'Type', type: 'status', width: 150 },
+        ]}
+        pageSize={100}
+        emptyText="No accounts found."
+        getRowId={(row) => row.id}
+        onRowClick={(row) => setSelectedId(row.id)}
+      />
     </div>
   )
 }
@@ -1097,40 +1040,36 @@ function AssetsTab({ accounts, userName, flash }) {
           <Scale size={15} /> Run straight-line depreciation
         </button>
       </div>
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th">Code</th>
-              <th className="th">Asset</th>
-              <th className="th text-right">Cost</th>
-              <th className="th text-right">Monthly dep.</th>
-              <th className="th text-right">Accum.</th>
-              <th className="th text-right">Book value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((a) => {
-              const accum = (a.asset_depreciation || []).reduce((s, d) => s + +d.amount, 0)
-              return (
-                <tr key={a.id}>
-                  <td className="td money text-xs">{a.asset_code}</td>
-                  <td className="td text-sm">{a.name}</td>
-                  <td className="td money text-right">{fmtBDT(a.cost)}</td>
-                  <td className="td money text-right">{fmtBDT(monthly(a))}</td>
-                  <td className="td money text-right">{fmtBDT(accum)}</td>
-                  <td className="td money text-right font-semibold">{fmtBDT(+a.cost - accum)}</td>
-                </tr>
-              )
-            })}
-            {rows.length === 0 && (
-              <tr><td className="td text-pine/40" colSpan={6}>No assets yet.</td></tr>
-            )}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="Fixed Assets Register"
+        subtitle="Acquisition cost, depreciation and carrying value"
+        data={rows.map((asset) => {
+          const accumulated = (asset.asset_depreciation || []).reduce(
+            (sum, depreciation) => sum + Number(depreciation.amount || 0),
+            0
+          )
+
+          return {
+            ...asset,
+            monthly_depreciation: monthly(asset),
+            accumulated_depreciation: accumulated,
+            book_value: Number(asset.cost || 0) - accumulated,
+          }
+        })}
+        columns={[
+          { accessorKey: 'asset_code', header: 'Code', width: 130 },
+          { accessorKey: 'name', header: 'Asset', width: 260 },
+          { accessorKey: 'category', header: 'Category', width: 150 },
+          { accessorKey: 'cost', header: 'Cost', type: 'currency', aggregation: 'sum', width: 150 },
+          { accessorKey: 'monthly_depreciation', header: 'Monthly Dep.', type: 'currency', width: 160 },
+          { accessorKey: 'accumulated_depreciation', header: 'Accumulated', type: 'currency', aggregation: 'sum', width: 160 },
+          { accessorKey: 'book_value', header: 'Book Value', type: 'currency', aggregation: 'sum', width: 160 },
+          { accessorKey: 'status', header: 'Status', type: 'status', width: 120 },
+        ]}
+        pageSize={100}
+        emptyText="No assets yet."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -1253,9 +1192,16 @@ function TransactionMappingTab({ accounts, flash, userName }) {
 
   const syncDefaultMappings = async ({ automated = false } = {}) => {
     setSyncBusy(true)
+    const tenantId = getTenantId()
+    if (!tenantId) {
+      setSyncBusy(false)
+      if (!automated) flash('No tenant context — cannot sync mappings.')
+      return
+    }
     const { data: current, error: loadErr } = await supabase
       .from('accounting_transaction_mapping')
       .select('transaction_type')
+      .eq('tenant_id', tenantId)
     if (loadErr) {
       setSyncBusy(false)
       flash(loadErr.message)
@@ -1270,6 +1216,7 @@ function TransactionMappingTab({ accounts, flash, userName }) {
     }
 
     const rows = missing.map((transaction_type) => ({
+      tenant_id: tenantId,
       transaction_type,
       label: toLabel(transaction_type),
       notes: automated ? 'Auto-synced on Accounting module open' : 'Added by manual trigger',
@@ -1287,6 +1234,15 @@ function TransactionMappingTab({ accounts, flash, userName }) {
     flash(automated ? `${missing.length} default mapping row(s) auto-synced.` : `${missing.length} mapping row(s) added.`)
     await load()
   }
+
+  // Actually run the auto-sync when the Accounting module's Transaction
+  // Mapping tab opens — previously this only ever ran from the manual
+  // "Sync Defaults" button despite the row notes claiming "Auto-synced on
+  // Accounting module open".
+  useEffect(() => {
+    syncDefaultMappings({ automated: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const triggerDefaultSync = async () => {
     await syncDefaultMappings({ automated: false })

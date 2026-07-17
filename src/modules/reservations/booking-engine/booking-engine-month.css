@@ -1,0 +1,81 @@
+.aeds-month-control {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  margin-left: auto;
+}
+
+.aeds-month-control button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgb(226 232 240);
+  border-radius: .85rem;
+  background: white;
+  color: rgb(51 65 85);
+}
+
+.aeds-month-control label {
+  position: relative;
+  min-width: 180px;
+  border: 1px solid rgb(226 232 240);
+  border-radius: .85rem;
+  padding: .6rem .8rem;
+  background: white;
+  text-align: center;
+  font-size: .8rem;
+  font-weight: 900;
+  color: rgb(15 23 42);
+}
+
+.aeds-month-control input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.aeds-booking-legend > strong {
+  margin-right: .3rem;
+  color: rgb(15 23 42);
+}
+
+.aeds-booking-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+.aeds-booking-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.aeds-booking-legend b {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgb(241 245 249);
+  color: rgb(71 85 105);
+  font-size: .68rem;
+}
+
+.aeds-timeline-date-head:has(+ *) {
+  min-width: var(--day-width);
+}
+
+@media (max-width: 900px) {
+  .aeds-month-control {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .aeds-month-control label {
+    flex: 1;
+  }
+}

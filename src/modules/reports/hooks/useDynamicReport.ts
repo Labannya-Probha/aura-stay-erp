@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { loadReportDefinition, runMetadataReport } from "../sdk/reportMetadata.service"
+import { getTenantId } from "../../../lib/tenant"
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -20,8 +21,9 @@ export function useDynamicReport(department = "accounts", slug = "accounts-payab
     let active = true
     Promise.resolve().then(async () => {
       setLoading(true)
+      const tenantId = getTenantId()
       const def = await loadReportDefinition(department, slug, role)
-      const rows = await runMetadataReport(department, slug, filters)
+      const rows = await runMetadataReport(department, slug, filters, tenantId)
       if (!active) return
       setDefinition(def)
       setData(rows)

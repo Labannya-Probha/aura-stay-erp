@@ -1,0 +1,1 @@
+export default function ReservationHistoryTab() { return <div className="aeds-card p-6"><h2 className="text-xl font-black text-slate-950">Reservation History</h2><p className="mt-1 text-sm text-slate-500">Audit trail and historical activity for reservations.</p></div> }

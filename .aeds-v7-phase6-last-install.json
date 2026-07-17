@@ -1,0 +1,19 @@
+﻿{
+    "files":  [
+                  "package.json",
+                  "src\\App.jsx",
+                  "src\\platform\\AedsPlatformProvider.jsx",
+                  "src\\platform\\index.js",
+                  "src\\platform\\README.md",
+                  "src\\platform\\registry\\featureFlags.js",
+                  "src\\platform\\registry\\moduleRegistry.js",
+                  "src\\platform\\registry\\pageRegistry.js",
+                  "src\\platform\\registry\\registryHelpers.js",
+                  "src\\platform\\metadata\\metadataContracts.js",
+                  "src\\platform\\metadata\\examples\\employeeForm.metadata.js",
+                  "src\\platform\\architecture\\aedsArchitectureRules.js",
+                  "scripts\\aeds-architecture-report.mjs"
+              ],
+    "installed_at":  "2026-07-10T16:56:53.6275207+06:00",
+    "backup_path":  "C:\\Users\\Accounts Manager\\Downloads\\aura-stay-erp-aeds-v2\\backups\\aeds-v7-phase6-20260710-165653"
+}
