@@ -69,12 +69,6 @@ function hexToRgb(hex) {
   return [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
 }
 
-function readableTextColor(hex) {
-  const [r, g, b] = hexToRgb(hex)
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000
-  return brightness > 160 ? '#172033' : '#FFFFFF'
-}
-
 function mixHex(hex, target = '#ffffff', weight = 0.88) {
   const [r, g, b] = hexToRgb(hex)
   const [tr, tg, tb] = hexToRgb(target)
@@ -188,20 +182,14 @@ export function applyBrandTheme(theme) {
   root.style.setProperty('--tenant-dark-rgb', darkRgb)
   root.style.setProperty('--tenant-button', theme.buttonColor)
   root.style.setProperty('--tenant-button-rgb', buttonRgb)
-  root.style.setProperty('--tenant-button-foreground', readableTextColor(theme.buttonColor))
-  root.style.setProperty('--tenant-primary-foreground', readableTextColor(theme.primary))
   root.style.setProperty('--tenant-font-family', `"${theme.fontFamily}", "Inter", sans-serif`)
-  root.style.setProperty('--tenant-text', '#172033')
-  root.style.setProperty('--tenant-text-muted', '#64748B')
-  root.style.setProperty('--tenant-surface', '#FFFFFF')
-  root.style.setProperty('--tenant-surface-muted', '#F8FAFC')
-  root.style.setProperty('--tenant-shell-bg', '#F1F5F9')
-  root.style.setProperty('--tenant-border', 'rgb(148 163 184 / 0.28)')
 
-  // Keep legacy semantic colours stable. Tenant branding is applied through
-  // --tenant-* variables only, preventing every legacy card/badge from being
-  // filled with the tenant primary colour.
-  root.style.setProperty('--color-amber-rgb', '212 160 23')
+  // Tailwind brand bridge. Classes like bg-forest/text-pine are used across
+  // existing modules, so point those tokens at the active tenant palette.
+  root.style.setProperty('--color-forest-rgb', primaryRgb)
+  root.style.setProperty('--color-pine-rgb', darkRgb)
+  root.style.setProperty('--color-leaf-rgb', accentRgb)
+  root.style.setProperty('--color-amber-rgb', hexToRgbChannels(theme.printAccent))
   
   // Legacy properties for backward compatibility
   root.style.setProperty('--brand-color', theme.primary)

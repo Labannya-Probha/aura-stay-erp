@@ -40,14 +40,6 @@
     --tenant-dark-rgb:    27 77 46;
     --tenant-button:      #1F6F78;
     --tenant-button-rgb:  31 111 120;
-    --tenant-button-foreground: #FFFFFF;
-    --tenant-primary-foreground: #FFFFFF;
-    --tenant-text: #172033;
-    --tenant-text-muted: #64748B;
-    --tenant-surface: #FFFFFF;
-    --tenant-surface-muted: #F8FAFC;
-    --tenant-shell-bg: #F1F5F9;
-    --tenant-border: rgb(148 163 184 / 0.28);
     --tenant-font-family: "Inter", sans-serif;
 
     /* ── Design tokens ───────────────────────────────────────────────── */
@@ -131,7 +123,7 @@
 
   html {
     /* Fluid root scale: compact on small screens, stable on desktop. */
-    font-size: clamp(14px, 0.15vw + 13.5px, 16px);
+    font-size: clamp(12px, 0.22vw + 10.4px, 14.5px);
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
@@ -144,8 +136,7 @@
     min-height: 100vh;
     font-family: var(--tenant-font-family);
     font-size: 1rem;
-    line-height: 1.55;
-    color: var(--tenant-text, #172033);
+    line-height: 1.5;
     overflow-x: hidden;
   }
 
@@ -2524,42 +2515,4 @@
     grid-template-columns: 1fr 1fr;
     gap: 28px;
   }
-}
-
-
-/* ============================================================
-   AEDS TENANT UI READABILITY LAYER
-   Tenant colour is an accent, not a page-fill colour.
-   ============================================================ */
-@layer components {
-  .aeds-surface,
-  .erp-card,
-  .saas-card,
-  .workspace-card {
-    background-color: var(--tenant-surface, #FFFFFF);
-    color: var(--tenant-text, #172033);
-    border-color: var(--tenant-border, rgb(148 163 184 / 0.28));
-  }
-
-  .text-muted,
-  .erp-muted,
-  .saas-muted {
-    color: var(--tenant-text-muted, #64748B);
-  }
-
-  .tenant-accent-surface {
-    background-color: rgb(var(--tenant-primary-rgb) / 0.07);
-    border-color: rgb(var(--tenant-primary-rgb) / 0.22);
-    color: var(--tenant-text, #172033);
-  }
-
-  .tenant-active-indicator {
-    color: var(--tenant-primary);
-    border-color: var(--tenant-primary);
-    background-color: rgb(var(--tenant-primary-rgb) / 0.08);
-  }
-}
-
-@media (min-width: 1024px) {
-  body { font-size: 1rem; }
 }

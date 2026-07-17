@@ -148,8 +148,6 @@ export function themeToCssVars(theme = AEDS_DEFAULT_THEME) {
     "--tenant-button-rgb": `${buttonRgb.r} ${buttonRgb.g} ${buttonRgb.b}`,
     "--tenant-button-hover": darken(theme.buttonColor || theme.primary, 0.18),
     "--tenant-button-text": theme.buttonText || "#FFFFFF",
-    "--tenant-button-foreground": theme.buttonText || getReadableText(theme.buttonColor || theme.primary),
-    "--tenant-primary-foreground": getReadableText(theme.primary),
     "--tenant-ring": `${theme.primary}22`,
 
     // Legacy aliases used in older modules/styles
@@ -163,8 +161,9 @@ export function themeToCssVars(theme = AEDS_DEFAULT_THEME) {
     "--table-header-bg": theme.tableHeader || mix(theme.primary, "#FFFFFF", 0.9),
     "--report-header-bg": theme.reportHeader || theme.primaryDark,
 
-    // Legacy semantic palette remains stable. Tenant colours are exposed only
-    // through --tenant-* variables so status badges, cards and table surfaces
-    // do not become a single large brand-colour fill.
+    // Tailwind bridge tokens
+    "--color-forest-rgb": `${primaryRgb.r} ${primaryRgb.g} ${primaryRgb.b}`,
+    "--color-pine-rgb": `${darkRgb.r} ${darkRgb.g} ${darkRgb.b}`,
+    "--color-leaf-rgb": `${accentRgb.r} ${accentRgb.g} ${accentRgb.b}`,
   }
 }
