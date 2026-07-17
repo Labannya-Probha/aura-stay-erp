@@ -10,7 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'rounded-[9px] text-white border border-white/[0.18] hover:brightness-[1.06] hover:-translate-y-px active:translate-y-0',
+          'rounded-[9px] border border-white/[0.18] hover:brightness-[1.06] hover:-translate-y-px active:translate-y-0',
         outline:
           'rounded-[9px] text-pine bg-white border border-[--border-color] hover:bg-[#FAF8F5] hover:-translate-y-px hover:border-[rgb(var(--tenant-primary-rgb)_/_0.30)] hover:shadow-[0_8px_20px_rgba(23,23,23,0.08)] active:translate-y-0',
         amber:
@@ -49,8 +49,9 @@ const Button = React.forwardRef(
     const buttonProps = asChild ? props : { ...props, type: type || 'button' }
     // Apply dynamic background gradient for default variant using CSS variables
     const dynamicStyle = variant === 'default' ? {
-      backgroundImage: 'linear-gradient(135deg, var(--brand-color), var(--brand-color))',
-      boxShadow: '0 8px 18px rgb(var(--tenant-primary-rgb) / 0.18)',
+      background: 'var(--tenant-button)',
+      color: 'var(--tenant-button-foreground, var(--tenant-button-text, #FFFFFF))',
+      boxShadow: '0 8px 18px rgb(var(--tenant-button-rgb) / 0.18)',
       ...style
     } : style
     

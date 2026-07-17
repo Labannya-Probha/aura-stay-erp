@@ -201,7 +201,6 @@ function NewSale({ items, taxConfig, userName, flash, onDone }) {
         await supabase.from('payments').insert(withTenantInsert({
           reservation_id: order.reservation_id, received_date: todayISO(), amount: t.total,
           method: primaryMethod, reference: order.order_no, received_by: userName, notes: catMeta.outlet,
-          payment_class: 'SETTLEMENT',
         }))
         await withTenant(supabase.from('pos_orders').update({ folio_charge_id: fc.id })).eq('id', order.id)
       } else if (issueMushak) {

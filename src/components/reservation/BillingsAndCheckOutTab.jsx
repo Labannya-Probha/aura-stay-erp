@@ -184,7 +184,6 @@ export function BillingsAndCheckOutTab({
   const addPayment = async () => {
     if (!p.amount || +p.amount <= 0) return
     const paymentNo = paymentNumbering ? await paymentNumbering.generate() : null
-    const cls = p.payment_class || 'SETTLEMENT'
     const { error } = await supabase.from('payments').insert({
       reservation_id: res.id,
       amount:         +p.amount,
@@ -193,7 +192,7 @@ export function BillingsAndCheckOutTab({
       received_date:  p.received_date,
       received_by:    p.received_by,
       paid_by_party:  p.paid_by_party || null,
-      payment_class:  cls,
+      payment_class:  p.payment_class || 'SETTLEMENT',
     })
     if (error) { flash(error.message); return }
     setP({ amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName, paid_by_party: '', payment_class: 'SETTLEMENT' })
@@ -339,14 +338,11 @@ export function BillingsAndCheckOutTab({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
             <h3 className="font-display font-semibold text-pine">Add charge</h3>
             <div className="flex flex-wrap gap-2">
-              {/* Room charges now post automatically at check-in (and
-                  nightly via Night Audit) — this manual "Repost" stays as
-                  an admin-only recovery tool if rates/discounts change
-                  after the fact and the folio needs recalculating. */}
-              {isAdmin && charges.some((ch) => ch.charge_type === 'ROOM') && (
-                <button className="btn-amber !py-2" onClick={repostRoomCharges} title="Admin override: recalculate and replace posted room charges">
-                  <BedDouble size={15} /> Repost room charges
-                </button>
+              <button className="btn-ghost" onClick={postRoomCharges}>
+                <BedDouble size={15} /> Post room charges ({nightsBetween(res.check_in, res.check_out)} nights)
+              </button>
+              {charges.some((ch) => ch.charge_type === 'ROOM') && (
+                <button className="btn-amber !py-2" onClick={repostRoomCharges}>Repost</button>
               )}
             </div>
           </div>

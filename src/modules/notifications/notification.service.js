@@ -3,17 +3,6 @@ import { supabase } from "../../supabase"
 export async function getUnreadNotifications({
   limit = 50,
 } = {}) {
-  const refreshResult = await supabase.rpc(
-    "refresh_operational_notifications"
-  )
-
-  if (refreshResult.error) {
-    console.warn(
-      "Operational notification refresh failed:",
-      refreshResult.error.message
-    )
-  }
-
   const { data, error } = await supabase.rpc(
     "notification_center_feed",
     {

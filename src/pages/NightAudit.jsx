@@ -8,8 +8,8 @@ import { logAudit } from '../lib/pms.api.js'
 import { getCompanySettingsQuery, getPrintBrandProps, withTenantScope } from '../lib/companySettings'
 import { withTenantInsert, withTenantInsertMany } from '../lib/tenant'
 
-// CASH_ACC/REV_ACC removed — revenue account routing now lives entirely in
-// trg_folio_charge_revenue (per-charge, at posting time), not here.
+const CASH_ACC = { CASH: '1010', BKASH: '1020', NAGAD: '1020', CARD: '1030', BANK: '1030', OTHER: '1030' }
+const REV_ACC = { ROOM: '4100', RESTAURANT: '4200', TEA: '4300', PICKLE: '4300', SPORTS: '4300', LAUNDRY: '4400', OTHER: '4400' }
 
 export default function NightAudit({ userName, isAdmin, role }) {
   const canCloseDay = isAdmin || role === 'SUPERUSER'
@@ -25,14 +25,8 @@ export default function NightAudit({ userName, isAdmin, role }) {
   const [closeMarks, setCloseMarks] = useState([])
   const [company, setCompany] = useState(null)
   const [printAudit, setPrintAudit] = useState(null)
-  // Revenue is now recognised automatically the moment each night's room
-  // charge is posted (folio_charges → trg_folio_charge_revenue), so Night
-  // Audit no longer needs to build its own separate summary journal voucher
-  // — doing so would double-count the same revenue. makeJV / jvId removed.
+  const [makeJV, setMakeJV] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [rangeFrom, setRangeFrom] = useState(todayISO())
-  const [rangeTo, setRangeTo] = useState(todayISO())
-  const [rangeBusy, setRangeBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 6000) }
 
@@ -49,16 +43,8 @@ export default function NightAudit({ userName, isAdmin, role }) {
       withTenantScope(supabase.from('day_closes').select('*').eq('close_date', auditDate)).in('type', ['RESERVATION', 'RESTAURANT']),
     ])
     const inHouseRows = ih.data || []
-    const auditRows = na.data || []
-
-    // A closed day is considered "Posted" once the day-close action itself
-    // has completed — even a zero-activity day (no guests, no charges, no
-    // journal) still counts, since there's nothing outstanding to post for
-    // that date. night_audits row presence == day was closed == Posted.
-    const auditsWithJv = auditRows.map((a) => ({ ...a, jv_status: 'POSTED' }))
-
     setInHouse(inHouseRows); setNoShows(ns.data || []); setPostedToday(fc.data || [])
-    setTaxConfig(tc.data || []); setAudits(auditsWithJv); setExisting(ex.data || null)
+    setTaxConfig(tc.data || []); setAudits(na.data || []); setExisting(ex.data || null)
     setCloseMarks(dc.data || [])
     await buildSummary(inHouseRows)
   }
@@ -143,7 +129,8 @@ export default function NightAudit({ userName, isAdmin, role }) {
 
   useEffect(() => { loadAll() }, [auditDate]) // eslint-disable-line
 
-  const buildRoomChargeRows = () => {
+  const postRoomCharges = async () => {
+    setBusy(true)
     const postedSet = new Set(postedToday.map((p) => p.reservation_id))
     const rows = []
     for (const res of inHouse) {
@@ -162,12 +149,6 @@ export default function NightAudit({ userName, isAdmin, role }) {
           rows.push({ reservation_id: res.id, charge_date: auditDate, charge_type: 'ROOM', description: `Driver accommodation × ${res.driver_count} — ${fmtDate(auditDate)} (night audit)`, ...computeCharge(res.driver_count * res.driver_rate, res.discount_pct, rate), created_by: userName })
       }
     }
-    return rows
-  }
-
-  const postRoomCharges = async () => {
-    setBusy(true)
-    const rows = buildRoomChargeRows()
     if (rows.length === 0) { setBusy(false); flash('Nothing to post — every in-house room already has tonight\'s charge.'); return }
     const { error } = await supabase.from('folio_charges').insert(withTenantInsertMany(rows))
     setBusy(false)
@@ -186,21 +167,31 @@ export default function NightAudit({ userName, isAdmin, role }) {
     if (!canCloseDay) { flash('Only Admin or SUPERUSER can close the day.'); return }
     if (!summary) return
     setBusy(true)
+    let jvId = null
     try {
-      // Auto-post tonight's room charges first — this is what actually
-      // triggers the revenue journal (trg_folio_charge_revenue fires on
-      // the folio_charges insert). Closing the day now guarantees the
-      // journal is posted, without a separate manual "Post room charges"
-      // click.
-      let postedCount = 0
-      const rows = buildRoomChargeRows()
-      if (rows.length > 0) {
-        const { error: chargeErr } = await supabase.from('folio_charges').insert(withTenantInsertMany(rows))
-        if (chargeErr) throw chargeErr
-        postedCount = rows.length
+      if (makeJV && summary.recTotal + summary.totals.total > 0) {
+        const { data: coa } = await withTenantScope(supabase.from('chart_of_accounts').select('id, code'))
+        const acc = Object.fromEntries((coa || []).map((a) => [a.code, a.id]))
+        const lines = []
+        for (const [m, amt] of Object.entries(summary.receipts))
+          if (amt > 0 && acc[CASH_ACC[m] || '1030']) lines.push({ account_id: acc[CASH_ACC[m] || '1030'], debit: +amt.toFixed(2), credit: 0, line_note: `Receipts — ${m}` })
+        for (const [t, r] of Object.entries(summary.revenue))
+          if (r.net > 0 && acc[REV_ACC[t] || '4400']) lines.push({ account_id: acc[REV_ACC[t] || '4400'], debit: 0, credit: +r.net.toFixed(2), line_note: `Revenue — ${t}` })
+        if (summary.totals.vat > 0) lines.push({ account_id: acc['2200'], debit: 0, credit: +summary.totals.vat.toFixed(2), line_note: 'VAT payable' })
+        if (summary.totals.sc > 0) lines.push({ account_id: acc['2300'], debit: 0, credit: +summary.totals.sc.toFixed(2), line_note: 'Service charge payable' })
+        const dr = lines.reduce((a, l) => a + l.debit, 0), cr = lines.reduce((a, l) => a + l.credit, 0)
+        const diff = +(cr - dr).toFixed(2)
+        if (diff > 0) lines.push({ account_id: acc['1100'], debit: diff, credit: 0, line_note: 'Charged to folios — receivable' })
+        if (diff < 0) lines.push({ account_id: acc['2400'], debit: 0, credit: -diff, line_note: 'Advance / unapplied receipts' })
+        if (lines.length > 1) {
+          const { data: jv, error: je } = await supabase.from('journal_entries').insert(withTenantInsert({ jv_date: auditDate, narration: `Night audit — ${fmtDate(auditDate)}`, source: 'NIGHT_AUDIT', posted_by: userName })).select().single()
+          if (je) throw je
+          const { error: jle } = await supabase.from('journal_lines').insert(withTenantInsertMany(lines.map((l) => ({ ...l, entry_id: jv.id }))))
+          if (jle) throw jle
+          jvId = jv.id
+        }
       }
-
-      const payload = withTenantInsert({ audit_date: auditDate, performed_by: userName, performed_at: new Date().toISOString(), summary, jv_id: null, notes: 'Revenue posted automatically per charge.' })
+      const payload = withTenantInsert({ audit_date: auditDate, performed_by: userName, performed_at: new Date().toISOString(), summary, jv_id: jvId, notes: makeJV ? 'Auto-JV posted' : null })
       const { error } = await supabase.from('night_audits').upsert(payload, { onConflict: 'tenant_id,audit_date' })
       if (error) throw error
 
@@ -234,103 +225,10 @@ export default function NightAudit({ userName, isAdmin, role }) {
       if (dcErr) throw dcErr
 
       await withTenantScope(supabase.from('company_settings').update({ last_audit_date: auditDate })).gt('id', 0)
-      flash(`Night audit for ${fmtDate(auditDate)} ${existing ? 'updated' : 'closed'}.${postedCount > 0 ? ` ${postedCount} room charge(s) posted — journal auto-posted.` : ''}`)
+      flash(`Night audit for ${fmtDate(auditDate)} ${existing ? 'updated' : 'closed'}.${jvId ? ' Journal voucher posted.' : ''}`)
       await loadAll()
     } catch (e) { flash(e.message) }
     setBusy(false)
-  }
-
-  // Close a whole span of nights in one action. Walks the range
-  // chronologically (oldest night first) so that even a back-dated range
-  // posts each night's room charge — and therefore each night's JV, via
-  // trg_folio_charge_revenue — with jv_date carried from that charge's own
-  // charge_date. That keeps the accounting ledger in correct date order
-  // regardless of when the button is actually clicked.
-  const closeDateRange = async () => {
-    if (!canCloseDay) { flash('Only Admin or SUPERUSER can close the day.'); return }
-    if (!rangeFrom || !rangeTo || rangeFrom > rangeTo) { flash('Pick a valid From/To range (From must be on or before To).'); return }
-    setRangeBusy(true)
-    let totalCharges = 0
-    let daysProcessed = 0
-    try {
-      // Broad fetch: any reservation whose stay could overlap this range,
-      // regardless of CURRENT status — a back-dated range often includes
-      // guests who have since checked out, so we can't filter to
-      // status = 'CHECKED_IN' the way the single-day view does.
-      const { data: candidateRes } = await withTenantScope(
-        supabase.from('reservations')
-          .select('*, reservation_rooms(*, rooms(*))')
-          .lt('check_in', rangeTo)
-          .gt('check_out', rangeFrom)
-      )
-      const reservations = candidateRes || []
-
-      const { data: existingCharges } = await withTenantScope(
-        supabase.from('folio_charges').select('reservation_id, charge_date').eq('charge_type', 'ROOM').gte('charge_date', rangeFrom).lte('charge_date', rangeTo)
-      )
-      const postedSet = new Set((existingCharges || []).map((c) => `${c.reservation_id}|${c.charge_date}`))
-
-      let d = new Date(rangeFrom + 'T00:00:00')
-      const end = new Date(rangeTo + 'T00:00:00')
-      while (d <= end) {
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-        const rate = rateFor(taxConfig, 'ROOM', dateStr)
-        const rows = []
-        for (const res of reservations) {
-          for (const rr of res.reservation_rooms || []) {
-            const ci = rr.from_date || res.check_in
-            const co = rr.to_date || res.check_out
-            if (dateStr < ci || dateStr >= co) continue
-            const key = `${res.id}|${dateStr}`
-            if (postedSet.has(key)) continue
-            rows.push({ reservation_id: res.id, charge_date: dateStr, charge_type: 'ROOM', description: `Room ${rr.rooms?.room_no}${rr.rooms?.room_name ? ` (${rr.rooms.room_name})` : ''} — Night of ${fmtDate(dateStr)} (range close)`, ...computeCharge(rr.rate, res.discount_pct, rate), created_by: userName })
-          }
-          if (dateStr >= res.check_in && dateStr < res.check_out) {
-            const key = `${res.id}|${dateStr}`
-            if (!postedSet.has(key)) {
-              if (res.extra_pax > 0 && res.extra_pax_rate > 0)
-                rows.push({ reservation_id: res.id, charge_date: dateStr, charge_type: 'ROOM', description: `Extra pax × ${res.extra_pax} — ${fmtDate(dateStr)} (range close)`, ...computeCharge(res.extra_pax * res.extra_pax_rate, res.discount_pct, rate), created_by: userName })
-              if (res.driver_accommodation && res.driver_count > 0 && res.driver_rate > 0)
-                rows.push({ reservation_id: res.id, charge_date: dateStr, charge_type: 'ROOM', description: `Driver accommodation × ${res.driver_count} — ${fmtDate(dateStr)} (range close)`, ...computeCharge(res.driver_count * res.driver_rate, res.discount_pct, rate), created_by: userName })
-            }
-          }
-        }
-
-        if (rows.length > 0) {
-          const { error: chargeErr } = await supabase.from('folio_charges').insert(withTenantInsertMany(rows))
-          if (chargeErr) throw chargeErr
-          totalCharges += rows.length
-          rows.forEach((r) => postedSet.add(`${r.reservation_id}|${r.charge_date}`))
-        }
-
-        const payload = withTenantInsert({ audit_date: dateStr, performed_by: userName, performed_at: new Date().toISOString(), summary: null, jv_id: null, notes: 'Range close — revenue posted automatically per charge.' })
-        await supabase.from('night_audits').upsert(payload, { onConflict: 'tenant_id,audit_date' })
-
-        const dayStart = `${dateStr}T00:00:00+06:00`
-        const dayEnd = `${dateStr}T23:59:59+06:00`
-        const [{ data: rest }, { data: resv }] = await Promise.all([
-          withTenantScope(supabase.from('pos_orders').select('total,status').is('reservation_id', null).gte('created_at', dayStart).lte('created_at', dayEnd)),
-          withTenantScope(supabase.from('pos_orders').select('total,status').not('reservation_id', 'is', null).gte('created_at', dayStart).lte('created_at', dayEnd)),
-        ])
-        const restSettled = (rest || []).filter((o) => o.status === 'SETTLED')
-        const resCharged = (resv || []).filter((o) => o.status === 'CHARGED_TO_ROOM')
-        await withTenantScope(supabase.from('day_closes').delete().eq('close_date', dateStr)).in('type', ['RESERVATION', 'RESTAURANT'])
-        await supabase.from('day_closes').insert(withTenantInsertMany([
-          { close_date: dateStr, closed_by: userName, closed_at: new Date().toISOString(), type: 'RESTAURANT', settled_amount: restSettled.reduce((a, o) => a + Number(o.total || 0), 0), settled_orders: restSettled.length },
-          { close_date: dateStr, closed_by: userName, closed_at: new Date().toISOString(), type: 'RESERVATION', charged_amount: resCharged.reduce((a, o) => a + Number(o.total || 0), 0), charged_orders: resCharged.length },
-        ]))
-
-        daysProcessed += 1
-        d = new Date(d.getTime() + 86400000)
-      }
-
-      await withTenantScope(supabase.from('company_settings').update({ last_audit_date: rangeTo })).gt('id', 0)
-      flash(`Closed ${daysProcessed} day(s), ${fmtDate(rangeFrom)} → ${fmtDate(rangeTo)}. ${totalCharges} room charge(s) posted — journals auto-posted in date order.`)
-      await loadAll()
-    } catch (e) {
-      flash(e.message)
-    }
-    setRangeBusy(false)
   }
 
   const openDay = async () => {
@@ -441,10 +339,10 @@ export default function NightAudit({ userName, isAdmin, role }) {
                 </tbody>
                 <tfoot><tr className="bg-leaf/40 font-bold money"><td className="td">TOTAL</td><td className="td text-right">{fmtBDT(summary.recTotal)}</td></tr></tfoot>
               </table>
-              <p className="flex items-start gap-2 text-xs text-pine/60 mt-4">
-                <CheckCircle2 size={14} className="mt-0.5 flex-shrink-0" />
-                Revenue is posted automatically to Accounting the moment each night's room charge is created — no manual journal voucher step needed here.
-              </p>
+              <label className="flex items-center gap-2 text-sm mt-4 cursor-pointer">
+                <input type="checkbox" checked={makeJV} onChange={(e) => setMakeJV(e.target.checked)} className="accent-forest" />
+                Also post a balanced journal voucher into Accounting
+              </label>
               {canCloseDay ? (
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <button className="btn-primary" disabled={busy} onClick={closeDay}><MoonStar size={15} /> {existing ? 'Re-close day' : 'Close the day'}</button>
@@ -457,27 +355,6 @@ export default function NightAudit({ userName, isAdmin, role }) {
               )}
             </div>
           </div>
-          {canCloseDay && (
-            <div className="card p-4">
-              <h3 className="font-display font-semibold text-pine flex items-center gap-2 mb-2"><BookOpenCheck size={17} className="text-forest" /> Close a date range</h3>
-              <p className="text-xs text-pine/60 mb-3">
-                Catch up several nights at once — each date is closed in order (oldest first), so a back-dated range still posts every night's room charge and journal voucher under its own correct date.
-              </p>
-              <div className="flex flex-wrap items-end gap-2">
-                <div>
-                  <label className="label !text-xs">From</label>
-                  <input type="date" className="input" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label !text-xs">To</label>
-                  <input type="date" className="input" value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} />
-                </div>
-                <button className="btn-amber" disabled={rangeBusy} onClick={closeDateRange}>
-                  <MoonStar size={15} /> {rangeBusy ? 'Closing…' : 'Close date range'}
-                </button>
-              </div>
-            </div>
-          )}
           <div>
             <div className="label">Invoice-wise audit snapshot (in-house guests)</div>
             <div className="card overflow-x-auto">
@@ -542,7 +419,7 @@ export default function NightAudit({ userName, isAdmin, role }) {
                 <td className="td text-sm">{a.performed_by}</td>
                 <td className="td money text-right">{fmtBDT(a.summary?.totals?.total)}</td>
                 <td className="td money text-right">{fmtBDT(a.summary?.recTotal)}</td>
-                <td className="td text-xs">{a.jv_status === 'POSTED' ? 'Posted' : a.jv_status === 'PARTIAL' ? 'Partial' : '—'}</td>
+                <td className="td text-xs">{a.jv_id ? 'Posted' : '—'}</td>
                 <td className="td text-right"><button className="btn-ghost !py-1" onClick={() => setPrintAudit(a)}><Printer size={13} /> Report</button></td>
               </tr>
             ))}
@@ -582,7 +459,7 @@ function NightAuditReport({ audit, company }) {
       <table style={{ width: '100%', fontSize: 11, marginBottom: 10 }}>
         <tbody>
           <tr><td><b>Audit date:</b> {fmtDate(audit.audit_date)}</td><td style={{ textAlign: 'right' }}><b>Performed by:</b> {audit.performed_by || '—'}</td></tr>
-          <tr><td><b>In-house at audit:</b> {s.inHouseCount != null ? s.inHouseCount : '—'}</td><td style={{ textAlign: 'right' }}><b>Journal voucher:</b> {audit.jv_status === 'POSTED' ? 'Posted' : audit.jv_status === 'PARTIAL' ? 'Partial' : '—'}</td></tr>
+          <tr><td><b>In-house at audit:</b> {s.inHouseCount != null ? s.inHouseCount : '—'}</td><td style={{ textAlign: 'right' }}><b>Journal voucher:</b> {audit.jv_id ? 'Posted' : '—'}</td></tr>
         </tbody>
       </table>
 

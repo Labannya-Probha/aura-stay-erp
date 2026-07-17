@@ -254,8 +254,6 @@ export async function getRoomRack() {
       guestName: reservation?.guestName || "Vacant",
       reservationNo:
         reservation?.reservationNo || "—",
-      reservationId:
-        reservation?.reservationId || null,
       checkOut: reservation?.checkOut || null,
       balance: Number(reservation?.balance || 0),
       occupied: Boolean(reservation),

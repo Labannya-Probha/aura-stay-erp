@@ -23,11 +23,7 @@ export default function AppTopBar({ company, role }) {
           </div>
         </div>
 
-        <UniversalActionBar
-          role={role}
-          tenantId={company?.tenant_id || company?.id}
-          onOpenCommand={commandPalette.open}
-        />
+        <UniversalActionBar role={role} onOpenCommand={commandPalette.open} />
       </header>
 
       <CommandPalette

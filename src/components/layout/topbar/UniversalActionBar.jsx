@@ -3,15 +3,11 @@ import QuickCreate from "./QuickCreate"
 import NotificationCenter from "./NotificationCenter"
 import OnlineStatusBadge from "./OnlineStatusBadge"
 
-export default function UniversalActionBar({
-  role,
-  tenantId,
-  onOpenCommand,
-}) {
+export default function UniversalActionBar({ role, onOpenCommand }) {
   return (
     <div className="ml-4 flex shrink-0 items-center gap-2">
       <QuickCreate role={role} />
-      <NotificationCenter tenantId={tenantId} />
+      <NotificationCenter />
       <OnlineStatusBadge />
       <button
         type="button"

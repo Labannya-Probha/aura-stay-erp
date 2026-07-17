@@ -22,7 +22,7 @@ export default function ReservationPayments({ userName, isAdmin }) {
     received_date: todayISO(),
     received_by: userName,
     paid_by_party: '',
-    payment_class: 'ADVANCE',
+    payment_class: 'SETTLEMENT',
   })
 
   // ── edit state ──────────────────────────────────────────────────
@@ -74,14 +74,11 @@ export default function ReservationPayments({ userName, isAdmin }) {
       received_date: f.received_date,
       received_by: f.received_by || userName,
       paid_by_party: f.paid_by_party || null,
-      // Always ADVANCE — this page books reservation-level deposits, never
-      // an actual folio settlement (that happens in Front Office → Billings
-      // & Check-out, which posts to Room Revenue / particular sales income).
-      payment_class: 'ADVANCE',
+      payment_class: f.payment_class || 'SETTLEMENT',
     })
     setBusy(false)
     if (error) { flash(error.message, 'err'); return }
-    setF({ reservation_id: '', amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName, paid_by_party: '', payment_class: 'ADVANCE' })
+    setF({ reservation_id: '', amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName, paid_by_party: '', payment_class: 'SETTLEMENT' })
     await loadAll()
     flash('Reservation payment recorded.')
   }
@@ -111,7 +108,7 @@ export default function ReservationPayments({ userName, isAdmin }) {
       reference: toPaymentReference(paymentNo, editForm.reference),
       received_date: editForm.received_date,
       paid_by_party: editForm.paid_by_party || null,
-      payment_class: 'ADVANCE',
+      payment_class: editForm.payment_class || 'SETTLEMENT',
     }).eq('id', editRow.id)
     if (error) { flash(error.message || 'Update failed.', 'err'); return }
     setEditRow(null)
@@ -325,7 +322,16 @@ export default function ReservationPayments({ userName, isAdmin }) {
           </div>
           <div>
             <label className="label !text-xs">Payment class</label>
-            <input className="input" value="Advance" disabled title="Reservation payments are always Advance — settle the actual bill from Front Office → Billings & Check-out." />
+            <SearchableSelect
+              value={f.payment_class}
+              onChange={(v) => setF({ ...f, payment_class: v })}
+              options={[
+                { value: 'ADVANCE', label: 'Advance' },
+                { value: 'SETTLEMENT', label: 'Settlement' },
+                { value: 'PARTIAL', label: 'Partial' },
+              ]}
+              placeholder="Class…"
+            />
           </div>
           <div>
             <label className="label !text-xs">Paid by</label>
@@ -437,7 +443,16 @@ export default function ReservationPayments({ userName, isAdmin }) {
               </div>
               <div>
                 <label className="label !text-xs">Payment class</label>
-                <input className="input" value="Advance" disabled title="Reservation payments are always Advance." />
+                <SearchableSelect
+                  value={editForm.payment_class}
+                  onChange={(v) => setEditForm({ ...editForm, payment_class: v })}
+                  options={[
+                    { value: 'ADVANCE', label: 'Advance' },
+                    { value: 'SETTLEMENT', label: 'Settlement' },
+                    { value: 'PARTIAL', label: 'Partial' },
+                  ]}
+                  placeholder="Class…"
+                />
               </div>
               <div>
                 <label className="label !text-xs">Paid by</label>

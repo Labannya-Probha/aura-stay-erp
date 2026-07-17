@@ -1,11 +1,10 @@
 import { useState } from "react"
 import { Hotel, RefreshCw } from "lucide-react"
-import { useNavigate } from "react-router-dom"
 
 import EnterpriseWorkspace from "../../components/layout/EnterpriseWorkspace"
 import ModuleTabs from "../../components/layout/ModuleTabs"
 import { Button } from "../../components/ui/button"
-import { PATHS } from "../../app/paths"
+
 import { can } from "../../lib/roles"
 import { FRONT_OFFICE_TABS } from "./frontOffice.config"
 import { useFrontOfficeTabs } from "./hooks/useFrontOfficeTabs"
@@ -14,8 +13,7 @@ import FrontOfficeKpiStrip from "./shared/FrontOfficeKpiStrip"
 import ArrivalBoardPage from "./arrival-board/ArrivalBoardPage"
 import DepartureBoardPage from "./departure-board/DepartureBoardPage"
 import InHouseGuestsPage from "./in-house/InHouseGuestsPage"
-import RoomRackControlCenter from "./room-rack/RoomRackControlCenter"
-import CheckInOutPage from "./check-in-out/CheckInOutPage"
+import RoomRackPage from "./room-rack/RoomRackPage"
 import GuestFolioPage from "./guest-folio/GuestFolioPage"
 import CashierPage from "./cashier/CashierPage"
 import NightAuditPage from "./night-audit/NightAuditPage"
@@ -34,7 +32,6 @@ export default function FrontOfficePage({
   company,
   privileges,
 }) {
-  const navigate = useNavigate()
   const { activeTab, setActiveTab } = useFrontOfficeTabs()
   const [checkInTarget, setCheckInTarget] = useState(null)
   const [checkOutTarget, setCheckOutTarget] = useState(null)
@@ -60,15 +57,13 @@ export default function FrontOfficePage({
 
   const currentTab = visibleTabs.some((tab) => tab.id === activeTab)
     ? activeTab
-    : visibleTabs[0]?.id || "room-rack"
-
-  const goToTab = (tabId) => setActiveTab(tabId)
+    : visibleTabs[0]?.id || "arrival-board"
 
   return (
     <>
       <EnterpriseWorkspace
         title="Front Office Workspace"
-        subtitle="Room rack, arrival, departure, in-house, folio, cashier and night audit control center."
+        subtitle="Arrival, departure, in-house guests, room rack, cashier and night audit command center."
         eyebrow="Hotel Operations"
         icon={Hotel}
         actions={
@@ -109,18 +104,6 @@ export default function FrontOfficePage({
           role="tabpanel"
           aria-labelledby={`module-tab-${currentTab}`}
         >
-          {currentTab === "room-rack" && (
-            <RoomRackControlCenter
-              rooms={roomRack}
-              loading={loading}
-              onOpenReservation={openReservation}
-              onOpenFolio={() => goToTab("guest-folio")}
-              onOpenHousekeeping={() => navigate(PATHS.HOUSEKEEPING || "/housekeeping")}
-              onOpenMaintenance={() => navigate(PATHS.MAINTENANCE || "/maintenance")}
-              onOpenMessages={() => goToTab("guest-messages")}
-            />
-          )}
-
           {currentTab === "arrival-board" && (
             <ArrivalBoardPage
               rows={arrivals}
@@ -149,44 +132,40 @@ export default function FrontOfficePage({
             />
           )}
 
-          {currentTab === "check-in-out" && (
-            <CheckInOutPage
-              arrivals={arrivals}
-              departures={departures}
+          {currentTab === "room-rack" && (
+            <RoomRackPage
+              rows={roomRack}
               loading={loading}
-              openReservation={openReservation}
-              onCheckIn={setCheckInTarget}
-              onCheckOut={setCheckOutTarget}
             />
           )}
 
           {currentTab === "guest-folio" && (
             <GuestFolioPage
-              openReservation={openReservation}
+              userName={userName}
+              company={company}
             />
           )}
 
           {currentTab === "cashier" && (
             <CashierPage
               userName={userName}
-              isAdmin={isAdmin}
+              company={company}
             />
           )}
 
           {currentTab === "night-audit" && (
             <NightAuditPage
               userName={userName}
-              isAdmin={isAdmin}
               role={role}
             />
           )}
 
           {currentTab === "lost-found" && (
-            <LostFoundPage userName={userName} />
+            <LostFoundPage />
           )}
 
           {currentTab === "guest-messages" && (
-            <GuestMessagesPage userName={userName} />
+            <GuestMessagesPage />
           )}
         </section>
       </EnterpriseWorkspace>
