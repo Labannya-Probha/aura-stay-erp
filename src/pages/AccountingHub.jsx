@@ -13,6 +13,8 @@ import VoucherDoc from '../components/print/VoucherDoc.jsx'
 import VendorPaymentTab from '../components/VendorPaymentTab.jsx'
 import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
 import '../styles/aeds-v6-workspaces.css'
+import PaymentTransactionsView from '../components/payments/PaymentTransactionsView.jsx'
+import { PAYMENT_SCOPES } from '../components/payments/paymentScope.js'
 
 /* ------------------------------------------------------------------ */
 /*  RETAINED EARNINGS account code — offsetting account for OB entries  */
@@ -51,6 +53,7 @@ export default function AccountingHub({ userName, isAdmin, role }) {
     ...(isAdmin ? ['Opening Balance'] : []),
     ...(isAdmin ? ['Transaction Mapping'] : []),
     'Vendor Payments',
+    'Payment Transactions',
   ]
 
   const initialTab = TABS.includes(urlTab) ? urlTab : 'Journal Vouchers'
@@ -127,6 +130,7 @@ export default function AccountingHub({ userName, isAdmin, role }) {
         <TransactionMappingTab accounts={accounts} flash={flash} userName={userName} />
       )}
       {tab === 'Vendor Payments' && <VendorPaymentTab role={role} />}
+      {tab === 'Payment Transactions' && <PaymentTransactionsView scope={PAYMENT_SCOPES.ACCOUNTING} />}
     </div>
   )
 }

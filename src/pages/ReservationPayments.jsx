@@ -5,9 +5,10 @@ import SearchableSelect from '../components/SearchableSelect.jsx'
 import { Receipt, Trash2, Pencil, MessageCircle, Mail, Printer, X } from 'lucide-react'
 import { generateReservationPaymentNo, parsePaymentReference, toPaymentReference } from '../lib/paymentNumber'
 import { logAudit } from '../lib/pms.api.js'
-import { runSingleFlight } from '../lib/singleFlight'
+import PaymentMethodFields, { validatePaymentMethodDetails } from '../components/payments/PaymentMethodFields.jsx'
+import { applyPaymentScope, PAYMENT_SCOPES } from '../components/payments/paymentScope.js'
 
-export default function ReservationPayments({ userName, isAdmin }) {
+export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT_SCOPES.ACCOUNTING, reservationId = null, sourceModule = 'RESERVATIONS' }) {
   const [reservations, setReservations] = useState([])
   const [payments, setPayments]         = useState([])
   const [busy, setBusy]                 = useState(false)
@@ -24,7 +25,16 @@ export default function ReservationPayments({ userName, isAdmin }) {
     received_by: userName,
     paid_by_party: '',
     payment_class: 'SETTLEMENT',
+    bank_account_id: '',
+    card_type: '',
+    cheque_number: '',
+    cheque_date: '',
+    pos_terminal_id: '',
+    payer_bank_name: '',
+    payer_branch_name: '',
+    payer_routing_number: '',
   })
+  const [methodErrors, setMethodErrors] = useState({})
 
   // ── edit state ──────────────────────────────────────────────────
   const [editRow,  setEditRow]  = useState(null)
@@ -37,23 +47,26 @@ export default function ReservationPayments({ userName, isAdmin }) {
   const [sendBusy, setSendBusy] = useState(false)
 
   const loadAll = async () => {
-    const [{ data: rs }, { data: pm }] = await runSingleFlight('payments:reservation-list', () => Promise.all([
+    const [{ data: rs }, { data: pm }] = await Promise.all([
       supabase
         .from('reservations')
         .select('id,res_no,reservation_name, guests:primary_guest_id(full_name,phone,email)')
         .order('created_at', { ascending: false })
         .limit(300),
-      supabase
-        .from('payments')
-        .select('id,reservation_id,received_date,amount,method,reference,received_by,paid_by_party,payment_class,reservations(res_no,reservation_name,primary_guest_id,guests:primary_guest_id(full_name,phone,email))')
-        .order('received_date', { ascending: false })
-        .limit(500),
-    ]))
+      applyPaymentScope(
+        supabase
+          .from('payments')
+          .select('id,payment_id,reservation_id,received_date,amount,method,reference,received_by,paid_by_party,payment_class,source_module,bank_account_id,card_type,cheque_number,cheque_date,pos_terminal_id,payer_bank_name,payer_branch_name,payer_routing_number,reservations(res_no,reservation_name,primary_guest_id,guests:primary_guest_id(full_name,phone,email))')
+          .order('received_date', { ascending: false })
+          .limit(500),
+        { scope, reservationId },
+      ),
+    ])
     setReservations(rs || [])
     setPayments(pm || [])
   }
 
-  useEffect(() => { loadAll() }, [])
+  useEffect(() => { loadAll() }, [scope, reservationId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const flash = (text, kind = 'ok') => {
     setMsg(text); setMsgKind(kind)
@@ -64,6 +77,9 @@ export default function ReservationPayments({ userName, isAdmin }) {
   const addPayment = async () => {
     if (!f.reservation_id) { flash('Select a reservation first.', 'err'); return }
     if (!f.amount || +f.amount <= 0) { flash('Enter a valid amount.', 'err'); return }
+    const validationErrors = validatePaymentMethodDetails(f)
+    setMethodErrors(validationErrors)
+    if (Object.keys(validationErrors).length) { flash('Complete the required payment method details.', 'err'); return }
 
     setBusy(true)
     const paymentNo = await generateReservationPaymentNo()
@@ -76,10 +92,20 @@ export default function ReservationPayments({ userName, isAdmin }) {
       received_by: f.received_by || userName,
       paid_by_party: f.paid_by_party || null,
       payment_class: f.payment_class || 'SETTLEMENT',
+      source_module: sourceModule,
+      bank_account_id: f.bank_account_id || null,
+      card_type: f.card_type || null,
+      cheque_number: f.cheque_number || null,
+      cheque_date: f.cheque_date || null,
+      pos_terminal_id: f.pos_terminal_id || null,
+      payer_bank_name: f.payer_bank_name || null,
+      payer_branch_name: f.payer_branch_name || null,
+      payer_routing_number: f.payer_routing_number || null,
     })
     setBusy(false)
     if (error) { flash(error.message, 'err'); return }
-    setF({ reservation_id: '', amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName, paid_by_party: '', payment_class: 'SETTLEMENT' })
+    setF({ reservation_id: reservationId || '', amount: '', method: 'CASH', reference: '', received_date: todayISO(), received_by: userName, paid_by_party: '', payment_class: 'SETTLEMENT', bank_account_id: '', card_type: '', cheque_number: '', cheque_date: '', pos_terminal_id: '', payer_bank_name: '', payer_branch_name: '', payer_routing_number: '' })
+    setMethodErrors({})
     await loadAll()
     flash('Reservation payment recorded.')
   }
@@ -95,12 +121,22 @@ export default function ReservationPayments({ userName, isAdmin }) {
       received_date: pm.received_date || todayISO(),
       paid_by_party: pm.paid_by_party || '',
       payment_class: pm.payment_class || 'SETTLEMENT',
+      bank_account_id: pm.bank_account_id || '',
+      card_type: pm.card_type || '',
+      cheque_number: pm.cheque_number || '',
+      cheque_date: pm.cheque_date || '',
+      pos_terminal_id: pm.pos_terminal_id || '',
+      payer_bank_name: pm.payer_bank_name || '',
+      payer_branch_name: pm.payer_branch_name || '',
+      payer_routing_number: pm.payer_routing_number || '',
     })
   }
 
   const saveEdit = async () => {
     if (!editRow) return
     if (!editForm.amount || +editForm.amount <= 0) { flash('Enter a valid amount.', 'err'); return }
+    const validationErrors = validatePaymentMethodDetails(editForm)
+    if (Object.keys(validationErrors).length) { flash('Complete the required payment method details.', 'err'); return }
     const parsedCurrent = parsePaymentReference(editRow.reference)
     const paymentNo = parsedCurrent.paymentNo || await generateReservationPaymentNo()
     const { error } = await supabase.from('payments').update({
@@ -110,6 +146,14 @@ export default function ReservationPayments({ userName, isAdmin }) {
       received_date: editForm.received_date,
       paid_by_party: editForm.paid_by_party || null,
       payment_class: editForm.payment_class || 'SETTLEMENT',
+      bank_account_id: editForm.bank_account_id || null,
+      card_type: editForm.card_type || null,
+      cheque_number: editForm.cheque_number || null,
+      cheque_date: editForm.cheque_date || null,
+      pos_terminal_id: editForm.pos_terminal_id || null,
+      payer_bank_name: editForm.payer_bank_name || null,
+      payer_branch_name: editForm.payer_branch_name || null,
+      payer_routing_number: editForm.payer_routing_number || null,
     }).eq('id', editRow.id)
     if (error) { flash(error.message || 'Update failed.', 'err'); return }
     setEditRow(null)
@@ -321,6 +365,9 @@ export default function ReservationPayments({ userName, isAdmin }) {
               placeholder="Method…"
             />
           </div>
+          <div className="sm:col-span-2 lg:col-span-4">
+            <PaymentMethodFields value={f} onChange={(next) => { setF(next); setMethodErrors({}) }} errors={methodErrors} disabled={busy} />
+          </div>
           <div>
             <label className="label !text-xs">Payment class</label>
             <SearchableSelect
@@ -441,6 +488,9 @@ export default function ReservationPayments({ userName, isAdmin }) {
               <div>
                 <label className="label !text-xs">Method</label>
                 <SearchableSelect value={editForm.method} onChange={(v) => setEditForm({ ...editForm, method: v })} options={['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK_TRANSFER', 'CHEQUE', 'OTHER']} placeholder="Method…" />
+              </div>
+              <div className="col-span-2">
+                <PaymentMethodFields value={editForm} onChange={setEditForm} disabled={busy} />
               </div>
               <div>
                 <label className="label !text-xs">Payment class</label>

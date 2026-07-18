@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Users, UserCheck, CalendarClock, ClipboardList } from 'lucide-react'
 import { supabase } from '../../supabase'
 import { todayISO } from '../../lib/helpers'
-import { runSingleFlight } from '../../lib/singleFlight'
 import { HR_TABS } from './hr.config'
 import { useHrTabs } from './hooks/useHrTabs'
 import EmployeesTab        from './tabs/EmployeesTab'
@@ -18,11 +17,11 @@ function KpiStrip() {
   useEffect(() => {
     const load = async () => {
       const today = todayISO()
-      const [{ count: headcount }, { data: att }, { count: pendingLeave }] = await runSingleFlight(`hr:kpis:${today}`, () => Promise.all([
+      const [{ count: headcount }, { data: att }, { count: pendingLeave }] = await Promise.all([
         supabase.from('employees').select('id', { count: 'exact', head: true }).eq('status', 'ACTIVE'),
         supabase.from('attendance_records').select('status').eq('att_date', today),
         supabase.from('leave_applications').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
-      ]))
+      ])
       const present = (att || []).filter((r) => r.status === 'P').length
       const total   = (att || []).length
       setKpi({ headcount, present, total, pendingLeave })

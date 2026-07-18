@@ -19,23 +19,19 @@ import { cn } from 'src/lib/utils'
  * }} props
  */
 export default function KpiStrip({ items = [], loading = false, className }) {
-  const uniqueItems = Array.from(
-    new Map(items.filter(Boolean).map((item) => [item.id || item.label, item])).values()
-  )
+  if (!items.length) return null
 
-  if (!uniqueItems.length) return null
-
-  const desktopColumnsClass = uniqueItems.length >= 4
+  const desktopColumnsClass = items.length >= 4
     ? 'lg:grid-cols-4'
-    : uniqueItems.length === 3
+    : items.length === 3
       ? 'lg:grid-cols-3'
-      : uniqueItems.length === 2
+      : items.length === 2
         ? 'lg:grid-cols-2'
         : 'lg:grid-cols-1'
 
   return (
     <div className={cn('grid gap-3 sm:grid-cols-2', desktopColumnsClass, className)}>
-      {uniqueItems.map((item) => {
+      {items.map((item, index) => {
         const Icon = item.icon
         const isLoading = loading || item.loading
         const trendText = item.trend === undefined || item.trend === null ? null : String(item.trend)
@@ -43,7 +39,7 @@ export default function KpiStrip({ items = [], loading = false, className }) {
         const TrendIcon = trendLower === 'up' ? TrendingUp : trendLower === 'down' ? TrendingDown : null
 
         return (
-          <Card key={item.id || item.label} size="sm">
+          <Card key={`${item.label}-${index}`} size="sm">
             <CardContent className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-xs text-muted-foreground">{item.label}</p>

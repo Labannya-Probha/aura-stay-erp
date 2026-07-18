@@ -18,9 +18,7 @@ import { cn } from 'src/lib/utils'
  * }} props
  */
 export default function ModuleTabs({ tabs = [], activeTab, onChange, className }) {
-  const visibleTabs = Array.from(
-    new Map(tabs.filter((tab) => tab && !tab.hidden).map((tab) => [tab.id, tab])).values()
-  )
+  const visibleTabs = tabs.filter((tab) => !tab.hidden)
   if (!visibleTabs.length) return null
 
   return (

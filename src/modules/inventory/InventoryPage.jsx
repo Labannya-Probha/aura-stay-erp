@@ -7,7 +7,6 @@ import KpiStrip from "../../components/layout/KpiStrip"
 import { Button } from "../../components/ui/button"
 
 import { supabase } from "../../supabase"
-import { runSingleFlight } from "../../lib/singleFlight"
 import { useInventoryTabs } from "./hooks/useInventoryTabs"
 import { INVENTORY_TABS } from "./inventory.config"
 
@@ -38,7 +37,7 @@ export default function InventoryPage({
 
       try {
         const [itemsRes, vendorsRes, reqRes, poRes] =
-          await runSingleFlight(`inventory:kpis:${refreshKey}`, () => Promise.all([
+          await Promise.all([
             supabase
               .from("inv_items")
               .select("id", { head: true, count: "exact" }),
@@ -51,7 +50,7 @@ export default function InventoryPage({
             supabase
               .from("purchase_orders")
               .select("id", { head: true, count: "exact" }),
-          ]))
+          ])
 
         const error =
           itemsRes.error ||
