@@ -33,6 +33,9 @@ export const PATHS = {
   MENU_MANAGEMENT: '/menu-management',
   POS_PRINT_CENTER: '/pos/print-center',
   VERIFY_BILL: '/verify/pos/:id',
+  VERIFY_INVOICE: '/verify/invoice/:id',
+  VERIFY_PAYMENT: '/verify/payment/:id',
+  PREVIEW_RESERVATION_PAYMENT_RECEIPT: '/preview/reservation-payment-receipt',
 
   // Inventory
   INVENTORY: '/inventory',

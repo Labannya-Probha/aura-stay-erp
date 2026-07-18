@@ -7,10 +7,13 @@ import { generateReservationPaymentNo, parsePaymentReference, toPaymentReference
 import { logAudit } from '../lib/pms.api.js'
 import PaymentMethodFields, { validatePaymentMethodDetails } from '../components/payments/PaymentMethodFields.jsx'
 import { applyPaymentScope, PAYMENT_SCOPES } from '../components/payments/paymentScope.js'
+import { getCompanySettingsQuery } from '../lib/companySettings'
 import { Button } from '../components/ui/button.jsx'
 import { Input } from '../components/ui/input.jsx'
 import { Textarea } from '../components/ui/textarea.jsx'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table.jsx'
+import PrintPortal from '../components/PrintPortal.jsx'
+import ReservationPaymentReceipt from '../components/print/ReservationPaymentReceipt.jsx'
 
 export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT_SCOPES.ACCOUNTING, reservationId = null, sourceModule = 'RESERVATIONS' }) {
   const [reservations, setReservations] = useState([])
@@ -49,6 +52,8 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
     open: false, channel: 'WHATSAPP', to: '', subject: '', body: '', file: null, payment: null,
   })
   const [sendBusy, setSendBusy] = useState(false)
+  const [printPaymentDoc, setPrintPaymentDoc] = useState(null)
+  const [company, setCompany] = useState(null)
   const fileInputClass = 'h-8 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
 
   const loadAll = async () => {
@@ -61,7 +66,7 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
       applyPaymentScope(
         supabase
           .from('payments')
-          .select('id,payment_id,reservation_id,received_date,amount,method,reference,received_by,paid_by_party,payment_class,source_module,bank_account_id,card_type,cheque_number,cheque_date,pos_terminal_id,payer_bank_name,payer_branch_name,payer_routing_number,reservations(res_no,reservation_name,primary_guest_id,guests:primary_guest_id(full_name,phone,email))')
+          .select('id,payment_id,reservation_id,received_date,amount,method,reference,received_by,paid_by_party,payment_class,source_module,bank_account_id,card_type,cheque_number,cheque_date,pos_terminal_id,payer_bank_name,payer_branch_name,payer_routing_number,reservations(res_no,reservation_name,check_in,check_out,primary_guest_id,guests:primary_guest_id(full_name,phone,email),reservation_rooms(rooms(room_no)))')
           .order('received_date', { ascending: false })
           .limit(500),
         { scope, reservationId },
@@ -69,6 +74,13 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
     ])
     setReservations(rs || [])
     setPayments(pm || [])
+
+    const { data: companyRow } = await getCompanySettingsQuery(
+      'tenant_id,tenant_name,name,company_name,address,phone,email,tin,bin,logo_url,software_name,primary_color,accent_color,secondary_color'
+    )
+      .limit(1)
+      .maybeSingle()
+    setCompany(companyRow || null)
   }
 
   useEffect(() => { loadAll() }, [scope, reservationId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -177,32 +189,8 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
 
   // ── Print ───────────────────────────────────────────────────────
   const printPayment = (pm) => {
-    const parsed = parsePaymentReference(pm.reference)
-    const resName = pm.reservations?.reservation_name || pm.reservations?.guests?.full_name || '—'
-    const html = `<!doctype html><html><head><title>Payment Receipt</title><style>
-      body{font-family:Arial,sans-serif;padding:32px;max-width:480px;margin:auto}
-      h2{margin-bottom:4px}p{margin:6px 0}hr{border:none;border-top:1px solid #ccc;margin:12px 0}
-      .amt{font-size:1.4rem;font-weight:700;margin-top:12px}
-    </style></head><body>
-      <h2>Payment Receipt</h2>
-      <hr/>
-      <p><b>Reservation:</b> ${pm.reservations?.res_no || '—'} — ${resName}</p>
-      <p><b>Payment ID:</b> ${parsed.paymentNo || 'N/A'}</p>
-      <p><b>Date:</b> ${pm.received_date || '—'}</p>
-      <p><b>Paid by:</b> ${pm.paid_by_party || pm.received_by || '—'}</p>
-      <p><b>Method:</b> ${pm.method || '—'}</p>
-      <p><b>Class:</b> ${pm.payment_class || 'SETTLEMENT'}</p>
-      <p><b>Reference:</b> ${parsed.reference || '—'}</p>
-      <hr/>
-      <p class="amt">Amount: ${fmtBDT(Number(pm.amount || 0))}</p>
-    </body></html>`
-    const w = window.open('', '_blank', 'width=640,height=760')
-    if (!w) return
-    w.document.write(html)
-    w.document.close()
-    w.focus()
-    w.print()
-    flash('Print sent.')
+    setPrintPaymentDoc(pm)
+    flash('Opening print preview...')
   }
 
   // ── Send (WhatsApp / Email) ──────────────────────────────────────
@@ -578,6 +566,19 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
             </div>
           </div>
         </div>
+      )}
+
+      {printPaymentDoc && (
+        <PrintPortal
+          title={`Reservation Payment Receipt — ${parsePaymentReference(printPaymentDoc.reference).paymentNo || printPaymentDoc.id}`}
+          type="A4"
+          autoPrint
+          onClose={() => setPrintPaymentDoc(null)}
+          primaryColor={company?.primary_color}
+          accentColor={company?.accent_color}
+        >
+          <ReservationPaymentReceipt payment={printPaymentDoc} company={company} />
+        </PrintPortal>
       )}
     </div>
   )

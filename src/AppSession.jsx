@@ -10,7 +10,13 @@ import { getTenantId, setTenantId } from "./lib/tenant"
 import { PATHS } from "./app/paths"
 
 import Login from "./components/Login.jsx"
-import { GuestPosKiosk, VerifyBillPage as VerifyBill } from "./modules/public/routePages.jsx"
+import {
+  GuestPosKiosk,
+  VerifyBillPage as VerifyBill,
+  VerifyInvoicePage as VerifyInvoice,
+  VerifyPaymentPage as VerifyPayment,
+  PreviewReservationPaymentReceiptPage as PreviewReservationPaymentReceipt,
+} from "./modules/public/routePages.jsx"
 import AppShell from "./AppLayout.jsx"
 
 const TENANT_BRANDING_FIELDS = [
@@ -266,6 +272,9 @@ export default function AppSession() {
 
   if (!session && location.pathname.startsWith(PATHS.GUEST_KIOSK)) return <GuestPosKiosk />
   if (!session && location.pathname.startsWith(PATHS.VERIFY_BILL.replace(":id", ""))) return <VerifyBill />
+  if (!session && location.pathname.startsWith(PATHS.VERIFY_INVOICE.replace(":id", ""))) return <VerifyInvoice />
+  if (!session && location.pathname.startsWith(PATHS.VERIFY_PAYMENT.replace(":id", ""))) return <VerifyPayment />
+  if (!session && location.pathname === PATHS.PREVIEW_RESERVATION_PAYMENT_RECEIPT) return <PreviewReservationPaymentReceipt />
   if (!session) return <Login />
 
   if (!profile) {

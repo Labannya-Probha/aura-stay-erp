@@ -3,9 +3,9 @@ export function getCompanyLogo(company) {
 }
 
 export function getCompanyName(company) {
-  return company?.software_name || company?.name || "Aura Stay"
+  return company?.software_name || company?.company_name || company?.name || "Company"
 }
 
 export function getTenantDisplayName(company) {
-  return company?.name || company?.tenant_name || "Aura Stay"
+  return company?.tenant_name || company?.name || "Tenant"
 }
