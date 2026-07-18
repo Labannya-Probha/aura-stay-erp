@@ -1,9 +1,10 @@
 import { X } from 'lucide-react'
 import SidebarBrandLogo from './SidebarBrandLogo.jsx'
+import { SidebarHeader as SidebarHeaderPrimitive } from 'src/components/ui/sidebar'
 
 export default function SidebarHeader({ company, softwareName, mobile = false, onClose }) {
   return (
-    <div className="flex items-center gap-3 border-b border-white/15 px-5 py-5">
+    <SidebarHeaderPrimitive>
       <SidebarBrandLogo url={company?.logo_url} softwareName={softwareName} />
 
       <div className="min-w-0 flex-1">
@@ -20,6 +21,6 @@ export default function SidebarHeader({ company, softwareName, mobile = false, o
           <X size={20} />
         </button>
       )}
-    </div>
+    </SidebarHeaderPrimitive>
   )
 }

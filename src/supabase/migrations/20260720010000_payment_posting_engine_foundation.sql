@@ -1,8 +1,5 @@
--- PostgreSQL (Supabase) migration.
 -- AEDS PR03.2 Commit-5: tenant-safe payment posting engine foundation.
 -- Additive and idempotent. It does not auto-post legacy payments.
-
-create extension if not exists pgcrypto;
 
 create table if not exists public.payment_posting_rules (
   id uuid primary key default gen_random_uuid(),

@@ -1,6 +1,15 @@
 import * as React from "react"
-import { CheckIcon, ChevronDownIcon, SearchIcon, XIcon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react"
 import { cn } from "src/lib/utils"
+import { Popover, PopoverContent, PopoverTrigger } from "src/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "src/components/ui/command"
 
 function normalizeItem(item) {
   if (typeof item === "string") {
@@ -21,23 +30,6 @@ function itemMatchesQuery(item, query) {
   return haystack.includes(query.toLowerCase())
 }
 
-function useClickOutside(ref, handler) {
-  React.useEffect(() => {
-    function onPointerDown(event) {
-      if (!ref.current || ref.current.contains(event.target)) return
-      handler()
-    }
-
-    document.addEventListener("mousedown", onPointerDown)
-    document.addEventListener("touchstart", onPointerDown)
-
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown)
-      document.removeEventListener("touchstart", onPointerDown)
-    }
-  }, [ref, handler])
-}
-
 function Combobox({
   items = [],
   value,
@@ -52,6 +44,12 @@ function Combobox({
   onCreate,
   createLabel = "Create",
   closeOnSelect = true,
+  searchValue,
+  onSearchValueChange,
+  isLoading = false,
+  loadingText = "Searching...",
+  triggerClassName,
+  contentClassName,
 }) {
   const normalizedItems = React.useMemo(() => items.map(normalizeItem), [items])
   const selectedItem = React.useMemo(
@@ -60,25 +58,30 @@ function Combobox({
   )
 
   const [open, setOpen] = React.useState(false)
-  const [query, setQuery] = React.useState("")
+  const [internalQuery, setInternalQuery] = React.useState("")
   const [creating, setCreating] = React.useState(false)
-  const rootRef = React.useRef(null)
-  const inputRef = React.useRef(null)
+  const query = searchValue ?? internalQuery
 
-  useClickOutside(rootRef, () => setOpen(false))
+  const setQuery = React.useCallback(
+    (nextValue) => {
+      if (onSearchValueChange) {
+        onSearchValueChange(nextValue)
+        return
+      }
+
+      setInternalQuery(nextValue)
+    },
+    [onSearchValueChange]
+  )
 
   React.useEffect(() => {
     if (!open) {
-      setQuery("")
+      if (searchValue === undefined) {
+        setInternalQuery("")
+      }
       setCreating(false)
     }
-  }, [open])
-
-  React.useEffect(() => {
-    if (open) {
-      inputRef.current?.focus()
-    }
-  }, [open])
+  }, [open, searchValue])
 
   const filteredItems = React.useMemo(
     () => normalizedItems.filter((item) => itemMatchesQuery(item, query)),
@@ -127,90 +130,100 @@ function Combobox({
   }
 
   return (
-    <div ref={rootRef} className={cn("relative w-full", className)}>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => setOpen((prev) => !prev)}
-        className={cn(
-          "flex h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-left text-sm text-slate-900 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60",
-          open && "ring-2 ring-emerald-500/30"
-        )}>
-        <span className={cn("truncate", !selectedItem && "text-slate-400")}>
-          {selectedItem?.label || placeholder}
-        </span>
-        <span className="ml-2 flex items-center gap-1">
-          {clearable && selectedItem ? (
-            <span
-              role="button"
-              tabIndex={-1}
-              onClick={handleClear}
-              className="rounded p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
-              <XIcon className="size-4" />
+    <Popover open={open} onOpenChange={setOpen}>
+      <div className={cn("w-full", className)}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            disabled={disabled}
+            role="combobox"
+            aria-expanded={open}
+            className={cn(
+              "flex h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-left text-sm text-slate-900 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60",
+              open && "ring-2 ring-emerald-500/30",
+              triggerClassName
+            )}>
+            <span className={cn("truncate", !selectedItem && "text-slate-400")}>
+              {selectedItem?.label || placeholder}
             </span>
-          ) : null}
-          <ChevronDownIcon className="size-4 text-slate-400" />
-        </span>
-      </button>
+            <span className="ml-2 flex items-center gap-1">
+              {clearable && selectedItem ? (
+                <span
+                  role="button"
+                  tabIndex={-1}
+                  onClick={handleClear}
+                  className="rounded p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+                  <XIcon className="size-4" />
+                </span>
+              ) : null}
+              <ChevronDownIcon className="size-4 text-slate-400" />
+            </span>
+          </button>
+        </PopoverTrigger>
 
-      {open ? (
-        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-          <div className="border-b border-slate-100 p-2">
-            <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 focus-within:border-emerald-300 focus-within:bg-white">
-              <SearchIcon className="size-4 shrink-0" />
-              <input
-                ref={inputRef}
+        <PopoverContent
+          align="start"
+          className={cn("z-50 mt-2 w-[var(--radix-popover-trigger-width)] min-w-[220px] overflow-hidden rounded-xl border border-slate-200 bg-white p-0 shadow-xl", contentClassName)}>
+          <Command shouldFilter={false} className="rounded-none bg-transparent p-0" onKeyDown={handleKeyDown}>
+            <div className="border-b border-slate-100 p-2">
+              <CommandInput
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={handleKeyDown}
+                onValueChange={setQuery}
                 placeholder={searchPlaceholder}
-                className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                className="h-8"
               />
-            </label>
-          </div>
+            </div>
 
-          <div className="max-h-64 overflow-y-auto p-1">
-            {filteredItems.map((item) => {
-              const isSelected = item.value === value
+            <CommandList className="max-h-64 p-1">
+              {isLoading ? <div className="px-3 py-2 text-xs font-semibold text-slate-400">{loadingText}</div> : null}
 
-              return (
+              {!isLoading ? (
+                <CommandGroup>
+                  {filteredItems.map((item) => {
+                    const isSelected = item.value === value
+
+                    return (
+                      <CommandItem
+                        key={String(item.value)}
+                        value={`${item.label ?? ""} ${item.sublabel ?? ""} ${item.value ?? ""}`.trim()}
+                        data-checked={isSelected ? "true" : undefined}
+                        onSelect={() => handleSelect(item)}
+                        className={cn(
+                          "flex min-h-8 items-start justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-50",
+                          isSelected && "bg-emerald-50 text-emerald-900"
+                        )}>
+                        <span className="min-w-0">
+                          <span className="block truncate">{item.label}</span>
+                          {item.sublabel ? (
+                            <span className="mt-0.5 block truncate text-xs text-slate-500">{item.sublabel}</span>
+                          ) : null}
+                        </span>
+                        {isSelected ? <CheckIcon className="mt-0.5 size-4 shrink-0" /> : null}
+                      </CommandItem>
+                    )
+                  })}
+                </CommandGroup>
+              ) : null}
+
+              {!isLoading && !filteredItems.length && canCreate ? (
                 <button
-                  key={String(item.value)}
                   type="button"
-                  onClick={() => handleSelect(item)}
-                  className={cn(
-                    "flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-50",
-                    isSelected && "bg-emerald-50 text-emerald-900"
-                  )}>
-                  <span className="min-w-0">
-                    <span className="block truncate">{item.label}</span>
-                    {item.sublabel ? (
-                      <span className="mt-0.5 block truncate text-xs text-slate-500">{item.sublabel}</span>
-                    ) : null}
-                  </span>
-                  {isSelected ? <CheckIcon className="mt-0.5 size-4 shrink-0" /> : null}
+                  onClick={handleCreate}
+                  disabled={creating}
+                  className="m-1 flex w-[calc(100%-0.5rem)] items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-50 disabled:opacity-60">
+                  <span>{createLabel} "{query.trim()}"</span>
+                  {creating ? <span className="text-xs text-slate-500">Saving...</span> : null}
                 </button>
-              )
-            })}
+              ) : null}
 
-            {!filteredItems.length && canCreate ? (
-              <button
-                type="button"
-                onClick={handleCreate}
-                disabled={creating}
-                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-50 disabled:opacity-60">
-                <span>{createLabel} "{query.trim()}"</span>
-                {creating ? <span className="text-xs text-slate-500">Saving...</span> : null}
-              </button>
-            ) : null}
-
-            {!filteredItems.length && !canCreate ? (
-              <div className="px-3 py-6 text-center text-sm text-slate-500">{emptyText}</div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-    </div>
+              {!isLoading && !filteredItems.length && !canCreate ? (
+                <CommandEmpty className="px-3 py-6 text-center text-sm text-slate-500">{emptyText}</CommandEmpty>
+              ) : null}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </div>
+    </Popover>
   )
 }
 

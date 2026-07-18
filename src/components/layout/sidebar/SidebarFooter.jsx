@@ -2,6 +2,7 @@ import { LogOut } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { getTenantId } from '../../../lib/tenant'
 import { ROLE_LABELS } from '../../../lib/roles'
+import { SidebarFooter as SidebarFooterPrimitive } from 'src/components/ui/sidebar'
 
 export default function SidebarFooter({ company, role, userName }) {
   async function handleLogout() {
@@ -19,7 +20,7 @@ export default function SidebarFooter({ company, role, userName }) {
   }
 
   return (
-    <div className="border-t border-white/15 px-5 py-4 text-xs text-white/70">
+    <SidebarFooterPrimitive className="text-xs text-white/70">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="truncate font-semibold text-white">{userName}</div>
@@ -34,6 +35,6 @@ export default function SidebarFooter({ company, role, userName }) {
           <LogOut size={15} />
         </button>
       </div>
-    </div>
+    </SidebarFooterPrimitive>
   )
 }

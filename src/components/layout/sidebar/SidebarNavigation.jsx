@@ -26,6 +26,7 @@ import {
   getVisibleReservationTabs,
   resolveReservationTab,
 } from "../../../modules/reservations/reservations.config"
+import { SidebarContent, SidebarInput } from "src/components/ui/sidebar"
 
 const EXPANDABLE_MODULES = new Set([
   "reservations",
@@ -599,10 +600,12 @@ export default function SidebarNavigation({
   }
 
   return (
-    <nav className="aeds-v6-sidebar-nav flex-1 overflow-y-auto px-3 pb-4 pt-2">
+    <SidebarContent asChild>
+      <nav className="aeds-v6-sidebar-nav px-3 pb-4 pt-2">
       <div className="aeds-v6-sidebar-search">
         <Search size={15} aria-hidden="true" />
-        <input
+        <SidebarInput
+          className="h-8 border-white/15 bg-white/10 text-white placeholder:text-white/55"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           placeholder="Find module or page"
@@ -722,6 +725,7 @@ export default function SidebarNavigation({
             No matching module or page.
           </div>
         )}
-    </nav>
+      </nav>
+    </SidebarContent>
   )
 }
