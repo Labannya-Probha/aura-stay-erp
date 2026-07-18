@@ -7,7 +7,7 @@ const Table = React.forwardRef(({ className, ...props }, ref) => (
     <table
       ref={ref}
       data-slot="table"
-      className={cn("w-full caption-bottom text-sm", className)}
+      className={cn("w-full caption-bottom text-sm text-foreground", className)}
       {...props}
     />
   </div>
@@ -15,7 +15,7 @@ const Table = React.forwardRef(({ className, ...props }, ref) => (
 Table.displayName = "Table"
 
 const TableHeader = React.forwardRef(({ className, ...props }, ref) => (
-  <thead ref={ref} data-slot="table-header" className={cn("[&_tr]:border-b", className)} {...props} />
+  <thead ref={ref} data-slot="table-header" className={cn("bg-muted/40 [&_tr]:border-b", className)} {...props} />
 ))
 TableHeader.displayName = "TableHeader"
 
@@ -43,7 +43,7 @@ const TableRow = React.forwardRef(({ className, ...props }, ref) => (
   <tr
     ref={ref}
     data-slot="table-row"
-    className={cn("border-b transition-colors hover:bg-muted/40 data-[state=selected]:bg-muted", className)}
+    className={cn("border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted/80", className)}
     {...props}
   />
 ))
@@ -53,14 +53,14 @@ const TableHead = React.forwardRef(({ className, ...props }, ref) => (
   <th
     ref={ref}
     data-slot="table-head"
-    className={cn("h-10 px-2 text-left align-middle font-semibold text-muted-foreground", className)}
+    className={cn("h-11 px-3 text-left align-middle text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground", className)}
     {...props}
   />
 ))
 TableHead.displayName = "TableHead"
 
 const TableCell = React.forwardRef(({ className, ...props }, ref) => (
-  <td ref={ref} data-slot="table-cell" className={cn("p-2 align-middle", className)} {...props} />
+  <td ref={ref} data-slot="table-cell" className={cn("px-3 py-3 align-middle", className)} {...props} />
 ))
 TableCell.displayName = "TableCell"
 
