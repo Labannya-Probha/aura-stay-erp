@@ -54,6 +54,7 @@ import PosPrintCenterPage from './modules/restaurant/PosPrintCenterPage.jsx'
 import RestaurantPage from './modules/restaurant/RestaurantPage.jsx'
 import { getVisibleReservationTabs } from './modules/reservations/reservations.config'
 import { DEFAULT_MASTER_DATA_TAB, MASTER_DATA_LEGACY_TAB_MAP } from './modules/master-data/masterData.config'
+import { PaymentConfigurationPage,} from "./modules/accounting/payment-configuration";
 
 function CmsLegacyRedirect() {
   const location = useLocation()
@@ -246,6 +247,11 @@ export default function AppRoutes({
           <VendorPaymentPage role={role} />
         </SaasModuleRoute>
       } />
+      <Route path={PATHS.ACCOUNTING_PAYMENT_CONFIGURATION} element={
+        <SaasModuleRoute moduleId="accounting" role={role} navId="accounting" privileges={privileges} modulesEnabled={modulesEnabled} company={company} userName={userName}>
+            <PaymentConfigurationPage />
+        </SaasModuleRoute>
+     }  />
 
       {/* HR & Payroll */}
       <Route path="/hr" element={<Navigate to="/hr/employee-entry" replace />} />

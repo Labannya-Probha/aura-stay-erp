@@ -49,6 +49,7 @@ export const PATHS = {
   ACCOUNTING_VENDOR_PAYMENTS: '/accounting/vendor-payments',
   VAT: '/vat',
   VAT_RETURN: '/vat-return',
+  ACCOUNTING_PAYMENT_CONFIGURATION: '/accounting/payment-configuration',
 
   // HR
   HR: '/hr',
