@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
-import { SUPABASE_CONFIGURED } from './supabase.js'
+import { SUPABASE_CONFIGURED } from './lib/supabase.js'
 import { ToastProvider } from './components/Toast'
 import { PopoverProvider } from './contexts/PopoverContext'
 import { AedsDialogProvider } from "./components/dialog-engine"
