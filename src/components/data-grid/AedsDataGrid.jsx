@@ -411,11 +411,11 @@ export default function AedsDataGrid({
   }
 
   return (
-    <section className="aeds-grid-card">
-      <header className="aeds-grid-header">
+    <section className="aeds-grid-card rounded-3xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.05)]">
+      <header className="aeds-grid-header border-b border-slate-200 px-5 py-4">
         <div>
-          <h2>{title}</h2>
-          <p>
+          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+          <p className="text-sm text-slate-500">
             {subtitle} ·{" "}
             {processedRows.length.toLocaleString("en-BD")}{" "}
             row(s)
@@ -441,8 +441,8 @@ export default function AedsDataGrid({
         </div>
       )}
 
-      <div className="aeds-grid-wrap">
-        <Table className="aeds-grid-table">
+      <div className="aeds-grid-wrap overflow-x-auto">
+        <Table className="aeds-grid-table min-w-full text-sm">
           <TableHeader>
             <TableRow>
               {visibleColumns.map(
@@ -657,12 +657,14 @@ export default function AedsDataGrid({
         </Table>
       </div>
 
-      <AedsDataGridPagination
-        page={page}
-        pageSize={pageSize}
-        totalRows={processedRows.length}
-        setPage={setPage}
-      />
+      <div className="border-t border-slate-200 px-5 py-4">
+        <AedsDataGridPagination
+          page={page}
+          pageSize={pageSize}
+          totalRows={processedRows.length}
+          setPage={setPage}
+        />
+      </div>
     </section>
   )
 }
