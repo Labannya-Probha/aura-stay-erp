@@ -360,10 +360,14 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
+    align-items: stretch;
+    justify-content: flex-start;
   }
 
   .tab-button-responsive {
     min-width: 0;
+    justify-content: flex-start;
+    text-align: left;
   }
 
   @media (max-width: 640px) {
@@ -377,13 +381,14 @@
 
     .tab-strip-responsive > .tab-button-responsive {
       width: 100%;
-      justify-content: center;
-      text-align: center;
+      justify-content: flex-start;
+      text-align: left;
       white-space: normal !important;
       border-bottom-width: 1px !important;
-      border-radius: 0.75rem;
+      border-radius: 0.95rem;
       margin-bottom: 0 !important;
       line-height: 1.2;
+      padding: 0.85rem 0.95rem !important;
     }
   }
 
