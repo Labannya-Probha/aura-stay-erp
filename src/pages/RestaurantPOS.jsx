@@ -15,6 +15,7 @@ import { Plus, Minus, Trash2, ChefHat, Banknote, BedDouble, Search, Save, XCircl
 import '../styles/aeds-v6-workspaces.css'
 import '../styles/aeds-v6-restaurant.css'
 import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
+import { LegacyButton } from '../components/ui/legacy-controls'
 
 const TABS = ['Orders', 'Menu', 'Day Close']
 const PAYMENT_METHODS = ['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER']
@@ -190,9 +191,9 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
       </div>
       {tab === 'Orders' && showOrderBuilder && (
         <div className="mb-3">
-          <button className="btn-ghost !py-1" onClick={() => { setShowOrderBuilder(false); setEditOrder(null); setDraftSeed(null) }}>
+          <LegacyButton variant="ghost" size="xs" onClick={() => { setShowOrderBuilder(false); setEditOrder(null); setDraftSeed(null) }}>
             <RotateCcw size={13} /> Back to orders
-          </button>
+          </LegacyButton>
         </div>
       )}
       {tab === 'Orders' && showOrderBuilder && <OrderBuilder key={editOrder?.order?.id || draftSeed?.table_no || 'new'} cats={cats} items={items} taxConfig={taxConfig} userName={userName} existing={editOrder} draftSeed={draftSeed} flash={flash} setPrintDoc={setPrintDoc} onDone={finishOrderFlow} />}
@@ -495,7 +496,7 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row gap-2 mb-2">
-              <button className="btn-ghost flex-1 justify-center !py-1.5 text-xs" onClick={() => setShowPicker(true)}><BedDouble size={14} /> Link in-house guest</button>
+              <LegacyButton variant="ghost" size="xs" className="flex-1 justify-center text-xs" onClick={() => setShowPicker(true)}><BedDouble size={14} /> Link in-house guest</LegacyButton>
               <input className="input flex-1 !py-1.5 text-xs" placeholder="Walk-in name (optional)" value={link.guest_name} onChange={(e) => setLink({ ...link, guest_name: e.target.value })} />
             </div>
           )}
@@ -567,17 +568,17 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
               </div>
             )
           })()}
-          <button className="btn-primary w-full justify-center" onClick={payNow} disabled={busy}><Banknote size={16} /> Pay now</button>
-          <button className="btn-ghost w-full justify-center" onClick={saveDraft} disabled={busy}><Save size={16} /> Save draft / hold table</button>
-          <button className="btn-amber w-full justify-center" onClick={chargeToRoom} disabled={busy || !link.reservation_id}><BedDouble size={16} /> Charge to room</button>
+          <LegacyButton className="w-full justify-center" onClick={payNow} disabled={busy}><Banknote size={16} /> Pay now</LegacyButton>
+          <LegacyButton variant="ghost" className="w-full justify-center" onClick={saveDraft} disabled={busy}><Save size={16} /> Save draft / hold table</LegacyButton>
+          <LegacyButton variant="amber" className="w-full justify-center" onClick={chargeToRoom} disabled={busy || !link.reservation_id}><BedDouble size={16} /> Charge to room</LegacyButton>
           <div className="border-t border-leaf pt-2 space-y-1">
             <div className="text-xs font-semibold text-pine">Staff / Shareholder Due</div>
             <div className="flex gap-2">
               <input className="input flex-1 !py-1.5 text-xs" placeholder="Staff / shareholder name" value={staffDueName} onChange={(e) => setStaffDueName(e.target.value)} />
-              <button className="btn-ghost !py-1.5 !px-3 text-xs whitespace-nowrap" onClick={chargeAsStaffDue} disabled={busy || !staffDueName.trim()}>Add Due</button>
+              <LegacyButton variant="ghost" size="xs" className="text-xs whitespace-nowrap" onClick={chargeAsStaffDue} disabled={busy || !staffDueName.trim()}>Add Due</LegacyButton>
             </div>
           </div>
-          <button className="btn-ghost w-full justify-center" onClick={() => {
+          <LegacyButton variant="ghost" className="w-full justify-center" onClick={() => {
             if (!guard()) return
             const orderPreview = {
               order_type: meta.order_type,
@@ -601,8 +602,8 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
               created_by: userName,
             }
             setPrintDoc({ type: 'RECEIPT', order: orderPreview, items: cart.map((c) => ({ item_name: c.item_name, qty: c.qty, unit_price: c.unit_price, line_total: +(c.qty * c.unit_price).toFixed(2) })), mushakNo: null })
-          }} disabled={busy}><Receipt size={16} /> Preview Bill</button>
-          <button className="btn-ghost w-full justify-center" onClick={generateKOT} disabled={busy}><ChefHat size={16} /> Generate KOT</button>
+          }} disabled={busy}><Receipt size={16} /> Preview Bill</LegacyButton>
+          <LegacyButton variant="ghost" className="w-full justify-center" onClick={generateKOT} disabled={busy}><ChefHat size={16} /> Generate KOT</LegacyButton>
         </div>
       </div>
       {showPicker && <GuestPicker close={() => setShowPicker(false)} pick={(g) => { setLink(g); setShowPicker(false) }} />}
@@ -617,10 +618,10 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
               <div className="flex justify-between text-amber font-semibold"><span>Change</span><span className="money">{fmtBDT(changeConfirmation.change)}</span></div>
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <button className="btn-ghost !py-1.5" onClick={() => setChangeConfirmation(null)} disabled={busy}>Cancel</button>
-              <button className="btn-primary !py-1.5" onClick={() => settlePaidOrder(changeConfirmation.paidMethods, changeConfirmation.totalPaid)} disabled={busy}>
+              <LegacyButton variant="ghost" size="xs" onClick={() => setChangeConfirmation(null)} disabled={busy}>Cancel</LegacyButton>
+              <LegacyButton size="xs" onClick={() => settlePaidOrder(changeConfirmation.paidMethods, changeConfirmation.totalPaid)} disabled={busy}>
                 {busy ? 'Processing…' : 'Confirm & Print Bill'}
-              </button>
+              </LegacyButton>
             </div>
           </div>
         </div>
@@ -721,8 +722,8 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
       </div>
       <div className="flex gap-2 mb-3">
         {['TODAY', 'OPEN', 'ALL'].map((f) => (<button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${filter === f ? 'bg-pine text-white' : 'bg-white border border-leaf text-pine/70'}`}>{f}</button>))}
-        <button className="btn-primary !py-1 ml-auto" onClick={() => onNewOrder?.()}><Plus size={14} /> New Order</button>
-        <button className="btn-ghost !py-1" onClick={load}><RotateCcw size={13} /> Refresh</button>
+        <LegacyButton size="xs" className="ml-auto" onClick={() => onNewOrder?.()}><Plus size={14} /> New Order</LegacyButton>
+        <LegacyButton variant="ghost" size="xs" onClick={load}><RotateCcw size={13} /> Refresh</LegacyButton>
       </div>
       <AedsDataGrid
         title="POS Orders"
@@ -757,8 +758,10 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
 
               return (
                 <div className="flex justify-end gap-1 flex-wrap">
-                  <button
-                    className="btn-ghost !py-1 !px-2 text-forest"
+                  <LegacyButton
+                    variant="ghost"
+                    size="xs"
+                    className="text-forest"
                     onClick={(event) => {
                       event.stopPropagation()
                       printReceipt(row)
@@ -766,11 +769,13 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
                     title="Print receipt"
                   >
                     <Receipt size={14} />
-                  </button>
+                  </LegacyButton>
 
                   {row.status !== 'CANCELLED' && (
-                    <button
-                      className="btn-ghost !py-1 !px-2 text-amber"
+                    <LegacyButton
+                      variant="ghost"
+                      size="xs"
+                      className="text-amber"
                       onClick={(event) => {
                         event.stopPropagation()
                         printKot(row)
@@ -778,12 +783,14 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
                       title="Print KOT"
                     >
                       <ChefHat size={14} />
-                    </button>
+                    </LegacyButton>
                   )}
 
                   {workflow && (
-                    <button
-                      className={`btn-ghost !py-1 !px-2 text-xs font-semibold border ${workflow.cls}`}
+                    <LegacyButton
+                      variant="ghost"
+                      size="xs"
+                      className={`text-xs font-semibold border ${workflow.cls}`}
                       onClick={async (event) => {
                         event.stopPropagation()
                         await advanceOrderStatus(
@@ -797,12 +804,14 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
                       title={`Mark as ${workflow.nextStatus}`}
                     >
                       {workflow.label}
-                    </button>
+                    </LegacyButton>
                   )}
 
                   {row.invoice_id && (
-                    <button
-                      className="btn-ghost !py-1 !px-2 text-pine"
+                    <LegacyButton
+                      variant="ghost"
+                      size="xs"
+                      className="text-pine"
                       onClick={(event) => {
                         event.stopPropagation()
                         printMushak(row)
@@ -810,12 +819,14 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
                       title="Print Mushak-6.3"
                     >
                       <FileText size={14} />
-                    </button>
+                    </LegacyButton>
                   )}
 
                   {canEdit(row) && (
-                    <button
-                      className="btn-ghost !py-1 !px-2 text-forest"
+                    <LegacyButton
+                      variant="ghost"
+                      size="xs"
+                      className="text-forest"
                       onClick={(event) => {
                         event.stopPropagation()
                         resumeOrder(row)
@@ -823,12 +834,14 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
                       title="Edit order"
                     >
                       Edit
-                    </button>
+                    </LegacyButton>
                   )}
 
                   {isAdmin && row.status === 'SETTLED' && (
-                    <button
-                      className="btn-ghost !py-1 !px-2 text-red-500"
+                    <LegacyButton
+                      variant="ghost"
+                      size="xs"
+                      className="text-red-500"
                       onClick={(event) => {
                         event.stopPropagation()
                         voidOrder(row)
@@ -836,7 +849,7 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
                       title="Void order"
                     >
                       <XCircle size={14} />
-                    </button>
+                    </LegacyButton>
                   )}
                 </div>
               )
@@ -883,7 +896,7 @@ function MenuManager({ cats, items, reload, isAdmin }) {
         {isAdmin ? (
           <div className="flex gap-2 mb-3">
             <input className="input flex-1" placeholder="New category" value={nc} onChange={(e) => setNc(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addCat()} />
-            <button className="btn-primary" onClick={addCat}><Plus size={15} /></button>
+            <LegacyButton onClick={addCat}><Plus size={15} /></LegacyButton>
           </div>
         ) : (
           <p className="text-xs text-pine/50 mb-3">Menu changes require administrator access.</p>
@@ -902,7 +915,7 @@ function MenuManager({ cats, items, reload, isAdmin }) {
           <div><label className="label">Category</label><select className="input" value={ni.category_id} onChange={(e) => setNi({ ...ni, category_id: e.target.value })}><option value="">Select…</option>{cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
           <div><label className="label">Item name</label><input className="input" value={ni.name} onChange={(e) => setNi({ ...ni, name: e.target.value })} /></div>
           <div><label className="label">Price ৳</label><input type="number" className="input money" value={ni.price} onChange={(e) => setNi({ ...ni, price: e.target.value })} /></div>
-          <button className="btn-primary justify-center" onClick={addItem}><Plus size={15} /> Add item</button>
+          <LegacyButton className="justify-center" onClick={addItem}><Plus size={15} /> Add item</LegacyButton>
         </div>}
         <AedsDataGrid
           title="Menu Items"
@@ -1171,9 +1184,9 @@ export function GuestPosKiosk() {
                       <p className="text-sm font-semibold text-forest">{fmtBDT(line.qty * line.unit_price)}</p>
                     </div>
                     <div className="mt-2 flex items-center gap-2">
-                      <button onClick={() => bump(i, -1)} className="btn-ghost !py-1 !px-2"><Minus size={14} /></button>
+                      <LegacyButton variant="ghost" size="xs" onClick={() => bump(i, -1)}><Minus size={14} /></LegacyButton>
                       <span className="text-sm w-6 text-center">{line.qty}</span>
-                      <button onClick={() => bump(i, 1)} className="btn-ghost !py-1 !px-2"><Plus size={14} /></button>
+                      <LegacyButton variant="ghost" size="xs" onClick={() => bump(i, 1)}><Plus size={14} /></LegacyButton>
                     </div>
                   </div>
                 ))}
@@ -1187,9 +1200,9 @@ export function GuestPosKiosk() {
                 <div className="flex justify-between font-bold text-base text-pine"><span>Total</span><span>{fmtBDT(total)}</span></div>
               </div>
 
-              <button className="btn-primary w-full" onClick={confirmOrder} disabled={busy}>
+              <LegacyButton className="w-full" onClick={confirmOrder} disabled={busy}>
                 {busy ? 'Confirming...' : 'Confirm Order'}
-              </button>
+              </LegacyButton>
             </div>
           </div>
         </div>
@@ -1250,7 +1263,7 @@ function DayClose({ flash, isAdmin, userName, role }) {
       <div className="flex gap-3 items-center">
         <label className="text-sm font-medium">Close date:</label>
         <input type="date" value={day} onChange={(e) => setDay(e.target.value)} className="input" />
-        <button className="btn-ghost !py-1" onClick={load}><RotateCcw size={14} /> Refresh</button>
+        <LegacyButton variant="ghost" size="xs" onClick={load}><RotateCcw size={14} /> Refresh</LegacyButton>
       </div>
       <div className="grid grid-cols-1 gap-4">
         <div className="card p-5">
@@ -1293,14 +1306,14 @@ function DayClose({ flash, isAdmin, userName, role }) {
               <h3 className="font-semibold text-amber">Close Day</h3>
               <p className="text-xs text-pine/60 mt-1">This creates a day close record for Restaurant POS only.</p>
             </div>
-            <button className="btn-amber" onClick={() => setShowConfirm(true)} disabled={busy}><Clock size={16} /> Close {day}</button>
+            <LegacyButton variant="amber" onClick={() => setShowConfirm(true)} disabled={busy}><Clock size={16} /> Close {day}</LegacyButton>
           </div>
           {closedRow && <p className="text-xs text-pine/60 mt-2">Closed by {closedRow.closed_by || '—'} at {fmtDate(closedRow.closed_at || closedRow.created_at || day)}.</p>}
           {canOpenDay && closedRow && (
             <div className="mt-3">
-              <button className="btn-ghost !py-1 text-red-600" onClick={openDay} disabled={busy}>
+              <LegacyButton variant="ghost" size="xs" className="text-red-600" onClick={openDay} disabled={busy}>
                 <XCircle size={14} /> Day Open (SUPERUSER)
-              </button>
+              </LegacyButton>
             </div>
           )}
           {showConfirm && (
@@ -1308,8 +1321,8 @@ function DayClose({ flash, isAdmin, userName, role }) {
               <p className="text-sm flex-1">
                 <span className="font-bold">Restaurant:</span> {fmtBDT(calcTotal(restOrders, 'SETTLED'))} settled
               </p>
-              <button className="btn-primary !py-1" onClick={closeDay} disabled={busy}>Confirm</button>
-              <button className="btn-ghost !py-1" onClick={() => setShowConfirm(false)} disabled={busy}>Cancel</button>
+              <LegacyButton size="xs" onClick={closeDay} disabled={busy}>Confirm</LegacyButton>
+              <LegacyButton variant="ghost" size="xs" onClick={() => setShowConfirm(false)} disabled={busy}>Cancel</LegacyButton>
             </div>
           )}
         </div>

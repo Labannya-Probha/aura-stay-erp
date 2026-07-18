@@ -27,6 +27,7 @@ import {
   resolveReservationTab,
 } from "../../../modules/reservations/reservations.config"
 import { SidebarContent, SidebarInput } from "src/components/ui/sidebar"
+import { Button } from "src/components/ui/button"
 
 const EXPANDABLE_MODULES = new Set([
   "reservations",
@@ -221,8 +222,9 @@ function NavButton({ item, active, open, expandable, onClick }) {
   const Icon = item.icon
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
         active || open
           ? "bg-white text-slate-900 shadow-sm ring-1 ring-white/40"
@@ -238,7 +240,7 @@ function NavButton({ item, active, open, expandable, onClick }) {
       {expandable && (
         <ChevronDown size={13} className={`transition-transform ${open ? "" : "-rotate-90"}`} />
       )}
-    </button>
+    </Button>
   )
 }
 
@@ -246,8 +248,9 @@ function ChildButton({ child, onNavigate }) {
   const Icon = child.icon
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors ${
         child.active
           ? "bg-white/18 text-white"
@@ -259,7 +262,7 @@ function ChildButton({ child, onNavigate }) {
     >
       {Icon && <Icon size={13} aria-hidden="true" className="shrink-0 opacity-70" />}
       <span className="min-w-0 truncate">{child.label}</span>
-    </button>
+    </Button>
   )
 }
 
@@ -268,8 +271,9 @@ function SubGroup({ group, onNavigate }) {
 
   return (
     <div>
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => setOpen((value) => !value)}
         className={`flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors ${
           group.active ? "font-semibold text-white" : "text-white/75 hover:text-white"
@@ -280,7 +284,7 @@ function SubGroup({ group, onNavigate }) {
           <span className="min-w-0 truncate">{group.label}</span>
         </span>
         <ChevronDown size={10} className={`transition-transform ${open ? "" : "-rotate-90"}`} />
-      </button>
+      </Button>
 
       {open && (
         <div className="ml-4 mt-0.5 space-y-0.5">

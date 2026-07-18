@@ -2,12 +2,9 @@ import { useMemo, useState } from "react"
 
 import FrontOfficeDialogShell from "./FrontOfficeDialogShell"
 import { amendStay } from "../services/frontOfficeActions.service"
-
-const primaryButton =
-  "rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-extrabold text-white hover:bg-emerald-800 disabled:opacity-60"
-
-const secondaryButton =
-  "rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-extrabold text-slate-800 hover:bg-slate-50"
+import { Button } from "../../../components/ui/button"
+import { Input } from "../../../components/ui/input"
+import { Textarea } from "../../../components/ui/textarea"
 
 function nights(checkIn, checkOut) {
   if (!checkIn || !checkOut) return 0
@@ -93,29 +90,27 @@ export default function StayAmendDialog({
       onClose={onClose}
       footer={
         <>
-          <button
+          <Button
             type="button"
-            className={secondaryButton}
+            variant="outline"
             onClick={onClose}
           >
             Cancel
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
-            className={primaryButton}
             disabled={saving}
             onClick={submit}
           >
             {saving ? "Updating..." : "Update Stay"}
-          </button>
+          </Button>
         </>
       }
     >
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="New Check In">
-          <input
-            className="input"
+          <Input
             type="date"
             value={newCheckIn}
             onChange={(event) =>
@@ -125,8 +120,7 @@ export default function StayAmendDialog({
         </Field>
 
         <Field label="New Check Out">
-          <input
-            className="input"
+          <Input
             type="date"
             value={newCheckOut}
             onChange={(event) =>
@@ -147,8 +141,8 @@ export default function StayAmendDialog({
 
         <label className="md:col-span-2">
           <span className="label">Reason</span>
-          <textarea
-            className="input min-h-24"
+          <Textarea
+            className="min-h-24"
             value={reason}
             onChange={(event) =>
               setReason(event.target.value)

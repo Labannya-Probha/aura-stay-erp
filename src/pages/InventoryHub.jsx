@@ -8,6 +8,8 @@ import {
   Boxes, Plus, Trash2, Check, X, Truck, PackageCheck, ArrowLeftRight,
   Undo2, Pencil, Save, Search, ChevronRight, Printer,
 } from 'lucide-react'
+import { Button } from '../components/ui/button.jsx'
+import { Input } from '../components/ui/input.jsx'
 
 
 const TABS = ['Items & Stock', 'Vendors', 'Requisitions', 'Purchase Orders', 'Goods Receipt', 'Transfers', 'Returns']
@@ -26,6 +28,7 @@ const LEGACY_TAB_MAP = {
   Consumption: null,
 }
 const TAB_ID_BY_LABEL = Object.entries(TAB_LABEL_BY_ID).reduce((acc, [id, label]) => ({ ...acc, [label]: id }), {})
+const selectClass = 'h-9 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
 
 function normalizeTabLabel(value) {
   if (!value) return 'Items & Stock'
@@ -254,7 +257,9 @@ function ItemsTab({ flash, isAdmin }) {
       width: 130,
       cell: ({ row }) => (
         <div className="flex justify-end gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="icon-xs"
             type="button"
             onClick={(event) => {
               event.stopPropagation()
@@ -264,9 +269,11 @@ function ItemsTab({ flash, isAdmin }) {
             aria-label={`Edit ${row.name}`}
           >
             <Pencil size={13} />
-          </button>
+          </Button>
           {isAdmin && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon-xs"
               type="button"
               onClick={(event) => {
                 event.stopPropagation()
@@ -276,7 +283,7 @@ function ItemsTab({ flash, isAdmin }) {
               aria-label={`Delete ${row.name}`}
             >
               <Trash2 size={13} />
-            </button>
+            </Button>
           )}
         </div>
       ),
@@ -293,21 +300,21 @@ function ItemsTab({ flash, isAdmin }) {
       <div className="card p-4 space-y-3">
         <h3 className="font-semibold text-pine text-sm">{editId ? '✏ Edit item' : '+ New item'}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-          <input className="input" placeholder="Code" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} />
-          <input className="input sm:col-span-2" placeholder="Item name *" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          <input className="input" placeholder="Unit" value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} />
-          <input className="input" placeholder="Category" value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} />
-          <input type="number" className="input money" placeholder="Reorder level" value={f.reorder_level} onChange={(e) => setF({ ...f, reorder_level: e.target.value })} />
+          <Input placeholder="Code" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} />
+          <Input className="sm:col-span-2" placeholder="Item name *" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <Input placeholder="Unit" value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} />
+          <Input placeholder="Category" value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} />
+          <Input type="number" className="money" placeholder="Reorder level" value={f.reorder_level} onChange={(e) => setF({ ...f, reorder_level: e.target.value })} />
         </div>
         <div className="flex gap-2">
-          <button className="btn-primary" onClick={save}>{editId ? <><Save size={15} /> Update</> : <><Plus size={15} /> Add item</>}</button>
-          {editId && <button className="btn-ghost" onClick={() => { setEditId(null); setF({ code: '', name: '', unit: 'pc', category: 'GENERAL', reorder_level: 0 }) }}>Cancel</button>}
+          <Button onClick={save}>{editId ? <><Save size={15} /> Update</> : <><Plus size={15} /> Add item</>}</Button>
+          {editId && <Button variant="ghost" onClick={() => { setEditId(null); setF({ code: '', name: '', unit: 'pc', category: 'GENERAL', reorder_level: 0 }) }}>Cancel</Button>}
         </div>
       </div>
 
       <div className="relative">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-pine/30" />
-        <input className="input pl-9" placeholder="Search items…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Input className="pl-9" placeholder="Search items…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
 
@@ -360,7 +367,9 @@ function VendorsTab({ flash, isAdmin }) {
       width: 130,
       cell: ({ row }) => (
         <div className="flex justify-end gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="icon-xs"
             type="button"
             onClick={(event) => {
               event.stopPropagation()
@@ -376,9 +385,11 @@ function VendorsTab({ flash, isAdmin }) {
             aria-label={`Edit ${row.name}`}
           >
             <Pencil size={13} />
-          </button>
+          </Button>
           {isAdmin && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon-xs"
               type="button"
               onClick={(event) => {
                 event.stopPropagation()
@@ -388,7 +399,7 @@ function VendorsTab({ flash, isAdmin }) {
               aria-label={`Delete ${row.name}`}
             >
               <Trash2 size={13} />
-            </button>
+            </Button>
           )}
         </div>
       ),
@@ -400,14 +411,14 @@ function VendorsTab({ flash, isAdmin }) {
       <div className="card p-4 space-y-3">
         <h3 className="font-semibold text-pine text-sm">{editId ? '✏ Edit vendor' : '+ New vendor'}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <input className="input sm:col-span-2" placeholder="Vendor name *" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          <input className="input money" placeholder="BIN" value={f.bin} onChange={(e) => setF({ ...f, bin: e.target.value })} />
-          <input className="input" placeholder="Phone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
-          <input className="input sm:col-span-4" placeholder="Address" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
+          <Input className="sm:col-span-2" placeholder="Vendor name *" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <Input className="money" placeholder="BIN" value={f.bin} onChange={(e) => setF({ ...f, bin: e.target.value })} />
+          <Input placeholder="Phone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+          <Input className="sm:col-span-4" placeholder="Address" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
         </div>
         <div className="flex gap-2">
-          <button className="btn-primary" onClick={save}>{editId ? <><Save size={15} /> Update</> : <><Plus size={15} /> Add vendor</>}</button>
-          {editId && <button className="btn-ghost" onClick={() => { setEditId(null); setF({ name: '', bin: '', phone: '', address: '' }) }}>Cancel</button>}
+          <Button onClick={save}>{editId ? <><Save size={15} /> Update</> : <><Plus size={15} /> Add vendor</>}</Button>
+          {editId && <Button variant="ghost" onClick={() => { setEditId(null); setF({ name: '', bin: '', phone: '', address: '' }) }}>Cancel</Button>}
         </div>
       </div>
 
@@ -448,22 +459,22 @@ function LineEditor({ items, lines, setLines, withCost = false, readOnly = false
           {readOnly ? (
             <span className="col-span-5 text-sm">{l.item_name || '—'} <span className="text-xs text-pine/40">({l.unit})</span></span>
           ) : (
-            <select className="input col-span-5 text-sm" value={l.item_id} onChange={(e) => upd(i, 'item_id', e.target.value)}>
+            <select className={`${selectClass} col-span-5 text-sm`} value={l.item_id} onChange={(e) => upd(i, 'item_id', e.target.value)}>
               <option value="">Select item…</option>
               {items.map((it) => <option key={it.id} value={it.id}>{it.name} ({it.unit})</option>)}
             </select>
           )}
-          <input type="number" readOnly={readOnly} className={`input col-span-2 money text-right text-sm ${readOnly ? 'bg-leaf/20' : ''}`} value={l.qty} onChange={(e) => upd(i, 'qty', e.target.value)} />
+          <Input type="number" readOnly={readOnly} className={`col-span-2 money text-right text-sm ${readOnly ? 'bg-leaf/20' : ''}`} value={l.qty} onChange={(e) => upd(i, 'qty', e.target.value)} />
           {withCost && (
             <>
-              <input type="number" readOnly={readOnly} className={`input col-span-2 money text-right text-sm ${readOnly ? 'bg-leaf/20' : ''}`} value={l.unit_cost} onChange={(e) => upd(i, 'unit_cost', e.target.value)} />
+              <Input type="number" readOnly={readOnly} className={`col-span-2 money text-right text-sm ${readOnly ? 'bg-leaf/20' : ''}`} value={l.unit_cost} onChange={(e) => upd(i, 'unit_cost', e.target.value)} />
               <span className={`col-span-2 money text-right text-sm px-1 py-1 ${readOnly ? 'text-pine/60' : 'text-pine'}`}>{(Number(l.qty || 0) * Number(l.unit_cost || 0)).toFixed(2)}</span>
             </>
           )}
-          {!readOnly && <button className="text-red-300 hover:text-red-600 col-span-1 flex justify-center" onClick={() => del(i)}><Trash2 size={14} /></button>}
+          {!readOnly && <Button variant="ghost" size="icon-xs" className="text-red-300 hover:text-red-600 col-span-1" onClick={() => del(i)}><Trash2 size={14} /></Button>}
         </div>
       ))}
-      {!readOnly && <button className="btn-ghost !py-1 text-sm" onClick={add}><Plus size={13} /> Add line</button>}
+      {!readOnly && <Button variant="ghost" size="sm" className="text-sm" onClick={add}><Plus size={13} /> Add line</Button>}
     </div>
   )
 }
@@ -628,24 +639,24 @@ function RequisitionsTab({ flash, userName, canApprove, onCreatePO, onCreateTRF 
           <div className="flex justify-end gap-1 flex-wrap">
             {row.status === 'PENDING' && canApprove && (
               <>
-                <button className="btn-ghost !py-0.5 !px-2 text-forest text-xs" onClick={(event) => { event.stopPropagation(); approveWithRouting(row) }}><Check size={13} /> Approve</button>
-                <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'REJECTED') }}><X size={13} /> Reject</button>
+                <Button variant="ghost" size="xs" className="text-forest text-xs" onClick={(event) => { event.stopPropagation(); approveWithRouting(row) }}><Check size={13} /> Approve</Button>
+                <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'REJECTED') }}><X size={13} /> Reject</Button>
               </>
             )}
             {row.status === 'APPROVED' && (
               <>
-                {!hasPO && <button className="btn-ghost !py-0.5 !px-2 text-forest text-xs" onClick={(event) => { event.stopPropagation(); onCreatePO({ id: row.id, req_no: row.req_no, items: row.requisition_items }) }}><Truck size={13} /> Create PO</button>}
-                {!hasTRF && <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={(event) => { event.stopPropagation(); onCreateTRF({ id: row.id, req_no: row.req_no, items: row.requisition_items }) }}><ArrowLeftRight size={13} /> Transfer</button>}
-                {(hasPO || hasTRF) && <button className="btn-ghost !py-0.5 !px-2 text-stone-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'CLOSED') }}>Close</button>}
+                {!hasPO && <Button variant="ghost" size="xs" className="text-forest text-xs" onClick={(event) => { event.stopPropagation(); onCreatePO({ id: row.id, req_no: row.req_no, items: row.requisition_items }) }}><Truck size={13} /> Create PO</Button>}
+                {!hasTRF && <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); onCreateTRF({ id: row.id, req_no: row.req_no, items: row.requisition_items }) }}><ArrowLeftRight size={13} /> Transfer</Button>}
+                {(hasPO || hasTRF) && <Button variant="ghost" size="xs" className="text-stone-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'CLOSED') }}>Close</Button>}
               </>
             )}
             {row.status === 'PENDING' && (
               <>
-                <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={(event) => { event.stopPropagation(); editReq(row) }}><Pencil size={13} /> Edit</button>
-                <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'CANCELLED') }}><X size={13} /> Cancel</button>
+                <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); editReq(row) }}><Pencil size={13} /> Edit</Button>
+                <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'CANCELLED') }}><X size={13} /> Cancel</Button>
               </>
             )}
-            <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={(event) => { event.stopPropagation(); printReq(row) }}><Printer size={13} /> Print</button>
+            <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); printReq(row) }}><Printer size={13} /> Print</Button>
           </div>
         )
       },
@@ -665,18 +676,18 @@ function RequisitionsTab({ flash, userName, canApprove, onCreatePO, onCreateTRF 
         <h3 className="font-display font-semibold text-pine">{editId ? 'Edit Requisition' : 'New Requisition'}</h3>
         <div className="flex gap-3 flex-wrap">
           <div><label className="label">Department</label>
-            <input className="input !w-48" value={dept} onChange={(e) => setDept(e.target.value)} placeholder="e.g. KITCHEN, HK" />
+            <Input className="!w-48" value={dept} onChange={(e) => setDept(e.target.value)} placeholder="e.g. KITCHEN, HK" />
           </div>
           <div className="flex-1"><label className="label">Notes</label>
-            <input className="input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" />
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" />
           </div>
         </div>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={false} />
         <div className="flex gap-2">
-          <button className="btn-primary" onClick={create}>
+          <Button onClick={create}>
             {editId ? <><Save size={15} /> Update requisition</> : <><Plus size={15} /> Create requisition</>}
-          </button>
-          {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+          </Button>
+          {editId && <Button variant="ghost" onClick={resetForm}>Cancel edit</Button>}
         </div>
       </div>
 
@@ -832,18 +843,18 @@ function POTab({ flash, userName, canApprove, navReq, clearNav }) {
       cell: ({ row }) => (
         <div className="flex justify-end gap-1 flex-wrap">
           {row.status === 'PENDING_APPROVAL' && canApprove && (
-            <button className="btn-ghost !py-0.5 !px-2 text-forest text-xs" onClick={(event) => { event.stopPropagation(); approvePO(row.id) }}><Check size={13} /> Approve</button>
+            <Button variant="ghost" size="xs" className="text-forest text-xs" onClick={(event) => { event.stopPropagation(); approvePO(row.id) }}><Check size={13} /> Approve</Button>
           )}
           {row.status === 'PENDING_APPROVAL' && (
             <>
-              <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={(event) => { event.stopPropagation(); editPO(row) }}><Pencil size={13} /> Edit</button>
-              <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'CANCELLED') }}><X size={13} /> Cancel</button>
+              <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); editPO(row) }}><Pencil size={13} /> Edit</Button>
+              <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'CANCELLED') }}><X size={13} /> Cancel</Button>
             </>
           )}
           {row.status === 'OPEN' && (
-            <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'CANCELLED') }}><X size={13} /> Cancel</button>
+            <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'CANCELLED') }}><X size={13} /> Cancel</Button>
           )}
-          <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={(event) => { event.stopPropagation(); printPO(row) }}><Printer size={13} /> Print</button>
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); printPO(row) }}><Printer size={13} /> Print</Button>
         </div>
       ),
     },
@@ -865,24 +876,24 @@ function POTab({ flash, userName, canApprove, navReq, clearNav }) {
         <div className="flex gap-3 flex-wrap">
           <div>
             <label className="label">Vendor *</label>
-            <select className="input !w-56" value={vendor} onChange={(e) => setVendor(e.target.value)}>
+            <select className={`${selectClass} !w-56`} value={vendor} onChange={(e) => setVendor(e.target.value)}>
               <option value="">Select vendor…</option>
               {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
           </div>
           <div className="flex-1">
             <label className="label">Notes</label>
-            <input className="input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
           </div>
         </div>
         <p className="text-xs text-pine/40">Unit cost (৳) per line — total amount auto-calculated.</p>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={true} />
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-2">
-            <button className="btn-primary" onClick={create}>
+            <Button onClick={create}>
               {editId ? <><Save size={15} /> Update PO</> : <><Truck size={15} /> Create PO</>}
-            </button>
-            {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+            </Button>
+            {editId && <Button variant="ghost" onClick={resetForm}>Cancel edit</Button>}
           </div>
           <div className="text-sm font-semibold text-pine money">
             Total: {fmtBDT(lines.reduce((a, l) => a + Number(l.qty || 0) * Number(l.unit_cost || 0), 0))}
@@ -1057,9 +1068,9 @@ function GRNTab({ flash, userName }) {
       width: 220,
       cell: ({ row }) => (
         <div className="flex justify-end gap-1 flex-wrap">
-          <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={(event) => { event.stopPropagation(); editGRN(row) }}><Pencil size={13} /> Edit</button>
-          <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); cancelGRN(row) }}><X size={13} /> Cancel</button>
-          <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={(event) => { event.stopPropagation(); printGRN(row) }}><Printer size={13} /> Print</button>
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); editGRN(row) }}><Pencil size={13} /> Edit</Button>
+          <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); cancelGRN(row) }}><X size={13} /> Cancel</Button>
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); printGRN(row) }}><Printer size={13} /> Print</Button>
         </div>
       ),
     },
@@ -1072,33 +1083,33 @@ function GRNTab({ flash, userName }) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div>
             <label className="label">PO (auto-fill items)</label>
-            <select className="input" value={h.po_id} onChange={(e) => onPOSelect(e.target.value)}>
+            <select className={selectClass} value={h.po_id} onChange={(e) => onPOSelect(e.target.value)}>
               <option value="">Select PO (optional)…</option>
               {pos.map((p) => <option key={p.id} value={p.id}>{p.po_no}</option>)}
             </select>
           </div>
           <div>
             <label className="label">Vendor *</label>
-            <select className="input" value={h.vendor_id} onChange={(e) => setH({ ...h, vendor_id: e.target.value })}>
+            <select className={selectClass} value={h.vendor_id} onChange={(e) => setH({ ...h, vendor_id: e.target.value })}>
               <option value="">Select vendor…</option>
               {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
           </div>
           <div><label className="label">Vendor invoice no</label>
-            <input className="input money" placeholder="Invoice number" value={h.vendor_invoice_no} onChange={(e) => setH({ ...h, vendor_invoice_no: e.target.value })} />
+            <Input className="money" placeholder="Invoice number" value={h.vendor_invoice_no} onChange={(e) => setH({ ...h, vendor_invoice_no: e.target.value })} />
           </div>
           <div><label className="label">Invoice date</label>
-            <input type="date" className="input" value={h.vendor_invoice_date} onChange={(e) => setH({ ...h, vendor_invoice_date: e.target.value })} />
+            <Input type="date" value={h.vendor_invoice_date} onChange={(e) => setH({ ...h, vendor_invoice_date: e.target.value })} />
           </div>
         </div>
         <p className="text-xs text-pine/40">Unit cost (৳) per line — total auto-calculated.</p>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={true} />
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-2">
-            <button className="btn-primary" onClick={create}>
+            <Button onClick={create}>
               {editId ? <><Save size={15} /> Update GRN</> : <><PackageCheck size={15} /> Receive goods</>}
-            </button>
-            {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+            </Button>
+            {editId && <Button variant="ghost" onClick={resetForm}>Cancel edit</Button>}
           </div>
           <div className="text-sm font-semibold text-pine money">
             Total: {fmtBDT(lines.reduce((a, l) => a + Number(l.qty || 0) * Number(l.unit_cost || 0), 0))}
@@ -1253,9 +1264,9 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
       width: 220,
       cell: ({ row }) => (
         <div className="flex justify-end gap-1 flex-wrap">
-          <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={(event) => { event.stopPropagation(); editTransfer(row) }}><Pencil size={13} /> Edit</button>
-          <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); cancelTransfer(row) }}><X size={13} /> Cancel</button>
-          <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={(event) => { event.stopPropagation(); printTransfer(row) }}><Printer size={13} /> Print</button>
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); editTransfer(row) }}><Pencil size={13} /> Edit</Button>
+          <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); cancelTransfer(row) }}><X size={13} /> Cancel</Button>
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); printTransfer(row) }}><Printer size={13} /> Print</Button>
         </div>
       ),
     },
@@ -1271,14 +1282,14 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <div>
             <label className="label">From location *</label>
-            <select className="input" value={h.from_location} onChange={(e) => setH({ ...h, from_location: e.target.value })}>
+            <select className={selectClass} value={h.from_location} onChange={(e) => setH({ ...h, from_location: e.target.value })}>
               <option value="">Select…</option>
               {locOptions}
             </select>
           </div>
           <div>
             <label className="label">To location *</label>
-            <select className="input" value={h.to_location} onChange={(e) => setH({ ...h, to_location: e.target.value })}>
+            <select className={selectClass} value={h.to_location} onChange={(e) => setH({ ...h, to_location: e.target.value })}>
               <option value="">Select…</option>
               {locOptions}
               <option value="CONSUMED">CONSUMED (consumption write-off)</option>
@@ -1286,15 +1297,15 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
           </div>
           <div>
             <label className="label">Notes</label>
-            <input className="input" value={h.notes} placeholder="Optional" onChange={(e) => setH({ ...h, notes: e.target.value })} />
+            <Input value={h.notes} placeholder="Optional" onChange={(e) => setH({ ...h, notes: e.target.value })} />
           </div>
         </div>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={false} />
         <div className="flex gap-2">
-          <button className="btn-primary" onClick={create}>
+          <Button onClick={create}>
             {editId ? <><Save size={15} /> Update transfer</> : <><ArrowLeftRight size={15} /> Post transfer</>}
-          </button>
-          {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+          </Button>
+          {editId && <Button variant="ghost" onClick={resetForm}>Cancel edit</Button>}
         </div>
       </div>
 
@@ -1436,9 +1447,9 @@ function ReturnsTab({ flash, userName }) {
       width: 220,
       cell: ({ row }) => (
         <div className="flex justify-end gap-1 flex-wrap">
-          <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={(event) => { event.stopPropagation(); editReturn(row) }}><Pencil size={13} /> Edit</button>
-          <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); cancelReturn(row) }}><X size={13} /> Cancel</button>
-          <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={(event) => { event.stopPropagation(); printReturn(row) }}><Printer size={13} /> Print</button>
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); editReturn(row) }}><Pencil size={13} /> Edit</Button>
+          <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); cancelReturn(row) }}><X size={13} /> Cancel</Button>
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); printReturn(row) }}><Printer size={13} /> Print</Button>
         </div>
       ),
     },
@@ -1451,7 +1462,7 @@ function ReturnsTab({ flash, userName }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <div>
             <label className="label">Return type</label>
-            <select className="input" value={h.return_type} onChange={(e) => setH({ ...h, return_type: e.target.value })}>
+            <select className={selectClass} value={h.return_type} onChange={(e) => setH({ ...h, return_type: e.target.value })}>
               <option value="TO_STORE">Return to Store (back in stock)</option>
               <option value="TO_VENDOR">Return to Vendor (out of stock)</option>
             </select>
@@ -1459,7 +1470,7 @@ function ReturnsTab({ flash, userName }) {
           {h.return_type === 'TO_VENDOR' && (
             <div>
               <label className="label">Vendor</label>
-              <select className="input" value={h.vendor_id} onChange={(e) => setH({ ...h, vendor_id: e.target.value })}>
+              <select className={selectClass} value={h.vendor_id} onChange={(e) => setH({ ...h, vendor_id: e.target.value })}>
                 <option value="">Select vendor…</option>
                 {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
               </select>
@@ -1467,7 +1478,7 @@ function ReturnsTab({ flash, userName }) {
           )}
           <div>
             <label className="label">From location</label>
-            <select className="input" value={h.from_location} onChange={(e) => setH({ ...h, from_location: e.target.value })}>
+            <select className={selectClass} value={h.from_location} onChange={(e) => setH({ ...h, from_location: e.target.value })}>
               <option value="">Select…</option>
               {locOptions}
             </select>
@@ -1475,10 +1486,10 @@ function ReturnsTab({ flash, userName }) {
         </div>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={false} />
         <div className="flex gap-2">
-          <button className="btn-primary" onClick={create}>
+          <Button onClick={create}>
             {editId ? <><Save size={15} /> Update return</> : <><Undo2 size={15} /> Post return</>}
-          </button>
-          {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+          </Button>
+          {editId && <Button variant="ghost" onClick={resetForm}>Cancel edit</Button>}
         </div>
       </div>
 

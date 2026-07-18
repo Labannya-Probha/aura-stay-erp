@@ -9,12 +9,11 @@ import {
   issueKeyCard,
   saveRegistrationCard,
 } from "../services/frontOfficeActions.service"
+import { Button } from "../../../components/ui/button"
+import { Input } from "../../../components/ui/input"
 
-const primaryButton =
-  "rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-extrabold text-white hover:bg-emerald-800 disabled:opacity-60"
-
-const secondaryButton =
-  "rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-extrabold text-slate-800 hover:bg-slate-50"
+const nativeSelectClass =
+  "h-8 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30"
 
 export default function CheckInDialog({
   open,
@@ -146,29 +145,28 @@ export default function CheckInDialog({
       onClose={onClose}
       footer={
         <>
-          <button
+          <Button
             type="button"
-            className={secondaryButton}
+            variant="outline"
             onClick={onClose}
           >
             Cancel
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
-            className={primaryButton}
             disabled={saving}
             onClick={completeCheckIn}
           >
             {saving ? "Processing..." : "Complete Check-in"}
-          </button>
+          </Button>
         </>
       }
     >
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Room">
           <select
-            className="input"
+            className={nativeSelectClass}
             value={roomId}
             onChange={(event) => {
               const nextId = event.target.value
@@ -193,8 +191,7 @@ export default function CheckInDialog({
         </Field>
 
         <Field label="Room Rate">
-          <input
-            className="input"
+          <Input
             type="number"
             value={rate}
             onChange={(event) =>
@@ -204,8 +201,7 @@ export default function CheckInDialog({
         </Field>
 
         <Field label="ID Type">
-          <input
-            className="input"
+          <Input
             value={idType}
             onChange={(event) =>
               setIdType(event.target.value)
@@ -215,8 +211,7 @@ export default function CheckInDialog({
         </Field>
 
         <Field label="ID Number">
-          <input
-            className="input"
+          <Input
             value={idNumber}
             onChange={(event) =>
               setIdNumber(event.target.value)
@@ -225,8 +220,7 @@ export default function CheckInDialog({
         </Field>
 
         <Field label="Address">
-          <input
-            className="input"
+          <Input
             value={address}
             onChange={(event) =>
               setAddress(event.target.value)
@@ -235,8 +229,7 @@ export default function CheckInDialog({
         </Field>
 
         <Field label="Vehicle No.">
-          <input
-            className="input"
+          <Input
             value={vehicleNo}
             onChange={(event) =>
               setVehicleNo(event.target.value)
@@ -245,8 +238,7 @@ export default function CheckInDialog({
         </Field>
 
         <Field label="Deposit">
-          <input
-            className="input"
+          <Input
             type="number"
             value={deposit}
             onChange={(event) =>
@@ -257,7 +249,7 @@ export default function CheckInDialog({
 
         <Field label="Deposit Method">
           <select
-            className="input"
+            className={nativeSelectClass}
             value={method}
             onChange={(event) =>
               setMethod(event.target.value)
@@ -277,8 +269,7 @@ export default function CheckInDialog({
         </Field>
 
         <Field label="Key Card Number">
-          <input
-            className="input"
+          <Input
             value={cardNumber}
             onChange={(event) =>
               setCardNumber(event.target.value)

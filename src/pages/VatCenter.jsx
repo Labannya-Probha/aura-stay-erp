@@ -8,10 +8,13 @@ import VdsCertificate from '../components/print/VdsCertificate.jsx'
 import ChallanForm from './ChallanForm'
 import '../styles/aeds-v6-workspaces.css'
 import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
+import { Button } from '../components/ui/button.jsx'
+import { Input } from '../components/ui/input.jsx'
 
 const TABS = ['Sales 6.2', 'Purchase 6.1', 'VDS 6.6', 'Monthly 9.1', 'Over-threshold 6.10', 'A-Challan']
 const monthBounds = (ym) => { const [y, m] = ym.split('-').map(Number); const start = `${ym}-01`; const end = new Date(y, m, 0); return { start, end: `${ym}-${String(end.getDate()).padStart(2, '0')}` } }
 const thisMonth = () => todayISO().slice(0, 7)
+const selectClass = 'h-9 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
 
 export default function VatCenter({ userName, company }) {
   const [tab, setTab] = useState('Sales 6.2')
@@ -36,7 +39,7 @@ export default function VatCenter({ userName, company }) {
         </div>
         <div className="flex items-center gap-2">
           <span className="label !mb-0">Tax month</span>
-          <input type="month" className="input !w-44" value={ym} onChange={(e) => setYm(e.target.value)} />
+          <Input type="month" className="!w-44" value={ym} onChange={(e) => setYm(e.target.value)} />
         </div>
       </div>
       <KPICards module="vat" />
@@ -62,7 +65,7 @@ function SalesReg({ ym, company }) {
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <button className="btn-ghost !py-1" onClick={xls}><FileDown size={14} /> Excel</button>
+        <Button variant="ghost" size="sm" onClick={xls}><FileDown size={14} /> Excel</Button>
       </div>
       <AedsDataGrid
         title="Sales Register (Mushak-6.2)"
@@ -94,7 +97,7 @@ function PurchaseReg({ ym, company }) {
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <button className="btn-ghost !py-1" onClick={xls}><FileDown size={14} /> Excel</button>
+        <Button variant="ghost" size="sm" onClick={xls}><FileDown size={14} /> Excel</Button>
       </div>
       <AedsDataGrid
         title="Purchase Register (Mushak-6.1)"
@@ -153,17 +156,17 @@ function VdsTab({ ym, userName, flash, onPrint }) {
   return (
     <div className="space-y-4">
       <div className="card p-4 grid grid-cols-4 gap-2">
-        <select className="input" value={f.direction} onChange={(e) => setF({ ...f, direction: e.target.value })}><option value="RECEIVED">VDS Received (we are supplier)</option><option value="ISSUED">VDS Issued (we withheld)</option></select>
-        <input className="input money" placeholder="Certificate no" value={f.cert_no} onChange={(e) => setF({ ...f, cert_no: e.target.value })} />
-        <input type="date" className="input" value={f.cert_date} onChange={(e) => setF({ ...f, cert_date: e.target.value })} />
-        <input className="input" placeholder="Party name" value={f.party_name} onChange={(e) => setF({ ...f, party_name: e.target.value })} />
-        <input className="input money" placeholder="Party BIN" value={f.party_bin} onChange={(e) => setF({ ...f, party_bin: e.target.value })} />
-        <input type="number" className="input money" placeholder="Base amount" value={f.base_amount} onChange={(e) => setF({ ...f, base_amount: e.target.value })} />
-        <input type="number" className="input money" placeholder="VDS rate %" value={f.vds_rate} onChange={(e) => setF({ ...f, vds_rate: e.target.value })} />
-        <input className="input money" placeholder="Challan no" value={f.challan_no} onChange={(e) => setF({ ...f, challan_no: e.target.value })} />
-        <input type="date" className="input" placeholder="Challan date" value={f.challan_date} onChange={(e) => setF({ ...f, challan_date: e.target.value })} />
-        <button className="btn-primary justify-center col-span-3" onClick={save}><Plus size={15} /> {editId ? 'Update certificate' : 'Add VDS certificate'}</button>
-        {editId && <button className="btn-ghost justify-center" onClick={() => { setF(blank); setEditId(null) }}>Cancel edit</button>}
+        <select className={selectClass} value={f.direction} onChange={(e) => setF({ ...f, direction: e.target.value })}><option value="RECEIVED">VDS Received (we are supplier)</option><option value="ISSUED">VDS Issued (we withheld)</option></select>
+        <Input className="money" placeholder="Certificate no" value={f.cert_no} onChange={(e) => setF({ ...f, cert_no: e.target.value })} />
+        <Input type="date" value={f.cert_date} onChange={(e) => setF({ ...f, cert_date: e.target.value })} />
+        <Input placeholder="Party name" value={f.party_name} onChange={(e) => setF({ ...f, party_name: e.target.value })} />
+        <Input className="money" placeholder="Party BIN" value={f.party_bin} onChange={(e) => setF({ ...f, party_bin: e.target.value })} />
+        <Input type="number" className="money" placeholder="Base amount" value={f.base_amount} onChange={(e) => setF({ ...f, base_amount: e.target.value })} />
+        <Input type="number" className="money" placeholder="VDS rate %" value={f.vds_rate} onChange={(e) => setF({ ...f, vds_rate: e.target.value })} />
+        <Input className="money" placeholder="Challan no" value={f.challan_no} onChange={(e) => setF({ ...f, challan_no: e.target.value })} />
+        <Input type="date" placeholder="Challan date" value={f.challan_date} onChange={(e) => setF({ ...f, challan_date: e.target.value })} />
+        <Button className="justify-center col-span-3" onClick={save}><Plus size={15} /> {editId ? 'Update certificate' : 'Add VDS certificate'}</Button>
+        {editId && <Button variant="ghost" className="justify-center" onClick={() => { setF(blank); setEditId(null) }}>Cancel edit</Button>}
       </div>
       <AedsDataGrid
         title="VDS Certificates (Mushak-6.6)"
@@ -186,9 +189,9 @@ function VdsTab({ ym, userName, flash, onPrint }) {
             width: 180,
             cell: ({ row }) => (
               <div className="flex justify-end gap-1">
-                <button className="btn-ghost !py-1" title="Print Mushak-6.6" onClick={(event) => { event.stopPropagation(); onPrint(row) }}><Printer size={13} /></button>
-                <button className="btn-ghost !py-1" title="Edit" onClick={(event) => { event.stopPropagation(); edit(row) }}><Pencil size={13} /></button>
-                <button className="btn-ghost !py-1 text-red-600" title="Delete" onClick={(event) => { event.stopPropagation(); del(row.id) }}><Trash2 size={13} /></button>
+                <Button variant="ghost" size="icon-xs" title="Print Mushak-6.6" onClick={(event) => { event.stopPropagation(); onPrint(row) }}><Printer size={13} /></Button>
+                <Button variant="ghost" size="icon-xs" title="Edit" onClick={(event) => { event.stopPropagation(); edit(row) }}><Pencil size={13} /></Button>
+                <Button variant="ghost" size="icon-xs" className="text-red-600" title="Delete" onClick={(event) => { event.stopPropagation(); del(row.id) }}><Trash2 size={13} /></Button>
               </div>
             ),
           },

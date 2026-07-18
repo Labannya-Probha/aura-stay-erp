@@ -1,4 +1,5 @@
 import AedsDataGrid from "../../../components/data-grid/AedsDataGrid"
+import { Button } from "../../../components/ui/button"
 
 export default function ArrivalBoardPage({
   rows = [],
@@ -27,16 +28,16 @@ export default function ArrivalBoardPage({
           sortable: false,
           width: 170,
           cell: ({ row }) => (
-            <button
+            <Button
               type="button"
-              className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-extrabold text-white hover:bg-emerald-800"
+              size="xs"
               onClick={(event) => {
                 event.stopPropagation()
                 onCheckIn?.(row)
               }}
             >
               Check In
-            </button>
+            </Button>
           ),
         },
       ]}

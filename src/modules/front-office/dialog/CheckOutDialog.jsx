@@ -5,12 +5,11 @@ import {
   checkOutReservation,
   createDeposit,
 } from "../services/frontOfficeActions.service"
+import { Button } from "../../../components/ui/button"
+import { Input } from "../../../components/ui/input"
 
-const primaryButton =
-  "rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-extrabold text-white hover:bg-emerald-800 disabled:opacity-60"
-
-const secondaryButton =
-  "rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-extrabold text-slate-800 hover:bg-slate-50"
+const nativeSelectClass =
+  "h-8 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30"
 
 export default function CheckOutDialog({
   open,
@@ -77,22 +76,21 @@ export default function CheckOutDialog({
       onClose={onClose}
       footer={
         <>
-          <button
+          <Button
             type="button"
-            className={secondaryButton}
+            variant="outline"
             onClick={onClose}
           >
             Cancel
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
-            className={primaryButton}
             disabled={saving}
             onClick={submit}
           >
             {saving ? "Processing..." : "Complete Check-out"}
-          </button>
+          </Button>
         </>
       }
     >
@@ -111,8 +109,7 @@ export default function CheckOutDialog({
         />
 
         <Field label="Settlement Amount">
-          <input
-            className="input"
+          <Input
             type="number"
             value={payment}
             onChange={(event) =>
@@ -123,7 +120,7 @@ export default function CheckOutDialog({
 
         <Field label="Payment Method">
           <select
-            className="input"
+            className={nativeSelectClass}
             value={method}
             onChange={(event) =>
               setMethod(event.target.value)

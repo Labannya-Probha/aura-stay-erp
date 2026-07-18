@@ -6,6 +6,7 @@ import { Search, Trash2, UserSearch, X, CheckCircle2 } from 'lucide-react'
 import SearchableSelect from '../components/SearchableSelect.jsx'
 import KPICards from '../components/KPICards.jsx'
 import { Combobox } from '../components/ui/combobox'
+import { LegacyButton } from '../components/ui/legacy-controls'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const STATUSES = ['ALL', 'QUERY', 'QUOTED', 'CONFIRMED', 'NO_SHOW', 'CHECKED_IN', 'CHECKED_OUT', 'SETTLED', 'CANCELLED'];
@@ -258,20 +259,21 @@ function GuestSearchPopup({ onSelect, onClose, onCreateContact }) {
             <div className="py-4 space-y-3">
               <p className="text-sm text-pine/40 text-center">No guests found matching &quot;{q}&quot;</p>
               <div className="flex flex-col sm:flex-row gap-2">
-                <button
+                <LegacyButton
                   type="button"
                   onClick={() => onCreateContact?.(q.trim(), false)}
-                  className="btn-primary flex-1 justify-center !py-2 text-sm"
+                  className="flex-1 justify-center text-sm"
                 >
                   Create contact: {q.trim()}
-                </button>
-                <button
+                </LegacyButton>
+                <LegacyButton
                   type="button"
+                  variant="ghost"
                   onClick={() => onCreateContact?.(q.trim(), true)}
-                  className="btn-ghost flex-1 justify-center !py-2 text-sm"
+                  className="flex-1 justify-center text-sm"
                 >
                   Create & edit details
-                </button>
+                </LegacyButton>
               </div>
             </div>
           )}
@@ -306,9 +308,9 @@ function GuestSearchPopup({ onSelect, onClose, onCreateContact }) {
         </div>
 
         <div className="mt-3 pt-3 border-t border-leaf">
-          <button onClick={onClose} className="btn-ghost w-full text-sm">
+          <LegacyButton variant="ghost" onClick={onClose} className="w-full text-sm">
             Cancel — create new guest instead
-          </button>
+          </LegacyButton>
         </div>
       </div>
     </div>
@@ -922,7 +924,7 @@ export function NewReservation({ close, openReservation, userName, prefill }) {
             <div className="col-span-2">
               <div className="flex items-center justify-between mb-1">
                 <label className="label !mb-0">Rooms — pick from dropdown, each with its own dates</label>
-                <button type="button" className="btn-ghost !py-1 text-xs" onClick={addRoomRow}>+ Add room</button>
+                <LegacyButton type="button" variant="ghost" size="xs" className="text-xs" onClick={addRoomRow}>+ Add room</LegacyButton>
               </div>
               <div className="space-y-2">
                 {roomRows.map((row, i) => {
@@ -1131,8 +1133,8 @@ export function NewReservation({ close, openReservation, userName, prefill }) {
           {err && <p className="text-sm text-red-600 mt-3">{err}</p>}
 
           <div className="flex justify-end gap-2 mt-6">
-            <button className="btn-ghost" onClick={close}>Cancel</button>
-            <button className="btn-primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Create query'}</button>
+            <LegacyButton variant="ghost" onClick={close}>Cancel</LegacyButton>
+            <LegacyButton onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Create query'}</LegacyButton>
           </div>
         </div>
       </div>
