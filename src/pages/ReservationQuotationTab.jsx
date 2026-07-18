@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, fmtDate, todayISO, nightsBetween, rateFor, computeCharge } from '../lib/helpers'
 import { generateReservationPaymentNo } from '../lib/paymentNumber'
 import { ArrowLeft, MessageCircle, Mail, Plus, Trash2, Printer, Pencil, Save } from 'lucide-react'

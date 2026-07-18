@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { fmtBDT, fmtDate } from '../../lib/helpers'
 import { applyPaymentScope, PAYMENT_SCOPES } from './paymentScope'
 

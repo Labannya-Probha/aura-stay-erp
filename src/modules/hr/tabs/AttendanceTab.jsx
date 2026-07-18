@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../../supabase'
+import { supabase } from '../../../lib/supabase'
 import { todayISO } from '../../../lib/helpers'
 import { CalendarDays } from 'lucide-react'
 

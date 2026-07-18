@@ -1,6 +1,6 @@
 // src/pages/VATReturn.jsx
 import { useState, useEffect } from "react";
-import { supabase } from "../supabase";
+import { supabase } from "../lib/supabase";
 import { getCompanySettingsQuery, withTenantScope } from "../lib/companySettings";
 import {
   FileText, TrendingUp, TrendingDown, DollarSign,

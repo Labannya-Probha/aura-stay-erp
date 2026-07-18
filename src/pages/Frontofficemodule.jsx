@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import {
   fmtBDT, fmtDate, todayISO, nightsBetween, eachNight,
   rateFor, computeCharge, sumCharges, applyRounding, STATUS_COLORS, buildWorkflowDescription,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Users, UserCheck, CalendarClock, ClipboardList } from 'lucide-react'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { todayISO } from '../../lib/helpers'
 import { HR_TABS } from './hr.config'
 import { useHrTabs } from './hooks/useHrTabs'

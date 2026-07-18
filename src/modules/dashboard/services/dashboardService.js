@@ -1,4 +1,4 @@
-import { supabase } from "../../../supabase"
+import { supabase } from "../../../lib/supabase"
 import { DASHBOARD_DEFAULT_DATA } from "../types/dashboard.types"
 
 function safeArray(value) {

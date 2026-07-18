@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, fmtDate, todayISO } from '../lib/helpers'
 import KPICards from '../components/KPICards.jsx'
 import {

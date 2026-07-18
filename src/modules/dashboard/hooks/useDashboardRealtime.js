@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { supabase } from "../../../supabase"
+import { supabase } from "../../../lib/supabase"
 
 const WATCHED_TABLES = [
   "reservations",

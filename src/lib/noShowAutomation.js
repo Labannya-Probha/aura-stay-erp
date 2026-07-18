@@ -1,4 +1,4 @@
-import { supabase } from '../supabase.js'
+import { supabase } from '../lib/supabase.js'
 
 export const NO_SHOW_CUTOFF_HOUR = 12
 export const NO_SHOW_CUTOFF_MINUTE = 5

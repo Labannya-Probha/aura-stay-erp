@@ -1,4 +1,4 @@
-import { supabase } from "../../../../supabase"
+import { supabase } from "../../../../lib/supabase"
 
 export async function getBookingCalendarData({ startDate, endDate, filters }) {
   const { data, error } = await supabase.rpc("booking_calendar_data", {

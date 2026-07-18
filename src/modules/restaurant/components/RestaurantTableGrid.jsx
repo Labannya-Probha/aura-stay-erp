@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { PATHS } from 'src/app/paths'
 import { fmtBDT } from 'src/lib/helpers'
 import { getTenantId } from 'src/lib/tenant'
-import { supabase } from 'src/supabase'
+import { supabase } from 'src/lib/supabase'
 
 export const RESTAURANT_TABLES = Array.from({ length: 25 }, (_, index) => `T${String(index + 1).padStart(2, '0')}`)
 export const TABLE_BLOCKING_STATUSES = ['DRAFT', 'OPEN', 'ACCEPTED', 'READY', 'SERVED']

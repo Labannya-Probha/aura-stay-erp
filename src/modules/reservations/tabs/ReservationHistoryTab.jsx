@@ -11,7 +11,7 @@ import {
 
 import AedsDataGrid from "../../../components/data-grid/AedsDataGrid"
 import { Button } from "../../../components/ui/button"
-import { supabase } from "../../../supabase"
+import { supabase } from "../../../lib/supabase"
 
 const EVENT_LABELS = {
   RESERVATION_CREATED: "Reservation Created",

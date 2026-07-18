@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { MessageSquareText } from 'lucide-react'
-import { supabase } from '../../../supabase'
+import { supabase } from '../../../lib/supabase'
 import { withTenantScope } from '../../../lib/companySettings'
 import { fmtDate } from '../../../lib/helpers'
 

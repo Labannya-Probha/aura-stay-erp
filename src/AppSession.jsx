@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Navigate, useLocation } from "react-router-dom"
 
-import { supabase } from "./supabase"
+import { supabase } from "./lib/supabase"
 import { setCurrency } from "./lib/helpers"
 import { getTenantId, setTenantId } from "./lib/tenant"
 import { PATHS } from "./app/paths"

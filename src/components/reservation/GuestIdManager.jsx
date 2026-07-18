@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import SearchableSelect from '../SearchableSelect.jsx'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 
 export function GuestIdManager({ reservationId, resGuests, guestIds, locked, reload, flash }) {
   const [adding, setAdding]     = useState(false)

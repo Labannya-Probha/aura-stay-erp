@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, fmtDate, todayISO, rateFor, computeCharge, applyRounding, buildWorkflowDescription, updateDescriptionStage } from '../lib/helpers'
 import PrintPortal from '../components/PrintPortal.jsx'
 import KPICards from '../components/KPICards.jsx'

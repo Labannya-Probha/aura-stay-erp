@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../../supabase'
+import { supabase } from '../../../lib/supabase'
 import { fmtBDT, todayISO } from '../../../lib/helpers'
 import { Plus } from 'lucide-react'
 import EmployeeProfileDrawer from '../components/EmployeeProfileDrawer'

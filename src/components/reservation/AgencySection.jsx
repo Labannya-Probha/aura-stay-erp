@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Handshake, Plus } from 'lucide-react'
 import { fmtBDT } from '../../lib/helpers'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 
 export function AgencySection({ res, reload, flash }) {
   const agency = res.agencies

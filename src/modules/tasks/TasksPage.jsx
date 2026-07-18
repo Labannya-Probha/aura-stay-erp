@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import PageHeader from '../../components/layout/PageHeader'
 import KpiStrip   from '../../components/layout/KpiStrip'
 import ModuleTabs  from '../../components/layout/ModuleTabs'

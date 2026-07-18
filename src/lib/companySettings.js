@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { getTenantId } from './tenant'
 
 // If tenantId can't be resolved (session still loading, storage cleared,

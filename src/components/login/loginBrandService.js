@@ -1,4 +1,4 @@
-import { supabase } from "../../supabase"
+import { supabase } from "../../lib/supabase"
 import { DEFAULT_SLUG, FALLBACK_BRAND } from "./login.constants"
 import { mapBrandTheme } from "./brandThemeMapper"
 

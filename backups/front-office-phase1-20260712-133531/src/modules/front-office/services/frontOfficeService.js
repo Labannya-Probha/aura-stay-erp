@@ -1,4 +1,4 @@
-import { supabase } from "../../../supabase"
+import { supabase } from "../../../lib/supabase"
 
 export async function getFrontOfficeSummary() {
   const { data, error } = await supabase.rpc("front_office_summary")

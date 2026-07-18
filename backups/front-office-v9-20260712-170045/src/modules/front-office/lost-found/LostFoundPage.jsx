@@ -3,7 +3,7 @@ import { Plus, RefreshCw } from "lucide-react"
 
 import AedsDataGrid from "../../../components/data-grid/AedsDataGrid"
 import { Button } from "../../../components/ui/button"
-import { supabase } from "../../../supabase"
+import { supabase } from "../../../lib/supabase"
 import { withTenantScope } from "../../../lib/companySettings"
 
 const EMPTY = {

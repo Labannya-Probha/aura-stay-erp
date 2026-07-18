@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { Save, Activity, Printer, FileText, Database } from 'lucide-react'
 import { MetricCard, InputField, SelectField } from './settingsHelpers'
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, fmtDate, todayISO, nightsBetween, eachNight, rateFor, computeCharge, STATUS_COLORS } from '../lib/helpers'
 import { loadReservationConfig } from '../lib/reservationConfig'
 import { Search, Trash2, UserSearch, X, CheckCircle2 } from 'lucide-react'

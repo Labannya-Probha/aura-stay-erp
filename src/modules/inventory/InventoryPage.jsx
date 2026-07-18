@@ -6,7 +6,7 @@ import ModuleTabs from "../../components/layout/ModuleTabs"
 import KpiStrip from "../../components/layout/KpiStrip"
 import { Button } from "../../components/ui/button"
 
-import { supabase } from "../../supabase"
+import { supabase } from "../../lib/supabase"
 import { useInventoryTabs } from "./hooks/useInventoryTabs"
 import { INVENTORY_TABS } from "./inventory.config"
 

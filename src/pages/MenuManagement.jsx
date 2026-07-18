@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT } from '../lib/helpers'
 import { Plus, Trash2, Pencil, Save, Search, ChefHat, X, FolderPlus } from 'lucide-react'
 

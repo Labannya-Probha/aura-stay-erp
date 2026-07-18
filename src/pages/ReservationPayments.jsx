@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, fmtDate, todayISO } from '../lib/helpers'
 import SearchableSelect from '../components/SearchableSelect.jsx'
 import { Receipt, Trash2, Pencil, MessageCircle, Mail, Printer, X } from 'lucide-react'
