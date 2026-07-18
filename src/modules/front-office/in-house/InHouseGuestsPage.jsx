@@ -1,4 +1,5 @@
 import AedsDataGrid from "../../../components/data-grid/AedsDataGrid"
+import { Button } from "../../../components/ui/button"
 
 export default function InHouseGuestsPage({
   rows = [],
@@ -30,27 +31,28 @@ export default function InHouseGuestsPage({
           width: 250,
           cell: ({ row }) => (
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-50"
+                variant="outline"
+                size="xs"
                 onClick={(event) => {
                   event.stopPropagation()
                   onRoomMove?.(row)
                 }}
               >
                 Room Move
-              </button>
+              </Button>
 
-              <button
+              <Button
                 type="button"
-                className="rounded-xl bg-emerald-700 px-3 py-2 text-xs font-extrabold text-white hover:bg-emerald-800"
+                size="xs"
                 onClick={(event) => {
                   event.stopPropagation()
                   onStayAmend?.(row)
                 }}
               >
                 Stay Amend
-              </button>
+              </Button>
             </div>
           ),
         },

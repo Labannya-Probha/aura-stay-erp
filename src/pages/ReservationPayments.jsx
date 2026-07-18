@@ -7,6 +7,10 @@ import { generateReservationPaymentNo, parsePaymentReference, toPaymentReference
 import { logAudit } from '../lib/pms.api.js'
 import PaymentMethodFields, { validatePaymentMethodDetails } from '../components/payments/PaymentMethodFields.jsx'
 import { applyPaymentScope, PAYMENT_SCOPES } from '../components/payments/paymentScope.js'
+import { Button } from '../components/ui/button.jsx'
+import { Input } from '../components/ui/input.jsx'
+import { Textarea } from '../components/ui/textarea.jsx'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table.jsx'
 
 export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT_SCOPES.ACCOUNTING, reservationId = null, sourceModule = 'RESERVATIONS' }) {
   const [reservations, setReservations] = useState([])
@@ -45,6 +49,7 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
     open: false, channel: 'WHATSAPP', to: '', subject: '', body: '', file: null, payment: null,
   })
   const [sendBusy, setSendBusy] = useState(false)
+  const fileInputClass = 'h-8 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
 
   const loadAll = async () => {
     const [{ data: rs }, { data: pm }] = await Promise.all([
@@ -350,11 +355,11 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
           </div>
           <div>
             <label className="label !text-xs">Amount (৳) *</label>
-            <input type="number" className="input money" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} />
+            <Input type="number" className="money" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} />
           </div>
           <div>
             <label className="label !text-xs">Date</label>
-            <input type="date" className="input" value={f.received_date} onChange={(e) => setF({ ...f, received_date: e.target.value })} />
+            <Input type="date" value={f.received_date} onChange={(e) => setF({ ...f, received_date: e.target.value })} />
           </div>
           <div>
             <label className="label !text-xs">Method</label>
@@ -383,16 +388,16 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
           </div>
           <div>
             <label className="label !text-xs">Paid by</label>
-            <input className="input" value={f.paid_by_party} onChange={(e) => setF({ ...f, paid_by_party: e.target.value })} placeholder="Guest/Agency" />
+            <Input value={f.paid_by_party} onChange={(e) => setF({ ...f, paid_by_party: e.target.value })} placeholder="Guest/Agency" />
           </div>
           <div className="lg:col-span-2">
             <label className="label !text-xs">Reference / TrxID</label>
-            <input className="input" value={f.reference} onChange={(e) => setF({ ...f, reference: e.target.value })} placeholder="Optional" />
+            <Input value={f.reference} onChange={(e) => setF({ ...f, reference: e.target.value })} placeholder="Optional" />
           </div>
           <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
-            <button className="btn-primary" onClick={addPayment} disabled={busy}>
+            <Button onClick={addPayment} disabled={busy}>
               <Receipt size={15} /> {busy ? 'Saving…' : 'Save payment'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -404,67 +409,67 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
           <span className="text-xs text-forest">Advance Paid Total: <span className="money font-semibold">{fmtBDT(advanceTotal)}</span></span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead><tr>
-              <th className="th">Date</th>
-              <th className="th">Payment ID</th>
-              <th className="th">Reservation</th>
-              <th className="th">Paid by</th>
-              <th className="th">Class</th>
-              <th className="th">Method</th>
-              <th className="th">Reference</th>
-              <th className="th text-right">Amount</th>
-              <th className="th">Actions</th>
-            </tr></thead>
-            <tbody>
+          <Table className="w-full">
+            <TableHeader><TableRow>
+              <TableHead className="th">Date</TableHead>
+              <TableHead className="th">Payment ID</TableHead>
+              <TableHead className="th">Reservation</TableHead>
+              <TableHead className="th">Paid by</TableHead>
+              <TableHead className="th">Class</TableHead>
+              <TableHead className="th">Method</TableHead>
+              <TableHead className="th">Reference</TableHead>
+              <TableHead className="th text-right">Amount</TableHead>
+              <TableHead className="th">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
               {payments.map((pm) => {
                 const parsedRef = parsePaymentReference(pm.reference)
                 return (
-                  <tr key={pm.id}>
-                    <td className="td text-xs">{fmtDate(pm.received_date)}</td>
-                    <td className="td text-xs font-mono text-pine/80">{parsedRef.paymentNo || '—'}</td>
-                    <td className="td text-xs">
+                  <TableRow key={pm.id}>
+                    <TableCell className="td text-xs">{fmtDate(pm.received_date)}</TableCell>
+                    <TableCell className="td text-xs font-mono text-pine/80">{parsedRef.paymentNo || '—'}</TableCell>
+                    <TableCell className="td text-xs">
                       <div className="font-semibold">{pm.reservations?.res_no || '—'}</div>
                       <div className="text-pine/50">{pm.reservations?.reservation_name || pm.reservations?.guests?.full_name || '—'}</div>
-                    </td>
-                    <td className="td text-xs">{pm.paid_by_party || pm.received_by || '—'}</td>
-                    <td className="td text-xs">
+                    </TableCell>
+                    <TableCell className="td text-xs">{pm.paid_by_party || pm.received_by || '—'}</TableCell>
+                    <TableCell className="td text-xs">
                       <span className={`status-chip text-xs ${
                         pm.payment_class === 'ADVANCE'    ? 'bg-amber/20 text-amber' :
                         pm.payment_class === 'SETTLEMENT' ? 'bg-forest/15 text-forest' :
                         'bg-sky-50 text-sky-700'
                       }`}>{pm.payment_class || 'SETTLEMENT'}</span>
-                    </td>
-                    <td className="td text-xs">{pm.method}</td>
-                    <td className="td text-xs">{parsedRef.reference || '—'}</td>
-                    <td className="td money text-right font-semibold">{fmtBDT(pm.amount)}</td>
-                    <td className="td">
+                    </TableCell>
+                    <TableCell className="td text-xs">{pm.method}</TableCell>
+                    <TableCell className="td text-xs">{parsedRef.reference || '—'}</TableCell>
+                    <TableCell className="td money text-right font-semibold">{fmtBDT(pm.amount)}</TableCell>
+                    <TableCell className="td">
                       <div className="flex flex-wrap gap-1">
-                        <button className="btn-ghost !py-1 !px-2 text-xs" title="Edit" onClick={() => startEdit(pm)}>
+                        <Button variant="ghost" size="xs" className="!px-2 text-xs" title="Edit" onClick={() => startEdit(pm)}>
                           <Pencil size={12} />
-                        </button>
+                        </Button>
                         {isAdmin && (
-                          <button className="btn-ghost !py-1 !px-2 text-xs text-red-600" title="Delete" onClick={() => delPayment(pm)}>
+                          <Button variant="ghost" size="xs" className="!px-2 text-xs text-red-600" title="Delete" onClick={() => delPayment(pm)}>
                             <Trash2 size={12} />
-                          </button>
+                          </Button>
                         )}
-                        <button className="btn-ghost !py-1 !px-2 text-xs" title="Print receipt" onClick={() => printPayment(pm)}>
+                        <Button variant="ghost" size="xs" className="!px-2 text-xs" title="Print receipt" onClick={() => printPayment(pm)}>
                           <Printer size={12} />
-                        </button>
-                        <button className="btn-ghost !py-1 !px-2 text-xs text-green-700" title="Send via WhatsApp" onClick={() => openSend('WHATSAPP', pm)}>
+                        </Button>
+                        <Button variant="ghost" size="xs" className="!px-2 text-xs text-green-700" title="Send via WhatsApp" onClick={() => openSend('WHATSAPP', pm)}>
                           <MessageCircle size={12} />
-                        </button>
-                        <button className="btn-ghost !py-1 !px-2 text-xs text-blue-600" title="Send via Email" onClick={() => openSend('EMAIL', pm)}>
+                        </Button>
+                        <Button variant="ghost" size="xs" className="!px-2 text-xs text-blue-600" title="Send via Email" onClick={() => openSend('EMAIL', pm)}>
                           <Mail size={12} />
-                        </button>
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-              {payments.length === 0 && <tr><td className="td text-pine/50" colSpan={9}>No payments found.</td></tr>}
-            </tbody>
-          </table>
+              {payments.length === 0 && <TableRow><TableCell className="td text-pine/50" colSpan={9}>No payments found.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
         </div>
       </div>
 
@@ -474,16 +479,16 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-display font-semibold text-pine">Edit Payment</h3>
-              <button className="btn-ghost !p-1" onClick={() => setEditRow(null)}><X size={16} /></button>
+              <Button variant="ghost" size="icon-xs" onClick={() => setEditRow(null)}><X size={16} /></Button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label !text-xs">Amount (৳) *</label>
-                <input type="number" className="input money" value={editForm.amount} onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })} />
+                <Input type="number" className="money" value={editForm.amount} onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })} />
               </div>
               <div>
                 <label className="label !text-xs">Date</label>
-                <input type="date" className="input" value={editForm.received_date} onChange={(e) => setEditForm({ ...editForm, received_date: e.target.value })} />
+                <Input type="date" value={editForm.received_date} onChange={(e) => setEditForm({ ...editForm, received_date: e.target.value })} />
               </div>
               <div>
                 <label className="label !text-xs">Method</label>
@@ -507,16 +512,16 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
               </div>
               <div>
                 <label className="label !text-xs">Paid by</label>
-                <input className="input" value={editForm.paid_by_party} onChange={(e) => setEditForm({ ...editForm, paid_by_party: e.target.value })} placeholder="Guest/Agency" />
+                <Input value={editForm.paid_by_party} onChange={(e) => setEditForm({ ...editForm, paid_by_party: e.target.value })} placeholder="Guest/Agency" />
               </div>
               <div>
                 <label className="label !text-xs">Reference</label>
-                <input className="input" value={editForm.reference} onChange={(e) => setEditForm({ ...editForm, reference: e.target.value })} placeholder="Optional" />
+                <Input value={editForm.reference} onChange={(e) => setEditForm({ ...editForm, reference: e.target.value })} placeholder="Optional" />
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button className="btn-ghost" onClick={() => setEditRow(null)}>Cancel</button>
-              <button className="btn-primary" onClick={saveEdit}>Save changes</button>
+              <Button variant="ghost" onClick={() => setEditRow(null)}>Cancel</Button>
+              <Button onClick={saveEdit}>Save changes</Button>
             </div>
           </div>
         </div>
@@ -531,30 +536,30 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
                 {sendBox.channel === 'WHATSAPP' ? <MessageCircle size={16} className="text-green-600" /> : <Mail size={16} className="text-blue-600" />}
                 Send via {sendBox.channel === 'WHATSAPP' ? 'WhatsApp' : 'Email'}
               </h3>
-              <button className="btn-ghost !p-1" onClick={() => setSendBox({ ...sendBox, open: false })}><X size={16} /></button>
+              <Button variant="ghost" size="icon-xs" onClick={() => setSendBox({ ...sendBox, open: false })}><X size={16} /></Button>
             </div>
             <div className="space-y-3">
               <div>
                 <label className="label !text-xs">{sendBox.channel === 'WHATSAPP' ? 'Phone number' : 'Email address'} *</label>
-                <input className="input" value={sendBox.to} onChange={(e) => setSendBox({ ...sendBox, to: e.target.value })}
+                <Input value={sendBox.to} onChange={(e) => setSendBox({ ...sendBox, to: e.target.value })}
                   placeholder={sendBox.channel === 'WHATSAPP' ? '01XXXXXXXXX' : 'guest@email.com'} />
               </div>
               {sendBox.channel === 'EMAIL' && (
                 <div>
                   <label className="label !text-xs">Subject</label>
-                  <input className="input" value={sendBox.subject} onChange={(e) => setSendBox({ ...sendBox, subject: e.target.value })} />
+                  <Input value={sendBox.subject} onChange={(e) => setSendBox({ ...sendBox, subject: e.target.value })} />
                 </div>
               )}
               <div>
                 <label className="label !text-xs">Message</label>
-                <textarea className="input h-32 resize-none" value={sendBox.body} onChange={(e) => setSendBox({ ...sendBox, body: e.target.value })} />
+                <Textarea className="h-32 resize-none" value={sendBox.body} onChange={(e) => setSendBox({ ...sendBox, body: e.target.value })} />
               </div>
               <div>
                 <label className="label !text-xs">Attachment</label>
                 <input
                   type="file"
                   accept={sendBox.channel === 'WHATSAPP' ? 'application/pdf' : undefined}
-                  className="input"
+                  className={fileInputClass}
                   onChange={(e) => setSendBox({ ...sendBox, file: e.target.files?.[0] || null })}
                 />
                 <p className="text-[11px] text-pine/50 mt-1">
@@ -565,11 +570,11 @@ export default function ReservationPayments({ userName, isAdmin, scope = PAYMENT
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button className="btn-ghost" onClick={() => setSendBox({ ...sendBox, open: false })}>Cancel</button>
-              <button className="btn-primary" onClick={sendNow} disabled={sendBusy}>
+              <Button variant="ghost" onClick={() => setSendBox({ ...sendBox, open: false })}>Cancel</Button>
+              <Button onClick={sendNow} disabled={sendBusy}>
                 {sendBox.channel === 'WHATSAPP' ? <MessageCircle size={14} /> : <Mail size={14} />}
                 {sendBusy ? 'Sending…' : 'Send'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -19,6 +19,7 @@ import {
 import Quotation from '../components/print/Quotation.jsx'
 import SearchableSelect from '../components/SearchableSelect.jsx'
 import { Combobox } from '../components/ui/combobox.jsx'
+import { Button } from '../components/ui/button.jsx'
 import { logAudit } from '../lib/pms.api.js'
 import { getPrintBrandProps } from '../lib/companySettings'
 import useReservationDetail from '../hooks/useReservationDetail.js'
@@ -67,7 +68,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
 
   return (
     <div>
-      <button className="btn-ghost mb-4" onClick={back}><ArrowLeft size={15} /> All reservations</button>
+      <Button variant="ghost" className="mb-4" onClick={back}><ArrowLeft size={15} /> All reservations</Button>
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3">
         <div>
@@ -633,22 +634,22 @@ function Overview({
           <h3 className="font-display font-semibold text-pine mb-3"></h3>
           <div className="space-y-2">
             {canConfirm && (
-              <button className="btn-primary w-full justify-center" onClick={() => {
+              <Button className="w-full justify-center" onClick={() => {
                 if (advance <= 0 && payments.length === 0) { flash('Record the advance payment first (Billings & Check-Out tab).'); return }
                 setStatus('CONFIRMED'); flash('Booking confirmed.')
               }}>
                 <CheckCircle2 size={16} /> Confirm booking
-              </button>
+              </Button>
             )}
             {['QUERY', 'QUOTED', 'CONFIRMED'].includes(res.status) && (
-              <button className="btn-ghost w-full justify-center text-red-600" onClick={() => setStatus('CANCELLED')}>
+              <Button variant="ghost" className="w-full justify-center text-red-600" onClick={() => setStatus('CANCELLED')}>
                 <Ban size={15} /> Cancel reservation
-              </button>
+              </Button>
             )}
             {res.status === 'CHECKED_IN' && (
-              <button className="btn-ghost w-full justify-center" onClick={requestRoomClearance} disabled={clearanceBusy}>
+              <Button variant="ghost" className="w-full justify-center" onClick={requestRoomClearance} disabled={clearanceBusy}>
                 <Send size={15} /> {clearanceBusy ? 'Sending...' : 'Room Clearance Request'}
-              </button>
+              </Button>
             )}
             <p className="text-xs text-pine/50 pt-2">Advance received: <span className="money font-semibold">{fmtBDT(advance)}</span>.</p>
           </div>
@@ -659,9 +660,9 @@ function Overview({
       <div className="card p-5 lg:col-span-3">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-display font-semibold text-pine">Quotation</h3>
-          <button className="btn-ghost !py-1.5 text-xs" onClick={() => openQuoteEditor(false)}>
+          <Button variant="ghost" size="xs" className="text-xs" onClick={() => openQuoteEditor(false)}>
             <Plus size={13} /> New quotation
-          </button>
+          </Button>
         </div>
         {!quote ? (
           <p className="text-sm text-pine/50 py-4">No quotation created yet. Click "+ New quotation" to create one.</p>
@@ -854,7 +855,7 @@ function Overview({
                 <input className="input flex-1 min-w-[120px]" placeholder="Item label" value={newAddon.label} onChange={e => setNewAddon({...newAddon, label: e.target.value})} />
                 <input type="number" className="input !w-24" placeholder="Price" value={newAddon.price} onChange={e => setNewAddon({...newAddon, price: e.target.value})} />
                 <input type="number" className="input !w-16" placeholder="Qty" min="1" value={newAddon.qty} onChange={e => setNewAddon({...newAddon, qty: e.target.value})} />
-                <button className="btn-ghost !py-1" onClick={addAddonItem}><Plus size={14} /></button>
+                <Button variant="ghost" size="sm" onClick={addAddonItem}><Plus size={14} /></Button>
               </div>
               {addonList.length === 0 && <p className="text-xs text-pine/40 py-1">No items added.</p>}
               {addonList.map((a, idx) => (
@@ -903,10 +904,10 @@ function Overview({
             </fieldset>
 
             <div className="flex flex-wrap gap-3 justify-end border-t border-leaf pt-4">
-              <button className="btn-ghost" onClick={() => setQuoteEditorOpen(false)}>Cancel</button>
-              <button className="btn-primary" onClick={handleUpdateQuotation}>
+              <Button variant="ghost" onClick={() => setQuoteEditorOpen(false)}>Cancel</Button>
+              <Button onClick={handleUpdateQuotation}>
                 <Save size={16} /> {editing ? 'Update Quotation' : 'Save Quotation'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

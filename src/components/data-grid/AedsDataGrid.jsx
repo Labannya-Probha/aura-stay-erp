@@ -12,6 +12,15 @@ import {
 
 import AedsDataGridToolbar from "./AedsDataGridToolbar"
 import AedsDataGridPagination from "./AedsDataGridPagination"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "src/components/ui/table"
 import "./aeds-data-grid.css"
 import "./aeds-v6-phase5-grid.css"
 
@@ -349,7 +358,7 @@ export default function AedsDataGrid({
     const clickable = typeof onRowClick === "function"
 
     return (
-      <tr
+      <TableRow
         key={rowId}
         className={`aeds-grid-row ${
           clickable ? "aeds-grid-row-clickable" : ""
@@ -379,7 +388,7 @@ export default function AedsDataGrid({
             frozenFirstColumn && columnIndex === 0
 
           return (
-            <td
+            <TableCell
               key={column.accessorKey}
               className={`aeds-grid-cell aeds-grid-align-${alignment(
                 column
@@ -394,10 +403,10 @@ export default function AedsDataGrid({
               }}
             >
               {renderCell(row, column, rowIndex)}
-            </td>
+            </TableCell>
           )
         })}
-      </tr>
+      </TableRow>
     )
   }
 
@@ -433,9 +442,9 @@ export default function AedsDataGrid({
       )}
 
       <div className="aeds-grid-wrap">
-        <table className="aeds-grid-table">
-          <thead>
-            <tr>
+        <Table className="aeds-grid-table">
+          <TableHeader>
+            <TableRow>
               {visibleColumns.map(
                 (column, columnIndex) => {
                   const frozen =
@@ -443,7 +452,7 @@ export default function AedsDataGrid({
                     columnIndex === 0
 
                   return (
-                    <th
+                    <TableHead
                       key={column.accessorKey}
                       className={`aeds-grid-align-${alignment(
                         column
@@ -519,17 +528,17 @@ export default function AedsDataGrid({
                           }
                         />
                       </div>
-                    </th>
+                    </TableHead>
                   )
                 }
               )}
-            </tr>
-          </thead>
+            </TableRow>
+          </TableHeader>
 
-          <tbody>
+          <TableBody>
             {loading ? (
-              <tr>
-                <td
+              <TableRow>
+                <TableCell
                   colSpan={Math.max(
                     1,
                     visibleColumns.length
@@ -537,8 +546,8 @@ export default function AedsDataGrid({
                   className="aeds-grid-empty"
                 >
                   Loading data...
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : grouped ? (
               Object.entries(grouped).map(
                 ([groupValue, groupedRows]) => {
@@ -549,8 +558,8 @@ export default function AedsDataGrid({
 
                   return (
                     <Fragment key={`group-${groupValue}`}>
-                      <tr className="aeds-grid-group-row">
-                        <td
+                      <TableRow className="aeds-grid-group-row">
+                        <TableCell
                           colSpan={visibleColumns.length}
                         >
                           {
@@ -562,15 +571,15 @@ export default function AedsDataGrid({
                           }
                           : <strong>{groupValue}</strong> ·{" "}
                           {groupedRows.length} row(s)
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
 
                       {groupedRows.map(renderRow)}
 
-                      <tr className="aeds-grid-subtotal">
+                      <TableRow className="aeds-grid-subtotal">
                         {visibleColumns.map(
                           (column, index) => (
-                            <td
+                            <TableCell
                               key={column.accessorKey}
                               className={`aeds-grid-align-${alignment(
                                 column
@@ -589,10 +598,10 @@ export default function AedsDataGrid({
                                       column
                                     )
                                   : ""}
-                            </td>
+                            </TableCell>
                           )
                         )}
-                      </tr>
+                      </TableRow>
                     </Fragment>
                   )
                 }
@@ -602,8 +611,8 @@ export default function AedsDataGrid({
             )}
 
             {!loading && !pagedRows.length && (
-              <tr>
-                <td
+              <TableRow>
+                <TableCell
                   colSpan={Math.max(
                     1,
                     visibleColumns.length
@@ -611,17 +620,17 @@ export default function AedsDataGrid({
                   className="aeds-grid-empty"
                 >
                   {emptyText}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
+          </TableBody>
 
           {processedRows.length > 0 && (
-            <tfoot>
-              <tr className="aeds-grid-total">
+            <TableFooter>
+              <TableRow className="aeds-grid-total">
                 {visibleColumns.map(
                   (column, index) => (
-                    <td
+                    <TableCell
                       key={column.accessorKey}
                       className={`aeds-grid-align-${alignment(
                         column
@@ -639,13 +648,13 @@ export default function AedsDataGrid({
                               column
                             )
                           : ""}
-                    </td>
+                    </TableCell>
                   )
                 )}
-              </tr>
-            </tfoot>
+              </TableRow>
+            </TableFooter>
           )}
-        </table>
+        </Table>
       </div>
 
       <AedsDataGridPagination

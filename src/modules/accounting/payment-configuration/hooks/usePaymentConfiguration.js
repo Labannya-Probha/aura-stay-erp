@@ -17,6 +17,7 @@ export default function usePaymentConfiguration(tenantId) {
   const [isSaving, setIsSaving] = useState(false)
   const [pendingTerminalId, setPendingTerminalId] = useState(null)
   const [error, setError] = useState('')
+  const [lastRefresh, setLastRefresh] = useState(null)
 
   useEffect(() => {
     mountedRef.current = true
@@ -50,6 +51,7 @@ export default function usePaymentConfiguration(tenantId) {
 
         setRecords(Array.isArray(terminals) ? terminals : [])
         setSettlementAccounts(Array.isArray(accounts) ? accounts : [])
+        setLastRefresh(new Date())
       } catch (requestError) {
         if (!mountedRef.current || requestId !== requestIdRef.current) return
 
@@ -213,6 +215,7 @@ export default function usePaymentConfiguration(tenantId) {
     isSaving,
     pendingTerminalId,
     error,
+    lastRefresh,
     clearError,
     refresh,
     createTerminal,

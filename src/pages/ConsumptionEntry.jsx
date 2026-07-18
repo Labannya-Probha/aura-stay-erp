@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
 import { fmtBDT, fmtDate, todayISO } from '../lib/helpers'
-import { Plus, Trash2, Save, RotateCcw, Search, ClipboardList } from 'lucide-react'
+import { Plus, Trash2, Save, RotateCcw, ClipboardList } from 'lucide-react'
 import KPICards from '../components/KPICards.jsx'
+import { Combobox } from '../components/ui/combobox.jsx'
 
 const LOCATIONS = ['KITCHEN', 'BAR', 'STORE', 'HOUSEKEEPING', 'MAINTENANCE', 'FRONT_OFFICE', 'OTHER']
 const REASONS = ['INTERNAL_USE', 'WASTAGE', 'COMPLIMENTARY', 'STAFF_MEAL', 'BREAKAGE', 'OTHER']
@@ -154,19 +155,24 @@ export default function ConsumptionEntry({ userName, isAdmin }) {
           </div>
 
           <div className="relative mb-3">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-pine/30" />
-            <input className="input pl-9" placeholder="Search raw material to add…" value={search} onChange={(e) => setSearch(e.target.value)} />
-            {search && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-leaf rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                {filteredInv.length === 0 && <div className="px-3 py-2 text-sm text-pine/40">No matching items.</div>}
-                {filteredInv.map((it) => (
-                  <button key={it.id} type="button" onClick={() => addLine(it)} className="w-full text-left px-3 py-2 text-sm hover:bg-leaf/40 flex justify-between">
-                    <span>{it.name}</span>
-                    <span className="text-xs text-pine/40">{it.unit} · {fmtBDT(latestCost[it.id] || 0)}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            <Combobox
+              items={filteredInv.map((it) => ({
+                value: it.id,
+                label: it.name,
+                sublabel: `${it.unit} · ${fmtBDT(latestCost[it.id] || 0)}`,
+              }))}
+              value=""
+              onChange={(nextValue) => {
+                const selected = filteredInv.find((it) => it.id === nextValue)
+                if (selected) addLine(selected)
+              }}
+              searchValue={search}
+              onSearchValueChange={setSearch}
+              placeholder="Search raw material to add…"
+              searchPlaceholder="Search raw material to add…"
+              emptyText="No matching items."
+              triggerClassName="input"
+            />
           </div>
 
           {lines.length > 0 ? (

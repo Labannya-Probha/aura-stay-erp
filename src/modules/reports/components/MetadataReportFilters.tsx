@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import { searchFilterOptions } from "../sdk/reportMetadata.service"
 import { getTenantId } from "../../../lib/tenant"
+import { Combobox } from "../../../components/ui/combobox"
 
 export interface ReportFilterDef {
   filterKey: string
@@ -36,10 +37,8 @@ interface AsyncSearchSelectProps {
 function AsyncSearchSelect({ sourceHint, value, displayValue, onSelect, placeholder }: AsyncSearchSelectProps) {
   const [query, setQuery] = useState<string>(displayValue || "")
   const [options, setOptions] = useState<FilterOption[]>([])
-  const [open, setOpen] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const boxRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setQuery(displayValue || "")
@@ -58,53 +57,26 @@ function AsyncSearchSelect({ sourceHint, value, displayValue, onSelect, placehol
     }
   }, [query, sourceHint])
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (boxRef.current && !boxRef.current.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
   return (
-    <div ref={boxRef} className="relative">
-      <input
-        type="text"
-        placeholder={placeholder}
-        value={query}
-        onFocus={() => setOpen(true)}
-        onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-          setQuery(event.target.value)
-          setOpen(true)
-          if (event.target.value === "") onSelect(null, "")
-        }}
-        className="mt-1 h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none focus:border-[#2E7D32]"
-      />
-      {open && (
-        <div className="absolute z-20 mt-1 max-h-56 w-full min-w-[200px] overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg">
-          {loading && (
-            <div className="px-3 py-2 text-xs font-semibold text-slate-400">Searching...</div>
-          )}
-          {!loading && options.length === 0 && (
-            <div className="px-3 py-2 text-xs font-semibold text-slate-400">No matches</div>
-          )}
-          {!loading &&
-            options.map((opt) => (
-              <div
-                key={opt.value}
-                onClick={() => {
-                  onSelect(opt.value, opt.label)
-                  setQuery(opt.label)
-                  setOpen(false)
-                }}
-                className="cursor-pointer px-3 py-2 text-sm font-semibold normal-case text-slate-700 hover:bg-[#F7F4EC]"
-              >
-                {opt.label}
-              </div>
-            ))}
-        </div>
-      )}
-    </div>
+    <Combobox
+      items={options}
+      value={value || ""}
+      onChange={(nextValue, item) => {
+        onSelect((nextValue as string) || null, (item?.label as string) || "")
+      }}
+      placeholder={placeholder || "Select..."}
+      searchPlaceholder={placeholder || "Search..."}
+      searchValue={query}
+      onSearchValueChange={(nextQuery) => {
+        setQuery(nextQuery)
+        if (!nextQuery) onSelect(null, "")
+      }}
+      isLoading={loading}
+      loadingText="Searching..."
+      emptyText="No matches"
+      clearable
+      triggerClassName="mt-1 h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+    />
   )
 }
 
