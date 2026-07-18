@@ -1,5 +1,5 @@
 import { LogOut } from 'lucide-react'
-import { supabase } from '../../../supabase'
+import { supabase } from '../../../lib/supabase'
 import { getTenantId } from '../../../lib/tenant'
 import { ROLE_LABELS } from '../../../lib/roles'
 

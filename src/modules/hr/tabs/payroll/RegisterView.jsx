@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../../../supabase'
+import { supabase } from '../../../../lib/supabase'
 import { fmtBDT, fmtDate } from '../../../../lib/helpers'
 import { ChevronDown, ChevronRight, Printer } from 'lucide-react'
 

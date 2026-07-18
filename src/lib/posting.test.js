@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock supabase and tenant modules so posting.js can be imported in Node
-vi.mock('../supabase', () => ({
+vi.mock('../lib/supabase', () => ({
   supabase: {
     rpc: vi.fn(),
     from: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock('./tenant', () => ({
 }))
 
 import { postJournal, isLocked } from './posting.js'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { getTenantId } from './tenant'
 
 describe('postJournal()', () => {

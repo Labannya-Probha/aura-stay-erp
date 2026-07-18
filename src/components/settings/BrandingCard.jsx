@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { setCurrency } from '../../lib/helpers'
 import { getTenantId } from '../../lib/tenant'
 import { getCompanySettingsQuery } from '../../lib/companySettings'

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Pencil, Plus, Save } from 'lucide-react'
 import SearchableSelect from '../SearchableSelect.jsx'
 import { fmtBDT, fmtDate } from '../../lib/helpers'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { PRESET_PREFERENCES } from './utils.js'
 
 export function GuestProfileCard({ guest, reservationId, isAdmin, userName, reload, flash }) {

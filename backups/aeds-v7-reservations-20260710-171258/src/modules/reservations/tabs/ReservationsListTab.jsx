@@ -6,7 +6,7 @@ import {
 } from "react"
 
 import AedsDataGrid from "../../../components/data-grid/AedsDataGrid"
-import { supabase } from "../../../supabase"
+import { supabase } from "../../../lib/supabase"
 
 function firstValue(row, keys, fallback = "") {
   for (const key of keys) {

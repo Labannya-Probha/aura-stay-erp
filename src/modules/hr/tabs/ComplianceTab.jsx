@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../../supabase'
+import { supabase } from '../../../lib/supabase'
 import { fmtDate, todayISO } from '../../../lib/helpers'
 import { Plus, BookOpen, Users } from 'lucide-react'
 

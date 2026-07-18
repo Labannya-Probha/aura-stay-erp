@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { applyRounding, nightsBetween, sumCharges } from '../lib/helpers'
 import { getCompanySettingsQuery, withTenantScope } from '../lib/companySettings'
 

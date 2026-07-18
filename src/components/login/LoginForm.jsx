@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Eye, EyeOff, LogIn, Shield, Loader2 } from "lucide-react"
-import { supabase } from "../../supabase"
+import { supabase } from "../../lib/supabase"
 import { cleanSlug } from "./login.constants"
 
 export default function LoginForm({ brand = {}, routeSlug }) {

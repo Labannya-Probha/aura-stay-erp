@@ -12,7 +12,7 @@ import {
 } from "lucide-react"
 
 import AedsDataGrid from "../../../components/data-grid/AedsDataGrid"
-import { supabase } from "../../../supabase"
+import { supabase } from "../../../lib/supabase"
 import {
   withTenantScope,
 } from "../../../lib/companySettings"

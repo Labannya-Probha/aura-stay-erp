@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { getTenantId, withTenantInsert } from '../lib/tenant'
 import { getCompanySettingsQuery, getPrintBrandProps } from '../lib/companySettings'
 import { fmtBDT, fmtDate, todayISO } from '../lib/helpers'

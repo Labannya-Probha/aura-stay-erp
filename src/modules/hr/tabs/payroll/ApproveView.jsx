@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../../../supabase'
+import { supabase } from '../../../../lib/supabase'
 import { fmtBDT } from '../../../../lib/helpers'
 import { postJournal } from '../../../../lib/posting'
 import { CheckCircle, BookOpen } from 'lucide-react'

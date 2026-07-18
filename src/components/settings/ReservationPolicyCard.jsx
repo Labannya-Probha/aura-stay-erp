@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { Calendar, Save, Pencil, Plus, Trash2 } from 'lucide-react'
 
 function fmtDate(d) {

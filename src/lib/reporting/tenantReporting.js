@@ -1,4 +1,4 @@
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { getTenantId } from '../tenant'
 import { REPORT_TEMPLATES } from './reportConfig'
 

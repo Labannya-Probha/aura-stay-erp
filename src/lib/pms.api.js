@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'   // file lives at src/lib/pms.api.js; supabase.js is at src/supabase.js
+import { supabase } from '../lib/supabase'   // file lives at src/lib/pms.api.js; supabase.js is at src/supabase.js
 import { getTenantId, withTenantInsert, withTenantInsertMany } from './tenant'
 
 /** tenant helpers */

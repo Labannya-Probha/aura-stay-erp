@@ -1,4 +1,4 @@
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { getTenantId } from '../tenant'
 
 const n = (value) => Number(value || 0)

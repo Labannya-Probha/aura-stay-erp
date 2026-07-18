@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Users } from 'lucide-react'
 import { fmtBDT, todayISO } from '../../lib/helpers'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 
 export function ShareholderRedemption({ res, charges = [], reload, flash, userName }) {
   const shareholder = res.shareholders

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, fmtDate, todayISO } from '../lib/helpers'
 import { generatePayrollJournal, approvePayrollAndPostJv } from '../lib/generatePayrollJournal'
 import KPICards from '../components/KPICards.jsx'

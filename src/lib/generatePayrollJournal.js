@@ -15,7 +15,7 @@
 //   Call this when a run is already APPROVED and only the journal is missing.
 //   The underlying RPC is idempotent: subsequent calls return the existing jv_id.
 // ────────────────────────────────────────────────────────────────────────────
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 
 function toRpcError(error) {
   const rpcError = new Error(error.message)

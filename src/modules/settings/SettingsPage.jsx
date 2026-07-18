@@ -4,7 +4,7 @@
 /* ------------------------------------------------------------------ */
 import { useEffect, useMemo, useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import AdminFeatureAccessCard from '../../components/settings/AdminFeatureAccessCard'
 import ReservationPolicyCard from '../../components/settings/ReservationPolicyCard'
 import { getVisibleSettingsSections } from '../../app/navigation/settingsSections'

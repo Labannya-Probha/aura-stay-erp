@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase, SUPABASE_CONFIG } from '../supabase'
+import { supabase, SUPABASE_CONFIG } from '../lib/supabase'
 import { fmtDate, todayISO, parseWorkflowMeta, routeAiIntent, buildWorkflowDescription, updateDescriptionStage } from '../lib/helpers'
 import KPICards from '../components/KPICards.jsx'
 import { ListChecks, Plus, Sparkles, Search, Clock, User, X, Bot, ArrowRight, RefreshCcw } from 'lucide-react'

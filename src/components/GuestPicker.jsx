@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { Search } from 'lucide-react'
 
 export default function GuestPicker({ close, pick }) {

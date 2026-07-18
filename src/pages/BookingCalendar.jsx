@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, todayISO } from '../lib/helpers'
 import { loadReservationConfig } from '../lib/reservationConfig'
 import { getGovtHoliday } from '../lib/govtHolidays'

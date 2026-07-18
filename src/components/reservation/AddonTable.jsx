@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CheckCircle2, Pencil, Save, Trash2, X } from 'lucide-react'
 import { computeCharge, fmtBDT, rateFor, todayISO } from '../../lib/helpers'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 
 export function AddonTable({ addons, taxConfig, res, userName, reload, flash, isAdmin }) {
   const [editId, setEditId] = useState(null)

@@ -1,4 +1,4 @@
-import { supabase } from "../../../supabase"
+import { supabase } from "../../../lib/supabase"
 
 export async function getReservationKpis() {
   const { data, error } = await supabase.rpc("reservation_kpi_summary")

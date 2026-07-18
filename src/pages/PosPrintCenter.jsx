@@ -4,7 +4,7 @@ import {
   Activity, ChefHat, FileText, Printer, Receipt, Route, Save, Search,
   Settings2, SlidersHorizontal, TestTube2,
 } from 'lucide-react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import PrintPortal from '../components/PrintPortal.jsx'
 import { BarOrderTicket, KitchenTicket, PosReceipt } from '../components/print/PosDocs.jsx'
 import { getTenantId } from '../lib/tenant'
