@@ -60,9 +60,10 @@ export default function usePaymentConfiguration(tenantId) {
           ),
         )
       } finally {
-        if (!mountedRef.current || requestId !== requestIdRef.current) return
-        setIsLoading(false)
-        setIsRefreshing(false)
+        if (mountedRef.current && requestId === requestIdRef.current) {
+          setIsLoading(false)
+          setIsRefreshing(false)
+        }
       }
     },
     [tenantId],
