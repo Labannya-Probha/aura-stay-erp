@@ -2,37 +2,34 @@
 
 Copy the included `src/modules/accounting` files into the matching project folder.
 
-This package expects the Commit-3 hook API:
+This package uses `usePaymentConfiguration` (in `hooks/usePaymentConfiguration.js`), which returns:
 
 - `terminals`
 - `settlementAccounts`
-- `loading`
-- `saving`
-- `error`
 - `search`
 - `setSearch`
+- `isLoading`
+- `isRefreshing`
+- `isSaving`
+- `pendingTerminalId`
+- `error`
+- `clearError()`
+- `refresh()`
 - `createTerminal(payload)`
 - `updateTerminal(id, payload)`
 - `toggleTerminalStatus(terminal)`
 - `removeTerminal(id)`
-- `refresh()`
 
-## Required shared CSS classes
+## Styling
 
-The UI uses these existing AEDS utility classes:
-
-- `aeds-input`
-- `aeds-button-primary`
-- `aeds-button-secondary`
-
-If they are not available, replace them with your project button/input classes or add equivalents in the global stylesheet.
+The UI is styled with Tailwind CSS utility classes (e.g. `bg-slate-900`, `rounded-xl`). No separate AEDS utility classes are required.
 
 ## Integration example
 
 ```jsx
-import { PaymentConfigurationPage } from './modules/accounting'
+import { PaymentConfigurationPage } from './modules/accounting/payment-configuration'
 
-<PaymentConfigurationPage tenantId={session.tenantId} />
+<PaymentConfigurationPage />
 ```
 
 ## Local verification
