@@ -165,7 +165,9 @@ function isRestaurantRoute(pathname) {
     pathname === PATHS.MENU_MANAGEMENT ||
     pathname.startsWith("/pos/print-center") ||
     pathname === PATHS.GUEST_KIOSK ||
-    pathname.startsWith("/verify/pos/")
+    pathname.startsWith("/verify/pos/") ||
+    pathname.startsWith("/verify/invoice/") ||
+    pathname.startsWith("/verify/payment/")
   )
 }
 

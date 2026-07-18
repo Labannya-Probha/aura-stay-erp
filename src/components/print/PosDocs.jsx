@@ -14,11 +14,14 @@ import {
   splitKotBotItems,
 } from '../../lib/posPrintEngine'
 
-const line = { borderTop: '1px dashed #000', margin: '6px 0' }
+const PRINT_INK = 'var(--print-ink, #111827)'
+const PRINT_LINE = 'var(--print-line, rgba(27,77,46,0.24))'
+
+const line = { borderTop: `1px dashed ${PRINT_LINE}`, margin: '6px 0' }
 const mono = { fontFamily: '"Noto Sans Bengali", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' }
 const cell = { padding: '2px 0', verticalAlign: 'top', fontSize: 10 }
 const amountCell = { ...cell, textAlign: 'right', whiteSpace: 'nowrap' }
-const labelCell = { ...cell, color: '#000' }
+const labelCell = { ...cell, color: PRINT_INK }
 
 function safeDate(order) {
   return order?.settled_at || order?.created_at || new Date().toISOString()
@@ -26,7 +29,7 @@ function safeDate(order) {
 
 function CopyBadge({ profile }) {
   return (
-    <div style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 800, fontSize: 10, padding: '2px 0', letterSpacing: 1 }}>
+    <div style={{ border: `1px solid ${PRINT_LINE}`, color: PRINT_INK, textAlign: 'center', fontWeight: 800, fontSize: 10, padding: '2px 0', letterSpacing: 1 }}>
       {profile.title}
     </div>
   )
@@ -253,7 +256,7 @@ export function ThermalReceiptLayout({ order = {}, items = [], company, copyType
   return (
     <div
       className={`print-copy ${profile.code !== 'CUSTOMER_COPY' ? 'print-copy-break' : ''}`}
-      style={{ ...mono, position: 'relative', boxSizing: 'border-box', maxWidth: '100%', width: '100%', margin: '0 auto', color: '#000', background: '#fff', overflowWrap: 'anywhere' }}
+      style={{ ...mono, position: 'relative', boxSizing: 'border-box', maxWidth: '100%', width: '100%', margin: '0 auto', color: PRINT_INK, background: '#fff', overflowWrap: 'anywhere' }}
     >
       <ReceiptHeader order={order} company={company} profile={profile} settings={settings} invoiceNo={invoiceNo} />
       <ReceiptItemTable items={items} />
@@ -339,7 +342,7 @@ export function KOTPrintLayout({ order = {}, items = [], company, stationName = 
   const profile = getCopyProfile(copyType)
   const issuedAt = order.created_at || new Date().toISOString()
   return (
-    <div className="print-copy" style={{ ...mono, boxSizing: 'border-box', maxWidth: '100%', width: '100%', margin: '0 auto', color: '#000', overflowWrap: 'anywhere' }}>
+    <div className="print-copy" style={{ ...mono, boxSizing: 'border-box', maxWidth: '100%', width: '100%', margin: '0 auto', color: PRINT_INK, overflowWrap: 'anywhere' }}>
       <CopyBadge profile={profile} />
       <div style={{ textAlign: 'center', borderBottom: '2px solid #000', padding: '4px 0' }}>
         <div style={{ fontSize: 16, fontWeight: 900 }}>{brand.outletName}</div>

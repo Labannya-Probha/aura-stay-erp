@@ -22,6 +22,8 @@ export function getActiveNavGroupTitle(currentTopId, pathname) {
     pathname.startsWith('/frontoffice') ||
     pathname.startsWith('/front-office') ||
     pathname.startsWith('/verify/pos/') ||
+    pathname.startsWith('/verify/invoice/') ||
+    pathname.startsWith('/verify/payment/') ||
     currentTopId === 'nightaudit' ||
     currentTopId === 'housekeeping' ||
     currentTopId === 'facilities'
@@ -31,7 +33,9 @@ export function getActiveNavGroupTitle(currentTopId, pathname) {
     pathname.startsWith('/pos') ||
     pathname.startsWith('/menu-management') ||
     pathname.startsWith('/kiosk/pos') ||
-    pathname.startsWith('/verify/pos/')
+    pathname.startsWith('/verify/pos/') ||
+    pathname.startsWith('/verify/invoice/') ||
+    pathname.startsWith('/verify/payment/')
   ) return 'Modules'
   const group = NAV_GROUPS.find((entry) => entry.items.some((item) => item.id === currentTopId))
   return group?.title || null
