@@ -48,10 +48,38 @@ function throwSupabaseError(error, fallbackMessage) {
   if (!error) return
 
   if (error.code === '23505') {
-    throw new Error('A payment terminal with the same code or identifying information already exists.')
+    throw new Error('Terminal code, merchant ID or terminal ID is already in use.')
+  }
+  if (error.code === '42501' || /permission|policy|row-level security/i.test(error.message || '')) {
+    throw new Error('You do not have permission to change payment configuration for this tenant.')
+  }
+  if (/fetch|network|timeout|failed to fetch/i.test(error.message || '')) {
+    throw new Error('Network connection failed. Check your connection and try again.')
   }
 
   throw new Error(error.message || fallbackMessage)
+}
+
+async function assertUniqueTerminal(tenantId, payload, excludedId = null) {
+  const checks = [
+    ['terminal_code', payload.terminal_code ?? payload.code, 'Terminal code'],
+    ['merchant_id', payload.merchant_id, 'Merchant ID'],
+    ['terminal_id', payload.terminal_id, 'Terminal ID'],
+  ].filter(([, value]) => String(value || '').trim())
+
+  for (const [column, rawValue, label] of checks) {
+    let query = supabase
+      .from(TERMINALS_TABLE)
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .ilike(column, String(rawValue).trim())
+      .limit(1)
+
+    if (excludedId) query = query.neq('id', excludedId)
+    const { data, error } = await query
+    throwSupabaseError(error, `Unable to validate ${label.toLowerCase()}.`)
+    if (data?.length) throw new Error(`${label} is already used by another payment terminal.`)
+  }
 }
 
 const paymentConfigurationService = {
@@ -92,6 +120,8 @@ const paymentConfigurationService = {
     requireSupabase()
     requireTenantId(tenantId)
 
+    await assertUniqueTerminal(tenantId, payload)
+
     const terminalPayload = {
       ...sanitizeTerminalPayload(payload),
       tenant_id: tenantId,
@@ -122,6 +152,7 @@ const paymentConfigurationService = {
       throw new Error('A payment terminal ID is required.')
     }
 
+    await assertUniqueTerminal(tenantId, payload, terminalId)
     const terminalPayload = sanitizeTerminalPayload(payload)
 
     const { data, error } = await supabase
