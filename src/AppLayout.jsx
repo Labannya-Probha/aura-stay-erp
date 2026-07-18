@@ -3,7 +3,7 @@
 /* ------------------------------------------------------------------ */
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { supabase } from "./supabase"
+import { supabase } from "./lib/supabase"
 import { PATHS } from "./app/paths"
 import { getTenantId } from "./lib/tenant"
 import { WelcomePopover } from "./components/WelcomePopover.jsx"
