@@ -1,1 +1,1 @@
-export { default as PaymentConfigurationPage } from "./PaymentConfigurationPage";
+export { default as PaymentConfigurationPage } from './PaymentConfigurationPage.jsx'
