@@ -19,7 +19,6 @@ import {
 import { getVisibleSettingsSections } from "../../../app/navigation/settingsSections"
 import { PATHS } from "../../../app/paths"
 import { FRONT_OFFICE_PAGES, frontOfficePath, normalizeFrontOfficeSlug } from "../../../modules/front-office/frontOffice.config"
-import "../../../styles/aeds-v6-migration.css"
 
 import {
   DEFAULT_RESERVATION_TAB,
@@ -227,20 +226,23 @@ function NavButton({ item, active, open, expandable, onClick }) {
     <Button
       type="button"
       variant="ghost"
-      className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+      aria-current={active ? "page" : undefined}
+      aria-expanded={expandable ? open : undefined}
+      data-active={active || open ? "true" : undefined}
+      className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-0 ${
         active || open
-          ? "bg-white text-slate-900 shadow-sm ring-1 ring-white/40"
-          : "text-white/80 hover:bg-white/12 hover:text-white"
+          ? "bg-white/14 text-white shadow-[0_12px_28px_rgba(0,0,0,0.16)] ring-1 ring-white/12"
+          : "text-white/78 hover:bg-white/10 hover:text-white"
       }`}
       onClick={onClick}
     >
       <span className="flex min-w-0 items-center gap-3">
-        {Icon && <Icon size={17} className="shrink-0" />}
-        <span className="min-w-0 truncate whitespace-nowrap">{item.label}</span>
+        {Icon && <Icon size={17} className="shrink-0 opacity-90" aria-hidden="true" />}
+        <span className="min-w-0 truncate whitespace-nowrap leading-none">{item.label}</span>
       </span>
 
       {expandable && (
-        <ChevronDown size={13} className={`transition-transform ${open ? "" : "-rotate-90"}`} />
+        <ChevronDown size={13} className={`shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden="true" />
       )}
     </Button>
   )
@@ -253,16 +255,18 @@ function ChildButton({ child, onNavigate }) {
     <Button
       type="button"
       variant="ghost"
-      className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors ${
+      aria-current={child.active ? "page" : undefined}
+      data-active={child.active ? "true" : undefined}
+      className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-0 ${
         child.active
-          ? "bg-white/18 text-white"
+          ? "bg-white/16 text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]"
           : child.path
-            ? "text-white/75 hover:bg-white/10 hover:text-white"
-            : "cursor-default text-white/50"
+            ? "text-white/72 hover:bg-white/10 hover:text-white"
+            : "cursor-default text-white/45"
       }`}
       onClick={() => child.path && onNavigate(child.path)}
     >
-      {Icon && <Icon size={13} aria-hidden="true" className="shrink-0 opacity-70" />}
+      {Icon && <Icon size={13} aria-hidden="true" className="shrink-0 opacity-75" />}
       <span className="min-w-0 truncate">{child.label}</span>
     </Button>
   )
@@ -277,19 +281,20 @@ function SubGroup({ group, onNavigate }) {
         type="button"
         variant="ghost"
         onClick={() => setOpen((value) => !value)}
-        className={`flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors ${
-          group.active ? "font-semibold text-white" : "text-white/75 hover:text-white"
+        aria-expanded={open}
+        className={`flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-0 ${
+          group.active ? "text-white" : "text-white/75 hover:bg-white/8 hover:text-white"
         }`}
       >
         <span className="flex min-w-0 items-center gap-2">
-          {group.icon && <group.icon size={12} className="shrink-0 opacity-70" />}
+          {group.icon && <group.icon size={12} className="shrink-0 opacity-70" aria-hidden="true" />}
           <span className="min-w-0 truncate">{group.label}</span>
         </span>
-        <ChevronDown size={10} className={`transition-transform ${open ? "" : "-rotate-90"}`} />
+        <ChevronDown size={10} className={`shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden="true" />
       </Button>
 
       {open && (
-        <div className="ml-4 mt-0.5 space-y-0.5">
+        <div className="ml-3 mt-1 space-y-1 border-l border-white/10 pl-3">
           {group.children.map((child) => (
             <ChildButton key={child.id} child={child} onNavigate={onNavigate} />
           ))}
@@ -607,11 +612,11 @@ export default function SidebarNavigation({
 
   return (
     <SidebarContent asChild>
-      <nav className="aeds-v6-sidebar-nav px-3 pb-4 pt-2">
-      <div className="aeds-v6-sidebar-search">
-        <Search size={15} aria-hidden="true" />
+      <nav aria-label="Primary navigation" className="flex h-full flex-col gap-3 px-3 py-3">
+      <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/8 px-3 py-2 text-white/80 shadow-inner shadow-black/10 focus-within:border-white/20 focus-within:bg-white/12">
+        <Search size={15} aria-hidden="true" className="shrink-0 text-white/65" />
         <SidebarInput
-          className="h-8 border-white/15 bg-white/10 text-white placeholder:text-white/55"
+          className="h-auto border-0 bg-transparent px-0 text-sm font-medium text-white placeholder:text-white/50 focus-visible:ring-0"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           placeholder="Find module or page"
@@ -622,6 +627,7 @@ export default function SidebarNavigation({
             type="button"
             onClick={() => setSearchQuery("")}
             aria-label="Clear navigation search"
+            className="grid size-6 shrink-0 place-items-center rounded-full text-white/60 transition-colors hover:bg-white/10 hover:text-white"
           >
             <X size={14} />
           </button>
@@ -644,11 +650,11 @@ export default function SidebarNavigation({
         return (
           <section
             key={group.title}
-            className={`aeds-v6-nav-group ${
-              groupIndex > 0 ? "mt-3 border-t border-white/[0.08] pt-3" : ""
-            }`}
+            className="rounded-2xl border border-white/10 bg-white/[0.04] p-2 shadow-[0_12px_28px_rgba(0,0,0,0.12)] backdrop-blur-sm"
           >
-            <div className="aeds-v6-nav-group-title">{group.title}</div>
+            <div className="px-2 pb-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
+              {group.title}
+            </div>
 
             <div className="space-y-1">
               {preparedItems.map(({ item, nested }) => {
@@ -690,7 +696,7 @@ export default function SidebarNavigation({
                     />
 
                     {open && (
-                      <div className="aeds-v6-nav-children ml-6 space-y-0.5">
+                      <div className="ml-3 space-y-1 border-l border-white/10 pl-3">
                         {nested.map((child) =>
                           child.children ? (
                             <SubGroup
@@ -727,7 +733,7 @@ export default function SidebarNavigation({
               return !matchesSearch(item, nested)
             })
         ) && (
-          <div className="aeds-v6-sidebar-empty">
+          <div className="rounded-2xl border border-dashed border-white/16 bg-white/[0.04] px-4 py-5 text-center text-xs font-semibold text-white/60">
             No matching module or page.
           </div>
         )}

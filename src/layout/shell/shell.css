@@ -13,7 +13,10 @@
   min-height: 100dvh;
   display: grid;
   grid-template-columns: var(--aeds-sidebar-width) minmax(0, 1fr);
-  background: var(--tenant-shell-bg);
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--tenant-primary) 12%, transparent), transparent 32%),
+    radial-gradient(circle at 100% 12%, color-mix(in srgb, var(--tenant-accent) 10%, transparent), transparent 24%),
+    linear-gradient(180deg, color-mix(in srgb, var(--tenant-shell-bg) 94%, white), var(--tenant-shell-bg));
   overflow-x: clip;
   isolation: isolate;
 }
@@ -41,6 +44,9 @@
   overflow-x: clip;
   overflow-y: auto;
   min-height: 0;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--tenant-surface) 72%, transparent), transparent 26%),
+    transparent;
 }
 
 .aeds-page-container {
@@ -48,6 +54,10 @@
   max-width: var(--aeds-page-max);
   margin-inline: auto;
   padding: var(--aeds-page-y) var(--aeds-page-x) calc(var(--aeds-footer-height) + 24px);
+}
+
+.aeds-page-container > * {
+  min-width: 0;
 }
 
 .aeds-mobile-bar {
@@ -67,12 +77,12 @@
     height: calc(var(--aeds-mobile-bar-height) + env(safe-area-inset-top));
     align-items: center;
     gap: 12px;
-    border-bottom: 1px solid var(--tenant-border);
-    background: color-mix(in srgb, var(--tenant-surface) 96%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--tenant-border) 92%, transparent);
+    background: color-mix(in srgb, var(--tenant-surface) 92%, transparent);
     padding: env(safe-area-inset-top) 14px 0;
-    box-shadow: var(--aeds-shadow-sm);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
   }
 
   .aeds-page-container {
@@ -100,11 +110,11 @@
   bottom: 0;
   z-index: 35;
   height: var(--aeds-footer-height);
-  border-top: 1px solid var(--tenant-border, rgb(226 232 240));
-  background: color-mix(in srgb, var(--tenant-surface, #fff) 96%, transparent);
-  box-shadow: 0 -4px 16px rgb(15 23 42 / 0.04);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid color-mix(in srgb, var(--tenant-border, rgb(226 232 240)) 88%, transparent);
+  background: color-mix(in srgb, var(--tenant-surface, #fff) 90%, transparent);
+  box-shadow: 0 -12px 32px rgb(15 23 42 / 0.08);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
 }
 
 .aeds-fixed-footer__inner {

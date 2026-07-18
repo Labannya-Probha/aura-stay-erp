@@ -5,7 +5,7 @@ export default function SidebarBrandLogo({ url, softwareName }) {
 
   if (url && ok) {
     return (
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-white/30">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-white/95 p-1.5 shadow-[0_8px_22px_rgba(15,23,42,0.14)]">
         <img
           src={url}
           alt={softwareName || 'Tenant logo'}
@@ -24,8 +24,8 @@ export default function SidebarBrandLogo({ url, softwareName }) {
     .toUpperCase()
 
   return (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm ring-1 ring-white/30">
-      <span className="text-sm font-bold leading-none">{abbr}</span>
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/95 text-slate-700 shadow-[0_8px_22px_rgba(15,23,42,0.14)]">
+      <span className="text-sm font-black leading-none tracking-tight">{abbr}</span>
     </div>
   )
 }
