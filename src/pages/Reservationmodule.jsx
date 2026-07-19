@@ -91,14 +91,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
 
       {msg && <div className="mb-4 px-4 py-2 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
 
-      <div className="tab-strip-responsive border-b border-leaf mb-6 overflow-x-auto">
-        {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`tab-button-responsive px-3 sm:px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
-            {t}
-          </button>
-        ))}
-      </div>
+      {/* Tabs managed by sidebar context - no visible tab strip */}
 
       {tab === 'Overview' && (
         <Overview
