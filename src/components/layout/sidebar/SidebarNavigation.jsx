@@ -236,9 +236,9 @@ function NavButton({ item, active, open, expandable, onClick }) {
       }`}
       onClick={onClick}
     >
-      <span className="flex min-w-0 items-center gap-3">
+      <span className="flex min-w-0 flex-1 items-center gap-3">
         {Icon && <Icon size={17} className="shrink-0 opacity-90" aria-hidden="true" />}
-        <span className="min-w-0 truncate whitespace-nowrap leading-none">{item.label}</span>
+        <span className="min-w-0 flex-1 leading-none">{item.label}</span>
       </span>
 
       {expandable && (
@@ -267,7 +267,7 @@ function ChildButton({ child, onNavigate }) {
       onClick={() => child.path && onNavigate(child.path)}
     >
       {Icon && <Icon size={13} aria-hidden="true" className="shrink-0 opacity-75" />}
-      <span className="min-w-0 truncate">{child.label}</span>
+      <span className="min-w-0 flex-1">{child.label}</span>
     </Button>
   )
 }
@@ -286,9 +286,9 @@ function SubGroup({ group, onNavigate }) {
           group.active ? "text-white" : "text-white/75 hover:bg-white/8 hover:text-white"
         }`}
       >
-        <span className="flex min-w-0 items-center gap-2">
+        <span className="flex min-w-0 flex-1 items-center gap-2">
           {group.icon && <group.icon size={12} className="shrink-0 opacity-70" aria-hidden="true" />}
-          <span className="min-w-0 truncate">{group.label}</span>
+          <span className="min-w-0 flex-1">{group.label}</span>
         </span>
         <ChevronDown size={10} className={`shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden="true" />
       </Button>
