@@ -2,8 +2,19 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 
+const isWindows = process.platform === "win32";
+
 export default defineConfig({
   plugins: [react()],
+
+  server: {
+    watch: isWindows
+      ? {
+          usePolling: true,
+          interval: 250,
+        }
+      : undefined,
+  },
 
   resolve: {
     alias: {
