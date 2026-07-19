@@ -130,7 +130,7 @@ export default function ReservationsPage({
         )
 
       case "quotations":
-        return <QuotationsTab />
+        return <QuotationsTab openReservation={openReservation} />
 
       case "history":
         return <ReservationHistoryTab />

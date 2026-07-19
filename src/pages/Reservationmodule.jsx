@@ -67,6 +67,20 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
 
   const setStatus = async (status, extra = {}) => {
     await supabase.from('reservations').update({ status, ...extra }).eq('id', id)
+    // Sync quotation status automatically
+    const quoteStatusMap = {
+      CONFIRMED: 'CONFIRMED',
+      CANCELLED: 'CANCELLED',
+      QUERY: 'DRAFT',
+      QUOTED: 'DRAFT',
+      CHECKED_IN: 'CONFIRMED',
+      CHECKED_OUT: 'CONFIRMED',
+      SETTLED: 'CONFIRMED',
+    }
+    const newQuoteStatus = quoteStatusMap[status]
+    if (newQuoteStatus) {
+      await supabase.from('quotations').update({ status: newQuoteStatus }).eq('reservation_id', id)
+    }
     await loadAll()
   }
 
@@ -91,14 +105,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
 
       {msg && <div className="mb-4 px-4 py-2 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
 
-      <div className="tab-strip-responsive border-b border-leaf mb-6 overflow-x-auto">
-        {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`tab-button-responsive px-3 sm:px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
-            {t}
-          </button>
-        ))}
-      </div>
+      {/* Tabs managed by sidebar context - no visible tab strip */}
 
       {tab === 'Overview' && (
         <Overview
@@ -216,7 +223,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
       )}
 
       {printDoc?.type === 'QUOTE' && (
-        <PrintPortal title="Quotation" onClose={() => setPrintDoc(null)} {...getPrintBrandProps(company)}>
+        <PrintPortal title="Quotation" onClose={() => { const cb = printDoc._afterClose; setPrintDoc(null); cb?.() }} {...getPrintBrandProps(company)}>
           <Quotation
             res={res}
             guest={guest}

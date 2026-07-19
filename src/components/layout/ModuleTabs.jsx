@@ -43,7 +43,7 @@ export default function ModuleTabs({ tabs = [], activeTab, onChange, className }
               tab.disabled && 'cursor-not-allowed opacity-60 shadow-none'
             )}
           >
-            <span className="min-w-0 flex-1 truncate text-left leading-none">{tab.label}</span>
+            <span className="min-w-0 flex-1 text-left leading-none">{tab.label}</span>
             {tab.badge !== undefined && tab.badge !== null ? (
               <span className="rounded-full border border-border bg-white/90 px-2 py-0.5 text-[10px] font-bold leading-none text-muted-foreground shadow-sm">
                 {tab.badge}
