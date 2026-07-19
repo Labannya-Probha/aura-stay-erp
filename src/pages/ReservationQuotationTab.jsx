@@ -278,6 +278,92 @@ export default function ReservationQuotationTab({
     })
   }
 
+  // Render quotation card with actions
+  if (quote) {
+    const qr = rateFor(taxConfig, 'ROOM', res.check_in)
+    const totalPreview = computeCharge((quote.room_rate || 0) * (quote.room_count || 0), quote.discount_pct || 0, qr)
+    const totalValue = +(totalPreview.total * nights).toFixed(2)
+
+    return (
+      <div className="space-y-4">
+        {/* Quotation Card */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-start justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">{quote.quote_no}</h3>
+              <p className="text-sm text-slate-500">Quotation for {guest?.full_name || res.reservation_name}</p>
+            </div>
+            <div className="text-right">
+              <div className="text-xs uppercase text-slate-500">Total Amount</div>
+              <div className="text-2xl font-bold text-slate-900">{fmtBDT(totalValue)}</div>
+            </div>
+          </div>
+
+          <div className="mb-6 grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <div className="font-medium text-slate-900">Check-in</div>
+              <div className="text-slate-600">{fmtDate(res.check_in)}</div>
+            </div>
+            <div>
+              <div className="font-medium text-slate-900">Check-out</div>
+              <div className="text-slate-600">{fmtDate(res.check_out)}</div>
+            </div>
+            <div>
+              <div className="font-medium text-slate-900">Valid until</div>
+              <div className="text-slate-600">{fmtDate(quote.valid_until)}</div>
+            </div>
+          </div>
+
+          <div className="mb-6 flex flex-wrap gap-2">
+            <button
+              onClick={() => printQuote()}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <Printer size={16} />
+              Print
+            </button>
+            <button
+              onClick={() => sendQuoteEmail()}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <Mail size={16} />
+              Email
+            </button>
+            <button
+              onClick={() => sendQuoteWhatsApp()}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <MessageCircle size={16} />
+              WhatsApp
+            </button>
+            <button
+              onClick={() => openQuoteEditor(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <Pencil size={16} />
+              Edit
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Empty state
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+      <div className="mb-2 text-lg font-semibold text-slate-900">No Quotation Yet</div>
+      <p className="mb-4 text-sm text-slate-600">Create your first quotation for this reservation</p>
+      <button
+        onClick={() => openQuoteEditor(false)}
+        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+      >
+        <Plus size={16} />
+        Create Quotation
+      </button>
+    </div>
+  )
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="card p-5 lg:col-span-3">
