@@ -13,7 +13,7 @@ import {
   withTenantScope,
 } from "../../../lib/companySettings"
 
-export default function QuotationsTab() {
+export default function QuotationsTab({ openReservation }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -135,6 +135,7 @@ export default function QuotationsTab() {
         title="Quotations"
         subtitle="Auto-created reservation quotation register"
         data={gridRows}
+        onRowClick={(row) => openReservation?.(row.reservation_id, 'Quotations')}
         columns={[
           {
             accessorKey: "quote_no",

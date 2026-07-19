@@ -67,6 +67,20 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
 
   const setStatus = async (status, extra = {}) => {
     await supabase.from('reservations').update({ status, ...extra }).eq('id', id)
+    // Sync quotation status automatically
+    const quoteStatusMap = {
+      CONFIRMED: 'CONFIRMED',
+      CANCELLED: 'CANCELLED',
+      QUERY: 'DRAFT',
+      QUOTED: 'DRAFT',
+      CHECKED_IN: 'CONFIRMED',
+      CHECKED_OUT: 'CONFIRMED',
+      SETTLED: 'CONFIRMED',
+    }
+    const newQuoteStatus = quoteStatusMap[status]
+    if (newQuoteStatus) {
+      await supabase.from('quotations').update({ status: newQuoteStatus }).eq('reservation_id', id)
+    }
     await loadAll()
   }
 
@@ -209,7 +223,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
       )}
 
       {printDoc?.type === 'QUOTE' && (
-        <PrintPortal title="Quotation" onClose={() => setPrintDoc(null)} {...getPrintBrandProps(company)}>
+        <PrintPortal title="Quotation" onClose={() => { const cb = printDoc._afterClose; setPrintDoc(null); cb?.() }} {...getPrintBrandProps(company)}>
           <Quotation
             res={res}
             guest={guest}
