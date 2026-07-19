@@ -1,0 +1,9 @@
+﻿{
+    "files":  [
+                  "src\\main.jsx",
+                  "src\\AppRoutes.jsx",
+                  "src\\components\\navigation-engine\\useNavigationEngine.js"
+              ],
+    "installed_at":  "2026-07-10T13:18:32.3343351+06:00",
+    "backup_path":  "C:\\Users\\Accounts Manager\\Downloads\\aura-stay-erp-aeds-v2\\backups\\aeds-v6-integration-20260710-131832"
+}

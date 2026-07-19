@@ -1,0 +1,11 @@
+﻿{
+    "files":  [
+                  "src\\modules\\reservations\\ReservationsPage.jsx",
+                  "src\\modules\\reservations\\reservations.config.js",
+                  "src\\modules\\reservations\\tabs\\QuotationsTab.jsx",
+                  "src\\modules\\reservations\\tabs\\ChannelManagerTab.jsx",
+                  "src\\modules\\reservations\\services\\quotationService.js"
+              ],
+    "installed_at":  "2026-07-12T12:53:38.3341530+06:00",
+    "backup_path":  "C:\\Users\\Accounts Manager\\Downloads\\aura-stay-erp-aeds-v2\\backups\\aeds-v8-reservations-20260712-125338"
+}

@@ -10,39 +10,39 @@
  */
 
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, todayISO } from '../lib/helpers'
 import {
   BedDouble, TrendingUp, TrendingDown, Users, Banknote, Clock,
   AlertTriangle, CheckCircle2, ShoppingCart, Boxes, Calculator, LogOut,
-  CalendarCheck, FileText, Star, ArrowUpRight, Loader2,
+  CalendarCheck, FileText, Star, ArrowUpRight, Loader2, Truck,
 } from 'lucide-react'
 
 /* ── colour helpers ─────────────────────────────────────────────────────── */
 const COLORS = {
-  green:  { bg: 'bg-forest/14',  text: 'text-forest',     icon: 'text-forest',     ring: 'ring-forest/20' },
-  amber:  { bg: 'bg-amber/18',   text: 'text-amber-900',  icon: 'text-amber-700',  ring: 'ring-amber/25' },
-  red:    { bg: 'bg-red-100',    text: 'text-red-800',    icon: 'text-red-600',    ring: 'ring-red-200' },
-  blue:   { bg: 'bg-sky-100',    text: 'text-sky-800',    icon: 'text-sky-600',    ring: 'ring-sky-200' },
-  pine:   { bg: 'bg-pine/14',    text: 'text-pine',       icon: 'text-pine',       ring: 'ring-pine/20' },
-  purple: { bg: 'bg-violet-100', text: 'text-violet-800', icon: 'text-violet-600', ring: 'ring-violet-200' },
-  stone:  { bg: 'bg-stone-200',  text: 'text-stone-700',  icon: 'text-stone-500',  ring: 'ring-stone-300' },
+  green:  { text: 'text-forest',     icon: 'text-forest',     tone: 'is-good' },
+  amber:  { text: 'text-amber-900',  icon: 'text-amber-700',  tone: 'is-warn' },
+  red:    { text: 'text-red-800',    icon: 'text-red-600',    tone: 'is-danger' },
+  blue:   { text: 'text-sky-800',    icon: 'text-sky-600',    tone: 'is-info' },
+  pine:   { text: 'text-pine',       icon: 'text-pine',       tone: 'is-brand' },
+  purple: { text: 'text-violet-800', icon: 'text-violet-600', tone: 'is-brand' },
+  stone:  { text: 'text-stone-700',  icon: 'text-stone-500',  tone: 'is-muted' },
 }
 
 /* ── single card ────────────────────────────────────────────────────────── */
 function KPICard({ label, value, sub, icon: Icon, color = 'pine', loading }) {
   const c = COLORS[color] || COLORS.pine
   return (
-    <div className={`rounded-xl p-4 ${c.bg} ring-1 ${c.ring} shadow-[0_8px_20px_rgba(23,23,23,0.06)] flex items-start gap-3 min-w-0`}>
-      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-white/85 ring-1 ring-black/5 ${c.icon}`}>
+    <div className={`erp-kpi-tile ${c.tone}`}>
+      <div className={`erp-kpi-icon ${c.icon}`}>
         {loading ? <Loader2 size={16} className="animate-spin opacity-40" /> : <Icon size={17} />}
       </div>
-      <div className="min-w-0">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-pine/80 leading-tight mb-0.5">{label}</div>
-        <div className={`font-display text-xl font-bold leading-tight ${c.text}`}>
+      <div className="erp-kpi-copy">
+        <div className="erp-kpi-label">{label}</div>
+        <div className={`erp-kpi-value ${c.text}`}>
           {loading ? <span className="opacity-30">—</span> : value}
         </div>
-        {sub && <div className="text-[11px] text-pine/70 mt-0.5 leading-tight">{sub}</div>}
+        {sub && <div className="erp-kpi-sub">{sub}</div>}
       </div>
     </div>
   )
@@ -162,12 +162,10 @@ async function fetchKPIs(module, today) {
       const daysSince = lastAudit ? Math.floor((new Date(today) - new Date(lastAudit.audit_date)) / 86400000) : null
       const auditedDays = (na || []).length
       const inhouse = (res || []).filter(r => r.status === 'CHECKED_IN').length
-      const dueAmt = (fc || []).filter(r => r.status === 'DUE').reduce((s, r) => s + +r.total, 0)
       return [
         { label: 'Last night audit', value: lastAudit ? lastAudit.audit_date : 'Never', sub: daysSince === 0 ? 'Done today' : daysSince === 1 ? 'Yesterday' : daysSince !== null ? `${daysSince} days ago` : 'No audits yet', icon: CalendarCheck, color: daysSince === 0 ? 'green' : daysSince !== null && daysSince > 1 ? 'red' : 'amber' },
         { label: 'Audits this month', value: (na || []).filter(a => a.audit_date >= today.slice(0,7) + '-01').length, sub: `${auditedDays} total`, icon: FileText, color: 'pine' },
         { label: 'In-house tonight', value: inhouse, sub: 'Guests to audit', icon: BedDouble, color: inhouse > 0 ? 'blue' : 'stone' },
-        { label: 'Outstanding due', value: fmtBDT(dueAmt), sub: dueAmt > 0 ? 'Unposted charges' : 'All clear', icon: dueAmt > 0 ? AlertTriangle : CheckCircle2, color: dueAmt > 0 ? 'amber' : 'green' },
       ]
     }
 
@@ -178,7 +176,7 @@ async function fetchKPIs(module, today) {
       ])
       const all = orders || []
       const todayOrders = all.filter(o => (o.settled_at || o.created_at || '').slice(0,10) === today)
-      const openOrders = all.filter(o => o.status === 'OPEN').length
+      const openOrders = all.filter(o => ['DRAFT', 'OPEN', 'ACCEPTED', 'READY', 'SERVED'].includes(o.status)).length
       const chargedRoom = all.filter(o => o.status === 'CHARGED_TO_ROOM').length
       const todaySettled = todayOrders.filter(o => o.status === 'SETTLED').reduce((s, o) => s + +o.total, 0)
       const mtdRest = (fc || []).reduce((s, r) => s + +r.total, 0)
@@ -337,7 +335,7 @@ export default function KPICards({ module }) {
   const cols = kpis.length <= 3 ? kpis.length : kpis.length <= 4 ? 4 : kpis.length <= 6 ? 3 : 4
 
   return (
-    <div className={`grid gap-3 mb-5 grid-cols-2 ${cols === 3 ? 'lg:grid-cols-3' : cols === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+    <div className={`erp-kpi-strip grid-cols-2 ${cols === 3 ? 'lg:grid-cols-3' : cols === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
       {(loading ? Array(4).fill({ label: '…', value: '—', icon: Loader2, color: 'stone' }) : kpis).map((kpi, i) => (
         <KPICard key={i} loading={loading} {...kpi} />
       ))}

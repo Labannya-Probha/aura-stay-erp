@@ -1,0 +1,386 @@
+.aeds-booking-engine {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.aeds-booking-header,
+.aeds-booking-toolbar,
+.aeds-booking-kpis,
+.aeds-booking-legend {
+  border: 1px solid rgb(226 232 240);
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
+}
+
+.aeds-booking-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.aeds-booking-eyebrow {
+  font-size: .75rem;
+  font-weight: 800;
+  color: var(--tenant-primary, #0F766E);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.aeds-booking-title {
+  margin: .15rem 0;
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: rgb(15 23 42);
+}
+
+.aeds-booking-subtitle {
+  color: rgb(100 116 139);
+  font-size: .875rem;
+}
+
+.aeds-booking-actions,
+.aeds-booking-toolbar,
+.aeds-view-switcher,
+.aeds-booking-legend {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+.aeds-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  border-radius: 1rem;
+  padding: .7rem 1rem;
+  font-size: .875rem;
+  font-weight: 800;
+  transition: .2s ease;
+}
+
+.aeds-btn-primary {
+  background: var(--tenant-primary, #0F766E);
+  color: white;
+}
+
+.aeds-btn-secondary {
+  border: 1px solid rgb(226 232 240);
+  background: white;
+  color: rgb(51 65 85);
+}
+
+.aeds-btn-danger {
+  background: rgb(220 38 38);
+  color: white;
+}
+
+.aeds-booking-toolbar {
+  padding: 1rem;
+  flex-wrap: wrap;
+}
+
+.aeds-booking-toolbar select,
+.aeds-search {
+  border: 1px solid rgb(226 232 240);
+  background: rgb(248 250 252);
+  border-radius: 1rem;
+  padding: .7rem .9rem;
+  font-size: .875rem;
+}
+
+.aeds-search {
+  min-width: 320px;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.aeds-search input {
+  outline: none;
+  border: none;
+  background: transparent;
+  width: 100%;
+}
+
+.aeds-view-switcher button {
+  border-radius: .85rem;
+  padding: .65rem .8rem;
+  font-size: .75rem;
+  font-weight: 800;
+  color: rgb(100 116 139);
+}
+
+.aeds-view-switcher button.active {
+  background: var(--tenant-primary, #0F766E);
+  color: white;
+}
+
+.aeds-booking-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.aeds-booking-kpi {
+  padding: 1rem;
+  border-right: 1px solid rgb(226 232 240);
+}
+
+.aeds-booking-kpi span {
+  display: block;
+  font-size: .75rem;
+  font-weight: 800;
+  color: rgb(100 116 139);
+}
+
+.aeds-booking-kpi strong {
+  display: block;
+  margin-top: .35rem;
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: rgb(15 23 42);
+}
+
+.aeds-timeline-shell {
+  --day-width: 118px;
+  overflow: auto;
+  border: 1px solid rgb(226 232 240);
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
+}
+
+.aeds-timeline-grid {
+  display: grid;
+  grid-template-columns: 180px repeat(var(--day-count), var(--day-width));
+  min-width: max-content;
+}
+
+.aeds-timeline-room-head,
+.aeds-timeline-date-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: rgb(248 250 252);
+  border-bottom: 1px solid rgb(226 232 240);
+  border-right: 1px solid rgb(226 232 240);
+  padding: .85rem;
+  font-size: .75rem;
+  font-weight: 900;
+  color: rgb(71 85 105);
+}
+
+.aeds-timeline-room-head,
+.aeds-timeline-room-cell {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+}
+
+.aeds-timeline-date-head {
+  text-align: center;
+}
+
+.aeds-timeline-date-head small {
+  display: block;
+  color: rgb(148 163 184);
+}
+
+.aeds-timeline-room-cell {
+  background: white;
+  border-bottom: 1px solid rgb(241 245 249);
+  border-right: 1px solid rgb(226 232 240);
+  padding: .85rem;
+  min-height: 56px;
+}
+
+.aeds-timeline-room-cell strong {
+  display: block;
+  color: rgb(15 23 42);
+}
+
+.aeds-timeline-room-cell span {
+  font-size: .75rem;
+  color: rgb(100 116 139);
+}
+
+.aeds-timeline-room-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--day-count), var(--day-width));
+  min-height: 56px;
+  border-bottom: 1px solid rgb(241 245 249);
+}
+
+.aeds-timeline-day-cell {
+  border-right: 1px solid rgb(241 245 249);
+}
+
+.aeds-reservation-bar {
+  position: absolute;
+  top: 9px;
+  height: 38px;
+  border-radius: .9rem;
+  padding: .45rem .65rem;
+  text-align: left;
+  overflow: hidden;
+  color: white;
+  box-shadow: 0 10px 25px rgb(15 23 42 / 0.14);
+  cursor: pointer;
+}
+
+.aeds-reservation-bar strong,
+.aeds-reservation-bar span {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aeds-reservation-bar strong {
+  font-size: .75rem;
+  font-weight: 900;
+}
+
+.aeds-reservation-bar span {
+  font-size: .65rem;
+  opacity: .85;
+}
+
+.aeds-reservation-bar.confirmed { background: #2563EB; }
+.aeds-reservation-bar.tentative { background: #F59E0B; }
+.aeds-reservation-bar.checked-in { background: #059669; }
+.aeds-reservation-bar.blocked { background: #334155; }
+.aeds-reservation-bar.cancelled { background: #DC2626; }
+.aeds-reservation-bar.no-show { background: #64748B; }
+
+.aeds-booking-legend {
+  padding: .8rem 1rem;
+  flex-wrap: wrap;
+  color: rgb(71 85 105);
+  font-size: .75rem;
+  font-weight: 800;
+}
+
+.aeds-booking-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.aeds-booking-legend i {
+  display: inline-block;
+  width: .7rem;
+  height: .7rem;
+  border-radius: 999px;
+}
+
+.aeds-booking-legend i.confirmed { background: #2563EB; }
+.aeds-booking-legend i.tentative { background: #F59E0B; }
+.aeds-booking-legend i.checked-in { background: #059669; }
+.aeds-booking-legend i.blocked { background: #334155; }
+.aeds-booking-legend i.cancelled { background: #DC2626; }
+.aeds-booking-legend i.no-show { background: #64748B; }
+
+.aeds-timeline-loading {
+  height: 520px;
+  margin: 1rem;
+  border-radius: 1.5rem;
+  background: linear-gradient(90deg, #f1f5f9, #e2e8f0, #f1f5f9);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.aeds-booking-error {
+  border: 1px solid rgb(254 202 202);
+  background: rgb(254 242 242);
+  color: rgb(185 28 28);
+  border-radius: 1rem;
+  padding: .9rem 1rem;
+  font-weight: 700;
+}
+
+.aeds-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(15 23 42 / 0.24);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.aeds-drawer {
+  width: min(420px, 92vw);
+  height: 100%;
+  background: white;
+  box-shadow: -30px 0 80px rgb(15 23 42 / 0.25);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.aeds-drawer-header,
+.aeds-drawer-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  align-items: center;
+}
+
+.aeds-drawer-header p {
+  color: var(--tenant-primary, #0F766E);
+  font-size: .75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.aeds-drawer-header h2 {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: rgb(15 23 42);
+}
+
+.aeds-drawer-body {
+  margin-top: 1.25rem;
+  display: grid;
+  gap: .75rem;
+}
+
+.aeds-info-row {
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1rem;
+  padding: .85rem;
+}
+
+.aeds-info-row span {
+  display: block;
+  color: rgb(100 116 139);
+  font-size: .75rem;
+  font-weight: 800;
+}
+
+.aeds-info-row strong {
+  display: block;
+  margin-top: .25rem;
+  color: rgb(15 23 42);
+}
+
+.aeds-drawer-actions {
+  margin-top: auto;
+  border-top: 1px solid rgb(226 232 240);
+  padding-top: 1rem;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: .6; }
+  50% { opacity: 1; }
+}
+
+@media (max-width: 1024px) {
+  .aeds-booking-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

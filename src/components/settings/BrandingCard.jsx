@@ -1,7 +1,80 @@
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { setCurrency } from '../../lib/helpers'
-import { Save, Building2, Image, Upload, ChevronDown } from 'lucide-react'
+import { getTenantId } from '../../lib/tenant'
+import { getCompanySettingsQuery } from '../../lib/companySettings'
+import { Save, Building2, Image, Upload } from 'lucide-react'
+import { extractLogoPalette } from '../../theme'
+import { darken, getReadableText, mix } from '../../theme/color.utils'
+import { Combobox } from '../ui/combobox'
+
+const TENANT_BRANDING_FIELDS = [
+  'logo_url',
+  'primary_color',
+  'secondary_color',
+  'accent_color',
+  'sidebar_bg_color',
+  'sidebar_text_color',
+  'button_color',
+  'table_header_color',
+  'report_header_color',
+  'font_family',
+  'theme_mode',
+]
+
+function mergeTenantBrandingRow(company, branding) {
+  if (!company) return company
+  if (!branding) return company
+
+  const nextCompany = { ...company }
+  TENANT_BRANDING_FIELDS.forEach((field) => {
+    if (branding[field] !== null && branding[field] !== undefined && branding[field] !== '') {
+      nextCompany[field] = branding[field]
+    }
+  })
+  return nextCompany
+}
+
+function toTenantBrandingPayload(company) {
+  return {
+    tenant_id: company.tenant_id,
+    tenant_name: company.software_name || company.name || null,
+    property_name: company.name || null,
+    logo_url: company.logo_url || null,
+    primary_color: company.primary_color || null,
+    secondary_color: company.secondary_color || null,
+    accent_color: company.accent_color || null,
+    sidebar_bg_color: company.sidebar_bg_color || null,
+    sidebar_text_color: company.sidebar_text_color || null,
+    button_color: company.button_color || null,
+    table_header_color: company.table_header_color || null,
+    report_header_color: company.report_header_color || null,
+    font_family: company.font_family || 'Inter',
+    theme_mode: company.theme_mode || 'light',
+    updated_at: new Date().toISOString(),
+  }
+}
+
+function buildLogoBrandingFields(palette = {}) {
+  const primary = palette.primary || '#1F6F78'
+  const accent = palette.accent || palette.secondary || mix(primary, '#22C55E', 0.38)
+  const brandPrimary = darken(primary, 0.34)
+  const secondary = mix(primary, '#FFFFFF', 0.86)
+  const sidebarBg = brandPrimary
+
+  return {
+    primary_color: primary,
+    accent_color: accent,
+    brand_primary: brandPrimary,
+    brand_accent: accent,
+    secondary_color: secondary,
+    sidebar_bg_color: sidebarBg,
+    sidebar_text_color: getReadableText(sidebarBg),
+    button_color: primary,
+    table_header_color: mix(primary, '#FFFFFF', 0.9),
+    report_header_color: brandPrimary,
+  }
+}
 
 function RichTextEditor({ initialHtml, onSave, saveLabel = 'Save' }) {
   const editorRef = useRef(null)
@@ -179,117 +252,119 @@ const ALL_CIRCLES = VAT_CIRCLES.flatMap((c) =>
   c.circles.map((name) => ({ label: name, value: name, comm: c.comm, code: c.code }))
 )
 function VatCircleDropdown({ value, onChange }) {
-  const [query, setQuery] = useState('')
-  const [open, setOpen]   = useState(false)
-  const ref               = useRef(null)
-
-  // close on outside click
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const filtered = query.trim()
-    ? ALL_CIRCLES.filter((c) =>
-        c.label.toLowerCase().includes(query.toLowerCase()) ||
-        c.comm.toLowerCase().includes(query.toLowerCase()) ||
-        c.code.includes(query)
-      )
-    : ALL_CIRCLES
-
-  const select = (item) => {
-    onChange(item.value)
-    setQuery('')
-    setOpen(false)
-  }
-
-  // group filtered results by commissionerate
-  const groups = VAT_CIRCLES.map((c) => ({
-    comm: c.comm,
-    code: c.code,
-    items: filtered.filter((f) => f.comm === c.comm),
-  })).filter((g) => g.items.length > 0)
+  const items = ALL_CIRCLES.map((item) => ({
+    value: item.value,
+    label: item.label,
+    sublabel: `${item.comm} (${item.code})`,
+  }))
 
   return (
-    <div className="relative" ref={ref}>
-      {/* trigger button */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="input text-left flex items-center justify-between w-full"
-      >
-        <span className={value ? 'text-pine' : 'text-pine/40'}>
-          {value || 'সার্কেল নির্বাচন করুন…'}
-        </span>
-        <ChevronDown size={14} className={`text-pine/40 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
+    <Combobox
+      items={items}
+      value={value || ''}
+      onChange={(nextValue) => onChange(nextValue || '')}
+      placeholder="সার্কেল নির্বাচন করুন…"
+      searchPlaceholder="খুঁজুন… (যেমন: শ্রীমঙ্গল, সিলেট, 0018)"
+      emptyText="কোনো ফলাফল নেই।"
+      clearable
+      triggerClassName="input text-left"
+      contentClassName="border-leaf"
+    />
+  )
+}
+const FONT_OPTIONS = [
+  'Inter',
+  'Arial',
+  'Roboto',
+  'Noto Sans',
+  'Source Sans 3',
+  'System UI',
+]
 
-      {/* dropdown panel */}
-      {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-leaf rounded-xl shadow-lg overflow-hidden">
-          {/* search box inside dropdown */}
-          <div className="p-2 border-b border-leaf">
-            <input
-              autoFocus
-              className="input !py-1.5 text-sm"
-              placeholder="খুঁজুন… (যেমন: শ্রীমঙ্গল, সিলেট, 0018)"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
+const ColorInput = ({ label, value, fallback, onChange }) => (
+  <div>
+    <label className="label">{label}</label>
+    <div className="flex items-center gap-2">
+      <input type="color" className="input !p-1 !w-14 shrink-0" value={/^#[0-9a-f]{6}$/i.test(value || '') ? value : fallback} onChange={(e) => onChange(e.target.value)} />
+      <input className="input money uppercase" value={value || ''} placeholder={fallback} onChange={(e) => onChange(e.target.value)} />
+    </div>
+  </div>
+)
 
-          <div className="max-h-64 overflow-y-auto">
-            {groups.length === 0 && (
-              <div className="px-4 py-3 text-sm text-pine/40">কোনো ফলাফল নেই।</div>
-            )}
-            {groups.map((g) => (
-              <div key={g.comm}>
-                {/* group header */}
-                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-pine/40 bg-stone-50 border-b border-leaf/50 flex justify-between">
-                  <span>{g.comm}</span>
-                  <span className="font-mono text-forest/60">{g.code}</span>
-                </div>
-                {g.items.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => select(item)}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-leaf/60 transition-colors flex items-center justify-between ${
-                      value === item.label ? 'bg-forest/10 text-forest font-medium' : 'text-pine'
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                    {value === item.label && <span className="text-forest text-xs">✓</span>}
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
+function TenantBrandPreview({ company }) {
+  const primary = company.primary_color || '#1F6F78'
+  const accent = company.accent_color || '#2E7D32'
+  const sidebar = company.sidebar_bg_color || company.brand_primary || '#123F2A'
+  const sidebarText = company.sidebar_text_color || '#FFFFFF'
+  const button = company.button_color || primary
+  const tableHeader = company.table_header_color || '#EAF4F1'
+  const reportHeader = company.report_header_color || company.brand_primary || '#0F4C81'
+  const fontFamily = company.font_family || 'Inter'
 
-          {/* clear button */}
-          {value && (
-            <div className="p-2 border-t border-leaf">
-              <button
-                type="button"
-                onClick={() => { onChange(''); setOpen(false) }}
-                className="w-full text-xs text-pine/50 hover:text-red-500 py-1 transition-colors"
-              >
-                ✕ Clear selection
-              </button>
+  return (
+    <div className="col-span-2 rounded-xl border border-leaf overflow-hidden bg-white">
+      <div className="grid md:grid-cols-[170px_1fr] min-h-[210px]" style={{ fontFamily: `"${fontFamily}", Inter, sans-serif` }}>
+        <aside className="p-4 text-sm" style={{ background: sidebar, color: sidebarText }}>
+          <div className="flex items-center gap-2 mb-5">
+            <div className="h-9 w-9 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center overflow-hidden">
+              {company.logo_url ? <img src={company.logo_url} alt="" className="h-full w-full object-contain" /> : <Building2 size={18} />}
             </div>
-          )}
-        </div>
-      )}
+            <div>
+              <div className="font-bold leading-tight">{company.software_name || 'Aura Stay ERP'}</div>
+              <div className="text-[11px] opacity-65">{company.name || 'Property'}</div>
+            </div>
+          </div>
+          {['Dashboard', 'Reservations', 'Reports'].map((item, idx) => (
+            <div key={item} className="mb-2 rounded-lg px-3 py-2" style={{ background: idx === 2 ? 'rgba(255,255,255,.14)' : 'transparent' }}>
+              {item}
+            </div>
+          ))}
+        </aside>
+        <main className="p-4 bg-slate-50">
+          <div className="rounded-lg overflow-hidden border border-slate-200 bg-white">
+            <div className="px-4 py-3 text-white font-bold" style={{ background: reportHeader }}>
+              {company.name || 'Tenant'} - Reporting Workbench
+            </div>
+            <div className="grid sm:grid-cols-3 gap-3 p-4">
+              <div className="rounded-lg border p-3" style={{ borderColor: `${accent}44` }}>
+                <div className="text-[10px] uppercase text-slate-500 font-bold">Revenue</div>
+                <div className="text-xl font-bold" style={{ color: primary }}>BDT 0.00</div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-[10px] uppercase text-slate-500 font-bold">Occupancy</div>
+                <div className="text-xl font-bold" style={{ color: accent }}>0%</div>
+              </div>
+              <button type="button" className="rounded-lg px-4 py-3 text-white font-bold" style={{ background: button }}>Primary action</button>
+            </div>
+            <table className="w-full text-xs">
+              <thead style={{ background: tableHeader }}>
+                <tr><th className="text-left p-3">Report</th><th className="text-left p-3">Status</th><th className="text-right p-3">Amount</th></tr>
+              </thead>
+              <tbody>
+                <tr><td className="p-3">Daily Sales</td><td className="p-3">Ready</td><td className="p-3 text-right">0.00</td></tr>
+                <tr className="bg-slate-50"><td className="p-3">Guest Ledger</td><td className="p-3">Ready</td><td className="p-3 text-right">0.00</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
+
 function BrandingCard({ reloadCompany }) {
   const [c, setC]   = useState(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg]   = useState('')
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
-  const load  = async () => { const { data } = await supabase.from('company_settings').select('*').single(); setC(data) }
+  const load  = async () => {
+    const tenantId = getTenantId()
+    const [{ data }, { data: branding }] = await Promise.all([
+      getCompanySettingsQuery('*', tenantId).limit(1).single(),
+      supabase.from('tenant_branding').select('*').eq('tenant_id', tenantId).limit(1).maybeSingle(),
+    ])
+    setC(mergeTenantBrandingRow(data, branding))
+  }
   useEffect(() => { load() }, [])
   if (!c) return <div className="card p-5 text-pine/50">Loading…</div>
   const set = (k, v) => setC((p) => ({ ...p, [k]: v }))
@@ -313,17 +388,46 @@ function BrandingCard({ reloadCompany }) {
     if (upErr) { flash(`Upload failed: ${upErr.message}`); setBusy(false); return }
     const { data: pub } = supabase.storage.from('branding').getPublicUrl(path)
     const url = pub.publicUrl
-    set('logo_url', url)
-    const { error: dbErr } = await supabase.from('company_settings').update({ logo_url: url }).eq('id', c.id)
-    if (dbErr) { flash(`Saved to storage but DB update failed: ${dbErr.message}`); } 
-    else { flash('Logo uploaded successfully.'); reloadCompany?.() }
+    const palette = await extractLogoPalette(url).catch(() => null)
+    const nextBranding = {
+      logo_url: url,
+      ...(palette?.primary ? buildLogoBrandingFields(palette) : {}),
+    }
+
+    setC((prev) => ({ ...prev, ...nextBranding }))
+
+    const companyUpdate = supabase
+      .from('company_settings')
+      .update({
+        ...nextBranding,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', c.id)
+
+    const tenantBrandingUpdate = supabase
+      .from('tenant_branding')
+      .upsert({
+        ...toTenantBrandingPayload({ ...c, ...nextBranding }),
+      }, { onConflict: 'tenant_id' })
+
+    const [{ error: dbErr }, { error: brandingErr }] = await Promise.all([
+      companyUpdate,
+      tenantBrandingUpdate,
+    ])
+
+    if (dbErr || brandingErr) { flash(`Saved to storage but DB update failed: ${(dbErr || brandingErr).message}`); }
+    else {
+      flash(palette?.primary ? 'Logo uploaded and brand colors synced from logo.' : 'Logo uploaded successfully. Logo color sync skipped.')
+      reloadCompany?.()
+    }
   } catch (e) { flash(e.message) }
   setBusy(false)
 }
 
   const save = async () => {
     setBusy(true)
-    const { error } = await supabase.from('company_settings').update({
+    const supportsRestaurantBranding = Object.prototype.hasOwnProperty.call(c || {}, 'is_restaurant_available')
+    const companyPayload = {
       name: c.name, legal_name: c.legal_name, address: c.address, phone: c.phone, email: c.email,
       bin: c.bin, vat_circle: c.vat_circle, invoice_footer: c.invoice_footer,
       short_code: c.short_code, software_name: c.software_name, currency: c.currency,
@@ -331,11 +435,28 @@ function BrandingCard({ reloadCompany }) {
       accent_color: c.accent_color || null,
       brand_primary: c.brand_primary || null,
       brand_accent: c.brand_accent || null,
+      secondary_color: c.secondary_color || null,
+      sidebar_bg_color: c.sidebar_bg_color || null,
+      sidebar_text_color: c.sidebar_text_color || null,
+      button_color: c.button_color || null,
+      table_header_color: c.table_header_color || null,
+      report_header_color: c.report_header_color || null,
+      font_family: c.font_family || 'Inter',
+      theme_mode: c.theme_mode || 'light',
       mushak610_threshold: +c.mushak610_threshold || 0,
+      ...(supportsRestaurantBranding ? {
+        is_restaurant_available: !!c.is_restaurant_available,
+        restaurant_name: c.is_restaurant_available ? (c.restaurant_name || null) : null,
+      } : {}),
       updated_at: new Date().toISOString(),
-    }).eq('id', c.id)
+    }
+
+    const [{ error }, { error: brandingError }] = await Promise.all([
+      supabase.from('company_settings').update(companyPayload).eq('id', c.id),
+      supabase.from('tenant_branding').upsert(toTenantBrandingPayload(c), { onConflict: 'tenant_id' }),
+    ])
     setBusy(false)
-    if (error) flash(error.message)
+    if (error || brandingError) flash((error || brandingError).message)
     else { setCurrency(c.currency || '৳'); flash('Saved.'); reloadCompany?.() }
   }
 
@@ -359,15 +480,52 @@ function BrandingCard({ reloadCompany }) {
         <div><label className="label">Short code</label><input className="input money" value={c.short_code || ''} onChange={(e) => set('short_code', e.target.value)} /></div>
         <div><label className="label">Property name</label><input className="input" value={c.name || ''} onChange={(e) => set('name', e.target.value)} /></div>
         <div><label className="label">Legal name</label><input className="input" value={c.legal_name || ''} onChange={(e) => set('legal_name', e.target.value)} /></div>
+        <div className="col-span-2 border border-leaf rounded-lg p-3 space-y-2">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" checked={!!c.is_restaurant_available} onChange={(e) => set('is_restaurant_available', e.target.checked)} className="w-4 h-4 accent-forest" />
+            <span className="text-sm font-semibold text-pine">Is restaurant available?</span>
+          </label>
+          {c.is_restaurant_available && (
+            <div>
+              <label className="label">Restaurant name</label>
+              <input className="input" value={c.restaurant_name || ''} onChange={(e) => set('restaurant_name', e.target.value)} placeholder="e.g. The Garden Bistro" />
+            </div>
+          )}
+          {!c.is_restaurant_available && <p className="text-xs text-pine/50">When disabled, documents will use the property name for restaurant bills.</p>}
+        </div>
         <div className="col-span-2"><label className="label">Address</label><input className="input" value={c.address || ''} onChange={(e) => set('address', e.target.value)} /></div>
         <div><label className="label">Phone</label><input className="input" value={c.phone || ''} onChange={(e) => set('phone', e.target.value)} /></div>
         <div><label className="label">Email</label><input className="input" value={c.email || ''} onChange={(e) => set('email', e.target.value)} /></div>
         <div><label className="label">BIN</label><input className="input money" value={c.bin || ''} onChange={(e) => set('bin', e.target.value)} /></div>
-        <div><label className="label">Short code</label><input className="input money" value={c.short_code || ''} onChange={(e) => set('short_code', e.target.value)} /></div>
+        <div><label className="label">Software name</label><input className="input" value={c.software_name || ''} onChange={(e) => set('software_name', e.target.value)} /></div>
         <div><label className="label">Primary UI color (optional)</label><input type="color" className="input !p-1" value={c.primary_color || '#1F6F78'} onChange={(e) => set('primary_color', e.target.value)} /></div>
         <div><label className="label">Accent UI color (optional)</label><input type="color" className="input !p-1" value={c.accent_color || '#2E7D32'} onChange={(e) => set('accent_color', e.target.value)} /></div>
         <div><label className="label">Print primary (optional)</label><input type="color" className="input !p-1" value={c.brand_primary || '#1B4D2E'} onChange={(e) => set('brand_primary', e.target.value)} /></div>
         <div><label className="label">Print accent (optional)</label><input type="color" className="input !p-1" value={c.brand_accent || '#2E7D32'} onChange={(e) => set('brand_accent', e.target.value)} /></div>
+        <div className="col-span-2 mt-2 border-t border-leaf pt-4">
+          <h3 className="font-display font-semibold text-pine">Tenant UI palette</h3>
+          <p className="text-sm text-pine/50">Controls the ERP shell, buttons, report headers, and table headers for this tenant.</p>
+        </div>
+        <ColorInput label="Secondary / soft background" value={c.secondary_color} fallback="#EAF4F1" onChange={(v) => set('secondary_color', v)} />
+        <ColorInput label="Sidebar background" value={c.sidebar_bg_color} fallback="#123F2A" onChange={(v) => set('sidebar_bg_color', v)} />
+        <ColorInput label="Sidebar text" value={c.sidebar_text_color} fallback="#FFFFFF" onChange={(v) => set('sidebar_text_color', v)} />
+        <ColorInput label="Button color" value={c.button_color} fallback={c.primary_color || '#1F6F78'} onChange={(v) => set('button_color', v)} />
+        <ColorInput label="Table header color" value={c.table_header_color} fallback="#EAF4F1" onChange={(v) => set('table_header_color', v)} />
+        <ColorInput label="Report header color" value={c.report_header_color} fallback="#0F4C81" onChange={(v) => set('report_header_color', v)} />
+        <div>
+          <label className="label">Font family</label>
+          <select className="input" value={c.font_family || 'Inter'} onChange={(e) => set('font_family', e.target.value)}>
+            {FONT_OPTIONS.map((font) => <option key={font} value={font}>{font}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label">Theme mode</label>
+          <select className="input" value={c.theme_mode || 'light'} onChange={(e) => set('theme_mode', e.target.value)}>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+        <TenantBrandPreview company={c} />
         <div className="col-span-2"><label className="label">VAT circle / division</label><VatCircleDropdown value={c.vat_circle || ''} onChange={(v) => set('vat_circle', v)} />{c.vat_circle && (<p className="text-xs text-pine/40 mt-1 font-mono">Challan code: 1/1133/{VAT_CIRCLES.find((g) => g.circles.includes(c.vat_circle))?.code || '????'}/0311</p>)}</div>
         <div><label className="label">Mushak-6.10 threshold</label><input type="number" className="input money" value={c.mushak610_threshold || 0} onChange={(e) => set('mushak610_threshold', e.target.value)} /></div>
         <div><label className="label">Invoice footer</label><input className="input" value={c.invoice_footer || ''} onChange={(e) => set('invoice_footer', e.target.value)} /></div>

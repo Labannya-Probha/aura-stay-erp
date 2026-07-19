@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { getTenantId, withTenantInsert } from '../lib/tenant'
+import { getCompanySettingsQuery, getPrintBrandProps } from '../lib/companySettings'
 import { fmtBDT, fmtDate, todayISO } from '../lib/helpers'
 import {
   Calculator, Plus, Trash2, Scale, Building2, Printer, Pencil,
@@ -10,12 +11,19 @@ import {
 import PrintPortal from '../components/PrintPortal.jsx'
 import VoucherDoc from '../components/print/VoucherDoc.jsx'
 import VendorPaymentTab from '../components/VendorPaymentTab.jsx'
+import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
+import { Button } from '../components/ui/button.jsx'
+import { Input } from '../components/ui/input.jsx'
+import '../styles/aeds-v6-workspaces.css'
+import PaymentTransactionsView from '../components/payments/PaymentTransactionsView.jsx'
+import { PAYMENT_SCOPES } from '../components/payments/paymentScope.js'
 
 /* ------------------------------------------------------------------ */
 /*  RETAINED EARNINGS account code — offsetting account for OB entries  */
 /*  Matches chart_of_accounts code = '300100' (Retained Earnings)       */
 /* ------------------------------------------------------------------ */
 const RE_CODE = '300100'
+const selectClass = 'h-9 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
 
 async function fetchActiveAccounts(context = 'loadAccounts') {
   const tenantId = getTenantId()
@@ -48,6 +56,7 @@ export default function AccountingHub({ userName, isAdmin, role }) {
     ...(isAdmin ? ['Opening Balance'] : []),
     ...(isAdmin ? ['Transaction Mapping'] : []),
     'Vendor Payments',
+    'Payment Transactions',
   ]
 
   const initialTab = TABS.includes(urlTab) ? urlTab : 'Journal Vouchers'
@@ -63,7 +72,7 @@ export default function AccountingHub({ userName, isAdmin, role }) {
 
   useEffect(() => {
     loadAccounts()
-    supabase.from('company_settings').select('*').limit(1).single()
+    getCompanySettingsQuery('*').limit(1).single()
       .then(({ data }) => setCompany(data))
   }, [])
 
@@ -74,28 +83,28 @@ export default function AccountingHub({ userName, isAdmin, role }) {
   }, [location.search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
-          <Calculator className="text-forest" /> Accounting
-        </h1>
-        <p className="text-sm text-pine/60">
-          Double-entry journals (IFRS), trial balance, chart of accounts and fixed-asset depreciation.
-        </p>
+    <div className="aeds-v6-legacy-page">
+      <div className="aeds-v6-legacy-header">
+        <div>
+          <div className="aeds-v6-workspace-eyebrow">Finance & Control</div>
+          <h1 className="flex items-center gap-2">
+            <Calculator className="text-forest" /> Accounting Workspace
+          </h1>
+          <p>
+            Double-entry journals, IFRS controls, account structure, assets and vendor payments.
+          </p>
+        </div>
+        <span className="aeds-core-badge">Live finance workspace</span>
       </div>
       {msg && (
         <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>
       )}
-      <div className="flex gap-1 border-b border-leaf flex-wrap">
+      <div className="aeds-v6-tab-strip">
         {TABS.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg ${
-              tab === t
-                ? 'bg-white border border-leaf border-b-white text-forest -mb-px'
-                : 'text-pine/60 hover:text-pine'
-            }`}
+            className={tab === t ? 'aeds-v6-tab-active' : ''}
           >
             {t === 'Opening Balance' && (
               <span className="inline-flex items-center gap-1">
@@ -124,6 +133,7 @@ export default function AccountingHub({ userName, isAdmin, role }) {
         <TransactionMappingTab accounts={accounts} flash={flash} userName={userName} />
       )}
       {tab === 'Vendor Payments' && <VendorPaymentTab role={role} />}
+      {tab === 'Payment Transactions' && <PaymentTransactionsView scope={PAYMENT_SCOPES.ACCOUNTING} />}
     </div>
   )
 }
@@ -282,17 +292,15 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="label">As at date <span className="text-red-500">*</span></label>
-            <input
+            <Input
               type="date"
-              className="input"
               value={obDate}
               onChange={(e) => setObDate(e.target.value)}
             />
           </div>
           <div className="sm:col-span-2">
             <label className="label">Narration</label>
-            <input
-              className="input"
+            <Input
               value={narration}
               onChange={(e) => setNarration(e.target.value)}
             />
@@ -312,7 +320,7 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
           {lines.map((l, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-center">
               <select
-                className="input col-span-5 text-sm"
+                className={`${selectClass} col-span-5 text-sm`}
                 value={l.account_id}
                 onChange={(e) => upd(i, 'account_id', e.target.value)}
               >
@@ -323,35 +331,37 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
                   </option>
                 ))}
               </select>
-              <input
+              <Input
                 type="number"
                 min="0"
-                className="input col-span-2 money text-right"
+                className="col-span-2 money text-right"
                 placeholder="0.00"
                 value={l.debit}
                 onChange={(e) => upd(i, 'debit', e.target.value)}
               />
-              <input
+              <Input
                 type="number"
                 min="0"
-                className="input col-span-2 money text-right"
+                className="col-span-2 money text-right"
                 placeholder="0.00"
                 value={l.credit}
                 onChange={(e) => upd(i, 'credit', e.target.value)}
               />
-              <input
-                className="input col-span-2 text-sm"
+              <Input
+                className="col-span-2 text-sm"
                 placeholder="Note"
                 value={l.line_note}
                 onChange={(e) => upd(i, 'line_note', e.target.value)}
               />
-              <button
-                className="col-span-1 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-300 hover:text-red-600"
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="col-span-1 text-red-300 hover:text-red-600"
                 onClick={() => delLine(i)}
                 title="Remove line"
               >
                 <X size={14} />
-              </button>
+              </Button>
             </div>
           ))}
 
@@ -376,9 +386,9 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
 
         {/* Add line + totals row */}
         <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-t border-leaf">
-          <button className="btn-ghost !py-1 text-sm" onClick={addLine}>
+          <Button variant="ghost" size="sm" className="text-sm" onClick={addLine}>
             <Plus size={14} /> Add account line
-          </button>
+          </Button>
 
           <div className="flex items-center gap-4 text-sm money font-semibold">
             <span className="text-pine/50">
@@ -401,91 +411,64 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
 
         {/* Confirm + Post */}
         {!confirmPost ? (
-          <button
-            className="btn-primary"
+          <Button
             disabled={!balanced || validLines.length === 0 || busy}
             onClick={() => setConfirmPost(true)}
           >
             <BookOpen size={15} /> Post Opening Balance
-          </button>
+          </Button>
         ) : (
           <div className="flex items-center gap-3 flex-wrap p-3 rounded-xl bg-amber-50 border border-amber-300">
             <AlertCircle size={16} className="text-amber-600 shrink-0" />
             <span className="text-sm text-amber-800 font-medium flex-1">
               This will be permanently locked. Are you sure?
             </span>
-            <button
-              className="btn-primary !bg-amber-600 hover:!bg-amber-700"
+            <Button
+              className="bg-amber-600 hover:bg-amber-700"
               disabled={busy}
               onClick={postOB}
             >
               <Lock size={14} /> {busy ? 'Posting…' : 'Yes, Post & Lock'}
-            </button>
-            <button
-              className="btn-ghost"
-              onClick={() => setConfirmPost(false)}
-            >
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirmPost(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         )}
       </div>
 
-      {/* ── Posted OB entries list ── */}
-      {postedList.length > 0 && (
-        <div className="card overflow-hidden">
-          <div className="px-5 py-3 border-b border-leaf flex items-center gap-2">
-            <Lock size={15} className="text-amber-600" />
-            <span className="font-display font-semibold text-pine text-sm">
-              Posted Opening Balances ({postedList.length})
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr>
-                <th className="th">Voucher No</th>
-                <th className="th">As at Date</th>
-                <th className="th">Narration</th>
-                <th className="th text-right">Total Dr</th>
-                <th className="th">Accounts</th>
-                <th className="th text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {postedList.map((r) => {
-                const totalAmt = (r.journal_lines || []).reduce((s, l) => s + +l.debit, 0)
-                const acctNames = (r.journal_lines || [])
-                  .map((l) => l.chart_of_accounts?.name)
-                  .filter(Boolean)
-                return (
-                  <tr key={r.id}>
-                    <td className="td money font-semibold text-sm">{r.jv_no}</td>
-                    <td className="td text-sm">{fmtDate(r.ob_date || r.jv_date)}</td>
-                    <td className="td text-sm max-w-[200px] truncate">{r.narration}</td>
-                    <td className="td money text-right">{fmtBDT(totalAmt)}</td>
-                    <td className="td text-xs text-pine/60 max-w-[200px]">
-                      <div className="truncate">{acctNames.slice(0, 3).join(', ')}{acctNames.length > 3 ? ` +${acctNames.length - 3} more` : ''}</div>
-                    </td>
-                    <td className="td text-center">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700">
-                        <Lock size={10} /> Locked
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-          </div>
-        </div>
-      )}
+      <AedsDataGrid
+        title="Posted Opening Balances"
+        subtitle="Locked commencement entries and retained earnings offsets"
+        data={postedList.map((entry) => {
+          const totalDebit = (entry.journal_lines || []).reduce(
+            (sum, line) => sum + Number(line.debit || 0),
+            0
+          )
+          const accountNames = (entry.journal_lines || [])
+            .map((line) => line.chart_of_accounts?.name)
+            .filter(Boolean)
 
-      {postedList.length === 0 && (
-        <div className="text-center text-pine/40 text-sm py-6">
-          No opening balance entries posted yet.
-        </div>
-      )}
+          return {
+            ...entry,
+            entry_date: entry.ob_date || entry.jv_date,
+            total_debit: totalDebit,
+            accounts_summary: accountNames.join(', '),
+            lock_status: 'LOCKED',
+          }
+        })}
+        columns={[
+          { accessorKey: 'jv_no', header: 'Voucher No', width: 160 },
+          { accessorKey: 'entry_date', header: 'As at Date', type: 'date', width: 140 },
+          { accessorKey: 'narration', header: 'Narration', width: 300 },
+          { accessorKey: 'total_debit', header: 'Total Debit', type: 'currency', aggregation: 'sum', width: 160 },
+          { accessorKey: 'accounts_summary', header: 'Accounts', width: 320 },
+          { accessorKey: 'lock_status', header: 'Status', type: 'status', width: 120 },
+        ]}
+        pageSize={50}
+        emptyText="No opening balance entries posted yet."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -625,7 +608,7 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
   return (
     <div className="space-y-4">
       {printV && (
-        <PrintPortal title={`Voucher — ${printV.entry.jv_no}`} onClose={() => setPrintV(null)}>
+        <PrintPortal title={`Voucher — ${printV.entry.jv_no}`} onClose={() => setPrintV(null)} {...getPrintBrandProps(company)}>
           <VoucherDoc entry={printV.entry} lines={printV.lines} company={company} voucherType={printV.voucherType} />
         </PrintPortal>
       )}
@@ -636,24 +619,24 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
             {editingId ? 'Edit voucher' : 'New voucher'}
           </h3>
           {editingId && (
-            <button className="btn-ghost !py-1 text-sm" onClick={resetForm}>Cancel edit</button>
+            <Button variant="ghost" size="sm" className="text-sm" onClick={resetForm}>Cancel edit</Button>
           )}
         </div>
         <div className="grid grid-cols-5 gap-2">
-          <input
-            type="date" className="input"
+          <Input
+            type="date"
             value={head.jv_date}
             onChange={(e) => setHead({ ...head, jv_date: e.target.value })}
           />
           <select
-            className="input"
+            className={selectClass}
             value={head.voucher_type}
             onChange={(e) => setHead({ ...head, voucher_type: e.target.value })}
           >
             {VOUCHER_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
-          <input
-            className="input col-span-3" placeholder="Narration"
+          <Input
+            className="col-span-3" placeholder="Narration"
             value={head.narration}
             onChange={(e) => setHead({ ...head, narration: e.target.value })}
           />
@@ -661,80 +644,74 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
         {lines.map((l, i) => (
           <div key={i} className="grid grid-cols-12 gap-2 items-center">
             <select
-              className="input col-span-4" value={l.account_id}
+              className={`${selectClass} col-span-4`} value={l.account_id}
               onChange={(e) => upd(i, 'account_id', e.target.value)}
             >
               <option value="">Account…</option>
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}
             </select>
-            <input type="number" className="input col-span-2 money" placeholder="Debit"  value={l.debit}  onChange={(e) => upd(i, 'debit',  e.target.value)} />
-            <input type="number" className="input col-span-2 money" placeholder="Credit" value={l.credit} onChange={(e) => upd(i, 'credit', e.target.value)} />
-            <input className="input col-span-3" placeholder="Note" value={l.line_note} onChange={(e) => upd(i, 'line_note', e.target.value)} />
-            <button className="text-red-400 hover:text-red-600 col-span-1" onClick={() => delLine(i)}><Trash2 size={15} /></button>
+            <Input type="number" className="col-span-2 money" placeholder="Debit"  value={l.debit}  onChange={(e) => upd(i, 'debit',  e.target.value)} />
+            <Input type="number" className="col-span-2 money" placeholder="Credit" value={l.credit} onChange={(e) => upd(i, 'credit', e.target.value)} />
+            <Input className="col-span-3" placeholder="Note" value={l.line_note} onChange={(e) => upd(i, 'line_note', e.target.value)} />
+            <Button variant="ghost" size="icon-xs" className="text-red-400 hover:text-red-600 col-span-1" onClick={() => delLine(i)}><Trash2 size={15} /></Button>
           </div>
         ))}
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <button className="btn-ghost !py-1" onClick={addLine}><Plus size={14} /> Add line</button>
+          <Button variant="ghost" size="sm" onClick={addLine}><Plus size={14} /> Add line</Button>
           <div className={`money font-semibold text-sm ${balanced ? 'text-forest' : 'text-red-600'}`}>
             Dr {totDr.toFixed(2)} · Cr {totCr.toFixed(2)} {balanced ? '✓ balanced' : '✗ not balanced'}
           </div>
-          <button className="btn-primary" disabled={!balanced} onClick={post}>
+          <Button disabled={!balanced} onClick={post}>
             <Plus size={15} /> {editingId ? 'Update voucher' : 'Post voucher'}
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th">Voucher No</th>
-              <th className="th">Date</th>
-              <th className="th">Narration</th>
-              <th className="th text-right">Amount</th>
-              <th className="th text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const amt = (r.journal_lines || []).reduce((a, l) => a + +l.debit, 0)
-              return (
-                <tr key={r.id}>
-                  <td className="td font-semibold money">{r.jv_no}</td>
-                  <td className="td text-xs">{fmtDate(r.jv_date)}</td>
-                  <td className="td text-sm">{r.narration}</td>
-                  <td className="td money text-right">{fmtBDT(amt)}</td>
-                  <td className="td text-right">
-                    <div className="flex gap-1 justify-end items-center flex-wrap">
-                      <button className="btn-ghost !py-1" title="Print voucher" onClick={() => openVoucher(r)}>
-                        <Printer size={13} /> Voucher
-                      </button>
-                      <button className="btn-ghost !py-1" title="Edit" onClick={() => edit(r)}>
-                        <Pencil size={13} />
-                      </button>
-                      {isAdmin && !r.is_locked && (
-                        <button className="btn-ghost !py-1 text-red-600" title="Delete" onClick={() => del(r.id)}>
-                          <Trash2 size={13} />
-                        </button>
-                      )}
-                      {r.is_locked && (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200">
-                          <Lock size={9} /> Locked
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-            {rows.length === 0 && (
-              <tr><td className="td text-pine/40" colSpan={5}>No vouchers yet.</td></tr>
-            )}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="Journal Vouchers"
+        subtitle="Manual vouchers, source documents and posting controls"
+        data={rows.map((entry) => ({
+          ...entry,
+          voucher_type: voucherTypeFromNo(entry.jv_no || ''),
+          amount: (entry.journal_lines || []).reduce(
+            (sum, line) => sum + Number(line.debit || 0),
+            0
+          ),
+          posting_status: entry.is_locked ? 'LOCKED' : 'POSTED',
+        }))}
+        columns={[
+          { accessorKey: 'jv_no', header: 'Voucher No', width: 160 },
+          { accessorKey: 'jv_date', header: 'Date', type: 'date', width: 130 },
+          { accessorKey: 'voucher_type', header: 'Type', type: 'status', width: 120 },
+          { accessorKey: 'narration', header: 'Narration', width: 320 },
+          { accessorKey: 'amount', header: 'Amount', type: 'currency', aggregation: 'sum', width: 160 },
+          { accessorKey: 'posting_status', header: 'Status', type: 'status', width: 120 },
+          {
+            accessorKey: 'actions',
+            header: 'Actions',
+            sortable: false,
+            width: 220,
+            cell: ({ row }) => (
+              <div className="flex gap-1 justify-end items-center flex-wrap">
+                <Button variant="ghost" size="sm" title="Print voucher" onClick={(event) => { event.stopPropagation(); openVoucher(row) }}>
+                  <Printer size={13} /> Voucher
+                </Button>
+                <Button variant="ghost" size="sm" title="Edit" onClick={(event) => { event.stopPropagation(); edit(row) }}>
+                  <Pencil size={13} />
+                </Button>
+                {isAdmin && !row.is_locked && (
+                  <Button variant="ghost" size="sm" className="text-red-600" title="Delete" onClick={(event) => { event.stopPropagation(); del(row.id) }}>
+                    <Trash2 size={13} />
+                  </Button>
+                )}
+              </div>
+            ),
+          },
+        ]}
+        pageSize={60}
+        emptyText="No vouchers yet."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -768,39 +745,33 @@ function TrialBalance() {
 
   const tot = rows.reduce((a, r) => ({ d: a.d + r.dr, c: a.c + r.cr }), { d: 0, c: 0 })
 
+  const trialBalanceColumns = [
+    { accessorKey: 'code', header: 'Code', width: 120 },
+    { accessorKey: 'name', header: 'Account', width: 300 },
+    { accessorKey: 'type', header: 'Type', type: 'status', width: 130 },
+    { accessorKey: 'dr', header: 'Debit', type: 'currency', aggregation: 'sum', width: 160 },
+    { accessorKey: 'cr', header: 'Credit', type: 'currency', aggregation: 'sum', width: 160 },
+    {
+      accessorKey: 'balance',
+      header: 'Balance',
+      type: 'currency',
+      width: 160,
+    },
+  ]
+
   return (
-    <div className="card overflow-hidden">
-      <div className="px-4 py-3 border-b border-leaf font-display font-semibold text-pine">Trial Balance</div>
-      <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr>
-            <th className="th">Code</th>
-            <th className="th">Account</th>
-            <th className="th text-right">Debit</th>
-            <th className="th text-right">Credit</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.code}>
-              <td className="td money text-xs">{r.code}</td>
-              <td className="td text-sm">{r.name}</td>
-              <td className="td money text-right">{r.dr.toFixed(2)}</td>
-              <td className="td money text-right">{r.cr.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr className="bg-leaf/40 font-bold money">
-            <td className="td" colSpan={2}>TOTAL</td>
-            <td className="td text-right">{tot.d.toFixed(2)}</td>
-            <td className="td text-right">{tot.c.toFixed(2)}</td>
-          </tr>
-        </tfoot>
-      </table>
-      </div>
-    </div>
+    <AedsDataGrid
+      title="Trial Balance"
+      subtitle={`Debit ${fmtBDT(tot.d)} · Credit ${fmtBDT(tot.c)}`}
+      data={rows.map((row) => ({
+        ...row,
+        balance: Number(row.dr || 0) - Number(row.cr || 0),
+      }))}
+      columns={trialBalanceColumns}
+      pageSize={100}
+      emptyText="No posted journal balances found."
+      getRowId={(row) => row.code}
+    />
   )
 }
 
@@ -909,41 +880,42 @@ function CoaTab({ accounts, reload, flash, isAdmin }) {
   return (
     <div className="space-y-4">
       <div className="card p-4 grid grid-cols-1 md:grid-cols-6 gap-2">
-        <input
-          className="input money"
+        <Input
+          className="money"
           placeholder="Code"
           value={f.code}
           onChange={(e) => setF((p) => ({ ...p, code: e.target.value }))}
         />
-        <input
-          className="input md:col-span-2"
+        <Input
+          className="md:col-span-2"
           placeholder="Account name"
           value={f.name}
           onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))}
         />
-        <select className="input" value={f.type} onChange={(e) => setF((p) => ({ ...p, type: e.target.value }))}>
+        <select className={selectClass} value={f.type} onChange={(e) => setF((p) => ({ ...p, type: e.target.value }))}>
           {['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'].map((t) => <option key={t}>{t}</option>)}
         </select>
-        <button className="btn-primary justify-center" onClick={submit}>
+        <Button className="justify-center" onClick={submit}>
           <Plus size={15} /> {editId ? 'Update' : 'Add'}
-        </button>
+        </Button>
         {editId && (
-          <button className="btn-ghost justify-center" onClick={resetForm}>Cancel edit</button>
+          <Button variant="ghost" className="justify-center" onClick={resetForm}>Cancel edit</Button>
         )}
       </div>
 
       <div className="card p-3 flex items-center flex-wrap gap-2">
-        <input
-          className="input !w-64"
+        <Input
+          className="!w-64"
           placeholder="Search code/name/type"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         {isAdmin && (
           <>
-            <button className="btn-ghost !py-1.5" onClick={duplicateSelected} disabled={!selectedId}>Duplicate</button>
-            <button
-              className="btn-ghost !py-1.5"
+            <Button variant="ghost" size="sm" onClick={duplicateSelected} disabled={!selectedId}>Duplicate</Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 const row = accounts.find((a) => a.id === selectedId)
                 if (!row) return flash('Select an account first.')
@@ -952,52 +924,28 @@ function CoaTab({ accounts, reload, flash, isAdmin }) {
               disabled={!selectedId}
             >
               <Pencil size={13} /> Edit
-            </button>
-            <button className="btn-ghost !py-1.5 text-red-500" onClick={removeSelected} disabled={!selectedId}>
+            </Button>
+            <Button variant="ghost" size="sm" className="text-red-500" onClick={removeSelected} disabled={!selectedId}>
               <Trash2 size={13} /> Delete
-            </button>
+            </Button>
           </>
         )}
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th w-12 text-center">Sel</th>
-              <th className="th">Code</th>
-              <th className="th">Account</th>
-              <th className="th">Type</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((a) => (
-              <tr
-                key={a.id}
-                className={selectedId === a.id ? 'bg-forest/5' : ''}
-                onClick={() => setSelectedId(a.id)}
-              >
-                <td className="td text-center">
-                  <input
-                    type="radio"
-                    name="coa-select"
-                    checked={selectedId === a.id}
-                    onChange={() => setSelectedId(a.id)}
-                  />
-                </td>
-                <td className="td money text-xs">{a.code}</td>
-                <td className="td text-sm">{a.name}</td>
-                <td className="td text-xs">{a.type}</td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr><td className="td text-pine/40" colSpan={4}>No accounts found.</td></tr>
-            )}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="Chart of Accounts"
+        subtitle="IFRS-aware account master and classification"
+        data={filtered}
+        columns={[
+          { accessorKey: 'code', header: 'Code', width: 130 },
+          { accessorKey: 'name', header: 'Account', width: 320 },
+          { accessorKey: 'type', header: 'Type', type: 'status', width: 150 },
+        ]}
+        pageSize={100}
+        emptyText="No accounts found."
+        getRowId={(row) => row.id}
+        onRowClick={(row) => setSelectedId(row.id)}
+      />
     </div>
   )
 }
@@ -1070,66 +1018,62 @@ function AssetsTab({ accounts, userName, flash }) {
   return (
     <div className="space-y-4">
       <div className="card p-4 grid grid-cols-6 gap-2">
-        <input className="input col-span-2" placeholder="Asset name"
+        <Input className="col-span-2" placeholder="Asset name"
           value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-        <input className="input" placeholder="Category"
+        <Input className="" placeholder="Category"
           value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} />
-        <input type="number" className="input money" placeholder="Cost"
+        <Input type="number" className="money" placeholder="Cost"
           value={f.cost} onChange={(e) => setF({ ...f, cost: e.target.value })} />
-        <input type="number" className="input money" placeholder="Salvage"
+        <Input type="number" className="money" placeholder="Salvage"
           value={f.salvage_value} onChange={(e) => setF({ ...f, salvage_value: e.target.value })} />
-        <input type="number" className="input money" placeholder="Life (months)"
+        <Input type="number" className="money" placeholder="Life (months)"
           value={f.useful_life_months} onChange={(e) => setF({ ...f, useful_life_months: e.target.value })} />
-        <button className="btn-primary justify-center col-span-6" onClick={add}>
+        <Button className="justify-center col-span-6" onClick={add}>
           <Building2 size={15} /> Add asset
-        </button>
+        </Button>
       </div>
       <div className="card p-4 flex items-center gap-3 flex-wrap">
         <span className="label !mb-0">Depreciation run</span>
-        <input type="month" className="input !w-44"
+        <Input type="month" className="!w-44"
           value={period} onChange={(e) => setPeriod(e.target.value)} />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="accent-forest" checked={makeJV} onChange={(e) => setMakeJV(e.target.checked)} />
           Post JV (Dr 5500 / Cr 1590)
         </label>
-        <button className="btn-amber" onClick={runDep}>
+        <Button variant="secondary" onClick={runDep}>
           <Scale size={15} /> Run straight-line depreciation
-        </button>
+        </Button>
       </div>
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th">Code</th>
-              <th className="th">Asset</th>
-              <th className="th text-right">Cost</th>
-              <th className="th text-right">Monthly dep.</th>
-              <th className="th text-right">Accum.</th>
-              <th className="th text-right">Book value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((a) => {
-              const accum = (a.asset_depreciation || []).reduce((s, d) => s + +d.amount, 0)
-              return (
-                <tr key={a.id}>
-                  <td className="td money text-xs">{a.asset_code}</td>
-                  <td className="td text-sm">{a.name}</td>
-                  <td className="td money text-right">{fmtBDT(a.cost)}</td>
-                  <td className="td money text-right">{fmtBDT(monthly(a))}</td>
-                  <td className="td money text-right">{fmtBDT(accum)}</td>
-                  <td className="td money text-right font-semibold">{fmtBDT(+a.cost - accum)}</td>
-                </tr>
-              )
-            })}
-            {rows.length === 0 && (
-              <tr><td className="td text-pine/40" colSpan={6}>No assets yet.</td></tr>
-            )}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <AedsDataGrid
+        title="Fixed Assets Register"
+        subtitle="Acquisition cost, depreciation and carrying value"
+        data={rows.map((asset) => {
+          const accumulated = (asset.asset_depreciation || []).reduce(
+            (sum, depreciation) => sum + Number(depreciation.amount || 0),
+            0
+          )
+
+          return {
+            ...asset,
+            monthly_depreciation: monthly(asset),
+            accumulated_depreciation: accumulated,
+            book_value: Number(asset.cost || 0) - accumulated,
+          }
+        })}
+        columns={[
+          { accessorKey: 'asset_code', header: 'Code', width: 130 },
+          { accessorKey: 'name', header: 'Asset', width: 260 },
+          { accessorKey: 'category', header: 'Category', width: 150 },
+          { accessorKey: 'cost', header: 'Cost', type: 'currency', aggregation: 'sum', width: 150 },
+          { accessorKey: 'monthly_depreciation', header: 'Monthly Dep.', type: 'currency', width: 160 },
+          { accessorKey: 'accumulated_depreciation', header: 'Accumulated', type: 'currency', aggregation: 'sum', width: 160 },
+          { accessorKey: 'book_value', header: 'Book Value', type: 'currency', aggregation: 'sum', width: 160 },
+          { accessorKey: 'status', header: 'Status', type: 'status', width: 120 },
+        ]}
+        pageSize={100}
+        emptyText="No assets yet."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -1252,9 +1196,16 @@ function TransactionMappingTab({ accounts, flash, userName }) {
 
   const syncDefaultMappings = async ({ automated = false } = {}) => {
     setSyncBusy(true)
+    const tenantId = getTenantId()
+    if (!tenantId) {
+      setSyncBusy(false)
+      if (!automated) flash('No tenant context — cannot sync mappings.')
+      return
+    }
     const { data: current, error: loadErr } = await supabase
       .from('accounting_transaction_mapping')
       .select('transaction_type')
+      .eq('tenant_id', tenantId)
     if (loadErr) {
       setSyncBusy(false)
       flash(loadErr.message)
@@ -1269,6 +1220,7 @@ function TransactionMappingTab({ accounts, flash, userName }) {
     }
 
     const rows = missing.map((transaction_type) => ({
+      tenant_id: tenantId,
       transaction_type,
       label: toLabel(transaction_type),
       notes: automated ? 'Auto-synced on Accounting module open' : 'Added by manual trigger',
@@ -1286,6 +1238,15 @@ function TransactionMappingTab({ accounts, flash, userName }) {
     flash(automated ? `${missing.length} default mapping row(s) auto-synced.` : `${missing.length} mapping row(s) added.`)
     await load()
   }
+
+  // Actually run the auto-sync when the Accounting module's Transaction
+  // Mapping tab opens — previously this only ever ran from the manual
+  // "Sync Defaults" button despite the row notes claiming "Auto-synced on
+  // Accounting module open".
+  useEffect(() => {
+    syncDefaultMappings({ automated: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const triggerDefaultSync = async () => {
     await syncDefaultMappings({ automated: false })
@@ -1348,7 +1309,7 @@ function TransactionMappingTab({ accounts, flash, userName }) {
 
   const AccountSelect = ({ value, onChange, placeholder }) => (
     <select
-      className="input text-xs !py-1"
+      className={`${selectClass} text-xs !py-1`}
       value={value || ''}
       onChange={(e) => onChange(e.target.value)}
     >
@@ -1380,13 +1341,13 @@ function TransactionMappingTab({ accounts, flash, userName }) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="btn-ghost !py-1.5" onClick={triggerDefaultSync} disabled={syncBusy}>
+            <Button variant="ghost" size="sm" onClick={triggerDefaultSync} disabled={syncBusy}>
               {syncBusy ? 'Triggering…' : 'Manual trigger defaults'}
-            </button>
+            </Button>
             <div className="relative w-56">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-pine/30" />
-              <input
-                className="input !pl-8 text-sm"
+              <Input
+                className="!pl-8 text-sm"
                 placeholder="Search transaction..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -1396,14 +1357,13 @@ function TransactionMappingTab({ accounts, flash, userName }) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-6 gap-2 border-t border-leaf pt-3">
-          <input
-            className="input"
+          <Input
             placeholder="Transaction type (e.g. LAUNDRY_REVENUE)"
             value={addF.transaction_type}
             onChange={(e) => setAddF((p) => ({ ...p, transaction_type: e.target.value }))}
           />
-          <input
-            className="input md:col-span-2"
+          <Input
+            className="md:col-span-2"
             placeholder="Label"
             value={addF.label}
             onChange={(e) => setAddF((p) => ({ ...p, label: e.target.value }))}
@@ -1418,11 +1378,11 @@ function TransactionMappingTab({ accounts, flash, userName }) {
             onChange={(v) => setAddF((p) => ({ ...p, credit_account_id: v }))}
             placeholder="Credit"
           />
-          <button className="btn-primary justify-center" onClick={addMapping} disabled={addBusy}>
+          <Button className="justify-center" onClick={addMapping} disabled={addBusy}>
             <Plus size={14} /> {addBusy ? 'Adding…' : 'Add mapping'}
-          </button>
-          <input
-            className="input md:col-span-6"
+          </Button>
+          <Input
+            className="md:col-span-6"
             placeholder="Notes (optional)"
             value={addF.notes}
             onChange={(e) => setAddF((p) => ({ ...p, notes: e.target.value }))}
@@ -1457,17 +1417,17 @@ function TransactionMappingTab({ accounts, flash, userName }) {
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-mono text-[10px] text-pine/40 bg-pine/5 px-2 py-0.5 rounded">{m.transaction_type}</span>
-                          <input
-                            className="input !py-1 text-sm font-semibold flex-1 min-w-[160px]"
+                          <Input
+                            className="!py-1 text-sm font-semibold flex-1 min-w-[160px]"
                             value={editF.label}
                             onChange={(e) => setEditF((p) => ({ ...p, label: e.target.value }))}
                           />
                         </div>
                         <div className="flex gap-2">
-                          <button onClick={saveEdit} disabled={busy} className="btn-primary !py-1 text-xs">
+                          <Button onClick={saveEdit} disabled={busy} size="xs" className="text-xs">
                             <Save size={12} /> {busy ? 'Saving…' : 'Save'}
-                          </button>
-                          <button onClick={() => setEditId(null)} className="btn-ghost !py-1 text-xs">Cancel</button>
+                          </Button>
+                          <Button variant="ghost" size="xs" className="text-xs" onClick={() => setEditId(null)}>Cancel</Button>
                         </div>
                       </div>
 
@@ -1516,8 +1476,8 @@ function TransactionMappingTab({ accounts, flash, userName }) {
 
                       <div>
                         <label className="label !text-xs">Notes</label>
-                        <input
-                          className="input text-xs"
+                        <Input
+                          className="text-xs"
                           value={editF.notes}
                           onChange={(e) => setEditF((p) => ({ ...p, notes: e.target.value }))}
                         />
@@ -1556,13 +1516,15 @@ function TransactionMappingTab({ accounts, flash, userName }) {
                         {m.notes && <p className="text-[10px] text-pine/40 mt-1.5">{m.notes}</p>}
                       </div>
 
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
                         onClick={() => startEdit(m)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-leaf text-pine/40 hover:text-forest shrink-0"
+                        className="text-pine/40 hover:text-forest shrink-0"
                         title="Edit mapping"
                       >
                         <Pencil size={13} />
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -1593,7 +1555,7 @@ export function VoucherEntryPage({ userName, isAdmin, role }) {
 
   useEffect(() => {
     loadAccounts()
-    supabase.from('company_settings').select('*').limit(1).single()
+    getCompanySettingsQuery('*').limit(1).single()
       .then(({ data }) => setCompany(data))
   }, [])
 

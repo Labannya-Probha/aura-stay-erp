@@ -1,18 +1,23 @@
-import { useEffect, useState, useRef } from 'react'
-import { supabase } from '../supabase'
+﻿import { useEffect, useState, useRef } from 'react'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, fmtDate, todayISO, nightsBetween, eachNight, rateFor, computeCharge, STATUS_COLORS } from '../lib/helpers'
 import { loadReservationConfig } from '../lib/reservationConfig'
-import { Search, Trash2, UserSearch, X, CheckCircle2 } from 'lucide-react'
+import { Search, Trash2, X, CheckCircle2, Building2, User, CalendarDays, Plus, BedDouble, Percent, SlidersHorizontal, MapPin, MessageSquare, ChevronDown } from 'lucide-react'
 import SearchableSelect from '../components/SearchableSelect.jsx'
 import KPICards from '../components/KPICards.jsx'
 import { Combobox } from '../components/ui/combobox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LegacyButton } from '../components/ui/legacy-controls'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { cn } from '../lib/utils'
 
 const STATUSES = ['ALL', 'QUERY', 'QUOTED', 'CONFIRMED', 'NO_SHOW', 'CHECKED_IN', 'CHECKED_OUT', 'SETTLED', 'CANCELLED'];
 const STATUS_TO_TAB = {
-  QUERY: 'Overview',
-  QUOTED: 'Overview',
-  CONFIRMED: 'Overview',
+  QUERY: 'Quotations',
+  QUOTED: 'Quotations',
+  CONFIRMED: 'Quotations',
   NO_SHOW: 'Overview',
   CHECKED_IN: 'Overview',
   CHECKED_OUT: 'Payments',
@@ -27,7 +32,7 @@ export function StatusFilter({ q, setQ, filter, setFilter }) {
         <Search size={15} className="absolute left-3 top-2.5 text-pine/40" />
         <input
           className="input pl-9 w-full"
-          placeholder="Search name, phone, RES no, CUST ID…"
+          placeholder="Search name, phone, RES no, CUST ID..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
@@ -52,7 +57,7 @@ export function StatusFilter({ q, setQ, filter, setFilter }) {
 }
 
 function dayName(dateStr) {
-  if (!dateStr) return '—'
+  if (!dateStr) return 'â€”'
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' })
 }
 
@@ -80,6 +85,17 @@ export default function Reservations({ openReservation, userName, prefill, clear
     (!q || [r.res_no, r.reservation_name, r.guests?.full_name, r.guests?.phone, r.guests?.customer_id].join(' ').toLowerCase().includes(q.toLowerCase()))
   )
 
+  if (showNew) {
+    return (
+      <NewReservation
+        prefill={prefill}
+        close={() => { setShowNew(false); clearPrefill?.(); load() }}
+        openReservation={openReservation}
+        userName={userName}
+      />
+    )
+  }
+
   return (
     <><div>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
@@ -94,7 +110,7 @@ export default function Reservations({ openReservation, userName, prefill, clear
     
     <div className="card overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-pine/40 text-sm">Loading reservations…</div>
+          <div className="p-8 text-center text-pine/40 text-sm">Loading reservations...</div>
         ) : (
           <>
             {/* Desktop table */}
@@ -114,21 +130,21 @@ export default function Reservations({ openReservation, userName, prefill, clear
                     <tr key={r.id} className="hover:bg-leaf/30 cursor-pointer" onClick={() => openReservation(r.id)}>
                       <td className="td money font-medium">{r.res_no}</td>
                       <td className="td">
-                        <div className="font-semibold">{r.reservation_name || r.guests?.full_name || '—'}</div>
+                        <div className="font-semibold">{r.reservation_name || r.guests?.full_name || 'â€”'}</div>
                         <div className="text-xs text-pine/50 flex items-center gap-1.5 flex-wrap">
                           {r.guests?.customer_id && (
                             <span className="font-mono bg-pine/10 text-pine/70 px-1 rounded text-[10px]">{r.guests.customer_id}</span>
                           )}
                           <span>{r.guests?.full_name}</span>
-                          {r.guests?.phone && <span>· {r.guests.phone}</span>}
+                          {r.guests?.phone && <span>Â· {r.guests.phone}</span>}
                         </div>
                       </td>
-                      <td className="td money text-xs">{fmtDate(r.check_in)} → {fmtDate(r.check_out)}</td>
+                      <td className="td money text-xs">{fmtDate(r.check_in)} â†’ {fmtDate(r.check_out)}</td>
                       <td className="td money text-xs font-semibold">
-                        {(r.reservation_rooms || []).map((x) => x.rooms ? `${x.rooms.room_no}${x.rooms.room_name ? ' (' + x.rooms.room_name + ')' : ''}` : null).filter(Boolean).join(', ') || '—'}
+                        {(r.reservation_rooms || []).map((x) => x.rooms ? `${x.rooms.room_no}${x.rooms.room_name ? ' (' + x.rooms.room_name + ')' : ''}` : null).filter(Boolean).join(', ') || 'â€”'}
                       </td>
                       <td className="td money">{(r.pax_adults || 0) + (r.pax_children || 0)}</td>
-                      <td className="td text-xs">{r.source || '—'}</td>
+                      <td className="td text-xs">{r.source || 'â€”'}</td>
                       <td className="td">
                         <button
                           onClick={(e) => { e.stopPropagation(); openReservation(r.id, STATUS_TO_TAB[r.status] || 'Overview') } }
@@ -155,12 +171,12 @@ export default function Reservations({ openReservation, userName, prefill, clear
                 <div key={r.id} onClick={() => openReservation(r.id)} className="p-4 active:bg-leaf/30 cursor-pointer">
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <div className="min-w-0">
-                      <div className="font-semibold text-sm truncate">{r.reservation_name || r.guests?.full_name || '—'}</div>
+                      <div className="font-semibold text-sm truncate">{r.reservation_name || r.guests?.full_name || 'â€”'}</div>
                       <div className="text-xs text-pine/50 truncate flex items-center gap-1">
                         {r.guests?.customer_id && (
                           <span className="font-mono bg-pine/10 text-pine/70 px-1 rounded text-[10px]">{r.guests.customer_id}</span>
                         )}
-                        <span>{r.guests?.full_name} {r.guests?.phone && `· ${r.guests.phone}`}</span>
+                        <span>{r.guests?.full_name} {r.guests?.phone && `Â· ${r.guests.phone}`}</span>
                       </div>
                     </div>
                     <button
@@ -170,14 +186,14 @@ export default function Reservations({ openReservation, userName, prefill, clear
                       {r.status.replace('_', ' ')}
                     </button>
                   </div>
-                  <div className="text-xs text-pine/70 money mb-1">{r.res_no} · {fmtDate(r.check_in)} → {fmtDate(r.check_out)}</div>
+                  <div className="text-xs text-pine/70 money mb-1">{r.res_no} Â· {fmtDate(r.check_in)} â†’ {fmtDate(r.check_out)}</div>
                   <div className="text-xs text-pine/60 money mb-1">
                     {(r.reservation_rooms || []).map((x) => x.rooms ? `${x.rooms.room_no}${x.rooms.room_name ? ' (' + x.rooms.room_name + ')' : ''}` : null).filter(Boolean).join(', ') || 'No rooms assigned'}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-pine/50">
                     <span>{(r.pax_adults || 0) + (r.pax_children || 0)} pax</span>
-                    <span>·</span>
-                    <span>{r.source || '—'}</span>
+                    <span>Â·</span>
+                    <span>{r.source || 'â€”'}</span>
                   </div>
                 </div>
               ))}
@@ -189,16 +205,9 @@ export default function Reservations({ openReservation, userName, prefill, clear
             </div>
           </>
         )}
-      </div></>
-      )
-      {showNew && (
-        <NewReservation
-          prefill={prefill}
-          close={() => { setShowNew(false); clearPrefill?.(); load() }}
-          openReservation={openReservation}
-          userName={userName}
-        />
-      )}
+      </div>
+    </>
+  )
 }
 
 function GuestSearchPopup({ onSelect, onClose, onCreateContact }) {
@@ -242,32 +251,33 @@ function GuestSearchPopup({ onSelect, onClose, onCreateContact }) {
           <input
             ref={inputRef}
             className="input pl-9 w-full"
-            placeholder="Type name, phone, or CUST ID…"
+            placeholder="Type name, phone, or CUST ID..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
 
         <div className="flex-1 min-h-0">
-          {loading && <p className="text-sm text-pine/40 text-center py-6">Searching…</p>}
+          {loading && <p className="text-sm text-pine/40 text-center py-6">Searching...</p>}
           {!loading && q.length >= 2 && results.length === 0 && (
             <div className="py-4 space-y-3">
-              <p className="text-sm text-pine/40 text-center">No guests found matching "{q}"</p>
+              <p className="text-sm text-pine/40 text-center">No guests found matching &quot;{q}&quot;</p>
               <div className="flex flex-col sm:flex-row gap-2">
-                <button
+                <LegacyButton
                   type="button"
                   onClick={() => onCreateContact?.(q.trim(), false)}
-                  className="btn-primary flex-1 justify-center !py-2 text-sm"
+                  className="flex-1 justify-center text-sm"
                 >
-                  Create contact "{q.trim()}"
-                </button>
-                <button
+                  Create contact: {q.trim()}
+                </LegacyButton>
+                <LegacyButton
                   type="button"
+                  variant="ghost"
                   onClick={() => onCreateContact?.(q.trim(), true)}
-                  className="btn-ghost flex-1 justify-center !py-2 text-sm"
+                  className="flex-1 justify-center text-sm"
                 >
                   Create & edit details
-                </button>
+                </LegacyButton>
               </div>
             </div>
           )}
@@ -302,11 +312,96 @@ function GuestSearchPopup({ onSelect, onClose, onCreateContact }) {
         </div>
 
         <div className="mt-3 pt-3 border-t border-leaf">
-          <button onClick={onClose} className="btn-ghost w-full text-sm">
-            Cancel — create new guest instead
-          </button>
+          <LegacyButton variant="ghost" onClick={onClose} className="w-full text-sm">
+            Cancel â€” create new guest instead
+          </LegacyButton>
         </div>
       </div>
+    </div>
+  )
+}
+
+/* ================================================================== */
+/*  GUEST INLINE SEARCH  (Odoo-style â€” type name â†’ dropdown)          */
+/* ================================================================== */
+function GuestInlineSearch({ value, disabled, onChange, onSelect, onCreateContact, inputRef, placeholder }) {
+  const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef(null)
+
+  useEffect(() => {
+    if (!value || value.length < 2 || disabled) { setResults([]); setOpen(false); return }
+    const t = setTimeout(async () => {
+      setLoading(true)
+      const { data } = await supabase
+        .from('guests')
+        .select('id, full_name, phone, email, address, customer_id, loyalty_points')
+        .or(`full_name.ilike.%${value}%,phone.ilike.%${value}%,customer_id.ilike.%${value}%`)
+        .order('full_name').limit(8)
+      setResults(data || [])
+      setLoading(false)
+      setOpen(true)
+    }, 280)
+    return () => clearTimeout(t)
+  }, [value, disabled])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const showDropdown = open && !disabled && value?.length >= 2
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <input
+        ref={inputRef}
+        className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm shadow-sm transition-colors placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
+        value={value}
+        disabled={disabled}
+        onChange={(e) => { onChange(e.target.value); if (e.target.value.length >= 2) setOpen(true) }}
+        onFocus={() => { if (value?.length >= 2) setOpen(true) }}
+        placeholder={placeholder}
+        autoComplete="off"
+      />
+      {showDropdown && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-xl border border-leaf bg-white shadow-xl max-h-64 overflow-y-auto">
+          {loading && <p className="text-xs text-pine/40 px-3 py-2">Searching...</p>}
+          {!loading && results.map((g) => (
+            <button key={g.id} type="button"
+              onMouseDown={(e) => { e.preventDefault(); onSelect(g); setOpen(false) }}
+              className="w-full text-left px-3 py-2 hover:bg-leaf/40 transition-colors border-b border-leaf/30 last:border-0"
+            >
+              <div className="font-semibold text-sm text-pine">{g.full_name}</div>
+              <div className="text-xs text-pine/50 flex items-center gap-2 mt-0.5">
+                {g.customer_id && <span className="font-mono bg-pine/10 px-1.5 py-0.5 rounded text-[10px]">{g.customer_id}</span>}
+                {g.phone && <span>{g.phone}</span>}
+                {g.email && <span className="truncate">{g.email}</span>}
+                {g.loyalty_points > 0 && <span className="text-forest font-semibold">{g.loyalty_points}pts</span>}
+              </div>
+            </button>
+          ))}
+          {!loading && (
+            <div className="border-t border-leaf/40 px-2 py-1.5 flex gap-1.5">
+              <button type="button"
+                onMouseDown={(e) => { e.preventDefault(); onCreateContact(value.trim(), false); setOpen(false) }}
+                className="flex-1 text-xs text-forest font-semibold px-2 py-1.5 rounded-lg hover:bg-forest/10 text-left"
+              >
+                + Create &quot;{value.trim()}&quot;
+              </button>
+              <button type="button"
+                onMouseDown={(e) => { e.preventDefault(); onCreateContact(value.trim(), true); setOpen(false) }}
+                className="flex-1 text-xs text-pine/60 px-2 py-1.5 rounded-lg hover:bg-leaf/40 text-left"
+              >
+                + Create &amp; edit details
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -318,8 +413,8 @@ function ServiceCombobox({ items, addons, onSelect }) {
   const selectedCount = Object.values(addons).filter(a => a.selected).length
   const comboboxItems = items.map((it) => ({
     value: it.id,
-    label: `${addons[it.id]?.selected ? '✓ ' : ''}${it.name}`,
-    sublabel: `${it.unit} · ${fmtBDT(it.default_price)}`,
+    label: `${addons[it.id]?.selected ? 'âœ“ ' : ''}${it.name}`,
+    sublabel: `${it.unit} Â· ${fmtBDT(it.default_price)}`,
   }))
 
   return (
@@ -327,8 +422,8 @@ function ServiceCombobox({ items, addons, onSelect }) {
       items={comboboxItems}
       value={undefined}
       onChange={(v) => onSelect(v)}
-      placeholder={selectedCount > 0 ? `${selectedCount} service${selectedCount > 1 ? 's' : ''} selected` : 'Search and select services…'}
-      searchPlaceholder="Search services…"
+      placeholder={selectedCount > 0 ? `${selectedCount} service${selectedCount > 1 ? 's' : ''} selected` : 'Search and select services...'}
+      searchPlaceholder="Search services..."
       emptyText="No services found"
       closeOnSelect={false}
     />
@@ -340,7 +435,7 @@ function ServiceCombobox({ items, addons, onSelect }) {
 /* ================================================================== */
 const SALUTATIONS = ['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Prof.', 'Engr.']
 
-function NewReservation({ close, openReservation, userName, prefill }) {
+export function NewReservation({ close, openReservation, userName, prefill }) {
   const t        = todayISO()
   const tomorrow = (d) => { const dt = new Date(d); dt.setDate(dt.getDate() + 1); return dt.toISOString().slice(0, 10) }
 
@@ -356,11 +451,10 @@ function NewReservation({ close, openReservation, userName, prefill }) {
   })
 
   const [linkedGuest, setLinkedGuest]         = useState(null)
-  const [showGuestSearch, setShowGuestSearch] = useState(false)
   const [rooms, setRooms]                     = useState([])
   const [companies, setCompanies]             = useState([])
   const [booked, setBooked]                   = useState([])
-  const [roomRows, setRoomRows]               = useState([])
+  const [roomRows, setRoomRows]               = useState(() => [{ room_id: '', from_date: t, to_date: tomorrow(t) }])
   const [taxConfig, setTaxConfig]             = useState([])
   const [facilityItems, setFacilityItems]     = useState([])
   const [reservationCfg, setReservationCfg]   = useState(() => loadReservationConfig())
@@ -376,6 +470,19 @@ function NewReservation({ close, openReservation, userName, prefill }) {
 
   const set          = (k, v) => setF((p) => ({ ...p, [k]: v }))
 
+  // Apply prefill data from Booking Calendar (check-in date, check-out date, room)
+  useEffect(() => {
+    if (!prefill) return
+    setF((p) => ({
+      ...p,
+      ...(prefill.from_date ? { check_in: prefill.from_date } : {}),
+      ...(prefill.to_date   ? { check_out: prefill.to_date }  : {}),
+    }))
+    if (prefill.room_id && prefill.from_date && prefill.to_date) {
+      setRoomRows([{ room_id: prefill.room_id, from_date: prefill.from_date, to_date: prefill.to_date }])
+    }
+  }, [prefill])
+
   const writeAudit = async ({ action, entity, entityId, details = {} }) => {
     try {
       await supabase.from('audit_log').insert({
@@ -389,6 +496,24 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       // Do not block reservation operations if audit insert fails.
     }
   }
+
+  function getPolicyDiscount(dateStr, policy) {
+    if (!policy || !dateStr) return null
+    const blackouts = policy.policy_blackout_dates || []
+    const isBlackout = blackouts.some(b => dateStr >= b.from_date && dateStr <= b.to_date)
+    if (isBlackout) return Number(policy.blackout_discount_pct)
+    const dow = new Date(`${dateStr}T00:00:00`).getDay() // 0=Sun
+    const isWeekend = (policy.weekend_days || [4,5,6]).includes(dow)
+    return isWeekend ? Number(policy.weekend_discount_pct) : Number(policy.weekday_discount_pct)
+  }
+
+  async function generateCustomerId() {
+    try {
+      const { data, error } = await supabase.rpc('generate_customer_id')
+      if (error || !data) return null
+      return data
+    } catch { return null }
+  }
   
   useEffect(() => {
     if (!reservationPolicy) return
@@ -397,7 +522,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       setPolicyDiscountPct(disc)
       setF(p => ({ ...p, discount_val: disc }))
     }
-  }, [reservationPolicy])
+  }, [reservationPolicy, f.check_in, f.discount_type])
   const toggleAddon  = (key) => setAddons((p) => ({ ...p, [key]: { ...p[key], selected: !p[key].selected } }))
   const updAddon     = (key, field, val) => setAddons((p) => ({ ...p, [key]: { ...p[key], [field]: val } }))
 
@@ -419,16 +544,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
     if (!fromDate || !toDate || toDate <= fromDate) return false
     const blocked = new Set(reservationCfg.blackoutDays || [])
     return eachNight(fromDate, toDate).some((d) => blocked.has(d))
-  }
-
-  const getPolicyDiscount = (dateStr, policy) => {
-    if (!policy || !dateStr) return null
-    const blackouts = policy.policy_blackout_dates || []
-    const isBlackout = blackouts.some(b => dateStr >= b.from_date && dateStr <= b.to_date)
-    if (isBlackout) return Number(policy.blackout_discount_pct)
-    const dow = new Date(`${dateStr}T00:00:00`).getDay() // 0=Sun
-    const isWeekend = (policy.weekend_days || [4,5,6]).includes(dow)
-    return isWeekend ? Number(policy.weekend_discount_pct) : Number(policy.weekday_discount_pct)
   }
 
   const setCheckIn = (val) => {
@@ -473,7 +588,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       address:          guest.address    || '',
       reservation_name: p.reservation_name || guest.full_name || '',
     }))
-    setShowGuestSearch(false)
   }
 
   const createContactFromSearch = async (name, openForEdit = false) => {
@@ -496,7 +610,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       address: g.address || '',
       link_names: false,
     }))
-    setShowGuestSearch(false)
     if (openForEdit) setFocusGuestName(true)
 
     await writeAudit({
@@ -544,6 +657,10 @@ function NewReservation({ close, openReservation, userName, prefill }) {
       .limit(1)
       .maybeSingle()
       .then(({ data }) => { if (data) setReservationPolicy(data) })
+    supabase.from('facility_items')
+      .select('*')
+      .eq('is_active', true)
+      .order('name')
       .then(({ data }) => {
         const items = data || []
         setFacilityItems(items)
@@ -600,14 +717,6 @@ function NewReservation({ close, openReservation, userName, prefill }) {
   const overallCI = validRows.length ? validRows.reduce((m, r) => r.from_date < m ? r.from_date : m, validRows[0].from_date) : f.check_in
   const overallCO = validRows.length ? validRows.reduce((m, r) => r.to_date > m ? r.to_date : m, validRows[0].to_date) : f.check_out
 
-  const generateCustomerId = async () => {
-    try {
-      const { data, error } = await supabase.rpc('generate_customer_id')
-      if (error || !data) return null
-      return data
-    } catch { return null }
-  }
-
   const save = async () => {
     setBusy(true); setErr('')
     try {
@@ -622,7 +731,7 @@ function NewReservation({ close, openReservation, userName, prefill }) {
         }
         if (isBusy(r.room_id, r.from_date, r.to_date)) {
           const rm = rooms.find((x) => x.id === r.room_id)
-          throw new Error(`Room ${rm?.room_no} is already booked for ${r.from_date} → ${r.to_date}`)
+          throw new Error(`Room ${rm?.room_no} is already booked for ${r.from_date} â†’ ${r.to_date}`)
         }
       }
 
@@ -770,350 +879,329 @@ function NewReservation({ close, openReservation, userName, prefill }) {
     setBusy(false)
   }
 
-  return (
-    <>
-      {showGuestSearch && (
-        <GuestSearchPopup
-          onSelect={handleGuestSelect}
-          onCreateContact={createContactFromSearch}
-          onClose={() => setShowGuestSearch(false)}
-        />
-      )}
+  // Shared field wrapper: label + control stacked
+  const F = ({ label, children, className, hint }) => (
+    <div className={cn('flex flex-col gap-1', className)}>
+      <label className="text-xs font-semibold text-pine/70 uppercase tracking-wide">{label}</label>
+      {children}
+      {hint && <span className="text-[11px] text-pine/40">{hint}</span>}
+    </div>
+  )
 
-      <div className="fixed inset-0 bg-ink/60 z-40 flex items-start justify-center overflow-auto p-3 sm:p-6">
-        <div className="card max-w-2xl w-full p-4 sm:p-6 my-3 sm:my-6">
-          <h2 className="font-display text-lg font-bold text-pine mb-4">New reservation query</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  return (<div className="min-h-screen bg-slate-50 py-6 px-4 sm:px-0"><div className="max-w-2xl mx-auto space-y-3.5">
 
-            <div><label className="label">Salutation</label>
-              <SearchableSelect
-                options={SALUTATIONS.map((s) => ({ value: s, label: s }))}
-                value={f.salutation}
-                onChange={(val) => set('salutation', val)}
-                placeholder="Select…"
-              />
-            </div>
-            <div><label className="label">Guest Type</label>
-              <div className="flex gap-2 h-[38px] items-center">
-                {['Individual', 'Company'].map((gt) => (
-                  <button key={gt} type="button" onClick={() => set('guest_type', gt)}
-                    className={`flex-1 h-full rounded-lg text-sm font-semibold border ${f.guest_type === gt ? 'bg-pine text-white border-pine' : 'border-leaf text-pine/70'}`}>
-                    {gt}
+      {/* â”€â”€ Header â”€â”€ */}
+      <div>
+        <h2 className="font-display text-xl font-bold text-pine">New Reservation Query</h2>
+        <p className="text-sm text-pine/50 mt-0.5">Fill in guest and stay details to create a booking query.</p>
+      </div>
+
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          SECTION 1 â€” Guest Details
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      <div className="card p-0 overflow-hidden">
+        <div className="flex items-center gap-2 px-5 py-2.5 border-b border-leaf/40 bg-leaf/10">
+          <User size={14} className="text-forest" />
+          <span className="text-sm font-semibold text-pine">Guest Details</span>
+        </div>
+
+        <div className="p-5 space-y-3">
+
+          {/* Row 1: Salutation (narrow) + Guest Type (fills rest) â€” single flex row */}
+          <div className="flex items-end gap-3">
+            <F label="Salutation" className="w-32 shrink-0">
+              <SearchableSelect options={SALUTATIONS.map((s) => ({ value: s, label: s }))} value={f.salutation} onChange={(val) => set('salutation', val)} placeholder="Select..." />
+            </F>
+
+            <F label="Guest Type" className="flex-1">
+              <div className="flex gap-1.5 h-9">
+                {[{ v: 'Individual', icon: <User size={13} /> }, { v: 'Company', icon: <Building2 size={13} /> }].map(({ v, icon }) => (
+                  <button key={v} type="button" onClick={() => set('guest_type', v)}
+                    className={cn(
+                      'flex-1 flex items-center justify-center gap-1.5 h-full rounded-xl border text-sm font-semibold transition-all',
+                      f.guest_type === v
+                        ? 'bg-forest text-white border-forest shadow-sm'
+                        : 'bg-white text-pine/70 border-leaf hover:border-forest/40 hover:text-pine'
+                    )}>
+                    {icon}{v}
                   </button>
                 ))}
               </div>
-            </div>
+            </F>
+          </div>
 
-            <div className="col-span-2">
-              <label className="label">{f.guest_type === 'Company' ? 'Reservation / Company Name *' : 'Reservation Name *'}</label>
-              <input className="input" value={f.reservation_name} onChange={(e) => setReservationName(e.target.value)} placeholder={f.guest_type === 'Company' ? 'e.g. Acme Corporation' : ''} />
-            </div>
+          {/* Row 2: Reservation Name | Guest Name */}
+          <div className="grid grid-cols-2 gap-3">
+            <F label={f.guest_type === 'Company' ? 'Reservation / Company Name *' : 'Reservation Name *'}>
+              <input className="input" value={f.reservation_name} onChange={(e) => setReservationName(e.target.value)} placeholder={f.guest_type === 'Company' ? 'e.g. Acme Corporation' : 'e.g. Hasan Family'} />
+            </F>
 
-            {/* Guest Name */}
-            <div className="col-span-2">
-              <div className="flex items-center justify-between mb-1">
-                <label className="label !mb-0">Guest Name *</label>
-                <div className="flex items-center gap-2">
-                  {!linkedGuest && (
-                    <button
-                      type="button"
-                      onClick={() => setShowGuestSearch(true)}
-                      className="flex items-center gap-1.5 text-xs text-forest font-semibold hover:underline"
-                    >
-                      <UserSearch size={13} /> Search existing guest
-                    </button>
-                  )}
-                  <label className="flex items-center gap-1.5 text-xs text-pine/70 cursor-pointer">
-                    <input type="checkbox" checked={f.link_names} onChange={(e) => toggleLinkNames(e.target.checked)} disabled={!!linkedGuest} />
-                    Same as Reservation Name
-                  </label>
-                </div>
+            <F label="Guest Name *">
+              <div className="flex items-center justify-end -mt-5 mb-1">
+                <label className="flex items-center gap-1.5 text-[11px] text-pine/50 cursor-pointer">
+                  <input type="checkbox" className="w-3 h-3 accent-forest" checked={f.link_names} onChange={(e) => toggleLinkNames(e.target.checked)} disabled={!!linkedGuest} />
+                  Same as reservation name
+                </label>
               </div>
-
-              {linkedGuest && (
-                <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-forest/10 border border-forest/20">
-                  <CheckCircle2 size={14} className="text-forest shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-semibold text-pine">{linkedGuest.full_name}</span>
-                    {linkedGuest.customer_id && (
-                      <span className="ml-2 font-mono text-[10px] bg-pine/10 text-pine/70 px-1.5 py-0.5 rounded">{linkedGuest.customer_id}</span>
-                    )}
-                    {linkedGuest.phone && <span className="ml-2 text-xs text-pine/50">{linkedGuest.phone}</span>}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button type="button" onClick={() => setShowGuestSearch(true)} className="text-xs text-pine/50 hover:text-forest underline">Change</button>
-                    <button type="button" onClick={clearLinkedGuest} className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 text-pine/30 hover:text-red-500">
-                      <X size={12} />
-                    </button>
-                  </div>
+              {linkedGuest ? (
+                <div className="flex items-center gap-2 h-9 px-3 rounded-xl bg-forest/10 border border-forest/20">
+                  <CheckCircle2 size={13} className="text-forest shrink-0" />
+                  <span className="text-sm font-semibold text-pine flex-1 truncate">{linkedGuest.full_name}</span>
+                  {linkedGuest.customer_id && <span className="font-mono text-[10px] bg-pine/10 text-pine/60 px-1.5 rounded shrink-0">{linkedGuest.customer_id}</span>}
+                  <button type="button" onClick={clearLinkedGuest} className="text-pine/30 hover:text-red-500 shrink-0"><X size={13} /></button>
                 </div>
+              ) : (
+                <GuestInlineSearch value={f.guest_name} disabled={f.link_names} onChange={(v) => set('guest_name', v)}
+                  onSelect={handleGuestSelect} onCreateContact={createContactFromSearch} inputRef={guestNameRef}
+                  placeholder={f.link_names ? 'Pulled from reservation name' : 'Search or create guest...'} />
               )}
+            </F>
+          </div>
 
-              <input
-                className="input"
-                ref={guestNameRef}
-                value={f.guest_name}
-                disabled={f.link_names}
-                onChange={(e) => set('guest_name', e.target.value)}
-                placeholder={linkedGuest ? 'Linked contact selected (editable)' : f.link_names ? 'Pulled from Reservation Name above' : ''}
-              />
-            </div>
-
-            <div><label className="label">Phone (WhatsApp)</label>
+          {/* Row 3: Phone | Email */}
+          <div className="grid grid-cols-2 gap-3">
+            <F label="Phone (WhatsApp)">
               <input className="input" placeholder="01XXXXXXXXX" value={f.phone} onChange={(e) => set('phone', e.target.value)} />
+            </F>
+            <F label="Email">
+              <input className="input" type="email" value={f.email} onChange={(e) => set('email', e.target.value)} />
+            </F>
+          </div>
+
+          {/* Row 4: Address */}
+          <F label="Address">
+            <input className="input" value={f.address} onChange={(e) => set('address', e.target.value)} placeholder="City, Country" />
+          </F>
+
+          {/* Company-only fields */}
+          {f.guest_type === 'Company' && (
+            <F label="Company">
+              <SearchableSelect options={companies.map((c) => ({ value: c.id, label: c.name }))} value={f.company_id}
+                onChange={(val) => { set('company_id', val); const c = companies.find((x) => x.id === val); if (c) setReservationName(c.name) }}
+                placeholder="Search or add a company..." allowCreate onCreate={createCompany} clearable />
+            </F>
+          )}
+          {f.guest_type === 'Company' && (
+            <div className="grid grid-cols-3 gap-3 p-3 rounded-xl bg-leaf/20 border border-leaf">
+              {[['Commission %', 'commission_pct'], ['VAT/VDS %', 'vat_vds_pct'], ['Tax/TDS %', 'tax_tds_pct']].map(([lbl, key]) => (
+                <F key={key} label={lbl}>
+                  <input type="number" min="0" max="100" className="input money text-right" value={f[key]} onChange={(e) => set(key, e.target.value)} />
+                </F>
+              ))}
             </div>
-            <div><label className="label">Email</label>
-              <input className="input" value={f.email} onChange={(e) => set('email', e.target.value)} />
-            </div>
+          )}
+        </div>
+      </div>
 
-            {f.guest_type === 'Company' && (
-              <div className="col-span-2">
-                <label className="label">Company</label>
-                <SearchableSelect
-                  options={companies.map((c) => ({ value: c.id, label: c.name }))}
-                  value={f.company_id}
-                  onChange={(val) => {
-                    set('company_id', val)
-                    const c = companies.find((x) => x.id === val)
-                    if (c) setReservationName(c.name)
-                  }}
-                  placeholder="Search or add a company…"
-                  allowCreate
-                  onCreate={createCompany}
-                  clearable
-                />
-              </div>
-            )}
-            {f.guest_type === 'Company' && (
-              <div className="col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 p-3 rounded-lg bg-leaf/30 border border-leaf">
-                <div><label className="label">Commission Rate %</label><input type="number" min="0" max="100" className="input money" value={f.commission_pct} onChange={(e) => set('commission_pct', e.target.value)} /></div>
-                <div><label className="label">Vat/VDS %</label><input type="number" min="0" max="100" className="input money" value={f.vat_vds_pct} onChange={(e) => set('vat_vds_pct', e.target.value)} /></div>
-                <div><label className="label">Tax/TDS %</label><input type="number" min="0" max="100" className="input money" value={f.tax_tds_pct} onChange={(e) => set('tax_tds_pct', e.target.value)} /></div>
-              </div>
-            )}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          SECTION 2 â€” Stay Details
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      <div className="card p-0 overflow-hidden">
+        <div className="flex items-center gap-2 px-5 py-2.5 border-b border-leaf/40 bg-leaf/10">
+          <CalendarDays size={14} className="text-forest" />
+          <span className="text-sm font-semibold text-pine">Stay Details</span>
+        </div>
 
-            <div><label className="label">Default check-in *</label><input type="date" className="input" value={f.check_in} onChange={(e) => setCheckIn(e.target.value)} /></div>
-            <div className="text-[11px] text-pine/50 -mt-2">{dayName(f.check_in)}</div>
-            <div><label className="label">Default check-out *</label><input type="date" className="input" value={f.check_out} onChange={(e) => set('check_out', e.target.value)} /></div>
-            <div className="text-[11px] text-pine/50 -mt-2">{dayName(f.check_out)}</div>
+        <div className="p-5 space-y-3">
 
-            {/* Rooms */}
-            <div className="col-span-2">
-              <div className="flex items-center justify-between mb-1">
-                <label className="label !mb-0">Rooms — pick from dropdown, each with its own dates</label>
-                <button type="button" className="btn-ghost !py-1 text-xs" onClick={addRoomRow}>+ Add room</button>
-              </div>
-              <div className="space-y-2">
-                {roomRows.map((row, i) => {
-                  const taken = isBusy(row.room_id, row.from_date, row.to_date)
-                  return (
-                    <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-                      <SearchableSelect
-                        className={`sm:col-span-5 ${taken ? 'ring-1 ring-red-400 rounded-lg' : ''}`}
-                        options={rooms.map((rm) => ({
-                          value: rm.id,
-                          label: `${rm.room_no}${rm.room_name ? ` · ${rm.room_name}` : ''}`,
-                          sublabel: `${rm.room_type} · ${fmtBDT(rm.base_rate)}`,
-                        }))}
-                        value={row.room_id}
-                        onChange={(val) => updRow(i, 'room_id', val)}
-                        placeholder="Select room…"
-                        clearable
-                      />
-                      <input type="date" className="input sm:col-span-3" value={row.from_date} onChange={(e) => updRow(i, 'from_date', e.target.value)} />
-                      <input type="date" className="input sm:col-span-3" value={row.to_date} onChange={(e) => updRow(i, 'to_date', e.target.value)} />
-                      <button type="button" className="text-red-400 hover:text-red-600 sm:col-span-1 justify-self-end sm:justify-self-auto" onClick={() => delRow(i)}><Trash2 size={15} /></button>
-                      <p className="sm:col-span-3 text-[10px] text-pine/50 -mt-1">{dayName(row.from_date)}</p>
-                      <p className="sm:col-span-3 text-[10px] text-pine/50 -mt-1">{dayName(row.to_date)}</p>
-                      <p className="sm:col-span-1" />
-                      {taken && <p className="sm:col-span-12 text-xs text-red-600 -mt-1">This room is already booked for the selected dates.</p>}
-                    </div>
-                  )
-                })}
-                {roomRows.length === 0 && <p className="text-xs text-pine/50">No rooms added yet — click "Add room". Leave empty to keep it a query without room assignment.</p>}
-                {rooms.length === 0 && <p className="text-xs text-amber">No rooms defined — add room inventory in Settings first.</p>}
-              </div>
-              {validRows.length > 0 && <p className="text-xs text-pine/50 mt-1">Stay window: <b>{overallCI} → {overallCO}</b> · {validRows.length} room booking(s).</p>}
-              {reservationCfg.blackoutDays.length > 0 && (
-                <p className="text-xs text-amber mt-1">Configured blackout days: {reservationCfg.blackoutDays.join(', ')}</p>
-              )}
-            </div>
+          {/* Check-in | Check-out | Pax */}
+          <div className="grid grid-cols-4 gap-3">
+            <F label="Check-in *" hint={dayName(f.check_in)}>
+              <input type="date" className="input" value={f.check_in} onChange={(e) => setCheckIn(e.target.value)} />
+            </F>
+            <F label="Check-out *" hint={dayName(f.check_out)}>
+              <input type="date" className="input" value={f.check_out} onChange={(e) => set('check_out', e.target.value)} />
+            </F>
+            <F label="Adults">
+              <input type="number" min="1" className="input text-center" value={f.pax_adults} onChange={(e) => set('pax_adults', e.target.value)} />
+            </F>
+            <F label="Children">
+              <input type="number" min="0" className="input text-center" value={f.pax_children} onChange={(e) => set('pax_children', e.target.value)} />
+            </F>
+          </div>
 
-            {/* Included Services — Combobox */}
-            <div className="col-span-2">
-              <label className="label">Included Services</label>
-              <p className="text-xs text-pine/50 mb-2">Select services included with this booking.</p>
-
-              {facilityItems.length === 0 && (
-                <p className="text-xs text-amber py-2">No active Facility Items — add in Configuration → Facility Items.</p>
-              )}
-
-              {facilityItems.length > 0 && (
-                <>
-                  <ServiceCombobox
-                    items={facilityItems}
-                    addons={addons}
-                    onSelect={toggleAddon}
-                  />
-
-                  {Object.values(addons).some(a => a.selected) && (
-                    <div className="space-y-2 mt-3">
-                      {facilityItems.filter(it => addons[it.id]?.selected).map(it => (
-                        <div key={it.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-forest bg-forest/5">
-                          <span className="text-sm flex-1 font-medium text-pine">
-                            {it.name}
-                            <span className="text-pine/40 text-xs ml-1">/{it.unit}</span>
-                          </span>
-                          <input type="number" min="0" step="0.01"
-                            className="input !w-24 !py-1 money text-right"
-                            placeholder="Price ৳"
-                            value={addons[it.id].price}
-                            onChange={(e) => updAddon(it.id, 'price', e.target.value)} />
-                          <input type="number" min="1"
-                            className="input !w-14 !py-1 money text-right"
-                            placeholder="Qty"
-                            value={addons[it.id].qty}
-                            onChange={(e) => updAddon(it.id, 'qty', e.target.value)} />
-                          <button onClick={() => toggleAddon(it.id)} className="text-red-300 hover:text-red-600 shrink-0">
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {!Object.values(addons).some(a => a.selected) && (
-                    <p className="text-xs text-pine/40 mt-2">No services selected yet.</p>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* VAT Mode */}
-            <div className="col-span-2">
-              <label className="label">VAT on Room Charges</label>
-              <div className="flex gap-2">
-                {[
-                  { v: 'EXCLUSIVE', label: 'VAT Exclusive', hint: 'VAT added on top of rate' },
-                  { v: 'INCLUSIVE', label: 'VAT Inclusive', hint: 'VAT included in rate' },
-                  { v: 'NONE',      label: 'No VAT',        hint: 'VAT not applicable' },
-                ].map((opt) => (
-                  <button key={opt.v} type="button"
-                    onClick={() => set('vat_mode', opt.v)}
-                    className={`flex-1 py-2 px-3 rounded-xl border text-sm font-semibold transition-colors text-left ${
-                      f.vat_mode === opt.v ? 'bg-forest text-white border-forest' : 'border-leaf text-pine/70 hover:border-forest/40'
-                    }`}>
-                    <div>{opt.label}</div>
-                    <div className={`text-[10px] font-normal mt-0.5 ${f.vat_mode === opt.v ? 'text-white/70' : 'text-pine/40'}`}>{opt.hint}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div><label className="label">Adults</label><input type="number" min="1" className="input" value={f.pax_adults} onChange={(e) => set('pax_adults', e.target.value)} /></div>
-            <div><label className="label">Children</label><input type="number" min="0" className="input" value={f.pax_children} onChange={(e) => set('pax_children', e.target.value)} /></div>
-
-            <div className="col-span-2">
-              <label className="label">VIP Status <span className="text-pine/40 font-normal">(optional)</span></label>
-              <div className="flex gap-2 h-[38px] items-center">
-                {[
-                  { v: '', label: 'Regular' },
-                  { v: 'VIP', label: '⭐ VIP' },
-                  { v: 'VVIP', label: '👑 VVIP' },
-                ].map((opt) => (
-                  <button key={opt.v} type="button" onClick={() => set('vip_status', opt.v)}
-                    className={`px-4 h-full rounded-lg text-sm font-semibold border transition-colors ${
-                      f.vip_status === opt.v
-                        ? opt.v === 'VVIP' ? 'bg-amber-600 text-white border-amber-600'
-                          : opt.v === 'VIP' ? 'bg-forest text-white border-forest'
-                          : 'bg-pine text-white border-pine'
-                        : 'border-leaf text-pine/70 hover:border-forest/40'
-                    }`}>
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Discount */}
-            <div className="col-span-2">
-              <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
-                <label className="label !mb-0">Discount</label>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* Pricing policy auto-badge */}
-                  {reservationPolicy && policyDiscountPct !== null && (
-                    <span className="text-xs text-forest font-medium flex items-center gap-1 bg-forest/10 px-2 py-0.5 rounded-full">
-                      📅 {(() => {
-                        const dow = new Date(`${f.check_in}T00:00:00`).getDay()
-                        const blackouts = reservationPolicy.policy_blackout_dates || []
-                        const isBlackout = blackouts.some(b => f.check_in >= b.from_date && f.check_in <= b.to_date)
-                        if (isBlackout) return `Blackout — ${policyDiscountPct}% auto`
-                        const isWeekend = (reservationPolicy.weekend_days || [4,5,6]).includes(dow)
-                        return isWeekend ? `Weekend — ${policyDiscountPct}% auto` : `Weekday — ${policyDiscountPct}% auto`
-                      })()}
-                    </span>
-                  )}
-                  {selectedPolicyId && (() => {
-                    const policy = discountPolicies.find(p => p.id === selectedPolicyId)
-                    return policy ? (
-                      <span className="text-xs text-forest font-medium flex items-center gap-1">
-                        ✓ {policy.name}
-                        <button type="button" onClick={() => applyDiscountPolicy('')} className="text-pine/40 hover:text-red-500 ml-1">
-                          <X size={11} />
-                        </button>
-                      </span>
-                    ) : null
-                  })()}
-                  {!selectedPolicyId && discountPolicies.length > 0 && (
-                    <div className="w-48">
-                      <Combobox
-                        items={discountPolicies.map((p) => ({
-                          value: p.id,
-                          label: p.name,
-                          sublabel: p.type === 'fixed' ? `৳${p.value}` : `${p.value}%`,
-                        }))}
-                        value=""
-                        onChange={(v) => applyDiscountPolicy(v)}
-                        placeholder="Apply policy…"
-                        searchPlaceholder="Search policy…"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <div className="flex gap-1 h-[38px] items-center shrink-0">
-                  {[{ v: 'percentage', label: '%' }, { v: 'fixed', label: '৳ Fixed' }].map((opt) => (
-                    <button key={opt.v} type="button" onClick={() => set('discount_type', opt.v)}
-                      className={`px-3 h-full rounded-lg text-sm font-semibold border ${f.discount_type === opt.v ? 'bg-pine text-white border-pine' : 'border-leaf text-pine/70'}`}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-                <input type="number" min="0" max={f.discount_type === 'percentage' ? 100 : undefined}
-                  className="input money flex-1" placeholder={f.discount_type === 'percentage' ? 'e.g. 10' : 'e.g. 500'}
-                  value={f.discount_val} onChange={(e) => set('discount_val', e.target.value)} />
-              </div>
-            </div>
-
-            <div><label className="label">Source</label>
+          {/* Source | VIP */}
+          <div className="grid grid-cols-2 gap-3">
+            <F label="Source">
               <SearchableSelect
                 options={['Phone', 'WhatsApp', 'Facebook', 'Walk-in', 'Email', 'OTA', 'Agent'].map((s) => ({ value: s, label: s }))}
                 value={f.source}
                 onChange={(val) => set('source', val)}
-                placeholder="Select source…"
+                placeholder="Select..."
               />
-            </div>
-            <div className="col-span-2"><label className="label">Address</label><input className="input" value={f.address} onChange={(e) => set('address', e.target.value)} /></div>
-            <div className="col-span-2"><label className="label">Notes / special requests</label><textarea className="input" rows={2} value={f.notes} onChange={(e) => set('notes', e.target.value)} /></div>
+            </F>
+            <F label="VIP Status">
+              <div className="flex gap-1.5 h-9">
+                {[{ v: '', label: 'None' }, { v: 'VIP', label: 'VIP' }, { v: 'VVIP', label: 'VVIP' }].map((opt) => (
+                  <button key={opt.v} type="button" onClick={() => set('vip_status', opt.v)}
+                    className={cn('flex-1 h-full rounded-xl border text-xs font-semibold transition-all',
+                      f.vip_status === opt.v
+                        ? opt.v === 'VVIP' ? 'bg-amber-500 text-white border-amber-500'
+                          : opt.v === 'VIP' ? 'bg-forest text-white border-forest'
+                          : 'bg-pine text-white border-pine'
+                        : 'bg-white text-pine/60 border-leaf hover:border-forest/40')}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </F>
           </div>
 
-          {err && <p className="text-sm text-red-600 mt-3">{err}</p>}
-          <div className="flex justify-end gap-2 mt-5">
-            <button className="btn-ghost" onClick={close}>Cancel</button>
-            <button className="btn-primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Create query'}</button>
+          {/* Rooms */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-pine/70 uppercase tracking-wide flex items-center gap-1.5">
+                <BedDouble size={13} className="text-forest" /> Rooms
+              </label>
+              <button type="button" onClick={addRoomRow}
+                className="flex items-center gap-1 text-xs font-semibold text-forest hover:text-pine border border-leaf hover:border-forest/40 px-2.5 py-1 rounded-lg transition-colors">
+                <Plus size={12} /> Add room
+              </button>
+            </div>
+            <div className="space-y-2">
+              {roomRows.map((row, i) => {
+                const taken = isBusy(row.room_id, row.from_date, row.to_date)
+                return (
+                  <div key={i} className={cn('grid grid-cols-12 gap-2 items-start p-2.5 rounded-xl border', taken ? 'border-red-300 bg-red-50/50' : 'border-leaf/60 bg-leaf/5')}>
+                    <div className="col-span-5">
+                      <SearchableSelect options={rooms.map((rm) => ({ value: rm.id, label: `${rm.room_no}${rm.room_name ? ` Â· ${rm.room_name}` : ''}`, sublabel: `${rm.room_type} Â· ${fmtBDT(rm.base_rate)}` }))}
+                        value={row.room_id} onChange={(val) => updRow(i, 'room_id', val)} placeholder="Select room..." clearable className={taken ? 'ring-1 ring-red-400 rounded-lg' : ''} />
+                    </div>
+                    <div className="col-span-3">
+                      <input type="date" className="input !text-xs" value={row.from_date} onChange={(e) => updRow(i, 'from_date', e.target.value)} />
+                      <span className="text-[10px] text-pine/40 pl-1">{dayName(row.from_date)}</span>
+                    </div>
+                    <div className="col-span-3">
+                      <input type="date" className="input !text-xs" value={row.to_date} onChange={(e) => updRow(i, 'to_date', e.target.value)} />
+                      <span className="text-[10px] text-pine/40 pl-1">{dayName(row.to_date)}</span>
+                    </div>
+                    <div className="col-span-1 flex justify-center pt-2">
+                      <button type="button" onClick={() => delRow(i)} className="text-pine/20 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                    </div>
+                    {taken && <p className="col-span-12 text-xs text-red-600 -mt-1 pl-1">âš  Room already booked for these dates.</p>}
+                  </div>
+                )
+              })}
+              {roomRows.length === 0 && <p className="text-xs text-pine/40 py-2 text-center border border-dashed border-leaf rounded-xl">No rooms added â€” leave empty to save as a query.</p>}
+              {rooms.length === 0 && <p className="text-xs text-amber-600">No rooms defined â€” add room inventory in Settings first.</p>}
+            </div>
+            {validRows.length > 0 && <p className="text-xs text-pine/50 mt-2">Stay: <b className="text-pine">{overallCI} â†’ {overallCO}</b> Â· {validRows.length} room(s)</p>}
           </div>
+
+          {/* Notes */}
+          <F label="Notes / Special Requests">
+            <textarea className="input" rows={2} value={f.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Special requests, notes..." />
+          </F>
         </div>
       </div>
-    </>
+
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          SECTION 3 â€” Pricing
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      <div className="card p-0 overflow-hidden">
+        <div className="flex items-center gap-2 px-5 py-2.5 border-b border-leaf/40 bg-leaf/10">
+          <SlidersHorizontal size={14} className="text-forest" />
+          <span className="text-sm font-semibold text-pine">Pricing & Discount</span>
+        </div>
+
+        <div className="p-5 space-y-3">
+          {/* VAT Mode */}
+          <F label="VAT on Room Charges">
+            <div className="flex gap-2">
+              {[{ v: 'EXCLUSIVE', label: 'VAT Exclusive', hint: 'Added on top' }, { v: 'INCLUSIVE', label: 'VAT Inclusive', hint: 'Included in rate' }, { v: 'NONE', label: 'No VAT', hint: 'Not applicable' }].map((opt) => (
+                <button key={opt.v} type="button" onClick={() => set('vat_mode', opt.v)}
+                  className={cn('flex-1 py-2 px-3 rounded-xl border text-left transition-all',
+                    f.vat_mode === opt.v ? 'bg-forest text-white border-forest shadow-sm' : 'bg-white text-pine/70 border-leaf hover:border-forest/40')}>
+                  <div className="text-sm font-semibold">{opt.label}</div>
+                  <div className={cn('text-[11px] mt-0.5', f.vat_mode === opt.v ? 'text-white/70' : 'text-pine/40')}>{opt.hint}</div>
+                </button>
+              ))}
+            </div>
+          </F>
+
+          {/* Discount */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-pine/70 uppercase tracking-wide flex items-center gap-1.5">
+                <Percent size={12} className="text-forest" /> Discount
+              </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {reservationPolicy && policyDiscountPct !== null && (
+                  <span className="text-xs text-forest font-semibold bg-forest/10 border border-forest/20 px-2.5 py-0.5 rounded-full">
+                    ðŸ“… {(() => {
+                      const dow = new Date(`${f.check_in}T00:00:00`).getDay()
+                      const blackouts = reservationPolicy.policy_blackout_dates || []
+                      const isBlackout = blackouts.some(b => f.check_in >= b.from_date && f.check_in <= b.to_date)
+                      if (isBlackout) return `Blackout â€” ${policyDiscountPct}% auto`
+                      return (reservationPolicy.weekend_days || [4,5,6]).includes(dow) ? `Weekend â€” ${policyDiscountPct}% auto` : `Weekday â€” ${policyDiscountPct}% auto`
+                    })()}
+                  </span>
+                )}
+                {selectedPolicyId && (() => {
+                  const policy = discountPolicies.find(p => p.id === selectedPolicyId)
+                  return policy ? (
+                    <span className="text-xs text-pine/60 flex items-center gap-1 bg-leaf/30 border border-leaf px-2 py-0.5 rounded-full">
+                      âœ“ {policy.name}
+                      <button type="button" onClick={() => applyDiscountPolicy('')} className="text-pine/30 hover:text-red-500 ml-0.5"><X size={10} /></button>
+                    </span>
+                  ) : null
+                })()}
+                {!selectedPolicyId && discountPolicies.length > 0 && (
+                  <div className="w-40">
+                    <Combobox items={discountPolicies.map((p) => ({ value: p.id, label: p.name, sublabel: p.type === 'fixed' ? `à§³${p.value}` : `${p.value}%` }))}
+                      value="" onChange={(v) => applyDiscountPolicy(v)} placeholder="Apply policy..." searchPlaceholder="Search..." />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 p-3 rounded-xl border border-leaf bg-leaf/5">
+              <div className="flex gap-1 shrink-0">
+                {[{ v: 'percentage', label: '%' }, { v: 'fixed', label: 'à§³ Fixed' }].map((opt) => (
+                  <button key={opt.v} type="button" onClick={() => set('discount_type', opt.v)}
+                    className={cn('h-8 px-3 rounded-lg border text-xs font-semibold transition-all',
+                      f.discount_type === opt.v ? 'bg-forest text-white border-forest' : 'bg-white text-pine/60 border-leaf hover:border-forest/40')}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <input type="number" min="0" max={f.discount_type === 'percentage' ? 100 : undefined}
+                className="input money flex-1" placeholder={f.discount_type === 'percentage' ? '0' : '0.00'} value={f.discount_val} onChange={(e) => set('discount_val', e.target.value)} />
+              <span className="text-sm font-semibold text-pine/50 shrink-0 w-6">{f.discount_type === 'percentage' ? '%' : 'BDT'}</span>
+            </div>
+          </div>
+
+          {/* Included Services */}
+          {facilityItems.length > 0 && (
+            <div>
+              <label className="text-xs font-semibold text-pine/70 uppercase tracking-wide block mb-1.5">Included Services</label>
+              <ServiceCombobox items={facilityItems} addons={addons} onSelect={toggleAddon} />
+              {Object.values(addons).some(a => a.selected) && (
+                <div className="space-y-1.5 mt-2">
+                  {facilityItems.filter(it => addons[it.id]?.selected).map(it => (
+                    <div key={it.id} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-forest/20 bg-forest/5">
+                      <span className="text-sm flex-1 font-medium text-pine">{it.name}<span className="text-pine/40 text-xs ml-1">/{it.unit}</span></span>
+                      <input type="number" min="0" step="0.01" className="input !h-7 !w-24 money text-right" placeholder="Price à§³" value={addons[it.id].price} onChange={(e) => updAddon(it.id, 'price', e.target.value)} />
+                      <input type="number" min="1" className="input !h-7 !w-14 text-center" placeholder="Qty" value={addons[it.id].qty} onChange={(e) => updAddon(it.id, 'qty', e.target.value)} />
+                      <button onClick={() => toggleAddon(it.id)} className="text-pine/20 hover:text-red-500 shrink-0"><X size={14} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {err && <div className="px-4 py-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-600">{err}</div>}
+
+      {/* â”€â”€ Footer â”€â”€ */}
+      <div className="flex justify-end gap-3 pb-4">
+        <button type="button" onClick={close} className="btn-ghost px-5 h-9 text-sm">Cancel</button>
+        <button type="button" onClick={save} disabled={busy} className="btn-primary px-6 h-9 text-sm">
+          {busy ? 'Saving...' : 'Create Query'}
+        </button>
+      </div>
+      </div>
+    </div>
   )
 }

@@ -1,5 +1,7 @@
 # emotet-malware-killer
+
 ## Use at your own risk
+
 This software utilizes autorunsc to check processes and services against Virus Total, if it reaches the set threshold it will auto-nuke the malware.
 
 ## Team editor note (Tailwind CSS)
@@ -43,3 +45,78 @@ supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
 - **Disable public sign-ups** — Authentication → Providers → Email → disable "Enable email sign-ups". All accounts are created by admins through the Settings → Staff Management screen.
 - **Enable Leaked password protection** — Authentication → Providers → Email → enable "Leaked password protection".
 
+### 4. SSH & GPG key setup (Git)
+
+Add your SSH key to GitHub:
+
+```bash
+ssh-keygen -t ed25519 -C "your_email@example.com"
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+cat ~/.ssh/id_ed25519.pub
+```
+
+Then add the printed public key in GitHub → Settings → SSH and GPG keys.
+
+Add your GPG key for signed commits:
+
+```bash
+gpg --full-generate-key
+gpg --list-secret-keys --keyid-format=long
+gpg --armor --export <YOUR_KEY_ID>
+git config --global user.signingkey <YOUR_KEY_ID>
+git config --global commit.gpgsign true
+```
+
+Then add the exported public key in GitHub → Settings → SSH and GPG keys.
+
+---
+
+## Deployment
+
+### Primary: Cloudflare Workers (production)
+
+The project is deployed as a **Cloudflare Workers static asset site** via `wrangler deploy`.
+
+```bash
+npm run build          # Vite build → dist/
+npx wrangler deploy    # Upload dist/ to Cloudflare Workers
+```
+
+The GitHub Actions workflow `.github/workflows/deploy.yml` runs this automatically on every push to `main`.
+
+Configuration lives in `wrangler.jsonc`:
+
+- `assets.directory = './dist'` — serves the Vite output
+- `name` — your Workers service name
+
+Required Cloudflare secrets in GitHub Actions:
+
+```
+CLOUDFLARE_API_TOKEN
+CLOUDFLARE_ACCOUNT_ID
+```
+
+### Vercel (removed / not in use)
+
+`vercel.json` was inherited from an earlier prototype and is **not used in production**.  
+The Cloudflare Workers deployment is the sole production path.  
+If you need a Vercel staging environment, re-enable the Vercel GitHub integration manually and treat it as staging only.
+
+### POS Print / Reporting API (optional sidecar)
+
+The Express server in `server/` provides PDF/thermal-print proxying and advanced reporting.  
+Run it alongside the frontend when needed:
+
+```bash
+# Development
+node server/index.js          # listens on :4000 by default
+
+# Docker (production)
+docker compose up -d          # uses compose.yaml with healthcheck + restart policy
+
+# Health check
+curl http://localhost:4000/health
+```
+
+See `compose.yaml` for the full Docker configuration including healthcheck and `restart: unless-stopped`.

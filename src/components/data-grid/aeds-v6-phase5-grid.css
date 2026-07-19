@@ -1,0 +1,28 @@
+/* AEDS v6 Phase 5.1 additions */
+.aeds-grid-row-clickable {
+  cursor: pointer;
+}
+
+.aeds-grid-row-clickable:hover td {
+  background: var(--tenant-primary-soft, #ecfdf3);
+}
+
+.aeds-grid-row-clickable:focus {
+  outline: 2px solid
+    rgb(var(--tenant-primary-rgb, 27 77 46) / 0.35);
+  outline-offset: -2px;
+}
+
+.aeds-grid-message {
+  margin: 0 14px 12px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.aeds-grid-message-error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}

@@ -1,15 +1,40 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, fmtDate, todayISO } from '../lib/helpers'
 import KPICards from '../components/KPICards.jsx'
+import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
 import {
   Boxes, Plus, Trash2, Check, X, Truck, PackageCheck, ArrowLeftRight,
   Undo2, Pencil, Save, Search, ChevronRight, Printer,
 } from 'lucide-react'
+import { Button } from '../components/ui/button.jsx'
+import { Input } from '../components/ui/input.jsx'
 
 
 const TABS = ['Items & Stock', 'Vendors', 'Requisitions', 'Purchase Orders', 'Goods Receipt', 'Transfers', 'Returns']
+const TAB_LABEL_BY_ID = {
+  stock: 'Items & Stock',
+  vendors: 'Vendors',
+  requisitions: 'Requisitions',
+  'purchase-orders': 'Purchase Orders',
+  'goods-receipt': 'Goods Receipt',
+  transfers: 'Transfers',
+  returns: 'Returns',
+}
+const LEGACY_TAB_MAP = {
+  ...TAB_LABEL_BY_ID,
+  'Consumption Entry': null,
+  Consumption: null,
+}
+const TAB_ID_BY_LABEL = Object.entries(TAB_LABEL_BY_ID).reduce((acc, [id, label]) => ({ ...acc, [label]: id }), {})
+const selectClass = 'h-9 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
+
+function normalizeTabLabel(value) {
+  if (!value) return 'Items & Stock'
+  if (TABS.includes(value)) return value
+  return LEGACY_TAB_MAP[value] || 'Items & Stock'
+}
 
 /* ─── shared helpers ─────────────────────────────────────────────────────── */
 function flash_fn(setMsg) {
@@ -70,47 +95,78 @@ function printInventoryDoc({ title, docNo, meta = [], lines = [] }) {
 }
 
 /* ─── main component ─────────────────────────────────────────────────────── */
-export default function InventoryHub({ userName, role, isAdmin }) {
+export default function InventoryHub({
+  userName,
+  role,
+  isAdmin,
+  embedded = false,
+  controlledTabId = null,
+  onTabIdChange = null,
+}) {
   const location = useLocation()
-  const urlTab = new URLSearchParams(location.search).get('tab')
-  const initialTab = TABS.includes(urlTab) ? urlTab : 'Items & Stock'
+  const initialTab = normalizeTabLabel(controlledTabId || new URLSearchParams(location.search).get('tab'))
   const [tab, setTab] = useState(initialTab)
   const [msg, setMsg] = useState(null)
   const flash = flash_fn(setMsg)
   const canApprove = isAdmin || role === 'MANAGER'
 
-  // Sync tab with URL param when navigating via sidebar sub-items
+  const changeTab = (tabLabel) => {
+    setTab(tabLabel)
+    const tabId = TAB_ID_BY_LABEL[tabLabel]
+    if (tabId && onTabIdChange) onTabIdChange(tabId)
+  }
+
+  // Sync tab with external route tab
   useEffect(() => {
-    const t = new URLSearchParams(location.search).get('tab')
-    if (t && TABS.includes(t)) setTab(t)
-  }, [location.search])
+    if (!controlledTabId) return
+    setTab(normalizeTabLabel(controlledTabId))
+  }, [controlledTabId])
+
+  // Sync tab with URL param when used as standalone page
+  useEffect(() => {
+    if (controlledTabId) return
+    const t = normalizeTabLabel(new URLSearchParams(location.search).get('tab'))
+    setTab(t)
+  }, [location.search, controlledTabId])
 
   // Cross-tab navigation: Requisitions can push user to PO or Transfer tab
   // with a pre-selected requisition
   const [navReq, setNavReq] = useState(null) // { id, req_no, type: 'PO'|'TRF' }
-  const goCreatePO = (req) => { setNavReq({ ...req, type: 'PO' }); setTab('Purchase Orders') }
-  const goCreateTRF = (req) => { setNavReq({ ...req, type: 'TRF' }); setTab('Transfers') }
+  const goCreatePO = (req) => { setNavReq({ ...req, type: 'PO' }); changeTab('Purchase Orders') }
+  const goCreateTRF = (req) => { setNavReq({ ...req, type: 'TRF' }); changeTab('Transfers') }
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
-          <Boxes className="text-forest" /> Inventory & Procurement
-        </h1>
-        <p className="text-sm text-pine/60">
-          Requisition → Purchase Order / Transfer → Goods Receipt — fully integrated procurement workflow.
-        </p>
-      </div>
-      <KPICards module="inventory" />
+      {!embedded && (
+        <>
+          <div>
+            <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
+              <Boxes className="text-forest" /> Inventory & Procurement
+            </h1>
+            <p className="text-sm text-pine/60">
+              Requisition → Purchase Order / Transfer → Goods Receipt — fully integrated procurement workflow.
+            </p>
+          </div>
+          <KPICards module="inventory" />
+        </>
+      )}
       <FlashBar msg={msg} />
-      <div className="flex gap-1 border-b border-leaf flex-wrap">
-        {TABS.map((t) => (
-          <button key={t} onClick={() => { setTab(t); if (t !== 'Purchase Orders' && t !== 'Transfers') setNavReq(null) }}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
-            {t}
-          </button>
-        ))}
-      </div>
+      {!embedded && (
+        <div className="tab-strip-responsive border-b border-leaf">
+          {TABS.map((t) => (
+            <button
+              key={t}
+              onClick={() => {
+                changeTab(t)
+                if (t !== 'Purchase Orders' && t !== 'Transfers') setNavReq(null)
+              }}
+              className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
       {tab === 'Items & Stock'     && <ItemsTab flash={flash} isAdmin={isAdmin} />}
       {tab === 'Vendors'           && <VendorsTab flash={flash} isAdmin={isAdmin} />}
       {tab === 'Requisitions'      && <RequisitionsTab flash={flash} userName={userName} canApprove={canApprove} onCreatePO={goCreatePO} onCreateTRF={goCreateTRF} />}
@@ -174,6 +230,66 @@ function ItemsTab({ flash, isAdmin }) {
   const filtered = items.filter((it) => !search || it.name.toLowerCase().includes(search.toLowerCase()) || (it.code || '').toLowerCase().includes(search.toLowerCase()))
   const lowStock = items.filter((it) => it.reorder_level > 0 && onHand(it.id) <= it.reorder_level).length
 
+
+  const itemGridRows = filtered.map((item) => {
+    const onHandQty = onHand(item.id)
+    const low = item.reorder_level > 0 && onHandQty <= item.reorder_level
+
+    return {
+      ...item,
+      on_hand: onHandQty,
+      stock_status: low ? 'LOW STOCK' : 'AVAILABLE',
+    }
+  })
+
+  const itemColumns = [
+    { accessorKey: 'code', header: 'Code', width: 120 },
+    { accessorKey: 'name', header: 'Item', width: 230 },
+    { accessorKey: 'unit', header: 'Unit', width: 100 },
+    { accessorKey: 'category', header: 'Category', width: 150 },
+    { accessorKey: 'reorder_level', header: 'Reorder', type: 'number', width: 120 },
+    { accessorKey: 'on_hand', header: 'On Hand', type: 'number', aggregation: 'sum', width: 130 },
+    { accessorKey: 'stock_status', header: 'Status', type: 'status', width: 130 },
+    {
+      accessorKey: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 130,
+      cell: ({ row }) => (
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation()
+              startEdit(row)
+            }}
+            className="text-pine/40 hover:text-forest"
+            aria-label={`Edit ${row.name}`}
+          >
+            <Pencil size={13} />
+          </Button>
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                del(row.id)
+              }}
+              className="text-red-300 hover:text-red-600"
+              aria-label={`Delete ${row.name}`}
+            >
+              <Trash2 size={13} />
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-4">
       {lowStock > 0 && (
@@ -184,59 +300,33 @@ function ItemsTab({ flash, isAdmin }) {
       <div className="card p-4 space-y-3">
         <h3 className="font-semibold text-pine text-sm">{editId ? '✏ Edit item' : '+ New item'}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-          <input className="input" placeholder="Code" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} />
-          <input className="input sm:col-span-2" placeholder="Item name *" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          <input className="input" placeholder="Unit" value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} />
-          <input className="input" placeholder="Category" value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} />
-          <input type="number" className="input money" placeholder="Reorder level" value={f.reorder_level} onChange={(e) => setF({ ...f, reorder_level: e.target.value })} />
+          <Input placeholder="Code" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} />
+          <Input className="sm:col-span-2" placeholder="Item name *" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <Input placeholder="Unit" value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} />
+          <Input placeholder="Category" value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} />
+          <Input type="number" className="money" placeholder="Reorder level" value={f.reorder_level} onChange={(e) => setF({ ...f, reorder_level: e.target.value })} />
         </div>
         <div className="flex gap-2">
-          <button className="btn-primary" onClick={save}>{editId ? <><Save size={15} /> Update</> : <><Plus size={15} /> Add item</>}</button>
-          {editId && <button className="btn-ghost" onClick={() => { setEditId(null); setF({ code: '', name: '', unit: 'pc', category: 'GENERAL', reorder_level: 0 }) }}>Cancel</button>}
+          <Button onClick={save}>{editId ? <><Save size={15} /> Update</> : <><Plus size={15} /> Add item</>}</Button>
+          {editId && <Button variant="ghost" onClick={() => { setEditId(null); setF({ code: '', name: '', unit: 'pc', category: 'GENERAL', reorder_level: 0 }) }}>Cancel</Button>}
         </div>
       </div>
 
       <div className="relative">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-pine/30" />
-        <input className="input pl-9" placeholder="Search items…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Input className="pl-9" placeholder="Search items…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th">Code</th><th className="th">Item</th><th className="th">Unit</th>
-              <th className="th">Category</th><th className="th text-right">Reorder</th>
-              <th className="th text-right">On Hand</th><th className="th text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((it) => {
-              const oh = onHand(it.id)
-              const low = it.reorder_level > 0 && oh <= it.reorder_level
-              return (
-                <tr key={it.id} className={low ? 'bg-red-50' : 'hover:bg-leaf/20'}>
-                  <td className="td money text-xs">{it.code || '—'}</td>
-                  <td className="td text-sm font-medium">{it.name}</td>
-                  <td className="td text-sm">{it.unit}</td>
-                  <td className="td text-xs">{it.category}</td>
-                  <td className="td money text-right">{Number(it.reorder_level)}</td>
-                  <td className={`td money text-right font-bold ${low ? 'text-red-600' : ''}`}>{oh}</td>
-                  <td className="td text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => startEdit(it)} className="text-pine/40 hover:text-forest"><Pencil size={13} /></button>
-                      {isAdmin && <button onClick={() => del(it.id)} className="text-red-300 hover:text-red-600"><Trash2 size={13} /></button>}
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-            {filtered.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={7}>No items found.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+
+      <AedsDataGrid
+        title="Items & Stock"
+        subtitle="Inventory master, reorder level and live stock balance"
+        data={itemGridRows}
+        columns={itemColumns}
+        pageSize={100}
+        emptyText="No items found."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -264,45 +354,83 @@ function VendorsTab({ flash, isAdmin }) {
     if (error) flash('Cannot delete — vendor may be in use.', 'error'); else load()
   }
 
+
+  const vendorColumns = [
+    { accessorKey: 'name', header: 'Vendor', width: 230 },
+    { accessorKey: 'bin', header: 'BIN', width: 160 },
+    { accessorKey: 'phone', header: 'Phone', width: 150 },
+    { accessorKey: 'address', header: 'Address', width: 280 },
+    {
+      accessorKey: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 130,
+      cell: ({ row }) => (
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation()
+              setEditId(row.id)
+              setF({
+                name: row.name,
+                bin: row.bin || '',
+                phone: row.phone || '',
+                address: row.address || '',
+              })
+            }}
+            className="text-pine/40 hover:text-forest"
+            aria-label={`Edit ${row.name}`}
+          >
+            <Pencil size={13} />
+          </Button>
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                del(row.id)
+              }}
+              className="text-red-300 hover:text-red-600"
+              aria-label={`Delete ${row.name}`}
+            >
+              <Trash2 size={13} />
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-4">
       <div className="card p-4 space-y-3">
         <h3 className="font-semibold text-pine text-sm">{editId ? '✏ Edit vendor' : '+ New vendor'}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <input className="input sm:col-span-2" placeholder="Vendor name *" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          <input className="input money" placeholder="BIN" value={f.bin} onChange={(e) => setF({ ...f, bin: e.target.value })} />
-          <input className="input" placeholder="Phone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
-          <input className="input sm:col-span-4" placeholder="Address" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
+          <Input className="sm:col-span-2" placeholder="Vendor name *" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <Input className="money" placeholder="BIN" value={f.bin} onChange={(e) => setF({ ...f, bin: e.target.value })} />
+          <Input placeholder="Phone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+          <Input className="sm:col-span-4" placeholder="Address" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
         </div>
         <div className="flex gap-2">
-          <button className="btn-primary" onClick={save}>{editId ? <><Save size={15} /> Update</> : <><Plus size={15} /> Add vendor</>}</button>
-          {editId && <button className="btn-ghost" onClick={() => { setEditId(null); setF({ name: '', bin: '', phone: '', address: '' }) }}>Cancel</button>}
+          <Button onClick={save}>{editId ? <><Save size={15} /> Update</> : <><Plus size={15} /> Add vendor</>}</Button>
+          {editId && <Button variant="ghost" onClick={() => { setEditId(null); setF({ name: '', bin: '', phone: '', address: '' }) }}>Cancel</Button>}
         </div>
       </div>
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead><tr><th className="th">Vendor</th><th className="th">BIN</th><th className="th">Phone</th><th className="th">Address</th><th className="th text-right">Actions</th></tr></thead>
-          <tbody>
-            {rows.map((v) => (
-              <tr key={v.id} className="hover:bg-leaf/20">
-                <td className="td text-sm font-medium">{v.name}</td>
-                <td className="td money text-xs">{v.bin || '—'}</td>
-                <td className="td text-sm">{v.phone || '—'}</td>
-                <td className="td text-xs">{v.address || '—'}</td>
-                <td className="td text-right">
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => { setEditId(v.id); setF({ name: v.name, bin: v.bin || '', phone: v.phone || '', address: v.address || '' }) }} className="text-pine/40 hover:text-forest"><Pencil size={13} /></button>
-                    {isAdmin && <button onClick={() => del(v.id)} className="text-red-300 hover:text-red-600"><Trash2 size={13} /></button>}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={5}>No vendors.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+
+      <AedsDataGrid
+        title="Vendors"
+        subtitle="Supplier master and procurement contacts"
+        data={rows}
+        columns={vendorColumns}
+        pageSize={100}
+        emptyText="No vendors found."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -331,22 +459,22 @@ function LineEditor({ items, lines, setLines, withCost = false, readOnly = false
           {readOnly ? (
             <span className="col-span-5 text-sm">{l.item_name || '—'} <span className="text-xs text-pine/40">({l.unit})</span></span>
           ) : (
-            <select className="input col-span-5 text-sm" value={l.item_id} onChange={(e) => upd(i, 'item_id', e.target.value)}>
+            <select className={`${selectClass} col-span-5 text-sm`} value={l.item_id} onChange={(e) => upd(i, 'item_id', e.target.value)}>
               <option value="">Select item…</option>
               {items.map((it) => <option key={it.id} value={it.id}>{it.name} ({it.unit})</option>)}
             </select>
           )}
-          <input type="number" readOnly={readOnly} className={`input col-span-2 money text-right text-sm ${readOnly ? 'bg-leaf/20' : ''}`} value={l.qty} onChange={(e) => upd(i, 'qty', e.target.value)} />
+          <Input type="number" readOnly={readOnly} className={`col-span-2 money text-right text-sm ${readOnly ? 'bg-leaf/20' : ''}`} value={l.qty} onChange={(e) => upd(i, 'qty', e.target.value)} />
           {withCost && (
             <>
-              <input type="number" readOnly={readOnly} className={`input col-span-2 money text-right text-sm ${readOnly ? 'bg-leaf/20' : ''}`} value={l.unit_cost} onChange={(e) => upd(i, 'unit_cost', e.target.value)} />
+              <Input type="number" readOnly={readOnly} className={`col-span-2 money text-right text-sm ${readOnly ? 'bg-leaf/20' : ''}`} value={l.unit_cost} onChange={(e) => upd(i, 'unit_cost', e.target.value)} />
               <span className={`col-span-2 money text-right text-sm px-1 py-1 ${readOnly ? 'text-pine/60' : 'text-pine'}`}>{(Number(l.qty || 0) * Number(l.unit_cost || 0)).toFixed(2)}</span>
             </>
           )}
-          {!readOnly && <button className="text-red-300 hover:text-red-600 col-span-1 flex justify-center" onClick={() => del(i)}><Trash2 size={14} /></button>}
+          {!readOnly && <Button variant="ghost" size="icon-xs" className="text-red-300 hover:text-red-600 col-span-1" onClick={() => del(i)}><Trash2 size={14} /></Button>}
         </div>
       ))}
-      {!readOnly && <button className="btn-ghost !py-1 text-sm" onClick={add}><Plus size={13} /> Add line</button>}
+      {!readOnly && <Button variant="ghost" size="sm" className="text-sm" onClick={add}><Plus size={13} /> Add line</Button>}
     </div>
   )
 }
@@ -479,6 +607,62 @@ function RequisitionsTab({ flash, userName, canApprove, onCreatePO, onCreateTRF 
     })
   }
 
+
+  const requisitionGridRows = rows.map((row) => ({
+    ...row,
+    item_count: (row.requisition_items || []).length,
+    route: row.route_decision || '—',
+    item_summary: (row.requisition_items || [])
+      .map((item) => `${item.item_name} (${item.qty})`)
+      .join(', '),
+  }))
+
+  const requisitionColumns = [
+    { accessorKey: 'req_no', header: 'Req No', width: 150 },
+    { accessorKey: 'req_date', header: 'Date', type: 'date', width: 130 },
+    { accessorKey: 'department', header: 'Department', width: 150 },
+    { accessorKey: 'requested_by', header: 'Requested By', width: 170 },
+    { accessorKey: 'item_count', header: 'Items', type: 'number', width: 100 },
+    { accessorKey: 'route', header: 'Route', width: 120 },
+    { accessorKey: 'status', header: 'Status', type: 'status', width: 150 },
+    { accessorKey: 'item_summary', header: 'Item Summary', width: 300 },
+    {
+      accessorKey: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 320,
+      cell: ({ row }) => {
+        const hasPO = (row.purchase_orders || []).length > 0
+        const hasTRF = (row.stock_transfers || []).length > 0
+
+        return (
+          <div className="flex justify-end gap-1 flex-wrap">
+            {row.status === 'PENDING' && canApprove && (
+              <>
+                <Button variant="ghost" size="xs" className="text-forest text-xs" onClick={(event) => { event.stopPropagation(); approveWithRouting(row) }}><Check size={13} /> Approve</Button>
+                <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'REJECTED') }}><X size={13} /> Reject</Button>
+              </>
+            )}
+            {row.status === 'APPROVED' && (
+              <>
+                {!hasPO && <Button variant="ghost" size="xs" className="text-forest text-xs" onClick={(event) => { event.stopPropagation(); onCreatePO({ id: row.id, req_no: row.req_no, items: row.requisition_items }) }}><Truck size={13} /> Create PO</Button>}
+                {!hasTRF && <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); onCreateTRF({ id: row.id, req_no: row.req_no, items: row.requisition_items }) }}><ArrowLeftRight size={13} /> Transfer</Button>}
+                {(hasPO || hasTRF) && <Button variant="ghost" size="xs" className="text-stone-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'CLOSED') }}>Close</Button>}
+              </>
+            )}
+            {row.status === 'PENDING' && (
+              <>
+                <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); editReq(row) }}><Pencil size={13} /> Edit</Button>
+                <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'CANCELLED') }}><X size={13} /> Cancel</Button>
+              </>
+            )}
+            <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); printReq(row) }}><Printer size={13} /> Print</Button>
+          </div>
+        )
+      },
+    },
+  ]
+
   return (
     <div className="space-y-4">
       <div className="px-4 py-3 rounded-lg bg-forest/10 border border-forest/20 text-sm text-pine">
@@ -492,103 +676,31 @@ function RequisitionsTab({ flash, userName, canApprove, onCreatePO, onCreateTRF 
         <h3 className="font-display font-semibold text-pine">{editId ? 'Edit Requisition' : 'New Requisition'}</h3>
         <div className="flex gap-3 flex-wrap">
           <div><label className="label">Department</label>
-            <input className="input !w-48" value={dept} onChange={(e) => setDept(e.target.value)} placeholder="e.g. KITCHEN, HK" />
+            <Input className="!w-48" value={dept} onChange={(e) => setDept(e.target.value)} placeholder="e.g. KITCHEN, HK" />
           </div>
           <div className="flex-1"><label className="label">Notes</label>
-            <input className="input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" />
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" />
           </div>
         </div>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={false} />
         <div className="flex gap-2">
-          <button className="btn-primary" onClick={create}>
+          <Button onClick={create}>
             {editId ? <><Save size={15} /> Update requisition</> : <><Plus size={15} /> Create requisition</>}
-          </button>
-          {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+          </Button>
+          {editId && <Button variant="ghost" onClick={resetForm}>Cancel edit</Button>}
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th">Req No</th><th className="th">Date</th><th className="th">Dept</th>
-              <th className="th">By</th><th className="th">Items</th><th className="th">Status</th>
-              <th className="th text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const hasPO = (r.purchase_orders || []).length > 0
-              const hasTRF = (r.stock_transfers || []).length > 0
-              return (
-                <>
-                  <tr key={r.id} className="hover:bg-leaf/20">
-                    <td className="td money font-semibold">
-                      <button onClick={() => setExpanded(expanded === r.id ? null : r.id)} className="flex items-center gap-1 hover:text-forest">
-                        {r.req_no} <ChevronRight size={13} className={`transition-transform ${expanded === r.id ? 'rotate-90' : ''}`} />
-                      </button>
-                    </td>
-                    <td className="td text-xs">{fmtDate(r.req_date)}</td>
-                    <td className="td text-xs font-medium">{r.department}</td>
-                    <td className="td text-xs">{r.requested_by}</td>
-                    <td className="td text-xs text-pine/60">{(r.requisition_items || []).length} items</td>
-                    <td className="td"><span className={`status-chip ${statusChip(r.status)}`}>{r.status}</span></td>
-                    <td className="td text-right">
-                      <div className="flex justify-end gap-1 flex-wrap">
-                        {r.status === 'PENDING' && canApprove && (
-                          <>
-                            <button className="btn-ghost !py-0.5 !px-2 text-forest text-xs" onClick={() => approveWithRouting(r)}><Check size={13} /> Approve</button>
-                            <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => setStatus(r.id, 'REJECTED')}><X size={13} /> Reject</button>
-                          </>
-                        )}
-                        {r.status === 'APPROVED' && (
-                          <>
-                            {!hasPO && <button className="btn-ghost !py-0.5 !px-2 text-forest text-xs" onClick={() => onCreatePO({ id: r.id, req_no: r.req_no, items: r.requisition_items })}><Truck size={13} /> Create PO</button>}
-                            {!hasTRF && <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => onCreateTRF({ id: r.id, req_no: r.req_no, items: r.requisition_items })}><ArrowLeftRight size={13} /> Create Transfer</button>}
-                            {(hasPO || hasTRF) && <button className="btn-ghost !py-0.5 !px-2 text-stone-500 text-xs" onClick={() => setStatus(r.id, 'CLOSED')}>Close</button>}
-                          </>
-                        )}
-                        {r.status === 'PENDING' && (
-                          <>
-                            <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => editReq(r)}><Pencil size={13} /> Edit</button>
-                            <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => setStatus(r.id, 'CANCELLED')}><X size={13} /> Cancel</button>
-                          </>
-                        )}
-                        <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => printReq(r)}><Printer size={13} /> Print</button>
-                      </div>
-                    </td>
-                  </tr>
-                  {expanded === r.id && (
-                    <tr key={`${r.id}-detail`}>
-                      <td colSpan={7} className="px-6 pb-3 bg-leaf/20">
-                        <div className="text-xs space-y-1 pt-2">
-                          <div className="font-semibold text-pine mb-1">Items:</div>
-                          {(r.requisition_items || []).map((it) => (
-                            <div key={it.id} className="flex gap-4 text-pine/70">
-                              <span className="font-medium">{it.item_name}</span>
-                              <span>Qty: {it.qty}</span>
-                              {it.notes && <span className="text-pine/40">{it.notes}</span>}
-                            </div>
-                          ))}
-                          {r.route_decision === 'TRANSFER' && <div className="mt-2 flex items-center gap-1 text-forest font-medium"><ArrowLeftRight size={12} /> Auto-routed to: Stock Transfer</div>}
-                          {r.route_decision === 'PO' && <div className="mt-2 flex items-center gap-1 text-amber font-medium"><Truck size={12} /> Auto-routed to: Purchase Order</div>}
-                          {hasPO && <div className="mt-1 text-forest font-medium">PO: {(r.purchase_orders || []).map((p) => `${p.po_no} (${p.status})`).join(', ')}</div>}
-                          {hasTRF && <div className="mt-1 text-pine font-medium">Transfer: {(r.stock_transfers || []).map((t) => t.trf_no).join(', ')}</div>}
-                          {r.approved_by && <div className="text-pine/50 mt-1">Approved by: {r.approved_by}</div>}
-                          {r.notes && <div className="text-pine/50 mt-1">Notes: {r.notes}</div>}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </>
-              )
-            })}
-            {rows.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={7}>No requisitions yet.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+
+      <AedsDataGrid
+        title="Requisitions"
+        subtitle="Approval, stock routing and procurement initiation"
+        data={requisitionGridRows}
+        columns={requisitionColumns}
+        pageSize={100}
+        emptyText="No requisitions found."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -704,6 +816,50 @@ function POTab({ flash, userName, canApprove, navReq, clearNav }) {
     })
   }
 
+
+  const poGridRows = rows.map((po) => ({
+    ...po,
+    vendor_name: po.vendors?.name || '—',
+    requisition_no: po.requisitions?.req_no || '—',
+    total_value: poTotal(po),
+    item_summary: (po.po_items || [])
+      .map((item) => `${item.item_name} (${item.qty})`)
+      .join(', '),
+  }))
+
+  const poColumns = [
+    { accessorKey: 'po_no', header: 'PO No', width: 150 },
+    { accessorKey: 'po_date', header: 'Date', type: 'date', width: 130 },
+    { accessorKey: 'vendor_name', header: 'Vendor', width: 210 },
+    { accessorKey: 'requisition_no', header: 'REQ', width: 140 },
+    { accessorKey: 'total_value', header: 'Value', type: 'currency', aggregation: 'sum', width: 150 },
+    { accessorKey: 'status', header: 'Status', type: 'status', width: 160 },
+    { accessorKey: 'item_summary', header: 'Item Summary', width: 300 },
+    {
+      accessorKey: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 260,
+      cell: ({ row }) => (
+        <div className="flex justify-end gap-1 flex-wrap">
+          {row.status === 'PENDING_APPROVAL' && canApprove && (
+            <Button variant="ghost" size="xs" className="text-forest text-xs" onClick={(event) => { event.stopPropagation(); approvePO(row.id) }}><Check size={13} /> Approve</Button>
+          )}
+          {row.status === 'PENDING_APPROVAL' && (
+            <>
+              <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); editPO(row) }}><Pencil size={13} /> Edit</Button>
+              <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'CANCELLED') }}><X size={13} /> Cancel</Button>
+            </>
+          )}
+          {row.status === 'OPEN' && (
+            <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); setStatus(row.id, 'CANCELLED') }}><X size={13} /> Cancel</Button>
+          )}
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); printPO(row) }}><Printer size={13} /> Print</Button>
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-4">
       <div className="px-4 py-3 rounded-lg bg-amber/10 border border-amber/30 text-sm text-pine">
@@ -720,24 +876,24 @@ function POTab({ flash, userName, canApprove, navReq, clearNav }) {
         <div className="flex gap-3 flex-wrap">
           <div>
             <label className="label">Vendor *</label>
-            <select className="input !w-56" value={vendor} onChange={(e) => setVendor(e.target.value)}>
+            <select className={`${selectClass} !w-56`} value={vendor} onChange={(e) => setVendor(e.target.value)}>
               <option value="">Select vendor…</option>
               {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
           </div>
           <div className="flex-1">
             <label className="label">Notes</label>
-            <input className="input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
           </div>
         </div>
         <p className="text-xs text-pine/40">Unit cost (৳) per line — total amount auto-calculated.</p>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={true} />
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-2">
-            <button className="btn-primary" onClick={create}>
+            <Button onClick={create}>
               {editId ? <><Save size={15} /> Update PO</> : <><Truck size={15} /> Create PO</>}
-            </button>
-            {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+            </Button>
+            {editId && <Button variant="ghost" onClick={resetForm}>Cancel edit</Button>}
           </div>
           <div className="text-sm font-semibold text-pine money">
             Total: {fmtBDT(lines.reduce((a, l) => a + Number(l.qty || 0) * Number(l.unit_cost || 0), 0))}
@@ -745,73 +901,16 @@ function POTab({ flash, userName, canApprove, navReq, clearNav }) {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th">PO No</th><th className="th">Date</th><th className="th">Vendor</th>
-              <th className="th">REQ</th><th className="th text-right">Value</th>
-              <th className="th">Status</th><th className="th text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((po) => (
-              <>
-                <tr key={po.id} className="hover:bg-leaf/20">
-                  <td className="td money font-semibold">
-                    <button onClick={() => setExpanded(expanded === po.id ? null : po.id)} className="flex items-center gap-1 hover:text-forest">
-                      {po.po_no} <ChevronRight size={13} className={`transition-transform ${expanded === po.id ? 'rotate-90' : ''}`} />
-                    </button>
-                  </td>
-                  <td className="td text-xs">{fmtDate(po.po_date)}</td>
-                  <td className="td text-sm">{po.vendors?.name}</td>
-                  <td className="td text-xs text-forest">{po.requisitions?.req_no || '—'}</td>
-                  <td className="td money text-right font-semibold">{fmtBDT(poTotal(po))}</td>
-                  <td className="td"><span className={`status-chip ${statusChip(po.status)}`}>{po.status}</span></td>
-                  <td className="td text-right">
-                    <div className="flex justify-end gap-1 flex-wrap">
-                      {po.status === 'PENDING_APPROVAL' && canApprove && (
-                        <button className="btn-ghost !py-0.5 !px-2 text-forest text-xs" onClick={() => approvePO(po.id)}><Check size={13} /> Approve</button>
-                      )}
-                      {po.status === 'PENDING_APPROVAL' && (
-                        <>
-                          <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => editPO(po)}><Pencil size={13} /> Edit</button>
-                          <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => setStatus(po.id, 'CANCELLED')}><X size={13} /> Cancel</button>
-                        </>
-                      )}
-                      {po.status === 'OPEN' && (
-                        <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => setStatus(po.id, 'CANCELLED')}><X size={13} /> Cancel</button>
-                      )}
-                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => printPO(po)}><Printer size={13} /> Print</button>
-                    </div>
-                  </td>
-                </tr>
-                {expanded === po.id && (
-                  <tr key={`${po.id}-d`}>
-                    <td colSpan={7} className="px-6 pb-3 bg-leaf/20">
-                      <div className="text-xs space-y-1 pt-2">
-                        {(po.po_items || []).map((it) => (
-                          <div key={it.id} className="flex gap-4 text-pine/70">
-                            <span className="font-medium w-40">{it.item_name}</span>
-                            <span>Qty: {it.qty}</span>
-                            <span>Rate: {fmtBDT(it.unit_cost)}</span>
-                            <span>Total: {fmtBDT(+it.qty * +it.unit_cost)}</span>
-                          </div>
-                        ))}
-                        {po.approved_by && <div className="text-forest/70 mt-1">Approved by: {po.approved_by}</div>}
-                        {po.notes && <div className="text-pine/40 mt-1">Notes: {po.notes}</div>}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </>
-            ))}
-            {rows.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={7}>No purchase orders.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+
+      <AedsDataGrid
+        title="Purchase Orders"
+        subtitle="Purchase approval, vendor commitment and receipt status"
+        data={poGridRows}
+        columns={poColumns}
+        pageSize={100}
+        emptyText="No purchase orders found."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -941,6 +1040,42 @@ function GRNTab({ flash, userName }) {
     })
   }
 
+
+  const grnGridRows = rows.map((grn) => ({
+    ...grn,
+    vendor_name: grn.vendors?.name || '—',
+    po_no: grn.purchase_orders?.po_no || '—',
+    total_value: grnTotal(grn),
+    rebate_status: grn.rebateable ? 'ELIGIBLE' : 'NO',
+    item_summary: (grn.grn_items || [])
+      .map((item) => `${item.item_name} (${item.qty})`)
+      .join(', '),
+  }))
+
+  const grnColumns = [
+    { accessorKey: 'grn_no', header: 'GRN No', width: 150 },
+    { accessorKey: 'grn_date', header: 'Date', type: 'date', width: 130 },
+    { accessorKey: 'vendor_name', header: 'Vendor', width: 210 },
+    { accessorKey: 'po_no', header: 'PO', width: 140 },
+    { accessorKey: 'vendor_invoice_no', header: 'Invoice', width: 160 },
+    { accessorKey: 'total_value', header: 'Value', type: 'currency', aggregation: 'sum', width: 150 },
+    { accessorKey: 'rebate_status', header: 'Rebate', type: 'status', width: 120 },
+    { accessorKey: 'item_summary', header: 'Item Summary', width: 300 },
+    {
+      accessorKey: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 220,
+      cell: ({ row }) => (
+        <div className="flex justify-end gap-1 flex-wrap">
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); editGRN(row) }}><Pencil size={13} /> Edit</Button>
+          <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); cancelGRN(row) }}><X size={13} /> Cancel</Button>
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); printGRN(row) }}><Printer size={13} /> Print</Button>
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-4">
       <div className="card p-4 space-y-3">
@@ -948,33 +1083,33 @@ function GRNTab({ flash, userName }) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div>
             <label className="label">PO (auto-fill items)</label>
-            <select className="input" value={h.po_id} onChange={(e) => onPOSelect(e.target.value)}>
+            <select className={selectClass} value={h.po_id} onChange={(e) => onPOSelect(e.target.value)}>
               <option value="">Select PO (optional)…</option>
               {pos.map((p) => <option key={p.id} value={p.id}>{p.po_no}</option>)}
             </select>
           </div>
           <div>
             <label className="label">Vendor *</label>
-            <select className="input" value={h.vendor_id} onChange={(e) => setH({ ...h, vendor_id: e.target.value })}>
+            <select className={selectClass} value={h.vendor_id} onChange={(e) => setH({ ...h, vendor_id: e.target.value })}>
               <option value="">Select vendor…</option>
               {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
           </div>
           <div><label className="label">Vendor invoice no</label>
-            <input className="input money" placeholder="Invoice number" value={h.vendor_invoice_no} onChange={(e) => setH({ ...h, vendor_invoice_no: e.target.value })} />
+            <Input className="money" placeholder="Invoice number" value={h.vendor_invoice_no} onChange={(e) => setH({ ...h, vendor_invoice_no: e.target.value })} />
           </div>
           <div><label className="label">Invoice date</label>
-            <input type="date" className="input" value={h.vendor_invoice_date} onChange={(e) => setH({ ...h, vendor_invoice_date: e.target.value })} />
+            <Input type="date" value={h.vendor_invoice_date} onChange={(e) => setH({ ...h, vendor_invoice_date: e.target.value })} />
           </div>
         </div>
         <p className="text-xs text-pine/40">Unit cost (৳) per line — total auto-calculated.</p>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={true} />
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-2">
-            <button className="btn-primary" onClick={create}>
+            <Button onClick={create}>
               {editId ? <><Save size={15} /> Update GRN</> : <><PackageCheck size={15} /> Receive goods</>}
-            </button>
-            {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+            </Button>
+            {editId && <Button variant="ghost" onClick={resetForm}>Cancel edit</Button>}
           </div>
           <div className="text-sm font-semibold text-pine money">
             Total: {fmtBDT(lines.reduce((a, l) => a + Number(l.qty || 0) * Number(l.unit_cost || 0), 0))}
@@ -982,62 +1117,16 @@ function GRNTab({ flash, userName }) {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th">GRN No</th><th className="th">Date</th><th className="th">Vendor</th>
-              <th className="th">PO</th><th className="th">Invoice</th>
-              <th className="th text-right">Value</th><th className="th">Rebate</th><th className="th text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((g) => (
-              <>
-                <tr key={g.id} className="hover:bg-leaf/20">
-                  <td className="td money font-semibold">
-                    <button onClick={() => setExpanded(expanded === g.id ? null : g.id)} className="flex items-center gap-1 hover:text-forest">
-                      {g.grn_no} <ChevronRight size={13} className={`transition-transform ${expanded === g.id ? 'rotate-90' : ''}`} />
-                    </button>
-                  </td>
-                  <td className="td text-xs">{fmtDate(g.grn_date)}</td>
-                  <td className="td text-sm">{g.vendors?.name}</td>
-                  <td className="td text-xs text-forest">{g.purchase_orders?.po_no || '—'}</td>
-                  <td className="td text-xs">{g.vendor_invoice_no || '—'}</td>
-                  <td className="td money text-right font-semibold">{fmtBDT(grnTotal(g))}</td>
-                  <td className="td text-xs">{g.rebateable ? <span className="text-forest font-medium">Yes</span> : 'No'}</td>
-                  <td className="td text-right">
-                    <div className="flex justify-end gap-1 flex-wrap">
-                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => editGRN(g)}><Pencil size={13} /> Edit</button>
-                      <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => cancelGRN(g)}><X size={13} /> Cancel</button>
-                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => printGRN(g)}><Printer size={13} /> Print</button>
-                    </div>
-                  </td>
-                </tr>
-                {expanded === g.id && (
-                  <tr key={`${g.id}-d`}>
-                    <td colSpan={8} className="px-6 pb-3 bg-leaf/20">
-                      <div className="text-xs space-y-1 pt-2">
-                        {(g.grn_items || []).map((it) => (
-                          <div key={it.id} className="flex gap-4 text-pine/70">
-                            <span className="font-medium w-40">{it.item_name}</span>
-                            <span>Qty: {it.qty}</span>
-                            <span>Rate: {fmtBDT(it.unit_cost)}</span>
-                            <span>Total: {fmtBDT(+it.qty * +it.unit_cost)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </>
-            ))}
-            {rows.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={8}>No goods receipts.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+
+      <AedsDataGrid
+        title="Goods Receipts"
+        subtitle="Vendor delivery, invoice and stock receipt register"
+        data={grnGridRows}
+        columns={grnColumns}
+        pageSize={100}
+        emptyText="No goods receipts found."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -1149,6 +1238,40 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
     })
   }
 
+
+  const transferGridRows = rows.map((transfer) => ({
+    ...transfer,
+    route: `${transfer.from_location || '—'} → ${transfer.to_location || '—'}`,
+    requisition_no: transfer.requisitions?.req_no || '—',
+    item_count: (transfer.transfer_items || []).length,
+    item_summary: (transfer.transfer_items || [])
+      .map((item) => `${item.item_name} (${item.qty})`)
+      .join(', '),
+  }))
+
+  const transferColumns = [
+    { accessorKey: 'trf_no', header: 'TRF No', width: 150 },
+    { accessorKey: 'trf_date', header: 'Date', type: 'date', width: 130 },
+    { accessorKey: 'route', header: 'From → To', width: 230 },
+    { accessorKey: 'requisition_no', header: 'REQ', width: 140 },
+    { accessorKey: 'item_count', header: 'Items', type: 'number', width: 100 },
+    { accessorKey: 'created_by', header: 'Created By', width: 170 },
+    { accessorKey: 'item_summary', header: 'Item Summary', width: 300 },
+    {
+      accessorKey: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 220,
+      cell: ({ row }) => (
+        <div className="flex justify-end gap-1 flex-wrap">
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); editTransfer(row) }}><Pencil size={13} /> Edit</Button>
+          <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); cancelTransfer(row) }}><X size={13} /> Cancel</Button>
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); printTransfer(row) }}><Printer size={13} /> Print</Button>
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-4">
       <div className="card p-4 space-y-3">
@@ -1159,14 +1282,14 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <div>
             <label className="label">From location *</label>
-            <select className="input" value={h.from_location} onChange={(e) => setH({ ...h, from_location: e.target.value })}>
+            <select className={selectClass} value={h.from_location} onChange={(e) => setH({ ...h, from_location: e.target.value })}>
               <option value="">Select…</option>
               {locOptions}
             </select>
           </div>
           <div>
             <label className="label">To location *</label>
-            <select className="input" value={h.to_location} onChange={(e) => setH({ ...h, to_location: e.target.value })}>
+            <select className={selectClass} value={h.to_location} onChange={(e) => setH({ ...h, to_location: e.target.value })}>
               <option value="">Select…</option>
               {locOptions}
               <option value="CONSUMED">CONSUMED (consumption write-off)</option>
@@ -1174,72 +1297,28 @@ function TransfersTab({ flash, userName, navReq, clearNav }) {
           </div>
           <div>
             <label className="label">Notes</label>
-            <input className="input" value={h.notes} placeholder="Optional" onChange={(e) => setH({ ...h, notes: e.target.value })} />
+            <Input value={h.notes} placeholder="Optional" onChange={(e) => setH({ ...h, notes: e.target.value })} />
           </div>
         </div>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={false} />
         <div className="flex gap-2">
-          <button className="btn-primary" onClick={create}>
+          <Button onClick={create}>
             {editId ? <><Save size={15} /> Update transfer</> : <><ArrowLeftRight size={15} /> Post transfer</>}
-          </button>
-          {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+          </Button>
+          {editId && <Button variant="ghost" onClick={resetForm}>Cancel edit</Button>}
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th">TRF No</th><th className="th">Date</th>
-              <th className="th">From → To</th><th className="th">REQ</th>
-              <th className="th">Items</th><th className="th">By</th><th className="th text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((t) => (
-              <>
-                <tr key={t.id} className="hover:bg-leaf/20">
-                  <td className="td money font-semibold">
-                    <button onClick={() => setExpanded(expanded === t.id ? null : t.id)} className="flex items-center gap-1 hover:text-forest">
-                      {t.trf_no} <ChevronRight size={13} className={`transition-transform ${expanded === t.id ? 'rotate-90' : ''}`} />
-                    </button>
-                  </td>
-                  <td className="td text-xs">{fmtDate(t.trf_date)}</td>
-                  <td className="td text-sm">{t.from_location} <span className="text-pine/40">→</span> {t.to_location}</td>
-                  <td className="td text-xs text-forest">{t.requisitions?.req_no || '—'}</td>
-                  <td className="td text-xs">{(t.transfer_items || []).length} items</td>
-                  <td className="td text-xs text-pine/50">{t.created_by}</td>
-                  <td className="td text-right">
-                    <div className="flex justify-end gap-1 flex-wrap">
-                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => editTransfer(t)}><Pencil size={13} /> Edit</button>
-                      <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => cancelTransfer(t)}><X size={13} /> Cancel</button>
-                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => printTransfer(t)}><Printer size={13} /> Print</button>
-                    </div>
-                  </td>
-                </tr>
-                {expanded === t.id && (
-                  <tr key={`${t.id}-d`}>
-                    <td colSpan={7} className="px-6 pb-3 bg-leaf/20">
-                      <div className="text-xs space-y-1 pt-2">
-                        {(t.transfer_items || []).map((it) => (
-                          <div key={it.id} className="flex gap-4 text-pine/70">
-                            <span className="font-medium">{it.item_name}</span>
-                            <span>Qty: {it.qty}</span>
-                          </div>
-                        ))}
-                        {t.notes && <div className="text-pine/40 mt-1">Notes: {t.notes}</div>}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </>
-            ))}
-            {rows.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={7}>No transfers.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+
+      <AedsDataGrid
+        title="Stock Transfers"
+        subtitle="Location-to-location stock movement register"
+        data={transferGridRows}
+        columns={transferColumns}
+        pageSize={100}
+        emptyText="No transfers found."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }
@@ -1343,6 +1422,39 @@ function ReturnsTab({ flash, userName }) {
     })
   }
 
+
+  const returnGridRows = rows.map((itemReturn) => ({
+    ...itemReturn,
+    vendor_name: itemReturn.vendors?.name || '—',
+    item_count: (itemReturn.return_items || []).length,
+    item_summary: (itemReturn.return_items || [])
+      .map((item) => `${item.item_name} (${item.qty})`)
+      .join(', '),
+  }))
+
+  const returnColumns = [
+    { accessorKey: 'ret_no', header: 'RET No', width: 150 },
+    { accessorKey: 'ret_date', header: 'Date', type: 'date', width: 130 },
+    { accessorKey: 'return_type', header: 'Type', type: 'status', width: 140 },
+    { accessorKey: 'vendor_name', header: 'Vendor', width: 210 },
+    { accessorKey: 'from_location', header: 'From', width: 160 },
+    { accessorKey: 'item_count', header: 'Items', type: 'number', width: 100 },
+    { accessorKey: 'item_summary', header: 'Item Summary', width: 300 },
+    {
+      accessorKey: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 220,
+      cell: ({ row }) => (
+        <div className="flex justify-end gap-1 flex-wrap">
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); editReturn(row) }}><Pencil size={13} /> Edit</Button>
+          <Button variant="ghost" size="xs" className="text-red-500 text-xs" onClick={(event) => { event.stopPropagation(); cancelReturn(row) }}><X size={13} /> Cancel</Button>
+          <Button variant="ghost" size="xs" className="text-pine text-xs" onClick={(event) => { event.stopPropagation(); printReturn(row) }}><Printer size={13} /> Print</Button>
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-4">
       <div className="card p-4 space-y-3">
@@ -1350,7 +1462,7 @@ function ReturnsTab({ flash, userName }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <div>
             <label className="label">Return type</label>
-            <select className="input" value={h.return_type} onChange={(e) => setH({ ...h, return_type: e.target.value })}>
+            <select className={selectClass} value={h.return_type} onChange={(e) => setH({ ...h, return_type: e.target.value })}>
               <option value="TO_STORE">Return to Store (back in stock)</option>
               <option value="TO_VENDOR">Return to Vendor (out of stock)</option>
             </select>
@@ -1358,7 +1470,7 @@ function ReturnsTab({ flash, userName }) {
           {h.return_type === 'TO_VENDOR' && (
             <div>
               <label className="label">Vendor</label>
-              <select className="input" value={h.vendor_id} onChange={(e) => setH({ ...h, vendor_id: e.target.value })}>
+              <select className={selectClass} value={h.vendor_id} onChange={(e) => setH({ ...h, vendor_id: e.target.value })}>
                 <option value="">Select vendor…</option>
                 {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
               </select>
@@ -1366,7 +1478,7 @@ function ReturnsTab({ flash, userName }) {
           )}
           <div>
             <label className="label">From location</label>
-            <select className="input" value={h.from_location} onChange={(e) => setH({ ...h, from_location: e.target.value })}>
+            <select className={selectClass} value={h.from_location} onChange={(e) => setH({ ...h, from_location: e.target.value })}>
               <option value="">Select…</option>
               {locOptions}
             </select>
@@ -1374,62 +1486,23 @@ function ReturnsTab({ flash, userName }) {
         </div>
         <LineEditor items={items} lines={lines} setLines={setLines} withCost={false} />
         <div className="flex gap-2">
-          <button className="btn-primary" onClick={create}>
+          <Button onClick={create}>
             {editId ? <><Save size={15} /> Update return</> : <><Undo2 size={15} /> Post return</>}
-          </button>
-          {editId && <button className="btn-ghost" onClick={resetForm}>Cancel edit</button>}
+          </Button>
+          {editId && <Button variant="ghost" onClick={resetForm}>Cancel edit</Button>}
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr><th className="th">RET No</th><th className="th">Date</th><th className="th">Type</th><th className="th">Vendor</th><th className="th">From</th><th className="th">Items</th><th className="th text-right">Actions</th></tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <>
-                <tr key={r.id} className="hover:bg-leaf/20">
-                  <td className="td money font-semibold">
-                    <button onClick={() => setExpanded(expanded === r.id ? null : r.id)} className="flex items-center gap-1 hover:text-forest">
-                      {r.ret_no} <ChevronRight size={13} className={`transition-transform ${expanded === r.id ? 'rotate-90' : ''}`} />
-                    </button>
-                  </td>
-                  <td className="td text-xs">{fmtDate(r.ret_date)}</td>
-                  <td className="td text-xs"><span className={`status-chip ${r.return_type === 'TO_STORE' ? 'bg-forest/10 text-forest' : 'bg-amber/20 text-amber'}`}>{r.return_type}</span></td>
-                  <td className="td text-sm">{r.vendors?.name || '—'}</td>
-                  <td className="td text-xs">{r.from_location || '—'}</td>
-                  <td className="td text-xs">{(r.return_items || []).length} items</td>
-                  <td className="td text-right">
-                    <div className="flex justify-end gap-1 flex-wrap">
-                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => editReturn(r)}><Pencil size={13} /> Edit</button>
-                      <button className="btn-ghost !py-0.5 !px-2 text-red-500 text-xs" onClick={() => cancelReturn(r)}><X size={13} /> Cancel</button>
-                      <button className="btn-ghost !py-0.5 !px-2 text-pine text-xs" onClick={() => printReturn(r)}><Printer size={13} /> Print</button>
-                    </div>
-                  </td>
-                </tr>
-                {expanded === r.id && (
-                  <tr key={`${r.id}-d`}>
-                    <td colSpan={7} className="px-6 pb-3 bg-leaf/20">
-                      <div className="text-xs space-y-1 pt-2">
-                        {(r.return_items || []).map((it) => (
-                          <div key={it.id} className="flex gap-4 text-pine/70">
-                            <span className="font-medium">{it.item_name}</span>
-                            <span>Qty: {it.qty}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </>
-            ))}
-            {rows.length === 0 && <tr><td className="td text-pine/40 text-center py-6" colSpan={7}>No returns.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-      </div>
+
+      <AedsDataGrid
+        title="Stock Returns"
+        subtitle="Store and vendor return register"
+        data={returnGridRows}
+        columns={returnColumns}
+        pageSize={100}
+        emptyText="No returns found."
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, fmtDate, todayISO, rateFor, computeCharge } from '../lib/helpers'
 import KPICards from '../components/KPICards.jsx'
 import PrintPortal from '../components/PrintPortal.jsx'
@@ -12,9 +12,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popove
 import { Plus, Minus, Trash2, Banknote, BedDouble, Leaf, Printer } from 'lucide-react'
 
 const TABS = ['New Sale', 'Sales', 'Items']
+const NO_TENANT_SENTINEL = '00000000-0000-0000-0000-000000000000'
 const withTenant = (q) => {
   const tenantId = getTenantId()
-  return tenantId ? q.eq('tenant_id', tenantId) : q
+  return q.eq('tenant_id', tenantId || NO_TENANT_SENTINEL)
 }
 
 function ActionPopoverButton({ message, className, children, disabled = false, ...props }) {
@@ -26,7 +27,7 @@ function ActionPopoverButton({ message, className, children, disabled = false, .
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <span className="inline-flex" onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide}>
-          <button className={className} disabled={disabled} {...props}>
+          <button type="button" className={className} disabled={disabled} {...props}>
             {children}
           </button>
         </span>
@@ -51,7 +52,7 @@ export default function Facilities({ userName, isAdmin }) {
     const [{ data: it }, { data: tc }, { data: co }] = await Promise.all([
       withTenant(supabase.from('facility_items').select('*')).order('name'),
       withTenant(supabase.from('tax_config').select('*')),
-      withTenant(supabase.from('company_settings').select('*')).eq('id', 1).single(),
+      withTenant(supabase.from('company_settings').select('*')).limit(1).maybeSingle(),
     ])
     setItems(it || []); setTaxConfig(tc || []); setCompany(co)
   }
@@ -62,10 +63,10 @@ export default function Facilities({ userName, isAdmin }) {
       <h1 className="font-display text-2xl font-bold text-pine mb-1">Service Bills</h1>      
       <KPICards module="facilities" />
 
-      <div className="flex gap-1 border-b border-leaf mb-6 flex-wrap overflow-x-auto">
+      <div className="tab-strip-responsive border-b border-leaf mb-6 flex-wrap overflow-x-auto">
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
+            className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
             {t}
           </button>
         ))}
@@ -85,6 +86,7 @@ export default function Facilities({ userName, isAdmin }) {
 
       {printDoc?.type === 'RECEIPT' && (
         <PrintPortal
+          type="thermal-80"
           title={`${printDoc.order.outlet} — ${printDoc.order.order_no}`}
           onClose={() => setPrintDoc(null)}
           primaryColor={company?.primary_color || company?.brand_primary}
@@ -488,7 +490,7 @@ function SalesList({ setPrintDoc, isAdmin, flash }) {
 
 /* ================= ITEMS MANAGER ================= */
 function ItemsManager({ items, reload, isAdmin, flash }) {
-  const createNewItem = () => ({ name: '', unit: 'pc', category: 'GENERAL', default_price: '' })
+  const createNewItem = () => ({ name: '', unit: 'pc', category: 'OTHER', default_price: '' })
   const [n, setN] = useState(createNewItem)
 
   const add = async () => {

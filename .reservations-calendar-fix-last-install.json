@@ -1,0 +1,9 @@
+﻿{
+    "files":  [
+                  "src\\modules\\reservations\\services\\reservationsList.service.js",
+                  "src\\modules\\reservations\\reservation-list\\normalizeReservationListRow.js",
+                  "src\\modules\\reservations\\booking-engine\\services\\bookingCalendarService.js"
+              ],
+    "installed_at":  "2026-07-10T17:21:44.3711934+06:00",
+    "backup_path":  "C:\\Users\\Accounts Manager\\Downloads\\aura-stay-erp-aeds-v2\\backups\\reservations-calendar-fix-20260710-172144"
+}

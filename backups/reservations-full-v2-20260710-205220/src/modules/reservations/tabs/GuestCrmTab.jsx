@@ -1,0 +1,1 @@
+export default function GuestCrmTab() { return <div className="aeds-card p-6"><h2 className="text-xl font-black text-slate-950">Guest CRM</h2><p className="mt-1 text-sm text-slate-500">Guest profiles, history, preferences and communication records.</p></div> }

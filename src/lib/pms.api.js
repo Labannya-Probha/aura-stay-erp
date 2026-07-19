@@ -1,10 +1,17 @@
-import { supabase } from '../supabase'   // file lives at src/lib/pms.api.js; supabase.js is at src/supabase.js
+import { supabase } from '../lib/supabase'   // file lives at src/lib/pms.api.js; supabase.js is at src/supabase.js
 import { getTenantId, withTenantInsert, withTenantInsertMany } from './tenant'
 
 /** tenant helpers */
+// If tenantId can't be resolved yet (session still loading, storage cleared,
+// etc.) we must NOT silently return an unscoped query — that previously let
+// `.order('id').limit(1)` fall through to whichever tenant's row happened to
+// have the lowest `id` (Novem, id=1), so e.g. Demo Resort's print layout
+// briefly showed "Novem Eco Resort" instead of refusing to load / showing
+// nothing. Fail safe: filter to a sentinel tenant_id that matches no rows.
+const NO_TENANT_SENTINEL = '00000000-0000-0000-0000-000000000000'
 const withTenant = (q) => {
   const tenantId = getTenantId()
-  return tenantId ? q.eq('tenant_id', tenantId) : q
+  return q.eq('tenant_id', tenantId || NO_TENANT_SENTINEL)
 }
 
 /* ---------- Company / config ---------- */

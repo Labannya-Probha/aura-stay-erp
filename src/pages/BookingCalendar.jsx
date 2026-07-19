@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, todayISO } from '../lib/helpers'
 import { loadReservationConfig } from '../lib/reservationConfig'
+import { getGovtHoliday } from '../lib/govtHolidays'
 import { CalendarRange, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 
 const DAY_W = 34
@@ -144,6 +145,18 @@ export default function BookingCalendar({ openReservation, onNewReservation, onO
           Occupancy: <span className="money">{occPct.toFixed(1)}%</span>{' '}
           ({occRoomNights}/{rooms.length * days.length} room-nights)
         </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-3 h-3 rounded bg-leaf/40" />
+          Weekend (Fri/Sat)
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-3 h-3 rounded bg-[#D4A017]/20 border border-[#D4A017]/40" />
+          Govt. Holiday
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-3 h-3 rounded bg-red-100 border border-red-300" />
+          Blackout
+        </span>
         {Object.entries(STATUS_BG).map(([s, bg]) => (
           <span key={s} className="flex items-center gap-1">
             <span className="inline-block w-3 h-3 rounded" style={{ background: bg }} />
@@ -170,16 +183,32 @@ export default function BookingCalendar({ openReservation, onNewReservation, onO
                   const dow  = new Date(d + 'T00:00:00').getDay()
                   const isWe = dow === 5 || dow === 6
                   const isBlackout = blackoutSet.has(d)
+                  const holidayName = getGovtHoliday(d)
+                  const isHoliday = Boolean(holidayName)
                   const dayShort = new Date(`${d}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })
+                  const headerTitle = isBlackout
+                    ? `${d} — Blackout day`
+                    : isHoliday
+                      ? `${d} — ${holidayName} (Govt. Holiday)`
+                      : d
                   return (
                     <th
                       key={d}
-                      className={`th text-center !px-1 ${isBlackout ? 'bg-red-100 text-red-700' : isWe ? 'bg-leaf/40' : ''}`}
+                      className={`th text-center !px-1 ${
+                        isBlackout
+                          ? 'bg-red-100 text-red-700'
+                          : isHoliday
+                            ? 'bg-[#D4A017]/20 text-[#8a6a0d]'
+                            : isWe
+                              ? 'bg-leaf/40'
+                              : ''
+                      }`}
                       style={{ minWidth: DAY_W }}
-                      title={d}
+                      title={headerTitle}
                     >
                       <div className="text-[9px] leading-none text-pine/50 mb-0.5">{dayShort}</div>
                       <div className="leading-none">{d.slice(8)}</div>
+                      {isHoliday && <div className="text-[8px] leading-none mt-0.5">●</div>}
                     </th>
                   )
                 })}

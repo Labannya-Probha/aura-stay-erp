@@ -1,0 +1,211 @@
+/* AEDS v6 Phase 3 — unified module workspaces */
+
+.aeds-v6-workspace {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+}
+
+.aeds-v6-workspace-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  overflow: hidden;
+  border: 1px solid var(--tenant-border, #e2e8f0);
+  border-radius: 24px;
+  padding: 18px 20px;
+  background:
+    radial-gradient(
+      circle at 94% 4%,
+      rgb(var(--tenant-primary-rgb, 27 77 46) / 0.12),
+      transparent 34%
+    ),
+    linear-gradient(
+      135deg,
+      var(--tenant-surface, #fff),
+      var(--tenant-surface-muted, #f8fafc)
+    );
+  box-shadow: 0 14px 38px rgb(15 23 42 / 0.05);
+}
+
+.aeds-v6-workspace-heading {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.aeds-v6-workspace-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--tenant-primary-soft, #ecfdf3);
+  color: var(--tenant-primary, #1b4d2e);
+}
+
+.aeds-v6-workspace-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+  color: var(--tenant-primary, #1b4d2e);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.aeds-v6-workspace-header h1 {
+  margin: 0;
+  color: var(--tenant-text, #0f172a);
+  font-size: 25px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.aeds-v6-workspace-header p {
+  max-width: 760px;
+  margin: 6px 0 0;
+  color: var(--tenant-text-muted, #64748b);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.aeds-v6-workspace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.aeds-v6-workspace-kpis {
+  min-width: 0;
+}
+
+.aeds-v6-workspace-tabs {
+  overflow-x: auto;
+  border: 1px solid var(--tenant-border, #e2e8f0);
+  border-radius: 18px;
+  padding: 5px;
+  background: var(--tenant-surface, #fff);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.035);
+}
+
+.aeds-v6-workspace-content {
+  min-width: 0;
+}
+
+.aeds-v6-legacy-page {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+}
+
+.aeds-v6-legacy-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--tenant-border, #e2e8f0);
+  border-radius: 22px;
+  padding: 17px 19px;
+  background:
+    radial-gradient(
+      circle at 94% 5%,
+      rgb(var(--tenant-primary-rgb, 27 77 46) / 0.1),
+      transparent 33%
+    ),
+    var(--tenant-surface, #fff);
+  box-shadow: 0 12px 34px rgb(15 23 42 / 0.045);
+}
+
+.aeds-v6-legacy-header h1 {
+  margin: 0;
+  color: var(--tenant-text, #0f172a);
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.aeds-v6-legacy-header p {
+  margin: 5px 0 0;
+  color: var(--tenant-text-muted, #64748b);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.aeds-v6-tab-strip {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--tenant-border, #e2e8f0);
+  border-radius: 20px;
+  padding: 6px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tenant-surface, #fff) 98%, white), var(--tenant-surface, #fff));
+  box-shadow: 0 14px 30px rgb(15 23 42 / 0.06);
+}
+
+.aeds-v6-tab-strip button {
+  min-height: 38px;
+  border: 1px solid transparent !important;
+  border-radius: 14px !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  background: transparent !important;
+  color: var(--tenant-text-muted, #64748b) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: nowrap;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.aeds-v6-tab-strip button:hover {
+  background: color-mix(in srgb, var(--tenant-surface-muted, #f8fafc) 88%, white) !important;
+  color: var(--tenant-text, #0f172a) !important;
+  transform: translateY(-1px);
+}
+
+.aeds-v6-tab-strip button.aeds-v6-tab-active {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tenant-primary-soft, #ecfdf3) 98%, white), var(--tenant-primary-soft, #ecfdf3)) !important;
+  color: var(--tenant-primary, #1b4d2e) !important;
+  box-shadow: inset 0 0 0 1px rgb(var(--tenant-primary-rgb, 27 77 46) / 0.12), 0 8px 18px rgb(var(--tenant-primary-rgb, 27 77 46) / 0.10);
+}
+
+.aeds-v6-workspace .card,
+.aeds-v6-legacy-page .card {
+  border-color: var(--tenant-border, #e2e8f0);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.035);
+}
+
+.aeds-v6-workspace table thead th,
+.aeds-v6-legacy-page table thead th {
+  background: var(--tenant-surface-muted, #f8fafc);
+  color: var(--tenant-text-muted, #475569);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  .aeds-v6-workspace-header,
+  .aeds-v6-legacy-header {
+    flex-direction: column;
+  }
+
+  .aeds-v6-workspace-actions {
+    justify-content: flex-start;
+  }
+}

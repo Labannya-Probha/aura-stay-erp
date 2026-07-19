@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
+import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
 import { fmtBDT, fmtDate, todayISO } from '../lib/helpers'
-import { Plus, Trash2, Save, RotateCcw, Search, ClipboardList } from 'lucide-react'
+import { Plus, Trash2, Save, RotateCcw, ClipboardList } from 'lucide-react'
 import KPICards from '../components/KPICards.jsx'
+import { Combobox } from '../components/ui/combobox.jsx'
 
 const LOCATIONS = ['KITCHEN', 'BAR', 'STORE', 'HOUSEKEEPING', 'MAINTENANCE', 'FRONT_OFFICE', 'OTHER']
 const REASONS = ['INTERNAL_USE', 'WASTAGE', 'COMPLIMENTARY', 'STAFF_MEAL', 'BREAKAGE', 'OTHER']
@@ -98,6 +100,27 @@ export default function ConsumptionEntry({ userName, isAdmin }) {
   const visibleEntries = entries.filter((e) => historyLoc === 'ALL' || e.location === historyLoc)
   const entryTotal = (e) => (e.consumption_lines || []).reduce((s, l) => s + Number(l.line_cost || 0), 0)
 
+
+  const historyRows = visibleEntries.map((entry) => ({
+    ...entry,
+    items_summary:
+      (entry.consumption_lines || [])
+        .map((line) => `${line.item_name} (${line.qty})`)
+        .join(', ') || '—',
+    total_cost: entryTotal(entry),
+    reason_label: entry.reason?.replaceAll('_', ' ') || '—',
+  }))
+
+  const historyColumns = [
+    { accessorKey: 'entry_no', header: 'Entry No', width: 150 },
+    { accessorKey: 'entry_date', header: 'Date', type: 'date', width: 130 },
+    { accessorKey: 'location', header: 'Location', type: 'status', width: 150 },
+    { accessorKey: 'reason_label', header: 'Reason', width: 180 },
+    { accessorKey: 'items_summary', header: 'Items', width: 320 },
+    { accessorKey: 'total_cost', header: 'Total Cost', type: 'currency', aggregation: 'sum', width: 150 },
+    { accessorKey: 'created_by', header: 'Created By', width: 170 },
+  ]
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -132,19 +155,24 @@ export default function ConsumptionEntry({ userName, isAdmin }) {
           </div>
 
           <div className="relative mb-3">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-pine/30" />
-            <input className="input pl-9" placeholder="Search raw material to add…" value={search} onChange={(e) => setSearch(e.target.value)} />
-            {search && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-leaf rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                {filteredInv.length === 0 && <div className="px-3 py-2 text-sm text-pine/40">No matching items.</div>}
-                {filteredInv.map((it) => (
-                  <button key={it.id} type="button" onClick={() => addLine(it)} className="w-full text-left px-3 py-2 text-sm hover:bg-leaf/40 flex justify-between">
-                    <span>{it.name}</span>
-                    <span className="text-xs text-pine/40">{it.unit} · {fmtBDT(latestCost[it.id] || 0)}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            <Combobox
+              items={filteredInv.map((it) => ({
+                value: it.id,
+                label: it.name,
+                sublabel: `${it.unit} · ${fmtBDT(latestCost[it.id] || 0)}`,
+              }))}
+              value=""
+              onChange={(nextValue) => {
+                const selected = filteredInv.find((it) => it.id === nextValue)
+                if (selected) addLine(selected)
+              }}
+              searchValue={search}
+              onSearchValueChange={setSearch}
+              placeholder="Search raw material to add…"
+              searchPlaceholder="Search raw material to add…"
+              emptyText="No matching items."
+              triggerClassName="input"
+            />
           </div>
 
           {lines.length > 0 ? (
@@ -200,37 +228,19 @@ export default function ConsumptionEntry({ userName, isAdmin }) {
         </div>
         <button className="btn-ghost !py-1 ml-auto" onClick={loadAll}><RotateCcw size={13} /> Refresh</button>
       </div>
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="th">Entry No</th>
-              <th className="th">Date</th>
-              <th className="th">Location</th>
-              <th className="th">Reason</th>
-              <th className="th">Items</th>
-              <th className="th text-right">Total Cost</th>
-              <th className="th">By</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleEntries.map((e) => (
-              <tr key={e.id} className="hover:bg-leaf/20 align-top">
-                <td className="td font-semibold text-sm">{e.entry_no}</td>
-                <td className="td text-sm">{fmtDate(e.entry_date)}</td>
-                <td className="td"><span className="status-chip bg-pine/10 text-pine">{e.location}</span></td>
-                <td className="td text-xs text-pine/60">{e.reason?.replace('_', ' ')}</td>
-                <td className="td text-xs text-pine/70">{(e.consumption_lines || []).map((l) => `${l.item_name} (${l.qty})`).join(', ') || '—'}</td>
-                <td className="td text-right money font-semibold">{fmtBDT(entryTotal(e))}</td>
-                <td className="td text-xs text-pine/50">{e.created_by || '—'}</td>
-              </tr>
-            ))}
-            {visibleEntries.length === 0 && (
-              <tr><td className="td text-pine/50 text-center py-6" colSpan={7}>কোনো consumption entry নেই{historyLoc !== 'ALL' ? ` "${historyLoc}" location-এর জন্য` : ''}।</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <AedsDataGrid
+        title="Consumption History"
+        subtitle="Location-wise internal usage and wastage register"
+        data={historyRows}
+        columns={historyColumns}
+        pageSize={100}
+        emptyText={
+          historyLoc === 'ALL'
+            ? 'No consumption entries found.'
+            : `No consumption entries for ${historyLoc}.`
+        }
+        getRowId={(row) => row.id}
+      />
     </div>
   )
 }

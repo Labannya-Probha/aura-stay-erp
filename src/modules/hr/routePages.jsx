@@ -1,0 +1,17 @@
+export {
+  HrEmployeeEntryPage,
+  HrServiceBookPage,
+  HrNomineePage,
+  HrLeaveEntryPage,
+  HrCompLeavePage,
+  HrFestivalLeavePage,
+  HrPayrollConfigPage,
+  HrPayrollGenPage,
+  HrPayrollRegisterPage,
+  HrLetterPage,
+  HrAttendanceRegisterPage,
+  HrEmployeeRegisterPage,
+  HrServiceBookRegPage,
+  HrIncidentsPage,
+  HrCompliancePage,
+} from '../../pages/HrOffice.jsx'

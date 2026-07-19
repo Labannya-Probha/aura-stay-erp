@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { loadReservationConfig, saveReservationConfig } from '../lib/reservationConfig'
 import { fmtBDT } from '../lib/helpers'
 import SearchableSelect from '../components/SearchableSelect.jsx'
@@ -541,11 +541,23 @@ function ReservationPoliciesCard() {
 /* ------------------------------------------------------------------ */
 /*  ROOT — Admin & Superuser only                                       */
 /* ------------------------------------------------------------------ */
-export default function CmsPortal({ role, isAdmin }) {
+export default function CmsPortal({ role, isAdmin, entityId, hidePageHeader = false }) {
   const location = useLocation()
   const isSuperuser = role === 'SUPERUSER'
   const isAdminPlus = isSuperuser || isAdmin
   const [selectedId, setSelectedId] = useState(CMS_TABS[0].id)
+
+  useEffect(() => {
+    if (!isAdminPlus) return
+    if (entityId && CMS_TABS.some((t) => t.id === entityId)) {
+      setSelectedId(entityId)
+      return
+    }
+    const requested = new URLSearchParams(location.search).get('entity')
+    if (requested && CMS_TABS.some((t) => t.id === requested)) {
+      setSelectedId(requested)
+    }
+  }, [entityId, location.search, isAdminPlus])
 
   if (!isAdminPlus) {
     return (
@@ -560,17 +572,14 @@ export default function CmsPortal({ role, isAdmin }) {
 
   const entity = CMS_ENTITIES.find((e) => e.id === selectedId) || CMS_ENTITIES[0]
 
-  useEffect(() => {
-    const requested = new URLSearchParams(location.search).get('entity')
-    if (requested && CMS_TABS.some((t) => t.id === requested)) {
-      setSelectedId(requested)
-    }
-  }, [location.search])
-
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-pine mb-1">Configuration</h1>
-      <p className="text-sm text-pine/60 mb-6">Create and edit master records used across Reservations, POS, Inventory and Accounting.</p>
+      {!hidePageHeader && (
+        <>
+          <h1 className="font-display text-2xl font-bold text-pine mb-1">Configuration</h1>
+          <p className="text-sm text-pine/60 mb-6">Create and edit master records used across Reservations, POS, Inventory and Accounting.</p>
+        </>
+      )}
       <div>
         {selectedId === 'reservation_policies'
           ? <ReservationPoliciesCard />

@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cva } from "class-variance-authority";
-import { Slot } from "radix-ui"
+import { Slot } from "@radix-ui/react-slot"
 
 import { cn } from "src/lib/utils"
 
@@ -9,16 +9,20 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        default:
+          'rounded-[9px] text-white border border-white/[0.18] hover:brightness-[1.06] hover:-translate-y-px active:translate-y-0',
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-transparent dark:hover:bg-input/30",
+          'rounded-[9px] text-pine bg-white border border-[--border-color] hover:bg-[#FAF8F5] hover:-translate-y-px hover:border-[rgb(var(--tenant-primary-rgb)_/_0.30)] hover:shadow-[0_8px_20px_rgba(23,23,23,0.08)] active:translate-y-0',
+        amber:
+          'rounded-[9px] text-white bg-gradient-to-br from-[#C89B5C] to-[#B38443] border border-white/[0.18] shadow-[0_8px_18px_rgba(184,134,11,0.16)] hover:brightness-105 hover:-translate-y-px hover:shadow-[0_11px_24px_rgba(184,134,11,0.24)] active:translate-y-0',
+        ghost:
+          'rounded-[9px] text-pine hover:bg-[#FAF8F5]',
+        destructive:
+          'rounded-[9px] bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        link:
+          'text-pine underline-offset-4 hover:underline',
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
-        ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         default:
@@ -39,23 +43,27 @@ const buttonVariants = cva(
   }
 )
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  asChild = false,
-  ...props
-}) {
-  const Comp = asChild ? Slot.Root : "button"
-
-  return (
-    <Comp
-      data-slot="button"
-      data-variant={variant}
-      data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props} />
-  );
-}
+const Button = React.forwardRef(
+  ({ className, variant, size, asChild = false, style, type, ...props }, ref) => {
+    const Comp = asChild ? Slot : 'button'
+    const buttonProps = asChild ? props : { ...props, type: type || 'button' }
+    // Apply dynamic background gradient for default variant using CSS variables
+    const dynamicStyle = variant === 'default' ? {
+      backgroundImage: 'linear-gradient(135deg, var(--brand-color), var(--brand-color))',
+      boxShadow: '0 8px 18px rgb(var(--tenant-primary-rgb) / 0.18)',
+      ...style
+    } : style
+    
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        style={dynamicStyle}
+        {...buttonProps}
+      />
+    )
+  },
+)
+Button.displayName = 'Button'
 
 export { Button, buttonVariants }

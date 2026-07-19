@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guest Payment Money Receipt</title>
+  <!--
+    Placeholder Variables (server-side templating reference):
+    {{logo_data_uri}}
+    {{resort_name}}
+    {{resort_address}}
+    {{resort_phone}}
+    {{resort_email}}
+    {{resort_bin_tin}}
+    {{receipt_no}}
+    {{receipt_date}}
+    {{guest_name}}
+    {{reservation_id}}
+    {{folio_no}}
+    {{room_no}}
+    {{checkin_date}}
+    {{checkout_date}}
+    {{payment_description}}
+    {{payment_mode}}
+    {{reference_no}}
+    {{amount_bdt}}
+    {{amount_in_words}}
+    {{balance_due_bdt}}
+    {{payment_status}}
+    {{received_by_name}}
+    {{received_by_designation}}
+    {{terms_note}}
+  -->
+  <style>
+    :root {
+      --pine: #1B4D2E;
+      --forest: #2E7D32;
+      --gold: #D4A017;
+      --cream: #F7F4EC;
+      --ink: #111827;
+      --muted: #4B5563;
+      --line: #1B4D2E;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: var(--cream);
+      color: var(--ink);
+      font-family: Inter, "Segoe UI", Arial, Helvetica, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.35;
+    }
+
+    .print-actions {
+      max-width: 800px;
+      margin: 0 auto 12px auto;
+      text-align: right;
+    }
+
+    .print-btn {
+      border: 1px solid var(--pine);
+      background: var(--pine);
+      color: #fff;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .receipt {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      border: 2px solid var(--line);
+      padding: 14px;
+    }
+
+    .mono {
+      font-family: "IBM Plex Mono", "Courier New", Courier, monospace;
+      letter-spacing: 0.2px;
+    }
+
+    .header {
+      border: 1px solid var(--line);
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 96px 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .logo-box {
+      width: 86px;
+      height: 86px;
+      border: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .logo-box img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .logo-fallback {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      padding: 6px;
+      display: none;
+    }
+
+    .resort-name {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.1;
+      color: var(--pine);
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .resort-meta {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--ink);
+    }
+
+    .title-row {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .receipt-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--pine);
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 4px 12px;
+      font-size: 12px;
+    }
+
+    .meta-grid .label {
+      color: var(--muted);
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .meta-grid .value {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .section {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      padding: 10px;
+    }
+
+    .section-title {
+      margin: 0 0 8px 0;
+      color: var(--forest);
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 5px;
+    }
+
+    .guest-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 14px;
+      font-size: 12px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 138px 1fr;
+      gap: 6px;
+      align-items: baseline;
+    }
+
+    .field-label {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .field-value {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .payment-table th,
+    .payment-table td {
+      border: 1px solid var(--line);
+      padding: 7px 8px;
+      vertical-align: top;
+    }
+
+    .payment-table th {
+      background: #f4f8f4;
+      color: var(--pine);
+      text-align: left;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .summary {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      padding: 10px;
+      font-size: 12px;
+    }
+
+    .summary .summary-row {
+      display: grid;
+      grid-template-columns: 170px 1fr;
+      gap: 8px;
+      margin-bottom: 6px;
+      align-items: baseline;
+    }
+
+    .summary .summary-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .status-pill {
+      display: inline-block;
+      border: 1px solid var(--gold);
+      color: var(--pine);
+      background: #fffdf6;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      text-transform: uppercase;
+    }
+
+    .signatures {
+      margin-top: 16px;
+      border: 1px solid var(--line);
+      padding: 14px 12px 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+
+    .sign-box {
+      min-height: 74px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+
+    .sign-line {
+      border-top: 1px solid var(--line);
+      height: 1px;
+      width: 100%;
+    }
+
+    .sign-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .sign-meta {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .footer {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .footer strong {
+      color: var(--ink);
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        margin: 0;
+        padding: 0;
+      }
+
+      .print-actions {
+        display: none !important;
+      }
+
+      .receipt {
+        max-width: none;
+        border-width: 1.5px;
+        margin: 0;
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 12px;
+      }
+
+      .header {
+        grid-template-columns: 1fr;
+      }
+
+      .logo-box {
+        margin: 0 auto;
+      }
+
+      .resort-name,
+      .resort-meta {
+        text-align: center;
+      }
+
+      .title-row {
+        grid-template-columns: 1fr;
+      }
+
+      .guest-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .signatures {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-actions">
+    <button class="print-btn" type="button" onclick="window.print()">Print Receipt</button>
+  </div>
+
+  <main class="receipt">
+    <header class="header">
+      <div class="logo-box">
+        <img src="{{logo_data_uri}}" alt="Novem Eco Resort Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+        <div class="logo-fallback">LOGO</div>
+      </div>
+      <div>
+        <h1 class="resort-name">{{resort_name}}</h1>
+        <div class="resort-meta">{{resort_address}}</div>
+        <div class="resort-meta">Phone: {{resort_phone}} | Email: {{resort_email}}</div>
+        <div class="resort-meta">BIN/TIN: <span class="mono">{{resort_bin_tin}}</span></div>
+      </div>
+    </header>
+
+    <section class="title-row">
+      <h2 class="receipt-title">Money Receipt</h2>
+      <div class="meta-grid">
+        <div class="label">Receipt No.</div>
+        <div class="value mono">{{receipt_no}}</div>
+        <div class="label">Date</div>
+        <div class="value mono">{{receipt_date}}</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h3 class="section-title">Guest Details</h3>
+      <div class="guest-grid">
+        <div class="field-row">
+          <div class="field-label">Guest Name</div>
+          <div class="field-value">{{guest_name}}</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Room No.</div>
+          <div class="field-value mono">{{room_no}}</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Reservation ID</div>
+          <div class="field-value mono">{{reservation_id}}</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Folio No.</div>
+          <div class="field-value mono">{{folio_no}}</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Check-in Date</div>
+          <div class="field-value mono">{{checkin_date}}</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Check-out Date</div>
+          <div class="field-value mono">{{checkout_date}}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h3 class="section-title">Payment Details</h3>
+      <table class="payment-table">
+        <thead>
+          <tr>
+            <th style="width: 36%;">Description</th>
+            <th style="width: 18%;">Payment Mode</th>
+            <th style="width: 24%;">Reference No.</th>
+            <th style="width: 22%;" class="text-right">Amount (BDT)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{payment_description}}</td>
+            <td>{{payment_mode}}</td>
+            <td class="mono">{{reference_no}}</td>
+            <td class="text-right mono">{{amount_bdt}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="summary">
+      <div class="summary-row">
+        <div class="field-label">Amount in Words</div>
+        <div class="field-value">{{amount_in_words}}</div>
+      </div>
+      <div class="summary-row">
+        <div class="field-label">Balance Due (BDT)</div>
+        <div class="field-value mono">{{balance_due_bdt}}</div>
+      </div>
+      <div class="summary-row">
+        <div class="field-label">Payment Status</div>
+        <div class="field-value"><span class="status-pill">{{payment_status}}</span></div>
+      </div>
+    </section>
+
+    <section class="signatures">
+      <div class="sign-box">
+        <div class="sign-line"></div>
+        <div class="sign-label">Received By</div>
+        <div class="sign-meta">{{received_by_name}} | {{received_by_designation}}</div>
+      </div>
+      <div class="sign-box">
+        <div class="sign-line"></div>
+        <div class="sign-label">Guest Signature</div>
+        <div class="sign-meta">Name: {{guest_name}}</div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div><strong>This is a computer-generated receipt.</strong></div>
+      <div>{{terms_note}}</div>
+    </footer>
+  </main>
+</body>
+</html>
