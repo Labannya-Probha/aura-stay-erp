@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { getReservationKpis } from "../services/reservations.service"
+import { useReservationRealtime } from "./useReservationRealtime"
 
 const DEFAULT_KPIS = {
   arrivals: 0,
@@ -11,21 +12,37 @@ const DEFAULT_KPIS = {
 export function useReservationKpis() {
   const [data, setData] = useState(DEFAULT_KPIS)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
 
-  useEffect(() => {
-    let active = true
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true)
+    setError("")
 
-    Promise.resolve().then(async () => {
+    try {
       const next = await getReservationKpis()
-      if (!active) return
       setData({ ...DEFAULT_KPIS, ...next })
+    } catch (loadError) {
+      setError(loadError?.message || "Reservation KPIs could not be loaded.")
+    } finally {
       setLoading(false)
-    })
-
-    return () => {
-      active = false
     }
   }, [])
 
-  return { data, loading }
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const realtime = useReservationRealtime(
+    () => load({ silent: true }),
+    { debounceMs: 350 }
+  )
+
+  return {
+    data,
+    loading,
+    error,
+    isLive: realtime.isLive,
+    realtimeStatus: realtime.status,
+    refresh: () => load({ silent: true }),
+  }
 }
