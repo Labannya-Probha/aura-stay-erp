@@ -9,7 +9,7 @@ const Sidebar = React.forwardRef(({ className, mobile = false, ...props }, ref) 
     data-slot="sidebar"
     className={cn(
       mobile
-        ? "aeds-sidebar fixed inset-y-0 left-0 z-50 flex h-full w-[300px] max-w-[88vw] flex-col overflow-hidden border-r border-[color-mix(in_srgb,var(--sidebar-text)_12%,transparent)] shadow-[0_40px_100px_rgba(15,23,42,0.5)] backdrop-blur-2xl"
+        ? "aeds-sidebar fixed inset-y-0 left-0 z-50 flex h-full w-[min(18.75rem,86vw)] flex-col overflow-hidden border-r border-[color-mix(in_srgb,var(--sidebar-text)_12%,transparent)] shadow-[0_40px_100px_rgba(15,23,42,0.5)] backdrop-blur-2xl"
         : "aeds-sidebar sticky top-0 hidden h-screen w-[var(--aeds-sidebar-width)] shrink-0 flex-col overflow-hidden border-r border-[color-mix(in_srgb,var(--sidebar-text)_10%,transparent)] shadow-[0_30px_70px_rgba(15,23,42,0.24)] lg:flex",
       className
     )}

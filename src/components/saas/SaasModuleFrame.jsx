@@ -2,7 +2,7 @@ import { LockKeyhole } from 'lucide-react'
 import { SAAS_MODULES, moduleForNav } from '../../lib/saasModules'
 
 export function SaasModuleFrame({ children }) {
-  return children
+  return <div className="saas-module-page min-w-0">{children}</div>
 }
 
 export function SaasModuleBlocked({ moduleId, company }) {
