@@ -81,6 +81,11 @@ export default function Dashboard({
   tasks,
   activities,
   refresh,
+  lastUpdated,
+  isLive,
+  notifications,
+  notificationsLoading,
+  notificationsError,
 }) {
   const navigate = useNavigate()
 
@@ -142,6 +147,9 @@ export default function Dashboard({
           />
           Refresh data
         </button>
+        <div className="text-xs font-bold text-slate-500" aria-live="polite">
+          {isLive ? "Live" : "Manual"} · {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString("en-BD", { hour: "2-digit", minute: "2-digit" })}` : "Waiting for data"}
+        </div>
       </div>
 
       {error && (
@@ -188,8 +196,9 @@ export default function Dashboard({
 
         <div className="xl:col-span-5">
           <NotificationsWidget
-            loading={loading}
-            data={activities}
+            loading={notificationsLoading || loading}
+            error={notificationsError}
+            data={notifications?.length ? notifications : activities}
           />
         </div>
       </div>

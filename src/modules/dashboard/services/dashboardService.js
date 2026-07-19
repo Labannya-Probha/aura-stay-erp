@@ -6,83 +6,53 @@ function safeArray(value) {
 }
 
 function safeObject(value, fallback = {}) {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? value
-    : fallback
+  return value && typeof value === "object" && !Array.isArray(value) ? value : fallback
 }
 
-async function rpcJson(name, fallback) {
-  const { data, error } = await supabase.rpc(name)
+async function rpcJson(name, fallback, tenantId) {
+  if (!supabase) throw new Error("Supabase is not configured.")
 
-  if (error) {
-    console.warn(`${name} failed:`, error.message)
+  const args = tenantId ? { p_tenant_id: tenantId } : undefined
+  let result = await supabase.rpc(name, args)
+
+  // Backward compatibility with existing RPCs that do not yet accept p_tenant_id.
+  if (result.error && tenantId && /p_tenant_id|function .* does not exist/i.test(result.error.message || "")) {
+    result = await supabase.rpc(name)
+  }
+
+  if (result.error) {
+    console.warn(`${name} failed:`, result.error.message)
     return fallback
   }
 
-  return data ?? fallback
+  return result.data ?? fallback
 }
 
-export async function getDashboardSummary() {
-  const data = await rpcJson("dashboard_summary", DASHBOARD_DEFAULT_DATA.summary)
-  return safeObject(data, DASHBOARD_DEFAULT_DATA.summary)
-}
+export async function getDashboardData({ tenantId } = {}) {
+  const calls = [
+    ["dashboard_summary", DASHBOARD_DEFAULT_DATA.summary],
+    ["dashboard_revenue_trend", []],
+    ["dashboard_occupancy_trend", []],
+    ["dashboard_housekeeping_summary", DASHBOARD_DEFAULT_DATA.housekeeping],
+    ["dashboard_restaurant_summary", DASHBOARD_DEFAULT_DATA.restaurant],
+    ["dashboard_operational_tasks", []],
+    ["dashboard_recent_activities", []],
+  ]
 
-export async function getRevenueTrend() {
-  const data = await rpcJson("dashboard_revenue_trend", [])
-  return safeArray(data)
-}
+  const results = await Promise.allSettled(
+    calls.map(([name, fallback]) => rpcJson(name, fallback, tenantId))
+  )
 
-export async function getOccupancyTrend() {
-  const data = await rpcJson("dashboard_occupancy_trend", [])
-  return safeArray(data)
-}
-
-export async function getHousekeepingSummary() {
-  const data = await rpcJson("dashboard_housekeeping_summary", DASHBOARD_DEFAULT_DATA.housekeeping)
-  return safeObject(data, DASHBOARD_DEFAULT_DATA.housekeeping)
-}
-
-export async function getRestaurantSummary() {
-  const data = await rpcJson("dashboard_restaurant_summary", DASHBOARD_DEFAULT_DATA.restaurant)
-  return safeObject(data, DASHBOARD_DEFAULT_DATA.restaurant)
-}
-
-export async function getOperationalTasks() {
-  const data = await rpcJson("dashboard_operational_tasks", [])
-  return safeArray(data)
-}
-
-export async function getRecentActivities() {
-  const data = await rpcJson("dashboard_recent_activities", [])
-  return safeArray(data)
-}
-
-export async function getDashboardData() {
-  const [
-    summary,
-    revenueTrend,
-    occupancyTrend,
-    housekeeping,
-    restaurant,
-    tasks,
-    activities,
-  ] = await Promise.all([
-    getDashboardSummary(),
-    getRevenueTrend(),
-    getOccupancyTrend(),
-    getHousekeepingSummary(),
-    getRestaurantSummary(),
-    getOperationalTasks(),
-    getRecentActivities(),
-  ])
+  const value = (index, fallback) =>
+    results[index].status === "fulfilled" ? results[index].value : fallback
 
   return {
-    summary,
-    revenueTrend,
-    occupancyTrend,
-    housekeeping,
-    restaurant,
-    tasks,
-    activities,
+    summary: safeObject(value(0, DASHBOARD_DEFAULT_DATA.summary), DASHBOARD_DEFAULT_DATA.summary),
+    revenueTrend: safeArray(value(1, [])),
+    occupancyTrend: safeArray(value(2, [])),
+    housekeeping: safeObject(value(3, DASHBOARD_DEFAULT_DATA.housekeeping), DASHBOARD_DEFAULT_DATA.housekeeping),
+    restaurant: safeObject(value(4, DASHBOARD_DEFAULT_DATA.restaurant), DASHBOARD_DEFAULT_DATA.restaurant),
+    tasks: safeArray(value(5, [])),
+    activities: safeArray(value(6, [])),
   }
 }
