@@ -1,6 +1,6 @@
 import { Bell } from "lucide-react"
 
-export default function NotificationsWidget({ loading = false, data = [] }) {
+export default function NotificationsWidget({ loading = false, error = "", data = [] }) {
   const rows = Array.isArray(data) ? data.slice(0, 4) : []
 
   return (
@@ -19,7 +19,9 @@ export default function NotificationsWidget({ loading = false, data = [] }) {
         <button type="button" className="text-xs font-black" style={{ color: "var(--tenant-primary, #1F6F78)" }}>View All</button>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-center text-xs font-bold text-red-700">{error}</div>
+      ) : loading ? (
         <div className="space-y-2.5">
           {[1, 2, 3].map((i) => <div key={i} className="h-9 animate-pulse rounded-xl" style={{ background: "rgb(var(--tenant-primary-rgb, 31 111 120) / 0.08)" }} />)}
         </div>
@@ -30,11 +32,11 @@ export default function NotificationsWidget({ loading = false, data = [] }) {
       ) : (
         <div className="space-y-1.5">
           {rows.map((item, index) => (
-            <div key={`${item.time}-${index}`} className="rounded-xl border px-3 py-2" style={{ borderColor: "rgb(var(--tenant-primary-rgb, 31 111 120) / 0.12)" }}>
+            <div key={item.id || `${item.time}-${index}`} className="rounded-xl border px-3 py-2" style={{ borderColor: "rgb(var(--tenant-primary-rgb, 31 111 120) / 0.12)" }}>
               <div className="truncate text-xs font-black" style={{ color: "var(--tenant-text, #0F172A)" }}>{item.title || "Notification"}</div>
               <div className="mt-0.5 flex items-center justify-between text-[11px] font-semibold" style={{ color: "var(--tenant-text-muted, #64748B)" }}>
-                <span className="truncate">{item.meta || "System"}</span>
-                <span>{item.time || "--:--"}</span>
+                <span className="truncate">{item.description || item.meta || item.module || "System"}</span>
+                <span>{item.created_at ? new Date(item.created_at).toLocaleTimeString("en-BD", { hour: "2-digit", minute: "2-digit" }) : item.time || "--:--"}</span>
               </div>
             </div>
           ))}
