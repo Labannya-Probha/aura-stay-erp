@@ -1,29 +1,23 @@
 
-IF OBJECT_ID(N'dbo.notifications', N'U') IS NULL
-BEGIN
-	CREATE TABLE notifications(
-		id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-		tenant_id UNIQUEIDENTIFIER,
-		user_id UNIQUEIDENTIFIER,
-		title NVARCHAR(MAX),
-		body NVARCHAR(MAX),
-		type NVARCHAR(255),
-		is_read BIT DEFAULT 0,
-		created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
-	);
-END;
+create table if not exists notifications(
+ id uuid primary key default gen_random_uuid(),
+ tenant_id uuid,
+ user_id uuid,
+ title text,
+ body text,
+ type text,
+ is_read boolean default false,
+ created_at timestamptz default now()
+);
 
-IF OBJECT_ID(N'dbo.activity_logs', N'U') IS NULL
-BEGIN
-	CREATE TABLE activity_logs(
-		id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-		tenant_id UNIQUEIDENTIFIER,
-		actor_id UNIQUEIDENTIFIER,
-		module NVARCHAR(255),
-		action NVARCHAR(255),
-		entity NVARCHAR(255),
-		entity_id NVARCHAR(255),
-		payload NVARCHAR(MAX),
-		created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
-	);
-END;
+create table if not exists activity_logs(
+ id uuid primary key default gen_random_uuid(),
+ tenant_id uuid,
+ actor_id uuid,
+ module text,
+ action text,
+ entity text,
+ entity_id text,
+ payload jsonb,
+ created_at timestamptz default now()
+);

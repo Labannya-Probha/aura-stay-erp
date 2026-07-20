@@ -1,1 +1,5 @@
-export default function AvailabilityTab({ onCreateReservation }) { return <div className="aeds-card p-6"><h2 className="text-xl font-black text-slate-950">Availability</h2><p className="mt-1 text-sm text-slate-500">Room availability and date-based booking control.</p><button onClick={() => onCreateReservation?.()} className="aeds-btn-primary mt-5 px-4 py-3 text-sm">Create Reservation</button></div> }
+import AvailabilityPage from "../availability/AvailabilityPage"
+
+export default function AvailabilityTab({ onCreateReservation }) {
+  return <AvailabilityPage onCreateReservation={onCreateReservation} />
+}

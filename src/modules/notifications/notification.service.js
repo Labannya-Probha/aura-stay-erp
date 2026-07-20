@@ -6,15 +6,6 @@ function requireSupabase() {
 
 export async function getUnreadNotifications({ limit = 50, tenantId } = {}) {
   requireSupabase()
-  let refreshArgs = tenantId ? { p_tenant_id: tenantId } : undefined
-  let refreshResult = await supabase.rpc("refresh_operational_notifications", refreshArgs)
-  if (refreshResult.error && tenantId && /p_tenant_id|function .* does not exist/i.test(refreshResult.error.message || "")) {
-    refreshResult = await supabase.rpc("refresh_operational_notifications")
-  }
-  if (refreshResult.error) {
-    console.warn("Operational notification refresh failed:", refreshResult.error.message)
-  }
-
   const args = { p_limit: limit }
   if (tenantId) args.p_tenant_id = tenantId
 
