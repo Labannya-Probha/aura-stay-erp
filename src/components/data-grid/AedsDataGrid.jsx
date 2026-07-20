@@ -24,6 +24,10 @@ import {
 import "./aeds-data-grid.css"
 import "./aeds-v6-phase5-grid.css"
 
+function columnKey(column) {
+  return column?.accessorKey || column?.id || String(column?.header || "column")
+}
+
 function formatValue(value, column) {
   if (value === null || value === undefined || value === "") return "—"
 
@@ -182,14 +186,14 @@ export default function AedsDataGrid({
   const [page, setPage] = useState(0)
   const [columnWidths, setColumnWidths] = useState({})
   const [columnOrder, setColumnOrder] = useState(
-    columns.map((column) => column.accessorKey)
+    columns.map((column) => columnKey(column))
   )
   const [columnVisibility, setColumnVisibility] = useState({})
 
   useEffect(() => {
     setColumnOrder((current) => {
       const incoming = columns.map(
-        (column) => column.accessorKey
+        (column) => columnKey(column)
       )
 
       return [
@@ -206,7 +210,7 @@ export default function AedsDataGrid({
   const visibleColumns = useMemo(() => {
     const byKey = new Map(
       columns.map((column) => [
-        column.accessorKey,
+        columnKey(column),
         column,
       ])
     )
@@ -222,7 +226,7 @@ export default function AedsDataGrid({
       )
       .filter(
         (column) =>
-          columnVisibility[column.accessorKey] !== false
+          columnVisibility[columnKey(column)] !== false
       )
   }, [columns, columnOrder, columnVisibility])
 
@@ -266,7 +270,7 @@ export default function AedsDataGrid({
   )
 
   const onSort = (column) => {
-    if (column.sortable === false) return
+    if (!column?.accessorKey || column.sortable === false) return
 
     setSort((current) => {
       if (current?.key !== column.accessorKey) {
@@ -276,7 +280,7 @@ export default function AedsDataGrid({
         }
       }
 
-      if (current.direction === "asc") {
+      if (current?.direction === "asc") {
         return {
           key: column.accessorKey,
           direction: "desc",
@@ -320,7 +324,7 @@ export default function AedsDataGrid({
   }
 
   const renderSortIcon = (column) => {
-    if (sort?.key !== column.accessorKey) return null
+    if (!column?.accessorKey || !sort || sort.key !== column.accessorKey) return null
 
     return sort.direction === "asc" ? (
       <ArrowUp size={12} />
@@ -453,7 +457,7 @@ export default function AedsDataGrid({
 
                   return (
                     <TableHead
-                      key={column.accessorKey}
+                      key={columnKey(column)}
                       className={`aeds-grid-align-${alignment(
                         column
                       )} ${
@@ -464,7 +468,7 @@ export default function AedsDataGrid({
                       style={{
                         width:
                           columnWidths[
-                            column.accessorKey
+                            columnKey(column)
                           ] ||
                           column.width ||
                           170,
@@ -486,7 +490,7 @@ export default function AedsDataGrid({
                           className="aeds-grid-mini"
                           onClick={() =>
                             moveColumn(
-                              column.accessorKey,
+                              columnKey(column),
                               "left"
                             )
                           }
@@ -500,7 +504,7 @@ export default function AedsDataGrid({
                           className="aeds-grid-mini"
                           onClick={() =>
                             moveColumn(
-                              column.accessorKey,
+                              columnKey(column),
                               "right"
                             )
                           }
@@ -514,7 +518,7 @@ export default function AedsDataGrid({
                           role="separator"
                           onClick={() =>
                             resizeColumn(
-                              column.accessorKey,
+                              columnKey(column),
                               32
                             )
                           }
@@ -522,7 +526,7 @@ export default function AedsDataGrid({
                             setColumnWidths(
                               (current) => ({
                                 ...current,
-                                [column.accessorKey]: 170,
+                                [columnKey(column)]: 170,
                               })
                             )
                           }
@@ -580,7 +584,7 @@ export default function AedsDataGrid({
                         {visibleColumns.map(
                           (column, index) => (
                             <TableCell
-                              key={column.accessorKey}
+                              key={columnKey(column)}
                               className={`aeds-grid-align-${alignment(
                                 column
                               )}`}
@@ -631,7 +635,7 @@ export default function AedsDataGrid({
                 {visibleColumns.map(
                   (column, index) => (
                     <TableCell
-                      key={column.accessorKey}
+                      key={columnKey(column)}
                       className={`aeds-grid-align-${alignment(
                         column
                       )}`}
