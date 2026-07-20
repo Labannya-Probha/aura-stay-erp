@@ -18,6 +18,7 @@ import ReservationPaymentsTab from "./tabs/ReservationPaymentsTab"
 import GuestCrmTab from "./tabs/GuestCrmTab"
 import QuotationsTab from "./tabs/QuotationsTab"
 import ReservationHistoryTab from "./tabs/ReservationHistoryTab"
+import ReservationWorkflowTab from "./tabs/ReservationWorkflowTab"
 import ReservationReportsTab from "./tabs/ReservationReportsTab"
 import ChannelManagerTab from "./tabs/ChannelManagerTab"
 
@@ -131,6 +132,9 @@ export default function ReservationsPage({
 
       case "quotations":
         return <QuotationsTab openReservation={openReservation} />
+
+      case "workflow":
+        return <ReservationWorkflowTab />
 
       case "history":
         return <ReservationHistoryTab />

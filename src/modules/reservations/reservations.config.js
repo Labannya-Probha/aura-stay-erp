@@ -37,6 +37,12 @@ export const RESERVATION_TABS = [
     permission: "reservations",
   },
   {
+    id: "workflow",
+    label: "Workflow & Approvals",
+    icon: "ShieldCheck",
+    permission: "reservations",
+  },
+  {
     id: "history",
     label: "History",
     icon: "History",
