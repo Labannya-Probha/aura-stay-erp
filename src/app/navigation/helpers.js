@@ -44,7 +44,7 @@ export function getActiveNavGroupTitle(currentTopId, pathname) {
 export function firstAccessiblePath(role, privileges, modulesEnabled = null) {
   for (const id of ALL_NAV_IDS) {
     if (!isModuleEnabled(id, modulesEnabled, role)) continue
-    if (id === 'dashboard' || id === 'nightaudit' || can(role, id, privileges)) {
+    if (can(role, id, privileges)) {
       return pathForNavId(id)
     }
   }
