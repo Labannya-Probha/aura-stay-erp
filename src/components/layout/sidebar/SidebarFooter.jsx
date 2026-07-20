@@ -1,6 +1,6 @@
 import { LogOut } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
-import { getTenantId } from '../../../lib/tenant'
+import { getTenantId, setTenantId } from '../../../lib/tenant'
 import { ROLE_LABELS } from '../../../lib/roles'
 import { SidebarFooter as SidebarFooterPrimitive } from 'src/components/ui/sidebar'
 import { Button } from 'src/components/ui/button'
@@ -9,6 +9,12 @@ export default function SidebarFooter({ company, role, userName }) {
   async function handleLogout() {
     const tenantId = getTenantId()
     await supabase.auth.signOut()
+    setTenantId(null)
+    try {
+      sessionStorage.removeItem('aura_tenant_slug')
+    } catch {
+      // ignore storage errors
+    }
 
     const { data: prop } = await supabase
       .from('properties')

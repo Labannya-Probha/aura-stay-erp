@@ -71,6 +71,29 @@ function getLoginSlug(pathname) {
   return pathParts.length > 1 ? pathParts[0] : undefined
 }
 
+function getTenantSlugHint(pathname) {
+  const pathSlug = getTenantSlugFromPath(pathname)
+  if (pathSlug) return pathSlug
+
+  try {
+    return sessionStorage.getItem("aura_tenant_slug") || null
+  } catch {
+    return null
+  }
+}
+
+function normalizeRole(rawRole) {
+  const value = String(rawRole || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_")
+
+  if (!value) return null
+  if (value === "SUPER_USER") return "SUPERUSER"
+  if (value === "FRONT_OFFICE") return "FRONT_OFFICE"
+  return value
+}
+
 export default function AppSession() {
   const location = useLocation()
 
@@ -171,27 +194,72 @@ export default function AppSession() {
       }
 
       const fallbackProfile = {
-        role: "FRONT_OFFICE",
+        role: null,
         full_name: session.user.email?.split("@")[0],
       }
 
-      const { data, error } = await supabase
+      let tenantIdHint = null
+      const slugHint = getTenantSlugHint(location.pathname)
+
+      if (slugHint) {
+        const { data: tenantRow } = await supabase
+          .from("properties")
+          .select("id")
+          .eq("slug", slugHint)
+          .limit(1)
+          .maybeSingle()
+
+        tenantIdHint = tenantRow?.id || null
+        if (tenantIdHint) setTenantId(tenantIdHint)
+      }
+
+      if (!tenantIdHint) {
+        tenantIdHint = getTenantId()
+      }
+
+      const { data: profileRows, error } = await supabase
         .from("app_users")
         .select("*")
-        .eq("auth_id", session.user.id)
-        .maybeSingle()
+        .or(`auth_id.eq.${session.user.id},id.eq.${session.user.id}`)
 
       if (!active) return
 
       if (error) {
         setProfile(fallbackProfile)
-        setTenantId(null)
-        await loadCompany(null)
+        if (tenantIdHint) {
+          setTenantId(tenantIdHint)
+          await loadCompany(tenantIdHint)
+        } else {
+          setTenantId(null)
+          await loadCompany(null)
+        }
         return
       }
 
-      const nextProfile = data || fallbackProfile
-      const tenantId = data?.tenant_id || null
+      let selectedProfile = null
+      if (Array.isArray(profileRows) && profileRows.length > 0) {
+        if (tenantIdHint) {
+          selectedProfile = profileRows.find((row) => row.tenant_id === tenantIdHint) || null
+        }
+        if (!selectedProfile) {
+          selectedProfile = profileRows[0]
+        }
+      }
+
+      if (!selectedProfile) {
+        await supabase.auth.signOut()
+        setTenantId(null)
+        setProfile(null)
+        setCompany(null)
+        setPrivileges(null)
+        return
+      }
+
+      const nextProfile = {
+        ...(selectedProfile || fallbackProfile),
+        role: normalizeRole(selectedProfile?.role || fallbackProfile.role),
+      }
+      const tenantId = selectedProfile?.tenant_id || tenantIdHint || null
 
       setProfile(nextProfile)
       setTenantId(tenantId)
@@ -207,7 +275,7 @@ export default function AppSession() {
     let active = true
 
     Promise.resolve().then(async () => {
-      const role = profile?.role
+      const role = normalizeRole(profile?.role)
       if (!role || !active) return
 
       const tenantId = getTenantId()
@@ -285,7 +353,15 @@ export default function AppSession() {
     )
   }
 
-  const role = profile?.role || "FRONT_OFFICE"
+  const role = normalizeRole(profile?.role)
+  if (!role) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 text-center text-slate-600">
+        Your user role is not configured for this tenant. Please contact an administrator.
+      </div>
+    )
+  }
+
   const isAdmin = role === "ADMIN" || role === "SUPERUSER"
   const userName = profile?.full_name || session.user?.email?.split("@")[0] || "User"
 

@@ -28,7 +28,7 @@ import StayAmendDialog from './dialog/StayAmendDialog'
 
 function hasPageAccess(page, { role, isAdmin, privileges }) {
   if (isAdmin || role === 'SUPERUSER') return true
-  return can(role, page.permission || 'dashboard', privileges)
+  return can(role, page.permission || 'frontoffice', privileges)
 }
 
 export default function FrontOfficePage({

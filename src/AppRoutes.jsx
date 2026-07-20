@@ -85,7 +85,7 @@ export default function AppRoutes({
 }) {
   const visibleReservationTabs = getVisibleReservationTabs({ role, isAdmin, privileges })
   const hasFrontOfficeAccess = (
-    can(role, 'dashboard', privileges) ||
+    can(role, 'frontoffice', privileges) ||
     can(role, 'nightaudit', privileges) ||
     can(role, 'facilities', privileges)
   )

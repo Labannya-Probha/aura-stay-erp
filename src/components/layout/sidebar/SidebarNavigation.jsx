@@ -351,7 +351,7 @@ function buildFrontOfficeChildren({ role, isAdmin, privileges, location }) {
   const activeSlug = normalizeFrontOfficeSlug(pathSlug || querySlug || 'room-rack')
 
   return FRONT_OFFICE_PAGES
-    .filter((page) => isAdmin || role === 'SUPERUSER' || can(role, page.permission || 'dashboard', privileges))
+    .filter((page) => isAdmin || role === 'SUPERUSER' || can(role, page.permission || 'frontoffice', privileges))
     .sort((a, b) => a.order - b.order)
     .map((page) => ({
       id: `fo-${page.id}`,
