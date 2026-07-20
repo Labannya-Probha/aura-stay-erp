@@ -9,8 +9,13 @@ function escapeCsv(value) {
   return text
 }
 
+function columnKey(column) {
+  return column?.accessorKey || column?.id || String(column?.header || "column")
+}
+
 function exportCsv({ title, columns, rows }) {
-  const csv = [columns.map((column) => column.header), ...rows.map((row) => columns.map((column) => row[column.accessorKey] ?? ""))]
+  const exportableColumns = columns.filter((column) => column?.accessorKey)
+  const csv = [exportableColumns.map((column) => column.header), ...rows.map((row) => exportableColumns.map((column) => row[column.accessorKey] ?? ""))]
     .map((line) => line.map(escapeCsv).join(","))
     .join("\n")
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
@@ -31,7 +36,7 @@ export default function AedsDataGridToolbar({ title, columns, rows, search, setS
       </div>
       <select className="aeds-grid-select rounded-xl border border-slate-200 bg-white px-2 text-sm" value={groupBy || ""} onChange={(event) => setGroupBy(event.target.value)}>
         <option value="">Group by: None</option>
-        {columns.map((column) => <option key={column.accessorKey} value={column.accessorKey}>{column.header}</option>)}
+        {columns.filter((column) => column?.accessorKey).map((column) => <option key={columnKey(column)} value={column.accessorKey}>{column.header}</option>)}
       </select>
       <AedsDataGridColumnMenu columns={columns} columnVisibility={columnVisibility} setColumnVisibility={setColumnVisibility} />
       <Button type="button" variant="outline" size="sm" onClick={() => window.print()}><Printer size={16} /> Print</Button>
