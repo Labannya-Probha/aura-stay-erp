@@ -4,29 +4,35 @@ function requireSupabase() {
   if (!supabase) throw new Error("Supabase is not configured.")
 }
 
+async function hasSession() {
+  const { data } = await supabase.auth.getSession()
+  return Boolean(data?.session)
+}
+
 export async function getUnreadNotifications({ limit = 50, tenantId } = {}) {
   requireSupabase()
-  const args = { p_limit: limit }
-  if (tenantId) args.p_tenant_id = tenantId
+  if (!(await hasSession())) return []
 
-  let result = await supabase.rpc("notification_center_feed", args)
-  if (result.error && tenantId && /p_tenant_id|function .* does not exist/i.test(result.error.message || "")) {
-    result = await supabase.rpc("notification_center_feed", { p_limit: limit })
-  }
+  // DB function reads tenant from JWT app_metadata/current_tenant_id(); no tenant arg required.
+  const result = await supabase.rpc("notification_center_feed", { p_limit: limit })
   if (result.error) throw result.error
   return Array.isArray(result.data) ? result.data : []
 }
 
 export async function markNotificationRead(id) {
   requireSupabase()
+  if (!(await hasSession())) return false
   const { error } = await supabase.rpc("mark_notification_read", { p_notification_id: id })
   if (error) throw error
+  return true
 }
 
 export async function markAllNotificationsRead() {
   requireSupabase()
+  if (!(await hasSession())) return 0
   const { error } = await supabase.rpc("mark_all_notifications_read")
   if (error) throw error
+  return 1
 }
 
 export function subscribeToNotifications({ tenantId, onInsert, onChange }) {

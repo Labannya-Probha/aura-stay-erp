@@ -11,6 +11,7 @@ import RegistrationCard from '../components/print/RegistrationCard.jsx'
 import GuestBill from '../components/print/GuestBill.jsx'
 import Mushak63 from '../components/print/Mushak63.jsx'
 import { exportXLSX } from '../lib/helpers'
+import { sanitizeHtml } from '../lib/sanitize'
 import {
   ArrowLeft, MessageCircle, Mail, CheckCircle2, LogIn, BedDouble,
   Plus, Trash2, Printer, FileDown, Receipt, BadgeCheck, Ban, Pencil, Save,
@@ -886,7 +887,7 @@ function Overview({
               {(editForm.terms_conditions || company?.terms_conditions) ? (
                 <div className="text-sm text-pine/70 bg-leaf/20 rounded-lg p-3 min-h-[72px] max-h-48 overflow-y-auto">
                   {/<[a-z][\s\S]*>/i.test(editForm.terms_conditions || company?.terms_conditions || '')
-                    ? <div dangerouslySetInnerHTML={{ __html: editForm.terms_conditions || company?.terms_conditions }} />
+                    ? <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(editForm.terms_conditions || company?.terms_conditions) }} />
                     : <div style={{ whiteSpace: 'pre-wrap' }}>{editForm.terms_conditions || company?.terms_conditions}</div>
                   }
                 </div>

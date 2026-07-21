@@ -1,5 +1,6 @@
 import { fmtBDT, fmtDate, nightsBetween, computeCharge, rateFor, todayISO } from '../../lib/helpers'
 import { getCompanyLogo, getCompanyName } from '../../theme/branding.service'
+import { sanitizeHtml } from '../../lib/sanitize'
 
 export default function Quotation({ res, guest, resRooms, company, taxConfig, terms, roomRate, roomCount, discountPct, validDays }) {
   const rate = rateFor(taxConfig, 'ROOM', todayISO())
@@ -91,7 +92,7 @@ export default function Quotation({ res, guest, resRooms, company, taxConfig, te
       {terms && (
         <div style={{ marginTop: 14, fontSize: 10.5, lineHeight: 1.6, borderTop: `1px solid ${line}`, paddingTop: 8 }}>
           {/<[a-z][\s\S]*>/i.test(terms)
-            ? <div dangerouslySetInnerHTML={{ __html: terms }} />
+            ? <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(terms) }} />
             : <div style={{ whiteSpace: 'pre-wrap' }}>{terms}</div>
           }
         </div>

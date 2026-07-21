@@ -30,15 +30,24 @@ export function useDashboard({ realtime = true, tenantId } = {}) {
   const [lastUpdated, setLastUpdated] = useState(null)
   const requestIdRef = useRef(0)
   const mountedRef = useRef(true)
+  const inFlightRef = useRef(false)
+  const queuedSilentRef = useRef(null)
 
   useEffect(() => () => {
     mountedRef.current = false
   }, [])
 
-  const load = useCallback(async ({ silent = false } = {}) => {
+  const load = useCallback(async ({ silent = false, showRefreshing = true } = {}) => {
+    if (inFlightRef.current) {
+      // Coalesce bursts of realtime events into a single follow-up refresh.
+      queuedSilentRef.current = queuedSilentRef.current ?? silent
+      return
+    }
+
+    inFlightRef.current = true
     const requestId = ++requestIdRef.current
     try {
-      if (silent) setRefreshing(true)
+      if (silent && showRefreshing) setRefreshing(true)
       else setLoading(true)
       setError("")
 
@@ -52,9 +61,17 @@ export function useDashboard({ realtime = true, tenantId } = {}) {
       console.error("Dashboard load failed:", err)
       setError(err?.message || "Dashboard data could not be loaded.")
     } finally {
+      inFlightRef.current = false
       if (mountedRef.current && requestId === requestIdRef.current) {
         setLoading(false)
         setRefreshing(false)
+      }
+
+      if (mountedRef.current && queuedSilentRef.current !== null) {
+        const nextSilent = queuedSilentRef.current
+        queuedSilentRef.current = null
+        // Background follow-up keeps UI stable during realtime churn.
+        void load({ silent: nextSilent, showRefreshing: false })
       }
     }
   }, [tenantId])
@@ -66,7 +83,7 @@ export function useDashboard({ realtime = true, tenantId } = {}) {
   useDashboardRealtime({
     enabled: realtime,
     tenantId,
-    onChange: () => load({ silent: true }),
+    onChange: () => load({ silent: true, showRefreshing: false }),
   })
 
   return {
@@ -76,7 +93,7 @@ export function useDashboard({ realtime = true, tenantId } = {}) {
     lastUpdated,
     isLive: Boolean(realtime),
     ...data,
-    refresh: () => load({ silent: true }),
+    refresh: () => load({ silent: true, showRefreshing: true }),
   }
 }
 

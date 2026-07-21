@@ -14,8 +14,9 @@ export function subscribeToReservationChanges({
   }
 
   const scopedTenantId = tenantId || NO_TENANT
+  const channelName = `reservations:${scopedTenantId}:${Math.random().toString(36).slice(2, 8)}`
   const channel = supabase
-    .channel(`reservations:${scopedTenantId}`)
+    .channel(channelName)
     .on(
       "postgres_changes",
       {

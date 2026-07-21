@@ -5,7 +5,8 @@ import { getTenantId } from "../../lib/tenant"
 
 export default function DashboardPage({ company, userName }) {
   const tenantId = getTenantId()
-  const dashboard = useDashboard({ realtime: true, tenantId })
+  // Without tenant context, global realtime subscriptions can flood refresh events.
+  const dashboard = useDashboard({ realtime: Boolean(tenantId), tenantId })
   const notifications = useNotificationCenter({ tenantId, limit: 8 })
 
   return (
