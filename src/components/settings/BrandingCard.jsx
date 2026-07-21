@@ -7,6 +7,7 @@ import { Save, Building2, Image, Upload } from 'lucide-react'
 import { extractLogoPalette } from '../../theme'
 import { darken, getReadableText, mix } from '../../theme/color.utils'
 import { Combobox } from '../ui/combobox'
+import { sanitizeHtml } from '../../lib/sanitize'
 
 const TENANT_BRANDING_FIELDS = [
   'logo_url',
@@ -87,7 +88,7 @@ function RichTextEditor({ initialHtml, onSave, saveLabel = 'Save' }) {
   // This avoids React re-rendering the div and resetting cursor position
   useEffect(() => {
     if (editorRef.current) {
-      editorRef.current.innerHTML = initialHtml || ''
+      editorRef.current.innerHTML = sanitizeHtml(initialHtml || '')
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -102,7 +103,7 @@ function RichTextEditor({ initialHtml, onSave, saveLabel = 'Save' }) {
   }
 
   const handleSave = async () => {
-    const html = editorRef.current?.innerHTML || ''
+    const html = sanitizeHtml(editorRef.current?.innerHTML || '')
     setSaving(true)
     await onSave(html)
     setSaving(false)
@@ -111,7 +112,7 @@ function RichTextEditor({ initialHtml, onSave, saveLabel = 'Save' }) {
   }
 
   const togglePreview = () => {
-    const html = editorRef.current?.innerHTML || ''
+    const html = sanitizeHtml(editorRef.current?.innerHTML || '')
     setPreviewHtml(html)
     setPreview((v) => !v)
   }

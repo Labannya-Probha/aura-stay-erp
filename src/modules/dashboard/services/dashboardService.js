@@ -1,6 +1,8 @@
 import { supabase } from "../../../lib/supabase"
 import { DASHBOARD_DEFAULT_DATA } from "../types/dashboard.types"
 
+const RPC_TIMEOUT_MS = 6000
+
 function safeArray(value) {
   return Array.isArray(value) ? value : []
 }
@@ -12,12 +14,20 @@ function safeObject(value, fallback = {}) {
 async function rpcJson(name, fallback, tenantId) {
   if (!supabase) throw new Error("Supabase is not configured.")
 
+  const withTimeout = (promise) =>
+    Promise.race([
+      promise,
+      new Promise((resolve) => {
+        window.setTimeout(() => resolve({ data: fallback, error: { message: `RPC timeout: ${name}` } }), RPC_TIMEOUT_MS)
+      }),
+    ])
+
   const args = tenantId ? { p_tenant_id: tenantId } : undefined
-  let result = await supabase.rpc(name, args)
+  let result = await withTimeout(supabase.rpc(name, args))
 
   // Backward compatibility with existing RPCs that do not yet accept p_tenant_id.
   if (result.error && tenantId && /p_tenant_id|function .* does not exist/i.test(result.error.message || "")) {
-    result = await supabase.rpc(name)
+    result = await withTimeout(supabase.rpc(name))
   }
 
   if (result.error) {
