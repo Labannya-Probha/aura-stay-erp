@@ -1,52 +1,8 @@
-import { fmtBDT, fmtDate } from '../../lib/helpers'
+import { fmtBDT } from '../../lib/helpers'
 import { parsePaymentReference } from '../../lib/paymentNumber'
-import { getCompanyLogo, getCompanyName, getTenantDisplayName } from '../../theme/branding.service'
+import { getCompanyLogo, getCompanyName } from '../../theme/branding.service'
 
-const PINE = 'var(--print-primary, #1B4D2E)'
-const ACCENT = 'var(--print-accent, #2E7D32)'
-const GOLD = '#D4A017'
-const LINE = 'var(--print-line, rgba(27,77,46,0.22))'
-const MUTE = 'var(--print-muted, #6b7280)'
-const INK = 'var(--print-ink, #111827)'
-const CREAM = '#F7F4EC'
-
-const labelStyle = {
-  color: MUTE,
-  fontSize: 9,
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-}
-
-const valueStyle = {
-  color: INK,
-  fontSize: 10,
-  fontWeight: 700,
-}
-
-const moneyStyle = {
-  fontVariantNumeric: 'tabular-nums',
-  fontFeatureSettings: 'tnum',
-  fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
-}
-
-function row(label, value) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: 6, alignItems: 'baseline' }}>
-      <span style={labelStyle}>{label}</span>
-      <span style={valueStyle}>{value || '---'}</span>
-    </div>
-  )
-}
-
-function buildVerifyUrl(paymentNo) {
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${origin}/verify/payment/${encodeURIComponent(paymentNo || 'unknown')}`
-}
-
-function qrUrl(value) {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=1&data=${encodeURIComponent(value || '')}`
-}
+const DEFAULT_ADDRESS = 'Bishamoni, Radhanagar, Sreemangal, Moulvibazar'
 
 function pickLogo(company) {
   return getCompanyLogo(company)
@@ -59,7 +15,10 @@ function makeInitials(text) {
     .filter(Boolean)
 
   if (!words.length) return 'CO'
-  return words.slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('')
+  return words
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join('')
 }
 
 function formatReceiptDate(value) {
@@ -83,12 +42,51 @@ function normalizeReceiptNo(paymentNo, receivedDate, fallbackId) {
   return `MR-${y}${m}${d}-${serial}`
 }
 
+function toFieldRows(labelValuePairs) {
+  return labelValuePairs.map(([label, value]) => ({
+    label,
+    value: value || '---',
+  }))
+}
+
 function amountInWords(value) {
   const amount = Number(value || 0)
   if (!amount) return 'Zero BDT only'
 
-  const small = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
-  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+  const small = [
+    '',
+    'One',
+    'Two',
+    'Three',
+    'Four',
+    'Five',
+    'Six',
+    'Seven',
+    'Eight',
+    'Nine',
+    'Ten',
+    'Eleven',
+    'Twelve',
+    'Thirteen',
+    'Fourteen',
+    'Fifteen',
+    'Sixteen',
+    'Seventeen',
+    'Eighteen',
+    'Nineteen',
+  ]
+  const tens = [
+    '',
+    '',
+    'Twenty',
+    'Thirty',
+    'Forty',
+    'Fifty',
+    'Sixty',
+    'Seventy',
+    'Eighty',
+    'Ninety',
+  ]
 
   const underThousand = (n) => {
     let out = ''
@@ -127,124 +125,166 @@ function amountInWords(value) {
   return `${toIndianWords(taka)} BDT only`
 }
 
-function ReceiptCopy({ payment, company, copyLabel }) {
+function OfficeCopy({ payment, company }) {
   const parsed = parsePaymentReference(payment?.reference)
   const paymentNoRaw = parsed.paymentNo || payment?.payment_id || payment?.id || 'N/A'
   const receiptNo = normalizeReceiptNo(paymentNoRaw, payment?.received_date, payment?.id)
-  const ref = parsed.reference || '---'
   const reservationNo = payment?.reservations?.res_no || '---'
-  const reservationName = payment?.reservations?.reservation_name || payment?.reservations?.guests?.full_name || '---'
-  const verifyUrl = buildVerifyUrl(receiptNo)
-  const roomNo = (payment?.reservations?.reservation_rooms || [])
-    .map((r) => r?.rooms?.room_no)
-    .filter(Boolean)
-    .join(', ') || '---'
+  const reservationName =
+    payment?.reservations?.reservation_name || payment?.reservations?.guests?.full_name || '---'
+  const roomNo =
+    (payment?.reservations?.reservation_rooms || [])
+      .map((r) => r?.rooms?.room_no)
+      .filter(Boolean)
+      .join(', ') || '---'
   const amount = Number(payment?.amount || 0)
   const amountWords = amountInWords(amount)
-  const balanceDue = Number(payment?.balance_due ?? payment?.due_amount ?? payment?.reservations?.balance ?? 0)
+  const balanceDue = Number(
+    payment?.balance_due ?? payment?.due_amount ?? payment?.reservations?.balance ?? 0,
+  )
   const statusText = balanceDue > 0 ? 'Balance Due' : 'Paid in Full'
+  const paymentMode = payment?.method || 'CARD'
 
   const orgName = company?.company_name || getCompanyName(company) || 'Company'
-  const tenantName = getTenantDisplayName(company) || 'Tenant'
-  const orgTagline = company?.software_name || tenantName
   const logo = pickLogo(company)
   const initials = makeInitials(orgName)
-  const resortAddress = company?.address || 'Bishamoni, Radhanagar, Sreemangal, Moulvibazar'
+  const companyAddress = company?.address || DEFAULT_ADDRESS
+  const paymentClass = payment?.payment_class || 'REGULAR'
+  const receivedBy = payment?.received_by || 'Demo Superuser'
+
+  const guestRows = toFieldRows([
+    ['Guest Name', reservationName],
+    ['Reservation ID', reservationNo],
+    ['Folio No', reservationNo],
+    ['Room No', roomNo],
+    ['Check-In', formatReceiptDate(payment?.reservations?.check_in)],
+    ['Check-Out', formatReceiptDate(payment?.reservations?.check_out)],
+  ])
+
+  const receiptRows = toFieldRows([
+    ['Receipt No', receiptNo],
+    ['Date', formatReceiptDate(payment?.received_date)],
+    ['Received By', receivedBy],
+    ['Payment Class', paymentClass],
+  ])
 
   return (
-    <section className="print-copy" style={{ border: `1px solid ${PINE}`, padding: 10, position: 'relative', background: '#fff' }}>
-      <header style={{ border: `1px solid ${PINE}`, padding: 8, marginBottom: 8, display: 'grid', gridTemplateColumns: '72px 1fr auto', gap: 8, alignItems: 'center' }}>
-        <div style={{ width: 64, height: 64, border: `1px solid ${PINE}`, display: 'grid', placeItems: 'center', overflow: 'hidden', background: '#fff' }}>
-            {logo ? (
-              <img src={logo} alt={`${orgName} logo`} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4 }} />
-            ) : (
-              <div style={{ fontWeight: 900, color: PINE, fontSize: 18 }}>{initials}</div>
-            )}
+    <section className="mx-auto w-full max-w-[840px] border-2 border-pine bg-white p-4 text-[12px] text-slate-900 print:max-w-none print:p-2">
+      <header className="grid grid-cols-[72px_1fr_auto] items-center gap-3 border border-pine p-3">
+        <div className="grid h-[64px] w-[64px] place-items-center overflow-hidden border border-pine bg-white">
+          {logo ? (
+            <img src={logo} alt={`${orgName} logo`} className="h-full w-full object-contain p-1" />
+          ) : (
+            <span className="text-lg font-black text-pine">{initials}</span>
+          )}
         </div>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 900, color: PINE, lineHeight: 1.1, textTransform: 'uppercase' }}>{orgName}</div>
-          <div style={{ color: INK, fontSize: 10 }}>{resortAddress}</div>
-          <div style={{ color: INK, fontSize: 10 }}>Phone: {company?.phone || '---'} | Email: {company?.email || '---'}</div>
-          <div style={{ color: INK, fontSize: 10 }}>BIN/TIN: <span style={moneyStyle}>{company?.tin || company?.bin || '---'}</span></div>
-          <div style={{ color: MUTE, fontSize: 9 }}>{orgTagline}</div>
+          <h1 className="text-xl font-black uppercase tracking-wide text-pine">{orgName}</h1>
+          <p className="text-[11px] text-slate-700">{companyAddress}</p>
+          <p className="text-[11px] text-slate-700">
+            Phone: {company?.phone || '---'} | Email: {company?.email || '---'}
+          </p>
+          <p className="font-mono text-[11px] text-slate-700">
+            BIN/TIN: {company?.tin || company?.bin || '---'}
+          </p>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ display: 'inline-block', border: `1px solid ${GOLD}`, background: CREAM, padding: '2px 8px', fontSize: 9, fontWeight: 800, color: PINE, marginBottom: 4 }}>
-            {copyLabel}
+        <div className="text-right">
+          <div className="inline-flex border border-amber-600 bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-pine">
+            OFFICE COPY
           </div>
-          <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: '0.08em', color: PINE }}>MONEY RECEIPT</div>
-          <div style={{ fontSize: 9, color: MUTE }}>English Copy</div>
+          <div className="mt-1 text-[24px] font-black tracking-[0.12em] text-pine">
+            MONEY RECEIPT
+          </div>
+          <div className="text-[10px] text-slate-500">English Copy</div>
         </div>
       </header>
 
-      <div style={{ border: `1px solid ${PINE}`, marginBottom: 8, padding: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <div style={{ display: 'grid', gap: 4, fontSize: 10 }}>
-          {row('Guest Name', reservationName)}
-          {row('Reservation ID', reservationNo)}
-          {row('Folio No.', reservationNo)}
-          {row('Room No.', roomNo)}
-          {row('Check-in', formatReceiptDate(payment?.reservations?.check_in))}
-          {row('Check-out', formatReceiptDate(payment?.reservations?.check_out))}
+      <div className="mt-3 grid gap-3 border border-pine p-3 md:grid-cols-2">
+        <div className="space-y-1.5">
+          {guestRows.map((row) => (
+            <div key={row.label} className="grid grid-cols-[130px_1fr] items-baseline gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.04em] text-slate-500">
+                {row.label}
+              </span>
+              <span className="font-semibold text-slate-900">{row.value}</span>
+            </div>
+          ))}
         </div>
-        <div style={{ display: 'grid', gap: 4, fontSize: 10 }}>
-          {row('Receipt No.', <span style={moneyStyle}>{receiptNo}</span>)}
-          {row('Date', <span style={moneyStyle}>{formatReceiptDate(payment?.received_date)}</span>)}
-          {row('Received By', payment?.received_by || 'Accounts User')}
-          {row('Payment Class', payment?.payment_class || 'SETTLEMENT')}
+        <div className="space-y-1.5">
+          {receiptRows.map((row) => (
+            <div key={row.label} className="grid grid-cols-[130px_1fr] items-baseline gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.04em] text-slate-500">
+                {row.label}
+              </span>
+              <span className="font-semibold text-slate-900">{row.value}</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div style={{ border: `1px solid ${PINE}`, marginBottom: 8, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+      <div className="mt-3 overflow-hidden border border-pine">
+        <table className="w-full border-collapse text-[12px]">
           <thead>
-            <tr>
-              <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: `1px solid ${PINE}`, borderRight: `1px solid ${PINE}`, color: PINE, background: CREAM }}>Description</th>
-              <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: `1px solid ${PINE}`, borderRight: `1px solid ${PINE}`, color: PINE, background: CREAM }}>Payment Mode</th>
-              <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: `1px solid ${PINE}`, borderRight: `1px solid ${PINE}`, color: PINE, background: CREAM }}>Reference No.</th>
-              <th style={{ textAlign: 'right', padding: '6px 8px', borderBottom: `1px solid ${PINE}`, color: PINE, background: CREAM }}>Amount (BDT)</th>
+            <tr className="bg-amber-50 text-pine">
+              <th className="border-b border-r border-pine px-2 py-1.5 text-left font-bold">
+                Description
+              </th>
+              <th className="border-b border-r border-pine px-2 py-1.5 text-left font-bold">
+                Payment Mode
+              </th>
+              <th className="border-b border-pine px-2 py-1.5 text-right font-bold">
+                Amount (BDT)
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td style={{ padding: '6px 8px', borderRight: `1px solid ${PINE}` }}>Reservation Folio Payment</td>
-              <td style={{ padding: '6px 8px', borderRight: `1px solid ${PINE}` }}>{payment?.method || '---'}</td>
-              <td style={{ ...moneyStyle, padding: '6px 8px', borderRight: `1px solid ${PINE}` }}>{ref}</td>
-              <td style={{ ...moneyStyle, textAlign: 'right', padding: '6px 8px', fontWeight: 700 }}>{fmtBDT(amount)}</td>
+              <td className="border-r border-pine px-2 py-1.5">Reservation Folio Payment</td>
+              <td className="border-r border-pine px-2 py-1.5">{paymentMode}</td>
+              <td className="px-2 py-1.5 text-right font-mono font-bold">{fmtBDT(amount)}</td>
             </tr>
             <tr>
-              <td colSpan={3} style={{ padding: '7px 8px', borderTop: `1px solid ${PINE}`, textAlign: 'right', fontWeight: 800, color: PINE }}>TOTAL RECEIVED</td>
-              <td style={{ ...moneyStyle, padding: '7px 8px', borderTop: `1px solid ${PINE}`, textAlign: 'right', fontWeight: 900, color: PINE }}>{fmtBDT(amount)}</td>
+              <td
+                colSpan={2}
+                className="border-t border-pine px-2 py-1.5 text-right font-extrabold text-pine"
+              >
+                TOTAL RECEIVED
+              </td>
+              <td className="border-t border-pine px-2 py-1.5 text-right font-mono text-[13px] font-black text-pine">
+                {fmtBDT(amount)}
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div style={{ border: `1px solid ${PINE}`, padding: 8, marginBottom: 8, fontSize: 10 }}>
-        <div style={{ marginBottom: 5 }}><span style={{ fontWeight: 700 }}>Amount in Words:</span> {amountWords}</div>
-        <div style={{ marginBottom: 5 }}><span style={{ fontWeight: 700 }}>Balance Due:</span> <span style={moneyStyle}>{fmtBDT(balanceDue)}</span></div>
-        <div><span style={{ fontWeight: 700 }}>Status:</span> <span style={{ border: `1px solid ${GOLD}`, padding: '1px 6px', fontSize: 9, fontWeight: 700, color: PINE, background: CREAM }}>{statusText}</span></div>
+      <div className="mt-3 space-y-1 border border-pine p-3 text-[12px]">
+        <p>
+          <span className="font-bold">Amount in Words:</span> {amountWords}
+        </p>
+        <p>
+          <span className="font-bold">Balance Due:</span>{' '}
+          <span className="font-mono font-semibold">{fmtBDT(balanceDue)}</span>
+        </p>
+        <p>
+          <span className="font-bold">Status:</span>{' '}
+          <span className="inline-flex border border-amber-600 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-pine">
+            {statusText}
+          </span>
+        </p>
       </div>
 
-      <div style={{ border: `1px solid ${PINE}`, padding: '10px 8px', marginBottom: 8, display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'end' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ borderTop: `1px solid ${PINE}`, height: 14 }} />
-          <div style={{ fontSize: 10, fontWeight: 700 }}>Received By</div>
-          <div style={{ fontSize: 9, color: MUTE }}>{payment?.received_by || 'Accounts User'}</div>
+      <div className="mt-3 grid grid-cols-2 gap-6 border border-pine p-3">
+        <div className="pt-5 text-center">
+          <div className="border-t border-pine" />
+          <p className="mt-1 font-semibold">Received By</p>
+          <p className="text-[11px] text-slate-500">{receivedBy}</p>
         </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ borderTop: `1px solid ${PINE}`, height: 14 }} />
-          <div style={{ fontSize: 10, fontWeight: 700 }}>Guest Signature</div>
-          <div style={{ fontSize: 9, color: MUTE }}>{reservationName}</div>
+        <div className="pt-5 text-center">
+          <div className="border-t border-pine" />
+          <p className="mt-1 font-semibold">Guest Signature</p>
+          <p className="text-[11px] text-slate-500">{reservationName}</p>
         </div>
-        <div style={{ textAlign: 'center' }}>
-          <img src={qrUrl(verifyUrl)} alt="Payment verify QR" style={{ width: 54, height: 54, border: `1px solid ${PINE}`, padding: 1, background: '#fff' }} />
-          <div className="print-accent" style={{ color: ACCENT, fontSize: 8, marginTop: 2 }}>Scan to verify</div>
-        </div>
-      </div>
-
-      <div style={{ border: `1px solid ${PINE}`, padding: '6px 8px', fontSize: 9, color: MUTE, textAlign: 'center' }}>
-        <div style={{ color: INK, fontWeight: 700 }}>This is a computer-generated receipt.</div>
-        <div>All payments are subject to resort policy and verification. Powered by {tenantName}.</div>
       </div>
     </section>
   )
@@ -254,10 +294,11 @@ export default function ReservationPaymentReceipt({ payment, company }) {
   if (!payment) return null
 
   return (
-    <div className="print-doc" style={{ maxWidth: '192mm', margin: '0 auto', display: 'grid', gap: 12, color: INK, fontFamily: "Inter, 'Segoe UI', Arial, sans-serif" }}>
-      <ReceiptCopy payment={payment} company={company} copyLabel="OFFICE COPY" />
-      <div style={{ borderTop: `1px dashed ${LINE}`, marginTop: 2 }} />
-      <ReceiptCopy payment={payment} company={company} copyLabel="GUEST COPY" />
+    <div
+      className="print-doc mx-auto w-full text-slate-900"
+      style={{ fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif" }}
+    >
+      <OfficeCopy payment={payment} company={company} />
     </div>
   )
 }

@@ -6,7 +6,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error(
-    'SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY must all be set for the reporting API to boot.'
+    'SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY must all be set for the reporting API to boot.',
   )
 }
 
@@ -20,6 +20,8 @@ const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 })
+
+export { supabaseAdmin }
 
 export const requireAuth = () => async (req, res, next) => {
   try {
@@ -65,15 +67,17 @@ export const requireAuth = () => async (req, res, next) => {
   }
 }
 
-export const requireRole = (...allowedRoles) => (req, res, next) => {
-  if (!req.authUser) {
-    return res.status(401).json({ error: 'Not authenticated', code: 401 })
+export const requireRole =
+  (...allowedRoles) =>
+  (req, res, next) => {
+    if (!req.authUser) {
+      return res.status(401).json({ error: 'Not authenticated', code: 401 })
+    }
+    if (!allowedRoles.includes(req.authUser.role)) {
+      return res.status(403).json({
+        error: `Role ${req.authUser.role} is not allowed for this operation`,
+        code: 403,
+      })
+    }
+    next()
   }
-  if (!allowedRoles.includes(req.authUser.role)) {
-    return res.status(403).json({
-      error: `Role ${req.authUser.role} is not allowed for this operation`,
-      code: 403,
-    })
-  }
-  next()
-}

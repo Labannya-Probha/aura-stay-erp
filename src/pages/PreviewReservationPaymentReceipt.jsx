@@ -4,19 +4,24 @@ import { getCompanySettingsQuery } from '../lib/companySettings'
 
 const samplePayment = {
   id: 'preview-1',
-  payment_id: 'MR-2026-00000001',
-  reservation_id: 'RES-001',
-  received_date: '2026-07-18',
-  amount: 12000,
-  method: 'CASH',
-  reference: 'MR-2026-00000001|General Collection',
-  received_by: 'Accounts User',
-  paid_by_party: 'Member / Donor Collection',
-  payment_class: 'SETTLEMENT',
+  payment_id: 'MR-20260714-0012',
+  reservation_id: 'RES-DEMO-2026-00000003',
+  received_date: '2026-07-14',
+  amount: 5245,
+  method: 'CARD',
+  reference: 'MR-20260714-0012|Reservation Folio Payment',
+  received_by: 'Demo Superuser',
+  payment_class: 'REGULAR',
+  balance_due: 0,
   reservations: {
-    res_no: 'RES-2026-000021',
-    reservation_name: 'Member / Donor Name',
+    res_no: 'RES-DEMO-2026-00000003',
+    reservation_name: 'Nirvik',
+    check_in: '2026-07-12',
+    check_out: '2026-07-14',
+    balance: 0,
+    reservation_rooms: [{ rooms: { room_no: '201' } }],
     guests: {
+      full_name: 'Nirvik',
       phone: '01XXXXXXXXX',
     },
   },
@@ -30,7 +35,7 @@ export default function PreviewReservationPaymentReceipt() {
 
     const loadCompany = async () => {
       const { data } = await getCompanySettingsQuery(
-        'tenant_id,tenant_name,name,company_name,address,phone,email,tin,bin,logo_url,software_name,primary_color,accent_color,secondary_color'
+        'tenant_id,tenant_name,name,company_name,address,phone,email,tin,bin,logo_url,software_name,primary_color,accent_color,secondary_color',
       )
         .limit(1)
         .maybeSingle()
@@ -49,7 +54,9 @@ export default function PreviewReservationPaymentReceipt() {
   return (
     <div className="min-h-screen bg-[#f5f6f8] py-6 px-2 sm:px-4">
       <div className="mx-auto max-w-[920px]">
-        <div className="mb-3 text-sm text-pine/70 font-semibold">Reservation Payment Receipt Preview</div>
+        <div className="mb-3 text-sm text-pine/70 font-semibold">
+          Reservation Payment Receipt Preview
+        </div>
         <div className="rounded-lg border border-slate-200 bg-white p-2 sm:p-4">
           <ReservationPaymentReceipt
             payment={samplePayment}
