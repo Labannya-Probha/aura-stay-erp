@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase'
 import { fmtDate, todayISO } from '../../../lib/helpers'
 import { X, Plus, Trash2 } from 'lucide-react'
 import { useLayerFocus } from 'src/hooks/accessibility/useLayerFocus'
+import { useGridKeyboardNavigation } from 'src/hooks/accessibility/useGridKeyboardNavigation'
 
 function ProfileTab({ emp, onSave, flash }) {
   const [f, setF] = useState(emp)
@@ -22,7 +23,7 @@ function ProfileTab({ emp, onSave, flash }) {
     if (error) flash(error.message)
     else {
       flash('Saved.')
-      onSave()
+      onSave?.()
     }
   }
   return (
@@ -91,7 +92,7 @@ function ProfileTab({ emp, onSave, flash }) {
           </select>
         </div>
       </div>
-      <button className="btn-primary" onClick={save}>
+      <button type="button" className="btn-primary" onClick={save}>
         Save Changes
       </button>
     </div>
@@ -134,9 +135,19 @@ function ServiceBookTab({ empId, flash, userName }) {
     }
   }
   const remove = async (id) => {
-    await supabase.from('service_book').delete().eq('id', id)
+    const { error } = await supabase.from('service_book').delete().eq('id', id)
+    if (error) {
+      flash(error.message)
+      return
+    }
     load()
   }
+
+  const { tableRef, onKeyDown } = useGridKeyboardNavigation({
+    columns: 4,
+    rows: Math.max(rows.length, 1),
+    enabled: true,
+  })
 
   return (
     <div className="space-y-3">
@@ -180,35 +191,90 @@ function ServiceBookTab({ empId, flash, userName }) {
             onChange={(e) => setF({ ...f, description: e.target.value })}
           />
         </div>
-        <button className="btn-primary justify-center" onClick={add}>
+        <button type="button" className="btn-primary justify-center" onClick={add}>
           <Plus size={14} /> Add
         </button>
       </div>
-      <table className="w-full text-sm">
+      <table
+        ref={tableRef}
+        className="w-full text-sm"
+        role="grid"
+        aria-label="Service book entries"
+        aria-rowcount={Math.max(rows.length, 1)}
+        aria-colcount={4}
+        onKeyDown={onKeyDown}
+      >
         <thead>
-          <tr>
-            <th className="th">Date</th>
-            <th className="th">Type</th>
-            <th className="th">Description</th>
-            <th className="th"></th>
+          <tr role="row">
+            <th className="th" role="columnheader">
+              Date
+            </th>
+            <th className="th" role="columnheader">
+              Type
+            </th>
+            <th className="th" role="columnheader">
+              Description
+            </th>
+            <th className="th" role="columnheader">
+              Actions
+            </th>
           </tr>
         </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td className="td money text-xs">{fmtDate(r.event_date)}</td>
-              <td className="td text-xs">{r.event_type}</td>
-              <td className="td text-sm">{r.description}</td>
-              <td className="td text-right">
-                <button onClick={() => remove(r.id)} className="text-red-400 hover:text-red-600">
+        <tbody role="rowgroup">
+          {rows.map((r, rowIndex) => (
+            <tr key={r.id} role="row" aria-rowindex={rowIndex + 1}>
+              <td
+                className="td money text-xs"
+                role="gridcell"
+                tabIndex={0}
+                data-grid-cell="true"
+                data-row-index={rowIndex}
+                data-col-index={0}
+              >
+                {fmtDate(r.event_date)}
+              </td>
+              <td
+                className="td text-xs"
+                role="gridcell"
+                tabIndex={0}
+                data-grid-cell="true"
+                data-row-index={rowIndex}
+                data-col-index={1}
+              >
+                {r.event_type}
+              </td>
+              <td
+                className="td text-sm"
+                role="gridcell"
+                tabIndex={0}
+                data-grid-cell="true"
+                data-row-index={rowIndex}
+                data-col-index={2}
+              >
+                {r.description}
+              </td>
+              <td
+                className="td text-right"
+                role="gridcell"
+                tabIndex={0}
+                data-grid-cell="true"
+                data-row-index={rowIndex}
+                data-col-index={3}
+              >
+                <button
+                  type="button"
+                  onClick={() => remove(r.id)}
+                  className="text-red-400 hover:text-red-600"
+                  aria-label={`Delete service entry ${rowIndex + 1}`}
+                >
                   <Trash2 size={13} />
                 </button>
               </td>
             </tr>
           ))}
           {rows.length === 0 && (
-            <tr>
-              <td className="td text-pine/40" colSpan={4}>
+            <tr role="row">
+              <td className="td text-pine/40" colSpan={4} role="gridcell">
                 No entries.
               </td>
             </tr>
@@ -246,9 +312,19 @@ function NomineesTab({ empId, flash }) {
     }
   }
   const remove = async (id) => {
-    await supabase.from('employee_nominees').delete().eq('id', id)
+    const { error } = await supabase.from('employee_nominees').delete().eq('id', id)
+    if (error) {
+      flash(error.message)
+      return
+    }
     load()
   }
+
+  const { tableRef, onKeyDown } = useGridKeyboardNavigation({
+    columns: 6,
+    rows: Math.max(rows.length, 1),
+    enabled: true,
+  })
 
   const totalShare = rows.reduce((s, r) => s + (+r.share_pct || 0), 0)
 
@@ -296,7 +372,7 @@ function NomineesTab({ empId, flash }) {
             onChange={(e) => setF({ ...f, phone: e.target.value })}
           />
         </div>
-        <button className="btn-primary justify-center" onClick={add}>
+        <button type="button" className="btn-primary justify-center" onClick={add}>
           <Plus size={14} /> Add
         </button>
       </div>
@@ -305,35 +381,112 @@ function NomineesTab({ empId, flash }) {
           Warning: total share is {totalShare}% (should be 100%)
         </div>
       )}
-      <table className="w-full text-sm">
+      <table
+        ref={tableRef}
+        className="w-full text-sm"
+        role="grid"
+        aria-label="Nominee entries"
+        aria-rowcount={Math.max(rows.length, 1)}
+        aria-colcount={6}
+        onKeyDown={onKeyDown}
+      >
         <thead>
-          <tr>
-            <th className="th">Name</th>
-            <th className="th">Relation</th>
-            <th className="th text-right">Share %</th>
-            <th className="th">NID</th>
-            <th className="th">Phone</th>
-            <th className="th"></th>
+          <tr role="row">
+            <th className="th" role="columnheader">
+              Name
+            </th>
+            <th className="th" role="columnheader">
+              Relation
+            </th>
+            <th className="th text-right" role="columnheader">
+              Share %
+            </th>
+            <th className="th" role="columnheader">
+              NID
+            </th>
+            <th className="th" role="columnheader">
+              Phone
+            </th>
+            <th className="th" role="columnheader">
+              Actions
+            </th>
           </tr>
         </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td className="td font-medium">{r.full_name}</td>
-              <td className="td text-xs">{r.relation}</td>
-              <td className="td text-right">{r.share_pct}%</td>
-              <td className="td text-xs">{r.nid_no || '—'}</td>
-              <td className="td text-xs">{r.phone || '—'}</td>
-              <td className="td text-right">
-                <button onClick={() => remove(r.id)} className="text-red-400 hover:text-red-600">
+        <tbody role="rowgroup">
+          {rows.map((r, rowIndex) => (
+            <tr key={r.id} role="row" aria-rowindex={rowIndex + 1}>
+              <td
+                className="td font-medium"
+                role="gridcell"
+                tabIndex={0}
+                data-grid-cell="true"
+                data-row-index={rowIndex}
+                data-col-index={0}
+              >
+                {r.full_name}
+              </td>
+              <td
+                className="td text-xs"
+                role="gridcell"
+                tabIndex={0}
+                data-grid-cell="true"
+                data-row-index={rowIndex}
+                data-col-index={1}
+              >
+                {r.relation}
+              </td>
+              <td
+                className="td text-right"
+                role="gridcell"
+                tabIndex={0}
+                data-grid-cell="true"
+                data-row-index={rowIndex}
+                data-col-index={2}
+              >
+                {r.share_pct}%
+              </td>
+              <td
+                className="td text-xs"
+                role="gridcell"
+                tabIndex={0}
+                data-grid-cell="true"
+                data-row-index={rowIndex}
+                data-col-index={3}
+              >
+                {r.nid_no || '—'}
+              </td>
+              <td
+                className="td text-xs"
+                role="gridcell"
+                tabIndex={0}
+                data-grid-cell="true"
+                data-row-index={rowIndex}
+                data-col-index={4}
+              >
+                {r.phone || '—'}
+              </td>
+              <td
+                className="td text-right"
+                role="gridcell"
+                tabIndex={0}
+                data-grid-cell="true"
+                data-row-index={rowIndex}
+                data-col-index={5}
+              >
+                <button
+                  type="button"
+                  onClick={() => remove(r.id)}
+                  className="text-red-400 hover:text-red-600"
+                  aria-label={`Delete nominee ${rowIndex + 1}`}
+                >
                   <Trash2 size={13} />
                 </button>
               </td>
             </tr>
           ))}
           {rows.length === 0 && (
-            <tr>
-              <td className="td text-pine/40" colSpan={6}>
+            <tr role="row">
+              <td className="td text-pine/40" colSpan={6} role="gridcell">
                 No nominees.
               </td>
             </tr>
@@ -371,7 +524,7 @@ export default function EmployeeProfileDrawer({ emp, onClose, flash, onSave, use
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={onClose}
+      onClick={() => onClose?.()}
     >
       <div
         ref={containerRef}
@@ -394,15 +547,28 @@ export default function EmployeeProfileDrawer({ emp, onClose, flash, onSave, use
               {emp.department ? ` · ${emp.department}` : ''}
             </div>
           </div>
-          <button data-autofocus onClick={onClose} className="text-pine/40 hover:text-pine">
+          <button
+            type="button"
+            data-autofocus
+            onClick={() => onClose?.()}
+            className="text-pine/40 hover:text-pine"
+            aria-label="Close employee profile drawer"
+          >
             <X size={18} />
           </button>
         </div>
-        <div className="flex gap-1 px-6 pt-3 border-b border-leaf/60">
+        <div
+          className="flex gap-1 px-6 pt-3 border-b border-leaf/60"
+          role="tablist"
+          aria-label="Employee profile tabs"
+        >
           {TABS.map((t) => (
             <button
+              type="button"
               key={t}
               onClick={() => setActiveTab(t)}
+              role="tab"
+              aria-selected={activeTab === t}
               className={`px-3 py-1.5 text-xs font-semibold rounded-t ${activeTab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}
             >
               {t}

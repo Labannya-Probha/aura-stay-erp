@@ -22,7 +22,7 @@ export default function HrLetterDrawer({ docType, onClose }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40"
-      onClick={onClose}
+      onClick={() => onClose?.()}
     >
       <div
         ref={containerRef}
@@ -36,7 +36,13 @@ export default function HrLetterDrawer({ docType, onClose }) {
           {docType || 'Letter'}
         </h2>
         <p className="text-pine/60 text-sm">Letter generation drawer — coming in next phase.</p>
-        <button data-autofocus className="btn-ghost w-full justify-center" onClick={onClose}>
+        <button
+          type="button"
+          data-autofocus
+          className="btn-ghost w-full justify-center"
+          onClick={() => onClose?.()}
+          aria-label="Close HR letter drawer"
+        >
           Close
         </button>
       </div>
