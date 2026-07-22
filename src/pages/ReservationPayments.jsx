@@ -276,7 +276,7 @@ export default function ReservationPayments({
       supabase
         .from('payments')
         .select(
-          'id,payment_id,reservation_id,received_date,amount,method,reference,received_by,paid_by_party,payment_class,source_module,reservations(res_no,reservation_name,check_in,check_out,primary_guest_id,guests:primary_guest_id(full_name,phone,email),reservation_rooms(rooms(room_no)),balance_due)',
+          'id,payment_id,reservation_id,received_date,amount,method,reference,received_by,paid_by_party,payment_class,source_module,reservations(res_no,reservation_name,check_in,check_out,primary_guest_id,guests:primary_guest_id(full_name,phone,email),reservation_rooms(rooms(room_no)))',
         )
         .eq('id', pm.id)
         .limit(1)
@@ -288,7 +288,10 @@ export default function ReservationPayments({
       return
     }
 
-    setPrintPaymentDoc(data)
+    setPrintPaymentDoc({
+      ...data,
+      balance_due: data?.balance_due ?? pm?.balance_due ?? pm?.due_amount ?? 0,
+    })
     flash('Opening print preview...')
   }
 
