@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: AuraStay
+    orgId: 1
+    folder: Aura Stay
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

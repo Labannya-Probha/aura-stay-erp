@@ -1,0 +1,75 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "tempo",
+        "uid": "Tempo"
+      },
+      "description": "Search recent traces for reporting API service",
+      "gridPos": {
+        "h": 18,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "dedicatedColumns": [],
+        "showHistogram": true,
+        "showTimeSeries": true,
+        "spanBar": {
+          "type": "Tag",
+          "tag": "http.method"
+        },
+        "tableType": "traces"
+      },
+      "targets": [
+        {
+          "limit": 20,
+          "query": "{ resource.service.name = \"aura-stay-reporting-api\" }",
+          "queryType": "traceql",
+          "refId": "A"
+        }
+      ],
+      "title": "Reporting API Traces",
+      "type": "traces"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["observability", "otel", "tempo"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Aura Stay API Tracing Overview",
+  "uid": "aurastay-api-tracing",
+  "version": 1,
+  "weekStart": ""
+}

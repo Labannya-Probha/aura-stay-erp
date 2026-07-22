@@ -7,6 +7,9 @@ import console from 'node:console'
 import process from 'node:process'
 import reportingRoutes from './reporting/routes.js'
 import posPrintRoutes from './posPrint/routes.js'
+import { requestContext } from './middleware/requestContext.js'
+import { errorHandler, initErrorTracking } from './middleware/errorTracking.js'
+import { initTelemetry, shutdownTelemetry } from './observability/telemetry.js'
 
 const app = express()
 const port = Number(process.env.PORT || 4000)
@@ -23,6 +26,7 @@ if (ALLOWED_ORIGINS.length === 0) {
 app.set('trust proxy', 1)
 
 app.use(helmet())
+app.use(requestContext)
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -52,6 +56,29 @@ app.get('/health', (req, res) => {
   res.json({ ok: true, service: 'aura-stay-reporting-api', time: new Date().toISOString() })
 })
 
-app.listen(port, () => {
-  console.log(`Aura Stay reporting API listening on :${port}`)
+app.use(errorHandler())
+
+async function bootstrap() {
+  await initTelemetry()
+  await initErrorTracking()
+
+  const server = app.listen(port, () => {
+    console.log(`Aura Stay reporting API listening on :${port}`)
+  })
+
+  const gracefulShutdown = async () => {
+    console.log('Shutting down API server...')
+    server.close(async () => {
+      await shutdownTelemetry()
+      process.exit(0)
+    })
+  }
+
+  process.on('SIGINT', gracefulShutdown)
+  process.on('SIGTERM', gracefulShutdown)
+}
+
+bootstrap().catch((error) => {
+  console.error('Server bootstrap failed:', error)
+  process.exit(1)
 })
