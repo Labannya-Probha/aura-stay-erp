@@ -6,6 +6,7 @@ dist/
 .vite/
 # local env files
 .env
+.env.test
 .env.local
 .env.*.local
 # logs
