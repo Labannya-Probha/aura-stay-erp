@@ -1,6 +1,5 @@
 import express from 'express'
 import { generateReport, getReport, listReports } from './reportService.js'
-import { toCsv, toPdfHtml } from './exporters.js'
 import { requireAuth } from '../middleware/auth.js'
 import { pdfReportQueue } from '../../queues/pdfReport.queue.js'
 
@@ -11,7 +10,24 @@ const toReportUser = (req) => ({
   name: req.authUser.email,
   role: req.authUser.role,
   reportCodes: req.authUser.reportCodes,
+  tenantId: req.authUser.tenantId,
 })
+
+const enqueueReportExport = async (req, format) => {
+  const job = await pdfReportQueue.add('generate', {
+    reportCode: req.params.reportCode,
+    params: req.body,
+    user: toReportUser(req),
+    format,
+  })
+
+  return {
+    jobId: job.id,
+    status: 'QUEUED',
+    format,
+    reportCode: req.params.reportCode,
+  }
+}
 
 const asyncRoute = (handler) => async (req, res, next) => {
   try {
@@ -35,23 +51,19 @@ router.post('/reports/:reportCode/generate', (req, res) => {
   res.json(generateReport(req.params.reportCode, req.body, toReportUser(req)))
 })
 
-router.post('/reports/:reportCode/export/csv', (req, res) => {
-  const payload = generateReport(req.params.reportCode, req.body, toReportUser(req))
-  res.setHeader('Content-Type', 'text/csv')
-  res.setHeader('Content-Disposition', `attachment; filename="${payload.report.code}.csv"`)
-  res.send(toCsv(payload))
-})
+router.post(
+  '/reports/:reportCode/export/csv',
+  asyncRoute(async (req, res) => {
+    const payload = await enqueueReportExport(req, 'csv')
+    res.status(202).json(payload)
+  }),
+)
 
 router.post(
   '/reports/:reportCode/export/excel',
   asyncRoute(async (req, res) => {
-    const job = await pdfReportQueue.add('generate', {
-      reportCode: req.params.reportCode,
-      params: req.body,
-      user: toReportUser(req),
-      format: 'excel',
-    })
-    res.status(202).json({ jobId: job.id, status: 'QUEUED' })
+    const payload = await enqueueReportExport(req, 'excel')
+    res.status(202).json(payload)
   }),
 )
 
@@ -68,12 +80,13 @@ router.get(
   }),
 )
 
-router.post('/reports/:reportCode/export/pdf', (req, res) => {
-  const payload = generateReport(req.params.reportCode, req.body, toReportUser(req))
-  res.setHeader('Content-Type', 'text/html; charset=utf-8')
-  res.setHeader('Content-Disposition', `inline; filename="${payload.report.code}.html"`)
-  res.send(toPdfHtml(payload))
-})
+router.post(
+  '/reports/:reportCode/export/pdf',
+  asyncRoute(async (req, res) => {
+    const payload = await enqueueReportExport(req, 'pdf')
+    res.status(202).json(payload)
+  }),
+)
 
 // Example admin route pattern:
 // router.delete('/reports/:reportCode', requireRole('SUPERUSER', 'ADMIN'), asyncRoute(async (req, res) => { ... }))
