@@ -95,7 +95,7 @@ router.get(
       tenant_id: tenantId,
       company: {
         name: company?.company_name || company?.name || null,
-        address: company?.address || 'Bishamoni, Radhanagar, Sreemangal, Moulvibazar',
+        address: company?.address || null,
         phone: company?.phone || null,
         email: company?.email || null,
         bin_tin: company?.tin || company?.bin || null,

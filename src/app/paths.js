@@ -9,10 +9,10 @@ export const PATHS = {
   LOGIN: '/login',
 
   // Front Office
-  FRONT_OFFICE: '/front-office',     // legacy module root
+  FRONT_OFFICE: '/front-office', // legacy module root
   FRONT_OFFICE_PAGE: '/front-office/:pageSlug',
   FRONTOFFICE: '/frontoffice',
-  DASHBOARD: '/dashboard',           // legacy alias → redirects to /front-office
+  DASHBOARD: '/dashboard', // legacy alias → redirects to /front-office
   FRONTOFFICE_RESERVATION_DETAIL: '/frontoffice/reservations/:id',
   NIGHTAUDIT: '/nightaudit',
   HOUSEKEEPING: '/housekeeping',
@@ -23,7 +23,7 @@ export const PATHS = {
   RESERVATION_DETAIL: '/reservations/:id',
   RESERVATION_PAYMENTS: '/reservation-payments',
   CALENDAR: '/calendar',
-  BOOKING_CALENDAR: '/booking-calendar',  // legacy alias → /calendar
+  BOOKING_CALENDAR: '/booking-calendar', // legacy alias → /calendar
   CRM: '/crm',
 
   // POS
@@ -53,6 +53,8 @@ export const PATHS = {
   VAT: '/vat',
   VAT_RETURN: '/vat-return',
   ACCOUNTING_PAYMENT_CONFIGURATION: '/accounting/payment-configuration',
+  ACCOUNTING_PAYMENT_POSTING: '/accounting/payment-posting',
+  ACCOUNTING_PAYMENT_SETTLEMENT: '/accounting/payment-settlement',
 
   // HR
   HR: '/hr',
@@ -86,7 +88,7 @@ export const PATHS = {
   HR_COMPLIANCE: '/hr/compliance',
 
   // Reports
-  REPORTS: "/reports",
+  REPORTS: '/reports',
   REPORTS_CASED_ALIAS: '/Reports',
   TENANT_REPORTS: '/:slug/reports',
   TENANT_REPORTS_CASED_ALIAS: '/:slug/Reports',

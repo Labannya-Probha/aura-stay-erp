@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { fmtDate, todayISO } from '../../../lib/helpers'
-import { X, Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
+import ModuleDialogShell from 'src/components/shared/ModuleDialogShell'
 import { useLayerFocus } from 'src/hooks/accessibility/useLayerFocus'
 import { useGridKeyboardNavigation } from 'src/hooks/accessibility/useGridKeyboardNavigation'
 
@@ -522,41 +523,18 @@ export default function EmployeeProfileDrawer({ emp, onClose, flash, onSave, use
 
   if (!emp) return null
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={() => onClose?.()}
+    <ModuleDialogShell
+      open={Boolean(emp)}
+      onClose={onClose}
+      title={emp.full_name}
+      subtitle={`${emp.designation || 'Designation not set'}${emp.department ? ` · ${emp.department}` : ''}`}
     >
       <div
         ref={containerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="employee-profile-drawer-title"
-        className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        role="region"
+        aria-label="Employee profile"
+        className="flex max-h-[70vh] flex-col"
       >
-        <div className="px-6 py-4 border-b border-leaf flex items-center justify-between">
-          <div>
-            <h2
-              id="employee-profile-drawer-title"
-              className="font-display font-bold text-pine text-lg"
-            >
-              {emp.full_name}
-            </h2>
-            <div className="text-xs text-pine/50">
-              {emp.designation}
-              {emp.department ? ` · ${emp.department}` : ''}
-            </div>
-          </div>
-          <button
-            type="button"
-            data-autofocus
-            onClick={() => onClose?.()}
-            className="text-pine/40 hover:text-pine"
-            aria-label="Close employee profile drawer"
-          >
-            <X size={18} />
-          </button>
-        </div>
         <div
           className="flex gap-1 px-6 pt-3 border-b border-leaf/60"
           role="tablist"
@@ -583,6 +561,6 @@ export default function EmployeeProfileDrawer({ emp, onClose, flash, onSave, use
           {activeTab === 'Nominees' && <NomineesTab empId={emp.id} flash={flash} />}
         </div>
       </div>
-    </div>
+    </ModuleDialogShell>
   )
 }

@@ -2,6 +2,7 @@
    FONTS — Inter
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/inter';
@@ -42,6 +43,7 @@
     --tenant-button: #1f6f78;
     --tenant-button-rgb: 31 111 120;
     --tenant-font-family: 'Inter', sans-serif;
+    --tenant-data-font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
     /* ── Design tokens ───────────────────────────────────────────────── */
     --brand-color: var(--tenant-primary);
@@ -348,6 +350,19 @@
   * {
     border-color: hsl(var(--border));
     outline-color: hsl(var(--ring));
+  }
+}
+
+@layer utilities {
+  .font-data {
+    font-family: var(--tenant-data-font-family);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .metric-value {
+    font-family: var(--tenant-data-font-family);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
   }
 }
 

@@ -1,13 +1,19 @@
-import React from 'react';
+import React from 'react'
+import { getCompanyName } from '../../theme/branding.service'
 
-export const ReportHeader = ({ title, showNBR }) => {
+export const ReportHeader = ({ title, showNBR, company }) => {
+  const companyName = getCompanyName(company) || company?.company_name || 'Company'
+  const companyAddress = company?.address || ''
+  const companyLogo = company?.logo_url || '/novem-logo.png'
+
   return (
     <div className="flex justify-between items-center border-b pb-4 mb-4">
       <div className="flex items-center gap-3">
-        <img src="/novem-logo.png" alt="Novem Logo" className="h-12 w-auto" />
+        <img src={companyLogo} alt={`${companyName} Logo`} className="h-12 w-auto" />
         <div>
-          <h1 className="text-xl font-bold">Novem Eco Resort</h1>
-          <p className="text-sm">Sreemangal, Bangladesh</p>
+          <h1 className="text-xl font-bold">{companyName}</h1>
+          {companyAddress ? <p className="text-sm">{companyAddress}</p> : null}
+          {title ? <p className="text-xs text-slate-500 mt-0.5">{title}</p> : null}
         </div>
       </div>
       {showNBR && (
@@ -17,5 +23,5 @@ export const ReportHeader = ({ title, showNBR }) => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}

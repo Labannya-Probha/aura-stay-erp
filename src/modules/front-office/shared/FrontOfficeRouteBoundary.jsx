@@ -1,9 +1,9 @@
-import ModuleErrorBoundary from 'src/components/boundary/ModuleErrorBoundary'
+import ModuleRouteBoundary from 'src/components/shared/ModuleRouteBoundary'
 
 export default function FrontOfficeRouteBoundary({ routeKey, children }) {
   return (
-    <ModuleErrorBoundary moduleName="Front Office" routeKey={routeKey}>
+    <ModuleRouteBoundary moduleName="Front Office" routeKey={routeKey}>
       {children}
-    </ModuleErrorBoundary>
+    </ModuleRouteBoundary>
   )
 }

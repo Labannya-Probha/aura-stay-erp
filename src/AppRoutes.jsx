@@ -65,6 +65,8 @@ import {
   MASTER_DATA_LEGACY_TAB_MAP,
 } from './modules/master-data/masterData.config'
 import { PaymentConfigurationPage } from './modules/accounting/payment-configuration'
+import { PaymentPostingPage } from './modules/accounting/payment-posting'
+import { PaymentSettlementPage } from './modules/accounting/payment-settlement'
 
 function CmsLegacyRedirect() {
   const location = useLocation()
@@ -536,6 +538,38 @@ export default function AppRoutes({
             userName={userName}
           >
             <PaymentConfigurationPage />
+          </SaasModuleRoute>
+        }
+      />
+      <Route
+        path={PATHS.ACCOUNTING_PAYMENT_POSTING}
+        element={
+          <SaasModuleRoute
+            moduleId="accounting"
+            role={role}
+            navId="accounting"
+            privileges={privileges}
+            modulesEnabled={modulesEnabled}
+            company={company}
+            userName={userName}
+          >
+            <PaymentPostingPage />
+          </SaasModuleRoute>
+        }
+      />
+      <Route
+        path={PATHS.ACCOUNTING_PAYMENT_SETTLEMENT}
+        element={
+          <SaasModuleRoute
+            moduleId="accounting"
+            role={role}
+            navId="accounting"
+            privileges={privileges}
+            modulesEnabled={modulesEnabled}
+            company={company}
+            userName={userName}
+          >
+            <PaymentSettlementPage />
           </SaasModuleRoute>
         }
       />

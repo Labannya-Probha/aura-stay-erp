@@ -35,7 +35,7 @@ export default function PreviewReservationPaymentReceipt() {
 
     const loadCompany = async () => {
       const { data } = await getCompanySettingsQuery(
-        'tenant_id,tenant_name,name,company_name,address,phone,email,tin,bin,logo_url,software_name,primary_color,accent_color,secondary_color',
+        'tenant_id,name,legal_name,property_name,address,phone,email,bin,logo_url,software_name,primary_color,accent_color,secondary_color,company_name:name,tenant_name:property_name,tin:bin',
       )
         .limit(1)
         .maybeSingle()

@@ -1,14 +1,5 @@
-import InventoryHub from '../../../pages/InventoryHub.jsx'
+import { POTab as InventoryPOTab } from './ProcurementFlowTabs.jsx'
 
-export default function PurchaseOrdersTab({ userName, role, isAdmin, onTabChange }) {
-  return (
-    <InventoryHub
-      userName={userName}
-      role={role}
-      isAdmin={isAdmin}
-      embedded
-      controlledTabId="purchase-orders"
-      onTabIdChange={onTabChange}
-    />
-  )
+export default function PurchaseOrdersTab(props) {
+  return <InventoryPOTab {...props} />
 }

@@ -2,6 +2,9 @@ import { useCallback, useMemo, useState } from 'react'
 import { CreditCard, Plus } from 'lucide-react'
 
 import { getTenantId } from '../../../lib/tenant.js'
+import Breadcrumb from 'src/components/layout/Breadcrumb'
+import ModuleLayout from 'src/components/shared/ModuleLayout'
+import LoadingState from 'src/components/feedback/LoadingState'
 import ConfirmDeleteDialog from './components/ConfirmDeleteDialog.jsx'
 import EmptyState from './components/EmptyState.jsx'
 import PaymentTerminalDialog from './components/PaymentTerminalDialog.jsx'
@@ -49,6 +52,12 @@ export default function PaymentConfigurationPage() {
     window.setTimeout(() => setNotice(''), 2800)
   }, [])
 
+  const breadcrumbItems = [
+    { label: 'Modules' },
+    { label: 'Accounting' },
+    { label: 'Payment Configuration', current: true },
+  ]
+
   const create = useCallback(() => {
     setSelectedTerminal(null)
     setEditorOpen(true)
@@ -83,7 +92,9 @@ export default function PaymentConfigurationPage() {
     async (terminal) => {
       try {
         await toggleTerminalStatus(terminal)
-        showNotice(`${terminal.name || terminal.terminal_name} ${terminal.is_active ? 'deactivated' : 'activated'}.`)
+        showNotice(
+          `${terminal.name || terminal.terminal_name} ${terminal.is_active ? 'deactivated' : 'activated'}.`,
+        )
       } catch {
         // Error is exposed by the hook.
       }
@@ -104,40 +115,33 @@ export default function PaymentConfigurationPage() {
   }, [deleteTarget, removeTerminal, showNotice])
 
   return (
-    <section className="space-y-5">
-      <header className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex gap-4">
-            <div className="grid h-11 w-11 place-items-center rounded-xl border bg-slate-50">
-              <CreditCard className="h-5 w-5" />
-            </div>
-
-            <div>
-              <h1 className="text-2xl font-semibold">Payment Configuration</h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Configure terminals, merchant references and settlement accounts.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={create}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-          >
-            <Plus className="h-4 w-4" />
-            New Terminal
-          </button>
-        </div>
-
-        <div className="grid border-t bg-slate-50/70 sm:grid-cols-4">
+    <ModuleLayout
+      moduleName="Accounting"
+      routeKey="accounting-payment-configuration"
+      eyebrow="Finance Operations"
+      title="Payment Configuration"
+      description="Configure terminals, merchant references and settlement accounts."
+      icon={CreditCard}
+      breadcrumb={<Breadcrumb items={breadcrumbItems} />}
+      actions={
+        <button
+          type="button"
+          onClick={create}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+        >
+          <Plus className="h-4 w-4" />
+          New Terminal
+        </button>
+      }
+      kpis={
+        <div className="grid border border-slate-200 bg-slate-50/70 sm:grid-cols-4 rounded-xl overflow-hidden">
           <Summary label="Configured" value={summary.total} />
           <Summary label="Active" value={summary.active} />
           <Summary label="Inactive" value={summary.inactive} />
           <Summary label="Settlement accounts" value={summary.mappedAccounts} />
         </div>
-      </header>
-
+      }
+    >
       {notice ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           {notice}
@@ -161,7 +165,12 @@ export default function PaymentConfigurationPage() {
         />
 
         {isLoading ? (
-          <Skeleton />
+          <LoadingState
+            variant="table"
+            label="Loading payment terminals"
+            rows={5}
+            className="rounded-none border-0"
+          />
         ) : terminals.length ? (
           <PaymentTerminalTable
             terminals={terminals}
@@ -197,28 +206,15 @@ export default function PaymentConfigurationPage() {
         onCancel={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
       />
-    </section>
+    </ModuleLayout>
   )
 }
 
 function Summary({ label, value }) {
   return (
-    <div className="border-b px-5 py-4 sm:border-b-0 sm:border-r">
+    <div className="border-b px-5 py-4 sm:border-b-0 sm:border-r last:sm:border-r-0">
       <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
-    </div>
-  )
-}
-
-function Skeleton() {
-  return (
-    <div className="animate-pulse p-5">
-      <div className="h-10 rounded bg-slate-100" />
-      <div className="mt-3 space-y-3">
-        {[1, 2, 3, 4].map((item) => (
-          <div key={item} className="h-14 rounded bg-slate-100" />
-        ))}
-      </div>
+      <p className="metric-value mt-1 text-2xl font-semibold">{value}</p>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 export { PaymentSettlementEngine, paymentSettlementEngine } from './PaymentSettlementEngine.js'
+export { default as PaymentSettlementPage } from './PaymentSettlementPage.jsx'
 export { buildSettlementJournal } from './settlementJournalBuilder.js'
 export { mapSettlementInput } from './settlementMapper.js'
 export { validateSettlement } from './settlementValidator.js'

@@ -19,7 +19,7 @@ const withTenant = (query) => {
   return query.eq('tenant_id', tenantId || NO_TENANT_SENTINEL)
 }
 
-export default function HousekeepingHub({ role, isAdmin, userName }) {
+export default function HousekeepingHub({ role, isAdmin, userName, embedded = false }) {
   const [rooms, setRooms] = useState([])
   const [requests, setRequests] = useState([])
   const [employees, setEmployees] = useState([])
@@ -237,12 +237,16 @@ export default function HousekeepingHub({ role, isAdmin, userName }) {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-pine mb-1">Housekeeping Hub</h1>
-      <p className="text-sm text-pine/60 mb-5">
-        Track and update the cleaning status of every room. Mark a room as Inspected to grant
-        check-out clearance.
-      </p>
-      <KPICards module="housekeeping" />
+      {!embedded ? (
+        <>
+          <h1 className="font-display text-2xl font-bold text-pine mb-1">Housekeeping Hub</h1>
+          <p className="text-sm text-pine/60 mb-5">
+            Track and update the cleaning status of every room. Mark a room as Inspected to grant
+            check-out clearance.
+          </p>
+          <KPICards module="housekeeping" />
+        </>
+      ) : null}
       {msg && <div className="mb-4 px-4 py-2 rounded-lg bg-red-50 text-red-600 text-sm">{msg}</div>}
       {!canEdit && (
         <div className="mb-4 px-4 py-2 rounded-lg bg-amber/10 text-amber text-sm">

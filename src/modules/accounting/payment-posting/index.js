@@ -1,5 +1,9 @@
 export { PaymentPostingEngine, paymentPostingEngine } from './PaymentPostingEngine.js'
-export { PaymentPostingQueueProcessor, paymentPostingQueueProcessor } from './queue/PaymentPostingQueueProcessor.js'
+export { default as PaymentPostingPage } from './PaymentPostingPage.jsx'
+export {
+  PaymentPostingQueueProcessor,
+  paymentPostingQueueProcessor,
+} from './queue/PaymentPostingQueueProcessor.js'
 export { default as paymentPostingQueueService } from './queue/paymentPostingQueue.service.js'
 export { default as usePaymentPosting } from './hooks/usePaymentPosting.js'
 export { buildPaymentJournal } from './paymentJournalBuilder.js'

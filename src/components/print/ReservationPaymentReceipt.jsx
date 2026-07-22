@@ -2,8 +2,6 @@ import { fmtBDT } from '../../lib/helpers'
 import { parsePaymentReference } from '../../lib/paymentNumber'
 import { getCompanyLogo, getCompanyName } from '../../theme/branding.service'
 
-const DEFAULT_ADDRESS = 'Bishamoni, Radhanagar, Sreemangal, Moulvibazar'
-
 function pickLogo(company) {
   return getCompanyLogo(company)
 }
@@ -152,7 +150,7 @@ function OfficeCopy({ payment, company }) {
   const orgName = company?.company_name || getCompanyName(company) || 'Company'
   const logo = pickLogo(company)
   const initials = makeInitials(orgName)
-  const companyAddress = company?.address || DEFAULT_ADDRESS
+  const companyAddress = company?.address || ''
   const paymentClass = payment?.payment_class || 'REGULAR'
   const receivedBy = payment?.received_by || 'Demo Superuser'
 
@@ -184,7 +182,7 @@ function OfficeCopy({ payment, company }) {
         </div>
         <div>
           <h1 className="text-xl font-black uppercase tracking-wide text-pine">{orgName}</h1>
-          <p className="text-[11px] text-slate-700">{companyAddress}</p>
+          {companyAddress ? <p className="text-[11px] text-slate-700">{companyAddress}</p> : null}
           <p className="text-[11px] text-slate-700">
             Phone: {company?.phone || '---'} | Email: {company?.email || '---'}
           </p>
