@@ -16,6 +16,9 @@ jobs:
           node-version: 22
           cache: "npm"
 
+      - name: Validate JSON key uniqueness
+        run: npm run check:json-keys
+
       - run: npm ci
 
       - name: Build
