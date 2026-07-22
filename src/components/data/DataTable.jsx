@@ -1,8 +1,9 @@
 import { ArrowDownUp } from 'lucide-react'
 import { isValidElement } from 'react'
 import { Button } from 'src/components/ui/button'
-import EmptyState from './EmptyState'
-import SkeletonRow from './SkeletonRow'
+import EmptyState from 'src/components/feedback/EmptyState'
+import LoadingState from 'src/components/feedback/LoadingState'
+import { useGridKeyboardNavigation } from 'src/hooks/accessibility/useGridKeyboardNavigation'
 import { cn } from 'src/lib/utils'
 
 /**
@@ -51,6 +52,11 @@ export default function DataTable({
   const hasBulkActions = Boolean(bulkActions)
   const hasRowActions = Boolean(rowActions)
   const columnCount = columns.length + (hasBulkActions ? 1 : 0) + (hasRowActions ? 1 : 0)
+  const { tableRef, onKeyDown } = useGridKeyboardNavigation({
+    columns: columnCount,
+    rows: Math.max(data.length, 1),
+    enabled: !loading,
+  })
 
   const toggleSort = (key) => {
     if (!onSortChange) return
@@ -68,11 +74,18 @@ export default function DataTable({
       ) : null}
 
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
-        <table className="min-w-full text-sm">
+        <table
+          ref={tableRef}
+          className="min-w-full text-sm"
+          role="grid"
+          aria-rowcount={Math.max(data.length, 1)}
+          aria-colcount={columnCount}
+          onKeyDown={onKeyDown}
+        >
           <thead className="border-b border-border bg-muted/30 text-left">
-            <tr>
+            <tr role="row">
               {hasBulkActions ? (
-                <th className="w-10 px-3 py-2">
+                <th className="w-10 px-3 py-2" role="columnheader">
                   <input
                     type="checkbox"
                     aria-label="Select all rows"
@@ -82,7 +95,11 @@ export default function DataTable({
                 </th>
               ) : null}
               {columns.map((column) => (
-                <th key={column.key} className="px-3 py-2 font-medium text-foreground">
+                <th
+                  key={column.key}
+                  className="px-3 py-2 font-medium text-foreground"
+                  role="columnheader"
+                >
                   {column.sortable ? (
                     <button
                       type="button"
@@ -98,46 +115,92 @@ export default function DataTable({
                   )}
                 </th>
               ))}
-              {hasRowActions ? <th className="w-20 px-3 py-2 text-right font-medium">Actions</th> : null}
+              {hasRowActions ? (
+                <th className="w-20 px-3 py-2 text-right font-medium" role="columnheader">
+                  Actions
+                </th>
+              ) : null}
             </tr>
           </thead>
 
-          <tbody>
+          <tbody role="rowgroup">
             {loading ? (
-              <SkeletonRow columnCount={columnCount} rows={4} />
+              <tr role="row">
+                <td colSpan={columnCount} className="px-3 py-4" role="gridcell">
+                  <LoadingState variant="table" label="Loading table" rows={4} />
+                </td>
+              </tr>
             ) : data.length ? (
               data.map((row, rowIndex) => {
                 const rowId = bulkActions?.getRowId?.(row, rowIndex) || String(row.id || rowIndex)
                 return (
-                  <tr key={rowId} className="border-b border-border/50 last:border-none">
+                  <tr
+                    key={rowId}
+                    className="border-b border-border/50 last:border-none"
+                    role="row"
+                    aria-rowindex={rowIndex + 1}
+                  >
                     {hasBulkActions ? (
-                      <td className="px-3 py-2">
+                      <td
+                        className="px-3 py-2"
+                        role="gridcell"
+                        tabIndex={0}
+                        data-grid-cell="true"
+                        data-row-index={rowIndex}
+                        data-col-index={0}
+                      >
                         <input
                           type="checkbox"
                           aria-label={`Select row ${rowIndex + 1}`}
                           checked={selectedIds.has(rowId)}
-                          onChange={(event) => bulkActions?.onToggleRow?.(rowId, event.target.checked, row)}
+                          onChange={(event) =>
+                            bulkActions?.onToggleRow?.(rowId, event.target.checked, row)
+                          }
                         />
                       </td>
                     ) : null}
                     {columns.map((column) => (
-                      <td key={column.key} className={cn('px-3 py-2 text-muted-foreground', column.className)}>
-                        {column.render ? column.render(row, rowIndex) : row[column.key] ?? '—'}
+                      <td
+                        key={column.key}
+                        className={cn('px-3 py-2 text-muted-foreground', column.className)}
+                        role="gridcell"
+                        tabIndex={0}
+                        data-grid-cell="true"
+                        data-row-index={rowIndex}
+                        data-col-index={
+                          (hasBulkActions ? 1 : 0) + columns.findIndex((c) => c.key === column.key)
+                        }
+                      >
+                        {column.render ? column.render(row, rowIndex) : (row[column.key] ?? '—')}
                       </td>
                     ))}
-                    {hasRowActions ? <td className="px-3 py-2 text-right">{rowActions?.(row, rowIndex)}</td> : null}
+                    {hasRowActions ? (
+                      <td
+                        className="px-3 py-2 text-right"
+                        role="gridcell"
+                        tabIndex={0}
+                        data-grid-cell="true"
+                        data-row-index={rowIndex}
+                        data-col-index={columnCount - 1}
+                      >
+                        {rowActions?.(row, rowIndex)}
+                      </td>
+                    ) : null}
                   </tr>
                 )
               })
             ) : (
-              <tr>
-                <td colSpan={columnCount} className="px-3 py-10">
+              <tr role="row">
+                <td colSpan={columnCount} className="px-3 py-10" role="gridcell">
                   {isValidElement(emptyState) ? (
                     emptyState
                   ) : (
                     <EmptyState
+                      variant="table"
                       title={emptyState?.title || 'No data found'}
-                      description={emptyState?.description || 'Try changing filters or creating a new record.'}
+                      description={
+                        emptyState?.description || 'Try changing filters or creating a new record.'
+                      }
                     />
                   )}
                 </td>

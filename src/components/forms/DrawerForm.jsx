@@ -27,14 +27,26 @@ const SIZE_CLASSES = {
  *   className?: string
  * }} props
  */
-export default function DrawerForm({ open, onOpenChange, title, subtitle, children, footer, size = 'md', className }) {
+export default function DrawerForm({
+  open,
+  onOpenChange,
+  title,
+  subtitle,
+  children,
+  footer,
+  size = 'md',
+  className,
+}) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        open={open}
+        initialFocusSelector="[data-autofocus], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])"
+        restoreFocus
         className={cn(
           'left-auto right-0 top-0 h-dvh w-full -translate-x-0 -translate-y-0 rounded-none p-0 sm:max-w-none',
           SIZE_CLASSES[size] || SIZE_CLASSES.md,
-          className
+          className,
         )}
       >
         <div className="flex h-full flex-col">
@@ -43,7 +55,11 @@ export default function DrawerForm({ open, onOpenChange, title, subtitle, childr
             {subtitle ? <DialogDescription>{subtitle}</DialogDescription> : null}
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
-          {footer ? <DialogFooter className="border-t border-border px-6 py-4 sm:justify-end">{footer}</DialogFooter> : null}
+          {footer ? (
+            <DialogFooter className="border-t border-border px-6 py-4 sm:justify-end">
+              {footer}
+            </DialogFooter>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

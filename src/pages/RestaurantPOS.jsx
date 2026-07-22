@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { fmtBDT, fmtDate, todayISO, rateFor, computeCharge, applyRounding, buildWorkflowDescription, updateDescriptionStage } from '../lib/helpers'
+import {
+  fmtBDT,
+  fmtDate,
+  todayISO,
+  rateFor,
+  computeCharge,
+  applyRounding,
+  buildWorkflowDescription,
+  updateDescriptionStage,
+} from '../lib/helpers'
 import PrintPortal from '../components/PrintPortal.jsx'
 import KPICards from '../components/KPICards.jsx'
 import { PosReceipt, KitchenTicket } from '../components/print/PosDocs.jsx'
@@ -10,8 +19,25 @@ import GuestPicker from '../components/GuestPicker.jsx'
 import { getTenantId, withTenantInsert, withTenantInsertMany } from '../lib/tenant'
 import { getCompanySettingsQuery, withTenantScope } from '../lib/companySettings'
 import { PATHS } from 'src/app/paths'
-import RestaurantTableGrid, { TABLE_BLOCKING_STATUSES, normalizeRestaurantTable } from 'src/modules/restaurant/components/RestaurantTableGrid.jsx'
-import { Plus, Minus, Trash2, ChefHat, Banknote, BedDouble, Search, Save, XCircle, RotateCcw, Receipt, Clock, FileText } from 'lucide-react'
+import RestaurantTableGrid, {
+  TABLE_BLOCKING_STATUSES,
+  normalizeRestaurantTable,
+} from 'src/modules/restaurant/components/RestaurantTableGrid.jsx'
+import {
+  Plus,
+  Minus,
+  Trash2,
+  ChefHat,
+  Banknote,
+  BedDouble,
+  Search,
+  Save,
+  XCircle,
+  RotateCcw,
+  Receipt,
+  Clock,
+  FileText,
+} from 'lucide-react'
 import '../styles/aeds-v6-workspaces.css'
 import '../styles/aeds-v6-restaurant.css'
 import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
@@ -26,17 +52,46 @@ const DISCOUNT_SCOPE_OPTIONS = [
   { value: 'FOOD', label: 'Food only' },
   { value: 'BEVERAGE', label: 'Beverage only' },
 ]
-const BEVERAGE_HINTS = ['bar', 'beverage', 'drink', 'mocktail', 'cocktail', 'juice', 'coffee', 'tea', 'soda', 'water']
+const BEVERAGE_HINTS = [
+  'bar',
+  'beverage',
+  'drink',
+  'mocktail',
+  'cocktail',
+  'juice',
+  'coffee',
+  'tea',
+  'soda',
+  'water',
+]
 const WORKFLOW_NEXT = {
-  OPEN:     { label: 'Accept',  nextStatus: 'ACCEPTED', taskStage: 'ACCEPTED', taskStatus: 'IN_PROGRESS', cls: 'text-sky-700  border-sky-200  hover:bg-sky-50' },
-  ACCEPTED: { label: 'Ready',   nextStatus: 'READY',    taskStage: 'READY',    taskStatus: 'IN_PROGRESS', cls: 'text-amber   border-amber/30 hover:bg-amber/10' },
-  READY:    { label: 'Served ✓',nextStatus: 'SERVED',   taskStage: 'SERVED',   taskStatus: 'DONE',        cls: 'text-forest  border-forest/20 hover:bg-forest/10' },
+  OPEN: {
+    label: 'Accept',
+    nextStatus: 'ACCEPTED',
+    taskStage: 'ACCEPTED',
+    taskStatus: 'IN_PROGRESS',
+    cls: 'text-sky-700  border-sky-200  hover:bg-sky-50',
+  },
+  ACCEPTED: {
+    label: 'Ready',
+    nextStatus: 'READY',
+    taskStage: 'READY',
+    taskStatus: 'IN_PROGRESS',
+    cls: 'text-amber   border-amber/30 hover:bg-amber/10',
+  },
+  READY: {
+    label: 'Served ✓',
+    nextStatus: 'SERVED',
+    taskStage: 'SERVED',
+    taskStatus: 'DONE',
+    cls: 'text-forest  border-forest/20 hover:bg-forest/10',
+  },
 }
 
 const applyCashRounding = (amount) => {
   const decimal = amount % 1
   if (decimal === 0) return { rounded: amount, rounding: 0 }
-  if (decimal >= 0.50) {
+  if (decimal >= 0.5) {
     const rounded = Math.ceil(amount)
     return { rounded, rounding: rounded - amount }
   } else {
@@ -52,31 +107,40 @@ const withTenant = (query) => {
 }
 
 const isBeverageItem = (item, categoryName = '') => {
-  const text = `${item?.category_name || categoryName || ''} ${item?.item_name || item?.name || ''}`.toLowerCase()
+  const text =
+    `${item?.category_name || categoryName || ''} ${item?.item_name || item?.name || ''}`.toLowerCase()
   return BEVERAGE_HINTS.some((hint) => text.includes(hint))
 }
 
 const buildOrderTotals = ({ cart, cats, rate, discountScope, discountType, discountValue }) => {
   const categoryMap = new Map((cats || []).map((cat) => [cat.id, cat.name || '']))
-  const subtotal = cart.reduce((sum, line) => sum + Number(line.qty || 0) * Number(line.unit_price || 0), 0)
+  const subtotal = cart.reduce(
+    (sum, line) => sum + Number(line.qty || 0) * Number(line.unit_price || 0),
+    0,
+  )
   const beverageSubtotal = cart.reduce((sum, line) => {
     const categoryName = line.category_name || categoryMap.get(line.category_id) || ''
-    return sum + (isBeverageItem(line, categoryName) ? Number(line.qty || 0) * Number(line.unit_price || 0) : 0)
+    return (
+      sum +
+      (isBeverageItem(line, categoryName)
+        ? Number(line.qty || 0) * Number(line.unit_price || 0)
+        : 0)
+    )
   }, 0)
   const foodSubtotal = subtotal - beverageSubtotal
-  const scopeBase = discountScope === 'FOOD'
-    ? foodSubtotal
-    : discountScope === 'BEVERAGE'
-      ? beverageSubtotal
-      : subtotal
+  const scopeBase =
+    discountScope === 'FOOD'
+      ? foodSubtotal
+      : discountScope === 'BEVERAGE'
+        ? beverageSubtotal
+        : subtotal
   const numericValue = Number(discountValue) || 0
-  const discountAmount = discountType === 'FIXED'
-    ? Math.min(numericValue, scopeBase)
-    : (scopeBase * numericValue) / 100
+  const discountAmount =
+    discountType === 'FIXED' ? Math.min(numericValue, scopeBase) : (scopeBase * numericValue) / 100
   const roundedDiscount = +discountAmount.toFixed(2)
   const net = +(subtotal - roundedDiscount).toFixed(2)
-  const service_charge = +(net * (Number(rate.service_charge_pct) || 0) / 100).toFixed(2)
-  const vat = +((net + service_charge) * (Number(rate.vat_pct) || 0) / 100).toFixed(2)
+  const service_charge = +((net * (Number(rate.service_charge_pct) || 0)) / 100).toFixed(2)
+  const vat = +(((net + service_charge) * (Number(rate.vat_pct) || 0)) / 100).toFixed(2)
   const rawTotal = +(net + service_charge + vat).toFixed(2)
   const { rounded: total, rounding } = applyCashRounding(rawTotal)
   const effectiveDiscountPct = subtotal > 0 ? +((roundedDiscount / subtotal) * 100).toFixed(2) : 0
@@ -109,7 +173,10 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
   const [printDoc, setPrintDoc] = useState(null)
   const [tableRefreshKey, setTableRefreshKey] = useState(0)
   const [msg, setMsg] = useState('')
-  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000) }
+  const flash = (m) => {
+    setMsg(m)
+    setTimeout(() => setMsg(''), 4000)
+  }
 
   const loadMenu = async () => {
     const [{ data: c }, { data: it }, { data: tc }, { data: co }] = await Promise.all([
@@ -118,12 +185,19 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
       withTenantScope(supabase.from('tax_config').select('*')),
       getCompanySettingsQuery('*').limit(1).maybeSingle(),
     ])
-    setCats(c || []); setItems(it || []); setTaxConfig(tc || []); setCompany(co)
+    setCats(c || [])
+    setItems(it || [])
+    setTaxConfig(tc || [])
+    setCompany(co)
   }
-  useEffect(() => { loadMenu() }, [])
+  useEffect(() => {
+    loadMenu()
+  }, [])
 
   const resumeOrder = useCallback(async (order) => {
-    const { data: oi } = await withTenant(supabase.from('pos_order_items').select('*').eq('order_id', order.id))
+    const { data: oi } = await withTenant(
+      supabase.from('pos_order_items').select('*').eq('order_id', order.id),
+    )
     setEditOrder({ order, items: oi || [] })
     setDraftSeed(null)
     setShowOrderBuilder(true)
@@ -137,21 +211,24 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
     setTab('Orders')
   }, [])
 
-  const openTable = useCallback(async (tableNo) => {
-    const normalizedTable = normalizeRestaurantTable(tableNo)
-    if (!normalizedTable) return
-    const { data: order } = await withTenant(
-      supabase
-        .from('pos_orders')
-        .select('*')
-        .eq('table_no', normalizedTable)
-        .in('status', TABLE_BLOCKING_STATUSES)
-        .order('created_at', { ascending: false })
-        .limit(1)
-    ).maybeSingle()
-    if (order) await resumeOrder(order)
-    else startNewOrder({ order_type: 'DINE_IN', table_no: normalizedTable })
-  }, [resumeOrder, startNewOrder])
+  const openTable = useCallback(
+    async (tableNo) => {
+      const normalizedTable = normalizeRestaurantTable(tableNo)
+      if (!normalizedTable) return
+      const { data: order } = await withTenant(
+        supabase
+          .from('pos_orders')
+          .select('*')
+          .eq('table_no', normalizedTable)
+          .in('status', TABLE_BLOCKING_STATUSES)
+          .order('created_at', { ascending: false })
+          .limit(1),
+      ).maybeSingle()
+      if (order) await resumeOrder(order)
+      else startNewOrder({ order_type: 'DINE_IN', table_no: normalizedTable })
+    },
+    [resumeOrder, startNewOrder],
+  )
 
   const finishOrderFlow = (doc) => {
     setEditOrder(null)
@@ -181,82 +258,216 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
         </div>
       </div>
       <KPICards module="pos" />
-      {msg && <div className="mb-4 px-4 py-2 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
+      {msg && (
+        <div className="mb-4 px-4 py-2 rounded-lg bg-forest/10 text-forest text-sm font-medium">
+          {msg}
+        </div>
+      )}
       <div className="aeds-v6-tab-strip">
         {TABS.map((t) => (
-          <button key={t} onClick={() => { setTab(t); if (t !== 'Orders') { setEditOrder(null); setDraftSeed(null); setShowOrderBuilder(false) } }} className={tab === t ? 'aeds-v6-tab-active' : ''}>
+          <button
+            key={t}
+            onClick={() => {
+              setTab(t)
+              if (t !== 'Orders') {
+                setEditOrder(null)
+                setDraftSeed(null)
+                setShowOrderBuilder(false)
+              }
+            }}
+            className={tab === t ? 'aeds-v6-tab-active' : ''}
+          >
             {t}
           </button>
         ))}
       </div>
       {tab === 'Orders' && showOrderBuilder && (
         <div className="mb-3">
-          <LegacyButton variant="ghost" size="xs" onClick={() => { setShowOrderBuilder(false); setEditOrder(null); setDraftSeed(null) }}>
+          <LegacyButton
+            variant="ghost"
+            size="xs"
+            onClick={() => {
+              setShowOrderBuilder(false)
+              setEditOrder(null)
+              setDraftSeed(null)
+            }}
+          >
             <RotateCcw size={13} /> Back to orders
           </LegacyButton>
         </div>
       )}
-      {tab === 'Orders' && showOrderBuilder && <OrderBuilder key={editOrder?.order?.id || draftSeed?.table_no || 'new'} cats={cats} items={items} taxConfig={taxConfig} userName={userName} existing={editOrder} draftSeed={draftSeed} flash={flash} setPrintDoc={setPrintDoc} onDone={finishOrderFlow} />}
+      {tab === 'Orders' && showOrderBuilder && (
+        <OrderBuilder
+          key={editOrder?.order?.id || draftSeed?.table_no || 'new'}
+          cats={cats}
+          items={items}
+          taxConfig={taxConfig}
+          userName={userName}
+          existing={editOrder}
+          draftSeed={draftSeed}
+          flash={flash}
+          setPrintDoc={setPrintDoc}
+          onDone={finishOrderFlow}
+        />
+      )}
       {tab === 'Orders' && !showOrderBuilder && (
         <div className="space-y-4">
-          <RestaurantTableGrid refreshKey={tableRefreshKey} onSelectTable={(tableNo) => openTable(tableNo)} />
-          <OrdersList company={company} flash={flash} resumeOrder={resumeOrder} setPrintDoc={setPrintDoc} isAdmin={isAdmin} userName={userName} onNewOrder={() => startNewOrder()} onOrdersChanged={() => setTableRefreshKey((value) => value + 1)} />
+          <RestaurantTableGrid
+            refreshKey={tableRefreshKey}
+            onSelectTable={(tableNo) => openTable(tableNo)}
+          />
+          <OrdersList
+            company={company}
+            flash={flash}
+            resumeOrder={resumeOrder}
+            setPrintDoc={setPrintDoc}
+            isAdmin={isAdmin}
+            userName={userName}
+            onNewOrder={() => startNewOrder()}
+            onOrdersChanged={() => setTableRefreshKey((value) => value + 1)}
+          />
         </div>
       )}
-      {tab === 'Menu' && <MenuManager cats={cats} items={items} reload={loadMenu} isAdmin={isAdmin} />}
-      {tab === 'Day Close' && <DayClose flash={flash} isAdmin={isAdmin} userName={userName} role={role} />}
+      {tab === 'Menu' && (
+        <MenuManager cats={cats} items={items} reload={loadMenu} isAdmin={isAdmin} />
+      )}
+      {tab === 'Day Close' && (
+        <DayClose flash={flash} isAdmin={isAdmin} userName={userName} role={role} />
+      )}
       {printDoc?.type === 'RECEIPT' && printDoc?.phase !== 'RESORT' && (
-        <PrintPortal type="thermal-80" title={`Restaurant Bill — ${printDoc.order.order_no}`} onClose={() => { if (window.confirm('Resort copy print করবেন?')) { setPrintDoc((prev) => ({ ...prev, phase: 'RESORT' })) } else { setPrintDoc(null) } }} primaryColor={company?.primary_color || company?.brand_primary} accentColor={company?.accent_color || company?.brand_accent} autoPrint>
-          <PosReceipt order={printDoc.order} items={printDoc.items} company={company} mushakNo={printDoc.mushakNo} singleCopy copyLabel="CUSTOMER_COPY" />
+        <PrintPortal
+          type="thermal-80"
+          title={`Restaurant Bill — ${printDoc.order.order_no}`}
+          onClose={() => {
+            if (window.confirm('Resort copy print করবেন?')) {
+              setPrintDoc((prev) => ({ ...prev, phase: 'RESORT' }))
+            } else {
+              setPrintDoc(null)
+            }
+          }}
+          primaryColor={company?.primary_color || company?.brand_primary}
+          accentColor={company?.accent_color || company?.brand_accent}
+          autoPrint
+        >
+          <PosReceipt
+            order={printDoc.order}
+            items={printDoc.items}
+            company={company}
+            mushakNo={printDoc.mushakNo}
+            singleCopy
+            copyLabel="CUSTOMER_COPY"
+          />
         </PrintPortal>
       )}
       {printDoc?.type === 'RECEIPT' && printDoc?.phase === 'RESORT' && (
-        <PrintPortal type="thermal-80" title={`Restaurant Bill (Resort Copy) — ${printDoc.order.order_no}`} onClose={() => setPrintDoc(null)} primaryColor={company?.primary_color || company?.brand_primary} accentColor={company?.accent_color || company?.brand_accent} autoPrint>
-          <PosReceipt order={printDoc.order} items={printDoc.items} company={company} mushakNo={printDoc.mushakNo} singleCopy copyLabel="RESORT_COPY" />
+        <PrintPortal
+          type="thermal-80"
+          title={`Restaurant Bill (Resort Copy) — ${printDoc.order.order_no}`}
+          onClose={() => setPrintDoc(null)}
+          primaryColor={company?.primary_color || company?.brand_primary}
+          accentColor={company?.accent_color || company?.brand_accent}
+          autoPrint
+        >
+          <PosReceipt
+            order={printDoc.order}
+            items={printDoc.items}
+            company={company}
+            mushakNo={printDoc.mushakNo}
+            singleCopy
+            copyLabel="RESORT_COPY"
+          />
         </PrintPortal>
       )}
-      {printDoc?.type === 'KOT' && (<PrintPortal type="thermal-80" title={`Kitchen Order — ${printDoc.order.order_no}`} onClose={() => setPrintDoc(null)} primaryColor={company?.primary_color || company?.brand_primary} accentColor={company?.accent_color || company?.brand_accent}><KitchenTicket order={printDoc.order} items={printDoc.items} company={company} /></PrintPortal>)}
-      {printDoc?.type === 'MUSHAK' && (<PrintPortal title={`Mushak-6.3 — ${printDoc.invoice.invoice_no}`} onClose={() => setPrintDoc(null)} primaryColor={company?.primary_color || company?.brand_primary} accentColor={company?.accent_color || company?.brand_accent}><Mushak63 invoice={printDoc.invoice} res={null} company={company} refNo={printDoc.refNo} /></PrintPortal>)}
+      {printDoc?.type === 'KOT' && (
+        <PrintPortal
+          type="thermal-80"
+          title={`Kitchen Order — ${printDoc.order.order_no}`}
+          onClose={() => setPrintDoc(null)}
+          primaryColor={company?.primary_color || company?.brand_primary}
+          accentColor={company?.accent_color || company?.brand_accent}
+        >
+          <KitchenTicket order={printDoc.order} items={printDoc.items} company={company} />
+        </PrintPortal>
+      )}
+      {printDoc?.type === 'MUSHAK' && (
+        <PrintPortal
+          title={`Mushak-6.3 — ${printDoc.invoice.invoice_no}`}
+          onClose={() => setPrintDoc(null)}
+          primaryColor={company?.primary_color || company?.brand_primary}
+          accentColor={company?.accent_color || company?.brand_accent}
+        >
+          <Mushak63
+            invoice={printDoc.invoice}
+            res={null}
+            company={company}
+            refNo={printDoc.refNo}
+          />
+        </PrintPortal>
+      )}
     </div>
   )
 }
 
-function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, flash, setPrintDoc, onDone }) {
+function OrderBuilder({
+  cats,
+  items,
+  taxConfig,
+  userName,
+  existing,
+  draftSeed,
+  flash,
+  setPrintDoc,
+  onDone,
+}) {
   const menuItemMap = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
-  const [cart, setCart] = useState(existing
-    ? existing.items.map((line) => {
-      const menuItem = menuItemMap.get(line.menu_item_id)
-      const category = cats.find((cat) => cat.id === menuItem?.category_id)
-      return {
-        menu_item_id: line.menu_item_id,
-        item_name: line.item_name,
-        qty: Number(line.qty),
-        unit_price: Number(line.unit_price),
-        category_id: menuItem?.category_id || null,
-        category_name: category?.name || '',
-      }
-    })
-    : [])
-  const [meta, setMeta] = useState(existing
-    ? {
-      order_type: existing.order.order_type,
-      table_no: normalizeRestaurantTable(existing.order.table_no || ''),
-      discount_scope: existing.order.discount_scope || 'GLOBAL',
-      discount_type: existing.order.discount_type || 'PERCENT',
-      discount_value: Number(existing.order.discount_value ?? existing.order.discount_pct ?? 0),
-      notes: existing.order.notes || '',
-    }
-    : {
-      order_type: draftSeed?.order_type || 'DINE_IN',
-      table_no: normalizeRestaurantTable(draftSeed?.table_no || ''),
-      discount_scope: 'GLOBAL',
-      discount_type: 'PERCENT',
-      discount_value: 0,
-      notes: '',
-    })
-  const [link, setLink] = useState(existing ? { reservation_id: existing.order.reservation_id, guest_name: existing.order.guest_name || '', room_no: existing.order.room_no || '' } : { reservation_id: null, guest_name: '', room_no: '' })
+  const [cart, setCart] = useState(
+    existing
+      ? existing.items.map((line) => {
+          const menuItem = menuItemMap.get(line.menu_item_id)
+          const category = cats.find((cat) => cat.id === menuItem?.category_id)
+          return {
+            menu_item_id: line.menu_item_id,
+            item_name: line.item_name,
+            qty: Number(line.qty),
+            unit_price: Number(line.unit_price),
+            category_id: menuItem?.category_id || null,
+            category_name: category?.name || '',
+          }
+        })
+      : [],
+  )
+  const [meta, setMeta] = useState(
+    existing
+      ? {
+          order_type: existing.order.order_type,
+          table_no: normalizeRestaurantTable(existing.order.table_no || ''),
+          discount_scope: existing.order.discount_scope || 'GLOBAL',
+          discount_type: existing.order.discount_type || 'PERCENT',
+          discount_value: Number(existing.order.discount_value ?? existing.order.discount_pct ?? 0),
+          notes: existing.order.notes || '',
+        }
+      : {
+          order_type: draftSeed?.order_type || 'DINE_IN',
+          table_no: normalizeRestaurantTable(draftSeed?.table_no || ''),
+          discount_scope: 'GLOBAL',
+          discount_type: 'PERCENT',
+          discount_value: 0,
+          notes: '',
+        },
+  )
+  const [link, setLink] = useState(
+    existing
+      ? {
+          reservation_id: existing.order.reservation_id,
+          guest_name: existing.order.guest_name || '',
+          room_no: existing.order.room_no || '',
+        }
+      : { reservation_id: null, guest_name: '', room_no: '' },
+  )
   const [activeCat, setActiveCat] = useState('ALL')
-  const [payments, setPayments] = useState(PAYMENT_METHODS.reduce((acc, m) => ({ ...acc, [m]: '' }), {}))
+  const [payments, setPayments] = useState(
+    PAYMENT_METHODS.reduce((acc, m) => ({ ...acc, [m]: '' }), {}),
+  )
   const [showPicker, setShowPicker] = useState(false)
   const [staffDueName, setStaffDueName] = useState('')
   const [busy, setBusy] = useState(false)
@@ -264,26 +475,32 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
   const [changeConfirmation, setChangeConfirmation] = useState(null)
   useEffect(() => {
     if (!items.length) return
-    setCart((prev) => prev.map((line) => {
-      if (line.category_id && line.category_name) return line
-      const menuItem = menuItemMap.get(line.menu_item_id)
-      const category = cats.find((cat) => cat.id === menuItem?.category_id)
-      return {
-        ...line,
-        category_id: line.category_id || menuItem?.category_id || null,
-        category_name: line.category_name || category?.name || '',
-      }
-    }))
+    setCart((prev) =>
+      prev.map((line) => {
+        if (line.category_id && line.category_name) return line
+        const menuItem = menuItemMap.get(line.menu_item_id)
+        const category = cats.find((cat) => cat.id === menuItem?.category_id)
+        return {
+          ...line,
+          category_id: line.category_id || menuItem?.category_id || null,
+          category_name: line.category_name || category?.name || '',
+        }
+      }),
+    )
   }, [cats, items, menuItemMap])
   const rate = rateFor(taxConfig, 'RESTAURANT', todayISO())
-  const t = useMemo(() => buildOrderTotals({
-    cart,
-    cats,
-    rate,
-    discountScope: meta.discount_scope,
-    discountType: meta.discount_type,
-    discountValue: meta.discount_value,
-  }), [cart, cats, meta.discount_scope, meta.discount_type, meta.discount_value, rate])
+  const t = useMemo(
+    () =>
+      buildOrderTotals({
+        cart,
+        cats,
+        rate,
+        discountScope: meta.discount_scope,
+        discountType: meta.discount_type,
+        discountValue: meta.discount_value,
+      }),
+    [cart, cats, meta.discount_scope, meta.discount_type, meta.discount_value, rate],
+  )
   const discountAmount = t.discount
   const discountPct = t.discount_pct
 
@@ -292,13 +509,34 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
     setCart((prev) => {
       const f = prev.find((c) => c.menu_item_id === mi.id)
       if (f) return prev.map((c) => (c.menu_item_id === mi.id ? { ...c, qty: c.qty + 1 } : c))
-      return [...prev, { menu_item_id: mi.id, item_name: mi.name, qty: 1, unit_price: Number(mi.price), category_id: mi.category_id || null, category_name: category?.name || '' }]
+      return [
+        ...prev,
+        {
+          menu_item_id: mi.id,
+          item_name: mi.name,
+          qty: 1,
+          unit_price: Number(mi.price),
+          category_id: mi.category_id || null,
+          category_name: category?.name || '',
+        },
+      ]
     })
   }
-  const bump = (idx, d) => setCart((prev) => prev.map((c, i) => (i === idx ? { ...c, qty: Math.max(0, c.qty + d) } : c)).filter((c) => c.qty > 0))
-  const setPrice = (idx, price) => setCart((prev) => prev.map((c, i) => (i === idx ? { ...c, unit_price: price } : c)))
+  const bump = (idx, d) =>
+    setCart((prev) =>
+      prev
+        .map((c, i) => (i === idx ? { ...c, qty: Math.max(0, c.qty + d) } : c))
+        .filter((c) => c.qty > 0),
+    )
+  const setPrice = (idx, price) =>
+    setCart((prev) => prev.map((c, i) => (i === idx ? { ...c, unit_price: price } : c)))
   const removeLine = (idx) => setCart((prev) => prev.filter((_, i) => i !== idx))
-  const visible = items.filter((i) =>  i.is_active &&  (activeCat === 'ALL' || i.category_id === activeCat) &&  (!itemSearch || i.name.toLowerCase().includes(itemSearch.toLowerCase())))
+  const visible = items.filter(
+    (i) =>
+      i.is_active &&
+      (activeCat === 'ALL' || i.category_id === activeCat) &&
+      (!itemSearch || i.name.toLowerCase().includes(itemSearch.toLowerCase())),
+  )
 
   const persist = async (statusFields) => {
     const payload = {
@@ -322,25 +560,52 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
     }
     let order
     if (existing) {
-      const { data, error } = await withTenant(supabase.from('pos_orders').update(payload).eq('id', existing.order.id)).select().single()
+      const { data, error } = await withTenant(
+        supabase.from('pos_orders').update(payload).eq('id', existing.order.id),
+      )
+        .select()
+        .single()
       if (error) throw error
       order = data
       await withTenant(supabase.from('pos_order_items').delete().eq('order_id', order.id))
     } else {
-      const { data, error } = await supabase.from('pos_orders').insert(withTenantInsert(payload)).select().single()
+      const { data, error } = await supabase
+        .from('pos_orders')
+        .insert(withTenantInsert(payload))
+        .select()
+        .single()
       if (error) throw error
       order = data
     }
-    const lineRows = cart.map((c) => ({ order_id: order.id, menu_item_id: c.menu_item_id, item_name: c.item_name, qty: c.qty, unit_price: c.unit_price, line_total: +(c.qty * c.unit_price).toFixed(2) }))
-    const { data: savedItems, error: ie } = await supabase.from('pos_order_items').insert(withTenantInsertMany(lineRows)).select()
+    const lineRows = cart.map((c) => ({
+      order_id: order.id,
+      menu_item_id: c.menu_item_id,
+      item_name: c.item_name,
+      qty: c.qty,
+      unit_price: c.unit_price,
+      line_total: +(c.qty * c.unit_price).toFixed(2),
+    }))
+    const { data: savedItems, error: ie } = await supabase
+      .from('pos_order_items')
+      .insert(withTenantInsertMany(lineRows))
+      .select()
     if (ie) throw ie
     return { order, items: savedItems }
   }
 
   const guard = () => {
-    if (cart.length === 0) { flash('Add at least one item to the order.'); return false }
-    if (meta.discount_scope !== 'GLOBAL' && t.discountScopeBase <= 0 && Number(meta.discount_value) > 0) {
-      flash(`No ${meta.discount_scope === 'FOOD' ? 'food' : 'beverage'} item available for this discount.`)
+    if (cart.length === 0) {
+      flash('Add at least one item to the order.')
+      return false
+    }
+    if (
+      meta.discount_scope !== 'GLOBAL' &&
+      t.discountScopeBase <= 0 &&
+      Number(meta.discount_value) > 0
+    ) {
+      flash(
+        `No ${meta.discount_scope === 'FOOD' ? 'food' : 'beverage'} item available for this discount.`,
+      )
       return false
     }
     return true
@@ -348,21 +613,66 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
 
   const generateKOT = () => {
     if (!guard()) return
-    setPrintDoc({ type: 'KOT', order: { order_no: 'TEMP-' + Date.now(), table_no: meta.table_no, order_type: meta.order_type, guest_name: link.guest_name }, items: cart })
+    setPrintDoc({
+      type: 'KOT',
+      order: {
+        order_no: 'TEMP-' + Date.now(),
+        table_no: meta.table_no,
+        order_type: meta.order_type,
+        guest_name: link.guest_name,
+      },
+      items: cart,
+    })
   }
 
   const settlePaidOrder = async (paidMethods, totalPaid) => {
     setBusy(true)
     try {
-      const settled = { status: 'SETTLED', payment_method: paidMethods.map(([m]) => m).join(', '), settled_at: new Date().toISOString() }
+      const settled = {
+        status: 'SETTLED',
+        payment_method: paidMethods.map(([m]) => m).join(', '),
+        settled_at: new Date().toISOString(),
+      }
       const { order, items: oi } = await persist(settled)
       let mushakNo = null
       if (order.reservation_id) {
-        const { data: fc, error: fe } = await supabase.from('folio_charges').insert(withTenantInsert({ reservation_id: order.reservation_id, charge_date: todayISO(), charge_type: 'RESTAURANT', description: `Restaurant ${order.order_no}${order.table_no ? ' · Table ' + order.table_no : ''}`, base_amount: t.base_amount, discount: discountAmount, service_charge: t.service_charge, vat: t.vat, total: t.total, status: 'PAID', created_by: userName })).select().single()
+        const { data: fc, error: fe } = await supabase
+          .from('folio_charges')
+          .insert(
+            withTenantInsert({
+              reservation_id: order.reservation_id,
+              charge_date: todayISO(),
+              charge_type: 'RESTAURANT',
+              description: `Restaurant ${order.order_no}${order.table_no ? ' · Table ' + order.table_no : ''}`,
+              base_amount: t.base_amount,
+              discount: discountAmount,
+              service_charge: t.service_charge,
+              vat: t.vat,
+              total: t.total,
+              status: 'PAID',
+              created_by: userName,
+            }),
+          )
+          .select()
+          .single()
         if (fe) throw fe
-        const { error: pe } = await supabase.from('payments').insert(withTenantInsert({ reservation_id: order.reservation_id, received_date: todayISO(), amount: t.total, method: paidMethods.map(([m]) => m).join(', '), reference: order.order_no, received_by: userName, notes: 'Restaurant POS' }))
+        const { error: pe } = await supabase
+          .from('payments')
+          .insert(
+            withTenantInsert({
+              reservation_id: order.reservation_id,
+              received_date: todayISO(),
+              amount: t.total,
+              method: paidMethods.map(([m]) => m).join(', '),
+              reference: order.order_no,
+              received_by: userName,
+              notes: 'Restaurant POS',
+            }),
+          )
         if (pe) throw pe
-        await withTenant(supabase.from('pos_orders').update({ folio_charge_id: fc.id }).eq('id', order.id))
+        await withTenant(
+          supabase.from('pos_orders').update({ folio_charge_id: fc.id }).eq('id', order.id),
+        )
       }
       onDone({
         type: 'RECEIPT',
@@ -376,8 +686,12 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
         items: oi,
         mushakNo,
       })
-      flash(`${order.order_no} settled — ${paidMethods.map(([m, a]) => `${m}:${fmtBDT(a)}`).join(', ')}`)
-    } catch (e) { flash(e.message) }
+      flash(
+        `${order.order_no} settled — ${paidMethods.map(([m, a]) => `${m}:${fmtBDT(a)}`).join(', ')}`,
+      )
+    } catch (e) {
+      flash(e.message)
+    }
     setChangeConfirmation(null)
     setBusy(false)
   }
@@ -385,9 +699,15 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
   const payNow = async () => {
     if (!guard()) return
     const paidMethods = Object.entries(payments).filter(([m, a]) => Number(a) > 0)
-    if (paidMethods.length === 0) { flash('Add at least one payment method.'); return }
+    if (paidMethods.length === 0) {
+      flash('Add at least one payment method.')
+      return
+    }
     const totalPaid = paidMethods.reduce((a, [m, amt]) => a + Number(amt), 0)
-    if (totalPaid < t.total) { flash(`Total payment (${fmtBDT(totalPaid)}) less than bill (${fmtBDT(t.total)})`); return }
+    if (totalPaid < t.total) {
+      flash(`Total payment (${fmtBDT(totalPaid)}) less than bill (${fmtBDT(t.total)})`)
+      return
+    }
     if (totalPaid > t.total) {
       setChangeConfirmation({ paidMethods, totalPaid, change: totalPaid - t.total })
       return
@@ -396,44 +716,65 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
   }
 
   const chargeToRoom = async () => {
-  if (!guard()) return
-  if (!link.reservation_id) { flash('Link an in-house guest first to charge to room.'); return }
-  setBusy(true)
-  try {
-    const { order, items: oi } = await persist({ status: 'CHARGED_TO_ROOM' })
+    if (!guard()) return
+    if (!link.reservation_id) {
+      flash('Link an in-house guest first to charge to room.')
+      return
+    }
+    setBusy(true)
+    try {
+      const { order, items: oi } = await persist({ status: 'CHARGED_TO_ROOM' })
 
-    const { data: fc, error: fe } = await supabase.from('folio_charges').insert(withTenantInsert({ 
-      reservation_id: order.reservation_id, 
-      charge_date: todayISO(), 
-      charge_type: 'RESTAURANT', 
-      description: `Restaurant ${order.order_no}${order.table_no ? ' · Table ' + order.table_no : ''}`, 
-      base_amount: t.base_amount, 
-      discount: discountAmount, 
-      service_charge: t.service_charge, 
-      vat: t.vat, 
-      total: t.total, 
-      status: 'DUE', 
-      invoice_type: 'RESTAURANT',
-      created_by: userName 
-    })).select().single()
+      const { data: fc, error: fe } = await supabase
+        .from('folio_charges')
+        .insert(
+          withTenantInsert({
+            reservation_id: order.reservation_id,
+            charge_date: todayISO(),
+            charge_type: 'RESTAURANT',
+            description: `Restaurant ${order.order_no}${order.table_no ? ' · Table ' + order.table_no : ''}`,
+            base_amount: t.base_amount,
+            discount: discountAmount,
+            service_charge: t.service_charge,
+            vat: t.vat,
+            total: t.total,
+            status: 'DUE',
+            invoice_type: 'RESTAURANT',
+            created_by: userName,
+          }),
+        )
+        .select()
+        .single()
 
-    if (fe) throw fe
-    await withTenant(supabase.from('pos_orders').update({ folio_charge_id: fc.id }).eq('id', order.id))
-    onDone({ type: 'RECEIPT', order: { ...order, status: 'CHARGED_TO_ROOM' }, items: oi })
-    flash(`${order.order_no} charged to Room ${order.room_no} as DUE — settles at check-out.`)
-  } catch (e) { flash(e.message) }
-  setBusy(false)
-}
+      if (fe) throw fe
+      await withTenant(
+        supabase.from('pos_orders').update({ folio_charge_id: fc.id }).eq('id', order.id),
+      )
+      onDone({ type: 'RECEIPT', order: { ...order, status: 'CHARGED_TO_ROOM' }, items: oi })
+      flash(`${order.order_no} charged to Room ${order.room_no} as DUE — settles at check-out.`)
+    } catch (e) {
+      flash(e.message)
+    }
+    setBusy(false)
+  }
 
   const chargeAsStaffDue = async () => {
     if (!guard()) return
-    if (!staffDueName.trim()) { flash('Enter staff/shareholder name to add due.'); return }
+    if (!staffDueName.trim()) {
+      flash('Enter staff/shareholder name to add due.')
+      return
+    }
     setBusy(true)
     try {
-      const { order, items: oi } = await persist({ status: 'STAFF_DUE', guest_name: staffDueName.trim() })
+      const { order, items: oi } = await persist({
+        status: 'STAFF_DUE',
+        guest_name: staffDueName.trim(),
+      })
       onDone({ type: 'RECEIPT', order: { ...order, status: 'STAFF_DUE' }, items: oi })
       flash(`${order.order_no} added as Due for ${staffDueName.trim()}.`)
-    } catch (e) { flash(e.message) }
+    } catch (e) {
+      flash(e.message)
+    }
     setBusy(false)
   }
 
@@ -442,62 +783,122 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
     setBusy(true)
     try {
       const { order } = await persist({ status: 'DRAFT' })
-      flash(`${order.order_no} saved as draft${order.table_no ? ` for Table ${order.table_no}` : ''}.`)
+      flash(
+        `${order.order_no} saved as draft${order.table_no ? ` for Table ${order.table_no}` : ''}.`,
+      )
       onDone()
-    } catch (e) { flash(e.message) }
+    } catch (e) {
+      flash(e.message)
+    }
     setBusy(false)
   }
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
       <div className="xl:col-span-3">
-          <input
-            className="input mb-3"
-            placeholder="Search menu items…"
-            value={itemSearch}
-            onChange={(e) => setItemSearch(e.target.value)}
-          />
-          <div className="flex gap-2 mb-3 flex-wrap">
-          <button onClick={() => setActiveCat('ALL')} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${activeCat === 'ALL' ? 'bg-pine text-white' : 'bg-white border border-leaf text-pine/70'}`}>All</button>
-          {cats.filter((c) => c.is_active).map((c) => (
-            <button key={c.id} onClick={() => setActiveCat(c.id)} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${activeCat === c.id ? 'bg-pine text-white' : 'bg-white border border-leaf text-pine/70'}`}>{c.name}</button>
-          ))}
+        <input
+          className="input mb-3"
+          placeholder="Search menu items…"
+          value={itemSearch}
+          onChange={(e) => setItemSearch(e.target.value)}
+        />
+        <div className="flex gap-2 mb-3 flex-wrap">
+          <button
+            onClick={() => setActiveCat('ALL')}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold ${activeCat === 'ALL' ? 'bg-pine text-white' : 'bg-white border border-leaf text-pine/70'}`}
+          >
+            All
+          </button>
+          {cats
+            .filter((c) => c.is_active)
+            .map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setActiveCat(c.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold ${activeCat === c.id ? 'bg-pine text-white' : 'bg-white border border-leaf text-pine/70'}`}
+              >
+                {c.name}
+              </button>
+            ))}
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {visible.map((mi) => (
-            <button key={mi.id} onClick={() => addItem(mi)} className="card p-3 text-left hover:border-forest hover:shadow transition-all active:scale-[0.98]">
+            <button
+              key={mi.id}
+              onClick={() => addItem(mi)}
+              className="card p-3 text-left hover:border-forest hover:shadow transition-all active:scale-[0.98]"
+            >
               <div className="font-semibold text-sm leading-tight">{mi.name}</div>
               <div className="money text-forest text-sm mt-1">{fmtBDT(mi.price)}</div>
             </button>
           ))}
-          {visible.length === 0 && (<div className="col-span-full card p-6 text-center text-sm text-pine/50">No menu items yet — add your dishes in the <b>Menu</b> tab.</div>)}
+          {visible.length === 0 && (
+            <div className="col-span-full card p-6 text-center text-sm text-pine/50">
+              No menu items yet — add your dishes in the <b>Menu</b> tab.
+            </div>
+          )}
         </div>
       </div>
       <div className="xl:col-span-2 space-y-3">
         <div className="card p-4">
           <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
-            <h3 className="font-display font-semibold text-pine">{existing ? `Editing ${existing.order.order_no}` : 'Current order'}</h3>
+            <h3 className="font-display font-semibold text-pine">
+              {existing ? `Editing ${existing.order.order_no}` : 'Current order'}
+            </h3>
             <div className="flex gap-2 flex-wrap w-full sm:w-auto">
-              <select className="input !w-full sm:!w-auto !py-1 text-xs" value={meta.order_type} onChange={(e) => setMeta({ ...meta, order_type: e.target.value })}>
-                <option value="DINE_IN">Dine-in</option><option value="ROOM_SERVICE">Room service</option><option value="TAKEAWAY">Takeaway</option>
+              <select
+                className="input !w-full sm:!w-auto !py-1 text-xs"
+                value={meta.order_type}
+                onChange={(e) => setMeta({ ...meta, order_type: e.target.value })}
+              >
+                <option value="DINE_IN">Dine-in</option>
+                <option value="ROOM_SERVICE">Room service</option>
+                <option value="TAKEAWAY">Takeaway</option>
               </select>
-              <input className="input !w-full sm:!w-20 !py-1 text-xs" placeholder="Table" value={meta.table_no} onChange={(e) => setMeta({ ...meta, table_no: normalizeRestaurantTable(e.target.value) })} />
+              <input
+                className="input !w-full sm:!w-20 !py-1 text-xs"
+                placeholder="Table"
+                value={meta.table_no}
+                onChange={(e) =>
+                  setMeta({ ...meta, table_no: normalizeRestaurantTable(e.target.value) })
+                }
+              />
             </div>
           </div>
           {meta.table_no && (
             <div className="mb-2 rounded-lg border border-amber/20 bg-amber/5 px-3 py-2 text-xs text-amber">
-              Table {meta.table_no} will stay blocked until the bill is settled or the draft is cleared.
+              Table {meta.table_no} will stay blocked until the bill is settled or the draft is
+              cleared.
             </div>
           )}
           {link.reservation_id ? (
             <div className="flex items-center justify-between flex-wrap gap-2 bg-leaf/50 rounded-lg px-3 py-2 mb-2 text-sm">
-              <span className="min-w-0 break-words"><b>{link.guest_name}</b> · Room {link.room_no}</span>
-              <button className="text-red-500 text-xs font-semibold" onClick={() => setLink({ reservation_id: null, guest_name: '', room_no: '' })}>Unlink</button>
+              <span className="min-w-0 break-words">
+                <b>{link.guest_name}</b> · Room {link.room_no}
+              </span>
+              <button
+                className="text-red-500 text-xs font-semibold"
+                onClick={() => setLink({ reservation_id: null, guest_name: '', room_no: '' })}
+              >
+                Unlink
+              </button>
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row gap-2 mb-2">
-              <LegacyButton variant="ghost" size="xs" className="flex-1 justify-center text-xs" onClick={() => setShowPicker(true)}><BedDouble size={14} /> Link in-house guest</LegacyButton>
-              <input className="input flex-1 !py-1.5 text-xs" placeholder="Walk-in name (optional)" value={link.guest_name} onChange={(e) => setLink({ ...link, guest_name: e.target.value })} />
+              <LegacyButton
+                variant="ghost"
+                size="xs"
+                className="flex-1 justify-center text-xs"
+                onClick={() => setShowPicker(true)}
+              >
+                <BedDouble size={14} /> Link in-house guest
+              </LegacyButton>
+              <input
+                className="input flex-1 !py-1.5 text-xs"
+                placeholder="Walk-in name (optional)"
+                value={link.guest_name}
+                onChange={(e) => setLink({ ...link, guest_name: e.target.value })}
+              />
             </div>
           )}
           <div className="max-h-64 overflow-auto divide-y divide-leaf/60">
@@ -505,44 +906,119 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
               <div key={i} className="flex items-center gap-2 py-2 flex-wrap sm:flex-nowrap">
                 <div className="flex-1">
                   <div className="text-sm font-medium leading-tight">{c.item_name}</div>
-                  <input type="number" min="0" step="0.01" className="input !w-24 !py-0.5 !px-2 text-xs money" value={c.unit_price} onChange={(e) => setPrice(i, Number(e.target.value) || 0)} />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="input !w-24 !py-0.5 !px-2 text-xs money"
+                    value={c.unit_price}
+                    onChange={(e) => setPrice(i, Number(e.target.value) || 0)}
+                  />
                 </div>
-                <button className="w-6 h-6 rounded bg-leaf text-pine font-bold" onClick={() => bump(i, -1)}><Minus size={13} className="mx-auto" /></button>
+                <button
+                  className="w-6 h-6 rounded bg-leaf text-pine font-bold"
+                  onClick={() => bump(i, -1)}
+                >
+                  <Minus size={13} className="mx-auto" />
+                </button>
                 <span className="money w-7 text-center font-semibold">{c.qty}</span>
-                <button className="w-6 h-6 rounded bg-forest text-white font-bold" onClick={() => bump(i, 1)}><Plus size={13} className="mx-auto" /></button>
-                <span className="money w-20 text-right text-sm font-semibold">{(c.qty * c.unit_price).toFixed(2)}</span>
-                <button className="text-red-300 hover:text-red-600" onClick={() => removeLine(i)}><Trash2 size={14} /></button>
+                <button
+                  className="w-6 h-6 rounded bg-forest text-white font-bold"
+                  onClick={() => bump(i, 1)}
+                >
+                  <Plus size={13} className="mx-auto" />
+                </button>
+                <span className="money w-20 text-right text-sm font-semibold">
+                  {(c.qty * c.unit_price).toFixed(2)}
+                </span>
+                <button className="text-red-300 hover:text-red-600" onClick={() => removeLine(i)}>
+                  <Trash2 size={14} />
+                </button>
               </div>
             ))}
-            {cart.length === 0 && <p className="text-sm text-pine/50 py-4 text-center">Tap menu items to add them.</p>}
+            {cart.length === 0 && (
+              <p className="text-sm text-pine/50 py-4 text-center">Tap menu items to add them.</p>
+            )}
           </div>
           <div className="border-t border-leaf mt-2 pt-2 text-sm space-y-1 money">
-            <div className="flex justify-between"><span>Subtotal</span><span>{t.base_amount.toFixed(2)}</span></div>
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>{t.base_amount.toFixed(2)}</span>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-center">
-              <select className="input !py-0.5 !px-1.5 text-xs" value={meta.discount_scope} onChange={(e) => setMeta({ ...meta, discount_scope: e.target.value, discount_value: 0 })}>
-                {DISCOUNT_SCOPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              <select
+                className="input !py-0.5 !px-1.5 text-xs"
+                value={meta.discount_scope}
+                onChange={(e) =>
+                  setMeta({ ...meta, discount_scope: e.target.value, discount_value: 0 })
+                }
+              >
+                {DISCOUNT_SCOPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
               <div className="flex gap-2">
-                <select className="input flex-1 !py-0.5 !px-1.5 text-xs" value={meta.discount_type} onChange={(e) => setMeta({ ...meta, discount_type: e.target.value, discount_value: 0 })}>
+                <select
+                  className="input flex-1 !py-0.5 !px-1.5 text-xs"
+                  value={meta.discount_type}
+                  onChange={(e) =>
+                    setMeta({ ...meta, discount_type: e.target.value, discount_value: 0 })
+                  }
+                >
                   <option value="PERCENT">Percentage</option>
                   <option value="FIXED">Fixed ৳</option>
                 </select>
-                <input type="number" min="0" step={meta.discount_type === 'PERCENT' ? '1' : '0.01'} className="input w-24 !py-0.5 !px-2 text-xs" value={meta.discount_value} onChange={(e) => setMeta({ ...meta, discount_value: Number(e.target.value) || 0 })} />
+                <input
+                  type="number"
+                  min="0"
+                  step={meta.discount_type === 'PERCENT' ? '1' : '0.01'}
+                  className="input w-24 !py-0.5 !px-2 text-xs"
+                  value={meta.discount_value}
+                  onChange={(e) =>
+                    setMeta({ ...meta, discount_value: Number(e.target.value) || 0 })
+                  }
+                />
               </div>
               <span className="text-right">− {discountAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-xs text-pine/60">
-              <span>Food subtotal</span><span>{fmtBDT(t.foodSubtotal)}</span>
+              <span>Food subtotal</span>
+              <span>{fmtBDT(t.foodSubtotal)}</span>
             </div>
             <div className="flex justify-between text-xs text-pine/60">
-              <span>Beverage subtotal</span><span>{fmtBDT(t.beverageSubtotal)}</span>
+              <span>Beverage subtotal</span>
+              <span>{fmtBDT(t.beverageSubtotal)}</span>
             </div>
-            <div className="flex justify-between"><span>Service charge {rate.service_charge_pct}%</span><span>{t.service_charge.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>VAT {rate.vat_pct}%</span><span>{t.vat.toFixed(2)}</span></div>
-            {t.rounding !== undefined && t.rounding !== 0 && (<div className="flex justify-between text-xs text-pine/60"><span>Cash rounding {t.rounding > 0 ? '(+)' : '(−)'}</span><span>{t.rounding > 0 ? '+' : ''}{t.rounding.toFixed(2)}</span></div>)}
-            <div className="flex justify-between font-bold text-base border-t border-pine/20 pt-1"><span>Total</span><span>{fmtBDT(t.total)}</span></div>
+            <div className="flex justify-between">
+              <span>Service charge {rate.service_charge_pct}%</span>
+              <span>{t.service_charge.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>VAT {rate.vat_pct}%</span>
+              <span>{t.vat.toFixed(2)}</span>
+            </div>
+            {t.rounding !== undefined && t.rounding !== 0 && (
+              <div className="flex justify-between text-xs text-pine/60">
+                <span>Cash rounding {t.rounding > 0 ? '(+)' : '(−)'}</span>
+                <span>
+                  {t.rounding > 0 ? '+' : ''}
+                  {t.rounding.toFixed(2)}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold text-base border-t border-pine/20 pt-1">
+              <span>Total</span>
+              <span>{fmtBDT(t.total)}</span>
+            </div>
           </div>
-          <input className="input mt-2 text-xs" placeholder="Kitchen note (e.g. less spicy)" value={meta.notes} onChange={(e) => setMeta({ ...meta, notes: e.target.value })} />
+          <input
+            className="input mt-2 text-xs"
+            placeholder="Kitchen note (e.g. less spicy)"
+            value={meta.notes}
+            onChange={(e) => setMeta({ ...meta, notes: e.target.value })}
+          />
         </div>
         <div className="card p-4 space-y-2">
           <div className="text-xs font-semibold text-pine mb-3">💳 Payments</div>
@@ -550,7 +1026,13 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
             {PAYMENT_METHODS.map((method) => (
               <div key={method} className="flex gap-2 items-center">
                 <label className="text-xs font-medium w-20">{method}</label>
-                <input type="number" className="input flex-1 !py-1.5 text-xs money" placeholder="0.00" value={payments[method]} onChange={(e) => setPayments({ ...payments, [method]: e.target.value })} />
+                <input
+                  type="number"
+                  className="input flex-1 !py-1.5 text-xs money"
+                  placeholder="0.00"
+                  value={payments[method]}
+                  onChange={(e) => setPayments({ ...payments, [method]: e.target.value })}
+                />
               </div>
             ))}
           </div>
@@ -561,65 +1043,159 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
             return (
               <div className="border-t border-leaf pt-2 space-y-1 text-xs">
                 <div className="flex justify-between font-semibold text-forest">
-                  <span>Total Paid</span><span>{fmtBDT(totalPaid)}</span>
+                  <span>Total Paid</span>
+                  <span>{fmtBDT(totalPaid)}</span>
                 </div>
-                {remaining > 0 && <div className="flex justify-between text-red-600 font-semibold"><span>Remaining Due</span><span>{fmtBDT(remaining)}</span></div>}
-                {change > 0 && <div className="flex justify-between text-amber font-semibold"><span>Change</span><span>{fmtBDT(change)}</span></div>}
+                {remaining > 0 && (
+                  <div className="flex justify-between text-red-600 font-semibold">
+                    <span>Remaining Due</span>
+                    <span>{fmtBDT(remaining)}</span>
+                  </div>
+                )}
+                {change > 0 && (
+                  <div className="flex justify-between text-amber font-semibold">
+                    <span>Change</span>
+                    <span>{fmtBDT(change)}</span>
+                  </div>
+                )}
               </div>
             )
           })()}
-          <LegacyButton className="w-full justify-center" onClick={payNow} disabled={busy}><Banknote size={16} /> Pay now</LegacyButton>
-          <LegacyButton variant="ghost" className="w-full justify-center" onClick={saveDraft} disabled={busy}><Save size={16} /> Save draft / hold table</LegacyButton>
-          <LegacyButton variant="amber" className="w-full justify-center" onClick={chargeToRoom} disabled={busy || !link.reservation_id}><BedDouble size={16} /> Charge to room</LegacyButton>
+          <LegacyButton className="w-full justify-center" onClick={payNow} disabled={busy}>
+            <Banknote size={16} /> Pay now
+          </LegacyButton>
+          <LegacyButton
+            variant="ghost"
+            className="w-full justify-center"
+            onClick={saveDraft}
+            disabled={busy}
+          >
+            <Save size={16} /> Save draft / hold table
+          </LegacyButton>
+          <LegacyButton
+            variant="amber"
+            className="w-full justify-center"
+            onClick={chargeToRoom}
+            disabled={busy || !link.reservation_id}
+          >
+            <BedDouble size={16} /> Charge to room
+          </LegacyButton>
           <div className="border-t border-leaf pt-2 space-y-1">
             <div className="text-xs font-semibold text-pine">Staff / Shareholder Due</div>
             <div className="flex gap-2">
-              <input className="input flex-1 !py-1.5 text-xs" placeholder="Staff / shareholder name" value={staffDueName} onChange={(e) => setStaffDueName(e.target.value)} />
-              <LegacyButton variant="ghost" size="xs" className="text-xs whitespace-nowrap" onClick={chargeAsStaffDue} disabled={busy || !staffDueName.trim()}>Add Due</LegacyButton>
+              <input
+                className="input flex-1 !py-1.5 text-xs"
+                placeholder="Staff / shareholder name"
+                value={staffDueName}
+                onChange={(e) => setStaffDueName(e.target.value)}
+              />
+              <LegacyButton
+                variant="ghost"
+                size="xs"
+                className="text-xs whitespace-nowrap"
+                onClick={chargeAsStaffDue}
+                disabled={busy || !staffDueName.trim()}
+              >
+                Add Due
+              </LegacyButton>
             </div>
           </div>
-          <LegacyButton variant="ghost" className="w-full justify-center" onClick={() => {
-            if (!guard()) return
-            const orderPreview = {
-              order_type: meta.order_type,
-              table_no: meta.table_no || null,
-              notes: meta.notes || null,
-              reservation_id: link.reservation_id,
-              guest_name: link.guest_name || null,
-              room_no: link.room_no || null,
-              discount_scope: meta.discount_scope,
-              discount_type: meta.discount_type,
-              discount_value: Number(meta.discount_value) || 0,
-              discount_pct: discountPct,
-              base_amount: t.base_amount,
-              discount: t.discount,
-              service_charge: t.service_charge,
-              vat: t.vat,
-              total: t.total,
-              rounding: t.rounding,
-              status: 'PREVIEW',
-              order_no: 'PREVIEW',
-              created_by: userName,
-            }
-            setPrintDoc({ type: 'RECEIPT', order: orderPreview, items: cart.map((c) => ({ item_name: c.item_name, qty: c.qty, unit_price: c.unit_price, line_total: +(c.qty * c.unit_price).toFixed(2) })), mushakNo: null })
-          }} disabled={busy}><Receipt size={16} /> Preview Bill</LegacyButton>
-          <LegacyButton variant="ghost" className="w-full justify-center" onClick={generateKOT} disabled={busy}><ChefHat size={16} /> Generate KOT</LegacyButton>
+          <LegacyButton
+            variant="ghost"
+            className="w-full justify-center"
+            onClick={() => {
+              if (!guard()) return
+              const orderPreview = {
+                order_type: meta.order_type,
+                table_no: meta.table_no || null,
+                notes: meta.notes || null,
+                reservation_id: link.reservation_id,
+                guest_name: link.guest_name || null,
+                room_no: link.room_no || null,
+                discount_scope: meta.discount_scope,
+                discount_type: meta.discount_type,
+                discount_value: Number(meta.discount_value) || 0,
+                discount_pct: discountPct,
+                base_amount: t.base_amount,
+                discount: t.discount,
+                service_charge: t.service_charge,
+                vat: t.vat,
+                total: t.total,
+                rounding: t.rounding,
+                status: 'PREVIEW',
+                order_no: 'PREVIEW',
+                created_by: userName,
+              }
+              setPrintDoc({
+                type: 'RECEIPT',
+                order: orderPreview,
+                items: cart.map((c) => ({
+                  item_name: c.item_name,
+                  qty: c.qty,
+                  unit_price: c.unit_price,
+                  line_total: +(c.qty * c.unit_price).toFixed(2),
+                })),
+                mushakNo: null,
+              })
+            }}
+            disabled={busy}
+          >
+            <Receipt size={16} /> Preview Bill
+          </LegacyButton>
+          <LegacyButton
+            variant="ghost"
+            className="w-full justify-center"
+            onClick={generateKOT}
+            disabled={busy}
+          >
+            <ChefHat size={16} /> Generate KOT
+          </LegacyButton>
         </div>
       </div>
-      {showPicker && <GuestPicker close={() => setShowPicker(false)} pick={(g) => { setLink(g); setShowPicker(false) }} />}
+      {showPicker && (
+        <GuestPicker
+          close={() => setShowPicker(false)}
+          pick={(g) => {
+            setLink(g)
+            setShowPicker(false)
+          }}
+        />
+      )}
       {changeConfirmation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl border border-leaf">
             <h4 className="font-display text-base font-semibold text-pine">Change confirmation</h4>
             <p className="text-xs text-pine/70 mt-1">Change দেওয়া হয়েছে কি?</p>
             <div className="mt-4 space-y-1.5 text-sm">
-              <div className="flex justify-between"><span>Bill amount</span><span className="money font-semibold">{fmtBDT(t.total)}</span></div>
-              <div className="flex justify-between"><span>Paid amount</span><span className="money font-semibold">{fmtBDT(changeConfirmation.totalPaid)}</span></div>
-              <div className="flex justify-between text-amber font-semibold"><span>Change</span><span className="money">{fmtBDT(changeConfirmation.change)}</span></div>
+              <div className="flex justify-between">
+                <span>Bill amount</span>
+                <span className="money font-semibold">{fmtBDT(t.total)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Paid amount</span>
+                <span className="money font-semibold">{fmtBDT(changeConfirmation.totalPaid)}</span>
+              </div>
+              <div className="flex justify-between text-amber font-semibold">
+                <span>Change</span>
+                <span className="money">{fmtBDT(changeConfirmation.change)}</span>
+              </div>
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <LegacyButton variant="ghost" size="xs" onClick={() => setChangeConfirmation(null)} disabled={busy}>Cancel</LegacyButton>
-              <LegacyButton size="xs" onClick={() => settlePaidOrder(changeConfirmation.paidMethods, changeConfirmation.totalPaid)} disabled={busy}>
+              <LegacyButton
+                variant="ghost"
+                size="xs"
+                onClick={() => setChangeConfirmation(null)}
+                disabled={busy}
+              >
+                Cancel
+              </LegacyButton>
+              <LegacyButton
+                size="xs"
+                onClick={() =>
+                  settlePaidOrder(changeConfirmation.paidMethods, changeConfirmation.totalPaid)
+                }
+                disabled={busy}
+              >
                 {busy ? 'Processing…' : 'Confirm & Print Bill'}
               </LegacyButton>
             </div>
@@ -630,54 +1206,92 @@ function OrderBuilder({ cats, items, taxConfig, userName, existing, draftSeed, f
   )
 }
 
-function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userName, onNewOrder, onOrdersChanged }) {
+function OrdersList({
+  company,
+  flash,
+  resumeOrder,
+  setPrintDoc,
+  isAdmin,
+  userName,
+  onNewOrder,
+  onOrdersChanged,
+}) {
   const [rows, setRows] = useState([])
   const [filter, setFilter] = useState('TODAY')
 
   const load = async () => {
-    let qy = withTenant(supabase.from('pos_orders').select('*')).order('created_at', { ascending: false }).limit(200)
+    let qy = withTenant(supabase.from('pos_orders').select('*'))
+      .order('created_at', { ascending: false })
+      .limit(200)
     if (filter === 'TODAY') qy = qy.gte('created_at', `${todayISO()}T00:00:00+06:00`)
     if (filter === 'OPEN') qy = qy.in('status', POS_ACTIVE_STATUSES)
     const { data } = await qy
     setRows(data || [])
   }
-  useEffect(() => { load() }, [filter])
+  useEffect(() => {
+    load()
+  }, [filter])
 
   const sumBy = (st) => rows.filter((r) => r.status === st).reduce((a, r) => a + Number(r.total), 0)
-  const canEdit = (order) => { return (isAdmin || userName === 'Manager') ? true : order.status !== 'SETTLED' }
+  const canEdit = (order) => {
+    return isAdmin || userName === 'Manager' ? true : order.status !== 'SETTLED'
+  }
   const printReceipt = async (o) => {
-    const { data: oi } = await withTenant(supabase.from('pos_order_items').select('*').eq('order_id', o.id))
+    const { data: oi } = await withTenant(
+      supabase.from('pos_order_items').select('*').eq('order_id', o.id),
+    )
     setPrintDoc({ type: 'RECEIPT', order: o, items: oi || [], mushakNo: null })
   }
   const printKot = async (o) => {
-    const { data: oi } = await withTenant(supabase.from('pos_order_items').select('*').eq('order_id', o.id))
+    const { data: oi } = await withTenant(
+      supabase.from('pos_order_items').select('*').eq('order_id', o.id),
+    )
     setPrintDoc({ type: 'KOT', order: o, items: oi || [] })
     await syncGuestOrderTask(o, 'KOT_GENERATED')
   }
   const printMushak = async (o) => {
-    const { data: inv } = await withTenant(supabase.from('invoices').select('*').eq('id', o.invoice_id)).single()
+    const { data: inv } = await withTenant(
+      supabase.from('invoices').select('*').eq('id', o.invoice_id),
+    ).single()
     if (inv) setPrintDoc({ type: 'MUSHAK', invoice: inv, refNo: o.order_no })
   }
   const cancel = async (o) => {
     await withTenant(supabase.from('pos_orders').update({ status: 'CANCELLED' }).eq('id', o.id))
-    flash(`${o.order_no} cancelled.`); onOrdersChanged?.(); load()
+    flash(`${o.order_no} cancelled.`)
+    onOrdersChanged?.()
+    load()
   }
   const voidOrder = async (o) => {
-    if (o.folio_charge_id) await withTenant(supabase.from('folio_charges').delete().eq('id', o.folio_charge_id))
-    if (o.reservation_id) await withTenant(supabase.from('payments').delete().eq('reservation_id', o.reservation_id).eq('reference', o.order_no))
-    if (o.invoice_id) await withTenant(supabase.from('invoices').delete().eq('id', o.invoice_id))
-    await withTenant(supabase.from('pos_orders').update({ status: 'CANCELLED', notes: ((o.notes || '') + ' [VOIDED by admin]').trim() }).eq('id', o.id))
-    flash(`${o.order_no} voided — folio charge, payment and Mushak entry reversed.`); onOrdersChanged?.(); load()
+    const reason = window.prompt(`Void reason for ${o.order_no}?`, 'Admin correction')
+    if (reason === null) return
+    const { data, error } = await supabase.rpc('pos_void_order', {
+      p_order_id: o.id,
+      p_reason: reason,
+    })
+    if (error) {
+      flash(error.message || 'Unable to void this order.')
+      return
+    }
+
+    if (data?.status === 'already_voided') {
+      flash(`${o.order_no} is already voided.`)
+    } else {
+      flash(`${o.order_no} voided atomically — linked folio/payment/invoice entries reversed.`)
+    }
+    onOrdersChanged?.()
+    load()
   }
   const syncGuestOrderTask = async (order, nextStage, nextStatus = 'IN_PROGRESS') => {
     const ref = `POS_ORDER_ID:${order.id}`
-    const { data: linkedTasks } = await withTenant(supabase
-      .from('tasks')
-      .select('id, description')
-      .eq('source', 'GUEST_POS_ORDER')
-      .ilike('description', `%${ref}%`)
-      .in('status', ['OPEN', 'IN_PROGRESS'])
-      .limit(10))
+    const { data: linkedTasks } = await withTenant(
+      supabase
+        .from('tasks')
+        .select('id, description')
+        .eq('source', 'GUEST_POS_ORDER')
+        .ilike('description', `%${ref}%`)
+        .in('status', ['OPEN', 'IN_PROGRESS'])
+        .limit(10),
+    )
     if (linkedTasks?.length) {
       for (const row of linkedTasks) {
         const patch = {
@@ -716,14 +1330,41 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
   return (
     <div>
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="card p-4"><div className="label">Settled (in view)</div><div className="font-display text-xl font-bold text-forest money">{fmtBDT(sumBy('SETTLED'))}</div></div>
-        <div className="card p-4"><div className="label">Charged to rooms</div><div className="font-display text-xl font-bold text-pine money">{fmtBDT(sumBy('CHARGED_TO_ROOM'))}</div></div>
-        <div className="card p-4"><div className="label">Open orders</div><div className="font-display text-xl font-bold text-amber money">{rows.filter((r) => POS_ACTIVE_STATUSES.includes(r.status)).length}</div></div>
+        <div className="card p-4">
+          <div className="label">Settled (in view)</div>
+          <div className="font-display text-xl font-bold text-forest money">
+            {fmtBDT(sumBy('SETTLED'))}
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="label">Charged to rooms</div>
+          <div className="font-display text-xl font-bold text-pine money">
+            {fmtBDT(sumBy('CHARGED_TO_ROOM'))}
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="label">Open orders</div>
+          <div className="font-display text-xl font-bold text-amber money">
+            {rows.filter((r) => POS_ACTIVE_STATUSES.includes(r.status)).length}
+          </div>
+        </div>
       </div>
       <div className="flex gap-2 mb-3">
-        {['TODAY', 'OPEN', 'ALL'].map((f) => (<button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${filter === f ? 'bg-pine text-white' : 'bg-white border border-leaf text-pine/70'}`}>{f}</button>))}
-        <LegacyButton size="xs" className="ml-auto" onClick={() => onNewOrder?.()}><Plus size={14} /> New Order</LegacyButton>
-        <LegacyButton variant="ghost" size="xs" onClick={load}><RotateCcw size={13} /> Refresh</LegacyButton>
+        {['TODAY', 'OPEN', 'ALL'].map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold ${filter === f ? 'bg-pine text-white' : 'bg-white border border-leaf text-pine/70'}`}
+          >
+            {f}
+          </button>
+        ))}
+        <LegacyButton size="xs" className="ml-auto" onClick={() => onNewOrder?.()}>
+          <Plus size={14} /> New Order
+        </LegacyButton>
+        <LegacyButton variant="ghost" size="xs" onClick={load}>
+          <RotateCcw size={13} /> Refresh
+        </LegacyButton>
       </div>
       <AedsDataGrid
         title="POS Orders"
@@ -746,7 +1387,13 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
           { accessorKey: 'order_context', header: 'Context', width: 160 },
           { accessorKey: 'guest_display', header: 'Guest', width: 200 },
           { accessorKey: 'payment_method', header: 'Payment', width: 150 },
-          { accessorKey: 'total_amount', header: 'Total', type: 'currency', aggregation: 'sum', width: 150 },
+          {
+            accessorKey: 'total_amount',
+            header: 'Total',
+            type: 'currency',
+            aggregation: 'sum',
+            width: 150,
+          },
           { accessorKey: 'status', header: 'Status', type: 'status', width: 150 },
           {
             accessorKey: 'actions',
@@ -797,7 +1444,7 @@ function OrdersList({ company, flash, resumeOrder, setPrintDoc, isAdmin, userNam
                           row,
                           workflow.nextStatus,
                           workflow.taskStage,
-                          workflow.taskStatus
+                          workflow.taskStatus,
                         )
                         flash(`${row.order_no} — ${workflow.label}.`)
                       }}
@@ -873,21 +1520,43 @@ function MenuManager({ cats, items, reload, isAdmin }) {
 
   const addCat = async () => {
     if (!nc.trim()) return
-    await supabase.from('menu_categories').insert(withTenantInsert({ name: nc.trim(), sort_order: cats.length + 1 }))
-    setNc(''); reload()
+    await supabase
+      .from('menu_categories')
+      .insert(withTenantInsert({ name: nc.trim(), sort_order: cats.length + 1 }))
+    setNc('')
+    reload()
   }
-  const toggleCat = async (c) => { await withTenantScope(supabase.from('menu_categories').update({ is_active: !c.is_active }).eq('id', c.id)); reload() }
+  const toggleCat = async (c) => {
+    await withTenantScope(
+      supabase.from('menu_categories').update({ is_active: !c.is_active }).eq('id', c.id),
+    )
+    reload()
+  }
   const addItem = async () => {
     if (!ni.name.trim() || ni.price === '' || !ni.category_id) return
-    await supabase.from('menu_items').insert(withTenantInsert({ category_id: ni.category_id, name: ni.name.trim(), price: +ni.price }))
-    setNi({ category_id: ni.category_id, name: '', price: '' }); reload()
+    await supabase
+      .from('menu_items')
+      .insert(
+        withTenantInsert({ category_id: ni.category_id, name: ni.name.trim(), price: +ni.price }),
+      )
+    setNi({ category_id: ni.category_id, name: '', price: '' })
+    reload()
   }
   const updatePrice = async (it, price) => {
     if (price === '' || +price === +it.price) return
-    await withTenantScope(supabase.from('menu_items').update({ price: +price }).eq('id', it.id)); reload()
+    await withTenantScope(supabase.from('menu_items').update({ price: +price }).eq('id', it.id))
+    reload()
   }
-  const toggleItem = async (it) => { await withTenantScope(supabase.from('menu_items').update({ is_active: !it.is_active }).eq('id', it.id)); reload() }
-  const delItem = async (it) => { await withTenantScope(supabase.from('menu_items').delete().eq('id', it.id)); reload() }
+  const toggleItem = async (it) => {
+    await withTenantScope(
+      supabase.from('menu_items').update({ is_active: !it.is_active }).eq('id', it.id),
+    )
+    reload()
+  }
+  const delItem = async (it) => {
+    await withTenantScope(supabase.from('menu_items').delete().eq('id', it.id))
+    reload()
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -895,36 +1564,88 @@ function MenuManager({ cats, items, reload, isAdmin }) {
         <h3 className="font-display font-semibold text-pine mb-3">Categories</h3>
         {isAdmin ? (
           <div className="flex gap-2 mb-3">
-            <input className="input flex-1" placeholder="New category" value={nc} onChange={(e) => setNc(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addCat()} />
-            <LegacyButton onClick={addCat}><Plus size={15} /></LegacyButton>
+            <input
+              className="input flex-1"
+              placeholder="New category"
+              value={nc}
+              onChange={(e) => setNc(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addCat()}
+            />
+            <LegacyButton onClick={addCat}>
+              <Plus size={15} />
+            </LegacyButton>
           </div>
         ) : (
           <p className="text-xs text-pine/50 mb-3">Menu changes require administrator access.</p>
         )}
         {cats.map((c) => (
-          <div key={c.id} className="flex justify-between items-center py-1.5 border-b border-leaf/60 text-sm">
+          <div
+            key={c.id}
+            className="flex justify-between items-center py-1.5 border-b border-leaf/60 text-sm"
+          >
             <span className="font-medium">{c.name}</span>
-            <button onClick={() => isAdmin && toggleCat(c)} disabled={!isAdmin} className={`status-chip ${c.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'} ${!isAdmin ? 'cursor-default' : ''}`}>{c.is_active ? 'ACTIVE' : 'OFF'}</button>
+            <button
+              onClick={() => isAdmin && toggleCat(c)}
+              disabled={!isAdmin}
+              className={`status-chip ${c.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'} ${!isAdmin ? 'cursor-default' : ''}`}
+            >
+              {c.is_active ? 'ACTIVE' : 'OFF'}
+            </button>
           </div>
         ))}
       </div>
       <div className="card p-5 lg:col-span-2">
         <h3 className="font-display font-semibold text-pine mb-3">Menu items</h3>
-        {!isAdmin && <p className="text-xs text-pine/50 mb-3">Read-only — ask an administrator to change items or prices.</p>}
-        {isAdmin && <div className="grid grid-cols-4 gap-2 mb-4 items-end">
-          <div><label className="label">Category</label><select className="input" value={ni.category_id} onChange={(e) => setNi({ ...ni, category_id: e.target.value })}><option value="">Select…</option>{cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-          <div><label className="label">Item name</label><input className="input" value={ni.name} onChange={(e) => setNi({ ...ni, name: e.target.value })} /></div>
-          <div><label className="label">Price ৳</label><input type="number" className="input money" value={ni.price} onChange={(e) => setNi({ ...ni, price: e.target.value })} /></div>
-          <LegacyButton className="justify-center" onClick={addItem}><Plus size={15} /> Add item</LegacyButton>
-        </div>}
+        {!isAdmin && (
+          <p className="text-xs text-pine/50 mb-3">
+            Read-only — ask an administrator to change items or prices.
+          </p>
+        )}
+        {isAdmin && (
+          <div className="grid grid-cols-4 gap-2 mb-4 items-end">
+            <div>
+              <label className="label">Category</label>
+              <select
+                className="input"
+                value={ni.category_id}
+                onChange={(e) => setNi({ ...ni, category_id: e.target.value })}
+              >
+                <option value="">Select…</option>
+                {cats.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Item name</label>
+              <input
+                className="input"
+                value={ni.name}
+                onChange={(e) => setNi({ ...ni, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="label">Price ৳</label>
+              <input
+                type="number"
+                className="input money"
+                value={ni.price}
+                onChange={(e) => setNi({ ...ni, price: e.target.value })}
+              />
+            </div>
+            <LegacyButton className="justify-center" onClick={addItem}>
+              <Plus size={15} /> Add item
+            </LegacyButton>
+          </div>
+        )}
         <AedsDataGrid
           title="Menu Items"
           subtitle="Category, selling price and availability control"
           data={items.map((item) => ({
             ...item,
-            category_name:
-              cats.find((category) => category.id === item.category_id)?.name ||
-              '—',
+            category_name: cats.find((category) => category.id === item.category_id)?.name || '—',
             menu_status: item.is_active ? 'ACTIVE' : 'OFF',
           }))}
           columns={[
@@ -934,7 +1655,7 @@ function MenuManager({ cats, items, reload, isAdmin }) {
               accessorKey: 'price',
               header: 'Price',
               width: 160,
-              cell: ({ row }) => (
+              cell: ({ row }) =>
                 isAdmin ? (
                   <input
                     type="number"
@@ -944,11 +1665,8 @@ function MenuManager({ cats, items, reload, isAdmin }) {
                     className="input !w-28 !py-1 money text-right inline-block"
                   />
                 ) : (
-                  <span className="money">
-                    {Number(row.price || 0).toFixed(2)}
-                  </span>
-                )
-              ),
+                  <span className="money">{Number(row.price || 0).toFixed(2)}</span>
+                ),
             },
             {
               accessorKey: 'menu_status',
@@ -963,9 +1681,7 @@ function MenuManager({ cats, items, reload, isAdmin }) {
                   }}
                   disabled={!isAdmin}
                   className={`status-chip ${
-                    row.is_active
-                      ? 'bg-forest/15 text-forest'
-                      : 'bg-stone-200 text-stone-600'
+                    row.is_active ? 'bg-forest/15 text-forest' : 'bg-stone-200 text-stone-600'
                   } ${!isAdmin ? 'cursor-default' : ''}`}
                 >
                   {row.is_active ? 'ACTIVE' : 'OFF'}
@@ -977,7 +1693,7 @@ function MenuManager({ cats, items, reload, isAdmin }) {
               header: 'Actions',
               sortable: false,
               width: 100,
-              cell: ({ row }) => (
+              cell: ({ row }) =>
                 isAdmin ? (
                   <button
                     onClick={(event) => {
@@ -989,8 +1705,7 @@ function MenuManager({ cats, items, reload, isAdmin }) {
                   >
                     <Trash2 size={14} />
                   </button>
-                ) : null
-              ),
+                ) : null,
             },
           ]}
           pageSize={100}
@@ -1003,211 +1718,318 @@ function MenuManager({ cats, items, reload, isAdmin }) {
 }
 
 export function GuestPosKiosk() {
-    const [cats, setCats] = useState([])
-    const [items, setItems] = useState([])
-    const [taxConfig, setTaxConfig] = useState([])
-    const [company, setCompany] = useState(null)
-    const [activeCat, setActiveCat] = useState('ALL')
-    const [search, setSearch] = useState('')
-    const [cart, setCart] = useState([])
-    const [guestName, setGuestName] = useState('')
-    const [roomNo, setRoomNo] = useState('')
-    const [reservationId, setReservationId] = useState('')
-    const [notes, setNotes] = useState('')
-    const [busy, setBusy] = useState(false)
-    const [msg, setMsg] = useState('')
+  const [cats, setCats] = useState([])
+  const [items, setItems] = useState([])
+  const [taxConfig, setTaxConfig] = useState([])
+  const [company, setCompany] = useState(null)
+  const [activeCat, setActiveCat] = useState('ALL')
+  const [search, setSearch] = useState('')
+  const [cart, setCart] = useState([])
+  const [guestName, setGuestName] = useState('')
+  const [roomNo, setRoomNo] = useState('')
+  const [reservationId, setReservationId] = useState('')
+  const [notes, setNotes] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
 
-    const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
+  const flash = (m) => {
+    setMsg(m)
+    setTimeout(() => setMsg(''), 5000)
+  }
 
-    useEffect(() => {
-      const q = new URLSearchParams(window.location.search)
-      setGuestName(q.get('guest') || '')
-      setRoomNo(q.get('room') || '')
-      setReservationId(q.get('rid') || '')
-    }, [])
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    setGuestName(q.get('guest') || '')
+    setRoomNo(q.get('room') || '')
+    setReservationId(q.get('rid') || '')
+  }, [])
 
-    useEffect(() => {
-      const load = async () => {
-        const [{ data: c }, { data: it }, { data: tc }, { data: co }] = await Promise.all([
-          withTenantScope(supabase.from('menu_categories').select('*')).order('sort_order'),
-          withTenantScope(supabase.from('menu_items').select('*').eq('is_active', true)).order('sort_order').order('name'),
-          withTenantScope(supabase.from('tax_config').select('*')),
-          getCompanySettingsQuery('*').limit(1).single(),
-        ])
-        setCats(c || [])
-        setItems(it || [])
-        setTaxConfig(tc || [])
-        setCompany(co || null)
-      }
-      load()
-    }, [])
+  useEffect(() => {
+    const load = async () => {
+      const [{ data: c }, { data: it }, { data: tc }, { data: co }] = await Promise.all([
+        withTenantScope(supabase.from('menu_categories').select('*')).order('sort_order'),
+        withTenantScope(supabase.from('menu_items').select('*').eq('is_active', true))
+          .order('sort_order')
+          .order('name'),
+        withTenantScope(supabase.from('tax_config').select('*')),
+        getCompanySettingsQuery('*').limit(1).single(),
+      ])
+      setCats(c || [])
+      setItems(it || [])
+      setTaxConfig(tc || [])
+      setCompany(co || null)
+    }
+    load()
+  }, [])
 
-    const visible = useMemo(
-      () => items.filter((i) =>
-        (activeCat === 'ALL' || i.category_id === activeCat) &&
-        (!search || i.name.toLowerCase().includes(search.toLowerCase())),
+  const visible = useMemo(
+    () =>
+      items.filter(
+        (i) =>
+          (activeCat === 'ALL' || i.category_id === activeCat) &&
+          (!search || i.name.toLowerCase().includes(search.toLowerCase())),
       ),
-      [items, activeCat, search],
-    )
+    [items, activeCat, search],
+  )
 
-    const rate = rateFor(taxConfig, 'RESTAURANT', todayISO())
-    const subtotal = cart.reduce((a, c) => a + c.qty * c.unit_price, 0)
-    const t = computeCharge(subtotal, 0, rate)
-    const total = applyRounding(t.total)
+  const rate = rateFor(taxConfig, 'RESTAURANT', todayISO())
+  const subtotal = cart.reduce((a, c) => a + c.qty * c.unit_price, 0)
+  const t = computeCharge(subtotal, 0, rate)
+  const total = applyRounding(t.total)
 
-    const addItem = (item) => setCart((prev) => {
+  const addItem = (item) =>
+    setCart((prev) => {
       const found = prev.find((c) => c.menu_item_id === item.id)
       if (found) return prev.map((c) => (c.menu_item_id === item.id ? { ...c, qty: c.qty + 1 } : c))
-      return [...prev, { menu_item_id: item.id, item_name: item.name, qty: 1, unit_price: Number(item.base_price || 0) }]
+      return [
+        ...prev,
+        {
+          menu_item_id: item.id,
+          item_name: item.name,
+          qty: 1,
+          unit_price: Number(item.base_price || 0),
+        },
+      ]
     })
 
-    const bump = (idx, delta) => setCart((prev) =>
-      prev.map((c, i) => (i === idx ? { ...c, qty: Math.max(0, c.qty + delta) } : c)).filter((c) => c.qty > 0),
+  const bump = (idx, delta) =>
+    setCart((prev) =>
+      prev
+        .map((c, i) => (i === idx ? { ...c, qty: Math.max(0, c.qty + delta) } : c))
+        .filter((c) => c.qty > 0),
     )
 
-    const confirmOrder = async () => {
-      if (!cart.length) { flash('Please add at least one item.'); return }
-      if (!guestName && !roomNo && !reservationId) { flash('Enter guest details (name/room/reservation).'); return }
-      setBusy(true)
-      try {
-        const payload = {
-          order_type: 'ROOM_CHARGE',
-          reservation_id: reservationId ? Number(reservationId) : null,
-          guest_name: guestName || null,
-          room_no: roomNo || null,
-          notes: notes || null,
-          discount_pct: 0,
-          base_amount: t.base_amount,
-          discount: t.discount,
-          service_charge: t.service_charge,
-          vat: t.vat,
-          total,
-          payment_method: 'ROOM',
-          status: 'OPEN',
-          created_by: 'Guest Kiosk',
-        }
-        const { data: order, error } = await supabase.from('pos_orders').insert(withTenantInsert(payload)).select().single()
-        if (error) throw error
+  const confirmOrder = async () => {
+    if (!cart.length) {
+      flash('Please add at least one item.')
+      return
+    }
+    if (!guestName && !roomNo && !reservationId) {
+      flash('Enter guest details (name/room/reservation).')
+      return
+    }
+    setBusy(true)
+    try {
+      const payload = {
+        order_type: 'ROOM_CHARGE',
+        reservation_id: reservationId ? Number(reservationId) : null,
+        guest_name: guestName || null,
+        room_no: roomNo || null,
+        notes: notes || null,
+        discount_pct: 0,
+        base_amount: t.base_amount,
+        discount: t.discount,
+        service_charge: t.service_charge,
+        vat: t.vat,
+        total,
+        payment_method: 'ROOM',
+        status: 'OPEN',
+        created_by: 'Guest Kiosk',
+      }
+      const { data: order, error } = await supabase
+        .from('pos_orders')
+        .insert(withTenantInsert(payload))
+        .select()
+        .single()
+      if (error) throw error
 
-        const lineRows = cart.map((c) => ({
-          order_id: order.id,
-          menu_item_id: c.menu_item_id,
-          item_name: c.item_name,
-          qty: c.qty,
-          unit_price: c.unit_price,
-          line_total: +(c.qty * c.unit_price).toFixed(2),
-        }))
-        const { error: itemError } = await supabase.from('pos_order_items').insert(withTenantInsertMany(lineRows))
-        if (itemError) throw itemError
+      const lineRows = cart.map((c) => ({
+        order_id: order.id,
+        menu_item_id: c.menu_item_id,
+        item_name: c.item_name,
+        qty: c.qty,
+        unit_price: c.unit_price,
+        line_total: +(c.qty * c.unit_price).toFixed(2),
+      }))
+      const { error: itemError } = await supabase
+        .from('pos_order_items')
+        .insert(withTenantInsertMany(lineRows))
+      if (itemError) throw itemError
 
-        await supabase.from('tasks').insert(withTenantInsert({
+      await supabase.from('tasks').insert(
+        withTenantInsert({
           title: `New guest food order · ${order.order_no || 'POS'}`,
-          description: buildWorkflowDescription([
-            `Guest: ${guestName || '—'}`,
-            `Room: ${roomNo || '—'}`,
-            `Reservation: ${reservationId || '—'}`,
-            `Total: ${fmtBDT(total)}`,
-            `Source: QR/Kiosk POS`,
-          ].join('\n'), {
-            department: 'RESTAURANT',
-            stage: 'REQUESTED',
-            workflow: RESTAURANT_WORKFLOW,
-            intent: 'Guest POS kiosk order',
-            reference: `POS_ORDER_ID:${order.id}`,
-          }),
+          description: buildWorkflowDescription(
+            [
+              `Guest: ${guestName || '—'}`,
+              `Room: ${roomNo || '—'}`,
+              `Reservation: ${reservationId || '—'}`,
+              `Total: ${fmtBDT(total)}`,
+              `Source: QR/Kiosk POS`,
+            ].join('\n'),
+            {
+              department: 'RESTAURANT',
+              stage: 'REQUESTED',
+              workflow: RESTAURANT_WORKFLOW,
+              intent: 'Guest POS kiosk order',
+              reference: `POS_ORDER_ID:${order.id}`,
+            },
+          ),
           priority: 'HIGH',
           status: 'OPEN',
           source: 'GUEST_POS_ORDER',
           created_by: 'Guest Kiosk',
-        }))
+        }),
+      )
 
-        setCart([])
-        setNotes('')
-        flash(`Order confirmed (${order.order_no || order.id}). Restaurant has been notified.`)
-      } catch (e) {
-        flash(e.message || 'Failed to confirm order.')
-      } finally {
-        setBusy(false)
-      }
+      setCart([])
+      setNotes('')
+      flash(`Order confirmed (${order.order_no || order.id}). Restaurant has been notified.`)
+    } catch (e) {
+      flash(e.message || 'Failed to confirm order.')
+    } finally {
+      setBusy(false)
     }
+  }
 
-    return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(22,163,74,0.16),transparent_45%),#f6f8f7] p-4 sm:p-8">
-        <div className="max-w-6xl mx-auto space-y-4">
-          <div className="card p-5">
-            <h1 className="font-display text-2xl font-bold text-pine">Guest Kiosk POS</h1>
-            <p className="text-sm text-pine/60 mt-1">Select items and confirm. Restaurant gets an instant order request.</p>
-            {company?.company_name && <p className="text-xs text-pine/50 mt-1">{company.company_name}</p>}
-            {msg && <div className="mt-3 px-3 py-2 rounded-lg bg-forest/10 text-forest text-sm">{msg}</div>}
+  return (
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(22,163,74,0.16),transparent_45%),#f6f8f7] p-4 sm:p-8">
+      <div className="max-w-6xl mx-auto space-y-4">
+        <div className="card p-5">
+          <h1 className="font-display text-2xl font-bold text-pine">Guest Kiosk POS</h1>
+          <p className="text-sm text-pine/60 mt-1">
+            Select items and confirm. Restaurant gets an instant order request.
+          </p>
+          {company?.company_name && (
+            <p className="text-xs text-pine/50 mt-1">{company.company_name}</p>
+          )}
+          {msg && (
+            <div className="mt-3 px-3 py-2 rounded-lg bg-forest/10 text-forest text-sm">{msg}</div>
+          )}
+        </div>
+
+        <div className="grid lg:grid-cols-[1fr_360px] gap-4">
+          <div className="card p-4 space-y-3">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <button
+                className={`px-3 py-1.5 rounded-lg text-sm border ${activeCat === 'ALL' ? 'bg-forest text-white border-forest' : 'border-leaf text-pine'}`}
+                onClick={() => setActiveCat('ALL')}
+              >
+                All
+              </button>
+              {cats.map((c) => (
+                <button
+                  key={c.id}
+                  className={`px-3 py-1.5 rounded-lg text-sm border whitespace-nowrap ${activeCat === c.id ? 'bg-forest text-white border-forest' : 'border-leaf text-pine'}`}
+                  onClick={() => setActiveCat(c.id)}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-pine/40" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search menu item..."
+                className="input pl-9"
+              />
+            </div>
+            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[56vh] overflow-auto">
+              {visible.map((it) => (
+                <button
+                  key={it.id}
+                  onClick={() => addItem(it)}
+                  className="text-left border border-leaf rounded-xl p-3 hover:border-forest hover:shadow-sm bg-white"
+                >
+                  <div className="font-semibold text-pine">{it.name}</div>
+                  <div className="text-xs text-pine/50 mt-1">{it.description || '—'}</div>
+                  <div className="text-sm font-bold text-forest mt-2">
+                    {fmtBDT(Number(it.base_price || 0))}
+                  </div>
+                </button>
+              ))}
+              {visible.length === 0 && (
+                <p className="text-sm text-pine/50 col-span-full py-6 text-center">
+                  No menu item found.
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="grid lg:grid-cols-[1fr_360px] gap-4">
-            <div className="card p-4 space-y-3">
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                <button className={`px-3 py-1.5 rounded-lg text-sm border ${activeCat === 'ALL' ? 'bg-forest text-white border-forest' : 'border-leaf text-pine'}`} onClick={() => setActiveCat('ALL')}>All</button>
-                {cats.map((c) => (
-                  <button key={c.id} className={`px-3 py-1.5 rounded-lg text-sm border whitespace-nowrap ${activeCat === c.id ? 'bg-forest text-white border-forest' : 'border-leaf text-pine'}`} onClick={() => setActiveCat(c.id)}>
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-pine/40" />
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search menu item..." className="input pl-9" />
-              </div>
-              <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[56vh] overflow-auto">
-                {visible.map((it) => (
-                  <button key={it.id} onClick={() => addItem(it)} className="text-left border border-leaf rounded-xl p-3 hover:border-forest hover:shadow-sm bg-white">
-                    <div className="font-semibold text-pine">{it.name}</div>
-                    <div className="text-xs text-pine/50 mt-1">{it.description || '—'}</div>
-                    <div className="text-sm font-bold text-forest mt-2">{fmtBDT(Number(it.base_price || 0))}</div>
-                  </button>
-                ))}
-                {visible.length === 0 && <p className="text-sm text-pine/50 col-span-full py-6 text-center">No menu item found.</p>}
-              </div>
+          <div className="card p-4 space-y-3">
+            <h3 className="font-semibold text-pine">Your order</h3>
+            <input
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              placeholder="Guest name"
+              className="input"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                value={roomNo}
+                onChange={(e) => setRoomNo(e.target.value)}
+                placeholder="Room no"
+                className="input"
+              />
+              <input
+                value={reservationId}
+                onChange={(e) => setReservationId(e.target.value)}
+                placeholder="Reservation ID"
+                className="input"
+              />
             </div>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Special request (optional)"
+              className="input min-h-[72px]"
+            />
 
-            <div className="card p-4 space-y-3">
-              <h3 className="font-semibold text-pine">Your order</h3>
-              <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Guest name" className="input" />
-              <div className="grid grid-cols-2 gap-2">
-                <input value={roomNo} onChange={(e) => setRoomNo(e.target.value)} placeholder="Room no" className="input" />
-                <input value={reservationId} onChange={(e) => setReservationId(e.target.value)} placeholder="Reservation ID" className="input" />
-              </div>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Special request (optional)" className="input min-h-[72px]" />
-
-              <div className="max-h-56 overflow-auto space-y-2">
-                {cart.map((line, i) => (
-                  <div key={`${line.menu_item_id}-${i}`} className="border border-leaf rounded-lg p-2">
-                    <div className="flex justify-between items-center">
-                      <p className="text-sm font-medium text-pine">{line.item_name}</p>
-                      <p className="text-sm font-semibold text-forest">{fmtBDT(line.qty * line.unit_price)}</p>
-                    </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <LegacyButton variant="ghost" size="xs" onClick={() => bump(i, -1)}><Minus size={14} /></LegacyButton>
-                      <span className="text-sm w-6 text-center">{line.qty}</span>
-                      <LegacyButton variant="ghost" size="xs" onClick={() => bump(i, 1)}><Plus size={14} /></LegacyButton>
-                    </div>
+            <div className="max-h-56 overflow-auto space-y-2">
+              {cart.map((line, i) => (
+                <div
+                  key={`${line.menu_item_id}-${i}`}
+                  className="border border-leaf rounded-lg p-2"
+                >
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm font-medium text-pine">{line.item_name}</p>
+                    <p className="text-sm font-semibold text-forest">
+                      {fmtBDT(line.qty * line.unit_price)}
+                    </p>
                   </div>
-                ))}
-                {cart.length === 0 && <p className="text-sm text-pine/50">No item selected yet.</p>}
-              </div>
-
-              <div className="text-sm border-t border-leaf pt-3 space-y-1">
-                <div className="flex justify-between"><span>Subtotal</span><span>{fmtBDT(t.base_amount)}</span></div>
-                <div className="flex justify-between"><span>Service</span><span>{fmtBDT(t.service_charge)}</span></div>
-                <div className="flex justify-between"><span>VAT</span><span>{fmtBDT(t.vat)}</span></div>
-                <div className="flex justify-between font-bold text-base text-pine"><span>Total</span><span>{fmtBDT(total)}</span></div>
-              </div>
-
-              <LegacyButton className="w-full" onClick={confirmOrder} disabled={busy}>
-                {busy ? 'Confirming...' : 'Confirm Order'}
-              </LegacyButton>
+                  <div className="mt-2 flex items-center gap-2">
+                    <LegacyButton variant="ghost" size="xs" onClick={() => bump(i, -1)}>
+                      <Minus size={14} />
+                    </LegacyButton>
+                    <span className="text-sm w-6 text-center">{line.qty}</span>
+                    <LegacyButton variant="ghost" size="xs" onClick={() => bump(i, 1)}>
+                      <Plus size={14} />
+                    </LegacyButton>
+                  </div>
+                </div>
+              ))}
+              {cart.length === 0 && <p className="text-sm text-pine/50">No item selected yet.</p>}
             </div>
+
+            <div className="text-sm border-t border-leaf pt-3 space-y-1">
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span>{fmtBDT(t.base_amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Service</span>
+                <span>{fmtBDT(t.service_charge)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>VAT</span>
+                <span>{fmtBDT(t.vat)}</span>
+              </div>
+              <div className="flex justify-between font-bold text-base text-pine">
+                <span>Total</span>
+                <span>{fmtBDT(total)}</span>
+              </div>
+            </div>
+
+            <LegacyButton className="w-full" onClick={confirmOrder} disabled={busy}>
+              {busy ? 'Confirming...' : 'Confirm Order'}
+            </LegacyButton>
           </div>
         </div>
       </div>
-    )
+    </div>
+  )
 }
 
 function DayClose({ flash, isAdmin, userName, role }) {
@@ -1221,41 +2043,82 @@ function DayClose({ flash, isAdmin, userName, role }) {
   const load = async () => {
     const dayStart = `${day}T00:00:00+06:00`
     const dayEnd = `${day}T23:59:59+06:00`
-    const { data: rest } = await withTenant(supabase.from('pos_orders').select('*').is('reservation_id', null).gte('created_at', dayStart).lte('created_at', dayEnd))
-    const { data: close } = await withTenant(supabase.from('day_closes').select('*').eq('close_date', day).eq('type', 'RESTAURANT')).maybeSingle()
+    const { data: rest } = await withTenant(
+      supabase
+        .from('pos_orders')
+        .select('*')
+        .is('reservation_id', null)
+        .gte('created_at', dayStart)
+        .lte('created_at', dayEnd),
+    )
+    const { data: close } = await withTenant(
+      supabase.from('day_closes').select('*').eq('close_date', day).eq('type', 'RESTAURANT'),
+    ).maybeSingle()
     setRestOrders(rest || [])
     setClosedRow(close || null)
   }
 
-  useEffect(() => { load() }, [day])
+  useEffect(() => {
+    load()
+  }, [day])
 
   const calcTotal = (orders, status = null) => {
-    return orders.filter((o) => !status || o.status === status).reduce((a, o) => a + Number(o.total), 0)
+    return orders
+      .filter((o) => !status || o.status === status)
+      .reduce((a, o) => a + Number(o.total), 0)
   }
 
   const closeDay = async () => {
-    if (!isAdmin) { flash('Only administrators can close the day.'); return }
+    if (!isAdmin) {
+      flash('Only administrators can close the day.')
+      return
+    }
     setBusy(true)
     try {
-      const closeData = { close_date: day, closed_by: userName, closed_at: new Date().toISOString() }
+      const closeData = {
+        close_date: day,
+        closed_by: userName,
+        closed_at: new Date().toISOString(),
+      }
       const restTotal = calcTotal(restOrders, 'SETTLED')
-      await withTenant(supabase.from('day_closes').delete().eq('close_date', day).eq('type', 'RESTAURANT'))
-      const { error: rError } = await supabase.from('day_closes').insert(withTenantInsert({ ...closeData, type: 'RESTAURANT', settled_amount: restTotal, settled_orders: restOrders.filter((o) => o.status === 'SETTLED').length }))
+      await withTenant(
+        supabase.from('day_closes').delete().eq('close_date', day).eq('type', 'RESTAURANT'),
+      )
+      const { error: rError } = await supabase
+        .from('day_closes')
+        .insert(
+          withTenantInsert({
+            ...closeData,
+            type: 'RESTAURANT',
+            settled_amount: restTotal,
+            settled_orders: restOrders.filter((o) => o.status === 'SETTLED').length,
+          }),
+        )
       if (rError) throw rError
       flash(`Day closed for ${day} — Restaurant ৳${restTotal.toFixed(2)}`)
       setShowConfirm(false)
       load()
-    } catch (e) { flash(e.message) }
+    } catch (e) {
+      flash(e.message)
+    }
     setBusy(false)
   }
 
   const openDay = async () => {
-    if (!canOpenDay) { flash('Only SUPERUSER can open a closed day.'); return }
+    if (!canOpenDay) {
+      flash('Only SUPERUSER can open a closed day.')
+      return
+    }
     setBusy(true)
-    const { error } = await withTenant(supabase.from('day_closes').delete().eq('close_date', day).eq('type', 'RESTAURANT'))
+    const { error } = await withTenant(
+      supabase.from('day_closes').delete().eq('close_date', day).eq('type', 'RESTAURANT'),
+    )
     setBusy(false)
     if (error) flash(error.message)
-    else { flash(`Day opened for ${day} — Restaurant.`); load() }
+    else {
+      flash(`Day opened for ${day} — Restaurant.`)
+      load()
+    }
   }
 
   return (
@@ -1263,15 +2126,30 @@ function DayClose({ flash, isAdmin, userName, role }) {
       <div className="flex gap-3 items-center">
         <label className="text-sm font-medium">Close date:</label>
         <input type="date" value={day} onChange={(e) => setDay(e.target.value)} className="input" />
-        <LegacyButton variant="ghost" size="xs" onClick={load}><RotateCcw size={14} /> Refresh</LegacyButton>
+        <LegacyButton variant="ghost" size="xs" onClick={load}>
+          <RotateCcw size={14} /> Refresh
+        </LegacyButton>
       </div>
       <div className="grid grid-cols-1 gap-4">
         <div className="card p-5">
-          <h3 className="font-display font-semibold text-forest mb-3 flex items-center gap-2"><Receipt size={18} /> Restaurant Orders (Walk-in)</h3>
+          <h3 className="font-display font-semibold text-forest mb-3 flex items-center gap-2">
+            <Receipt size={18} /> Restaurant Orders (Walk-in)
+          </h3>
           <div className="space-y-2 text-sm mb-4">
-            <div className="flex justify-between"><span>Total settled:</span><span className="font-bold money">{fmtBDT(calcTotal(restOrders, 'SETTLED'))}</span></div>
-            <div className="flex justify-between"><span>Settled orders:</span><span>{restOrders.filter((o) => o.status === 'SETTLED').length}</span></div>
-            <div className="flex justify-between"><span>Open orders:</span><span className="text-amber">{restOrders.filter((o) => POS_ACTIVE_STATUSES.includes(o.status)).length}</span></div>
+            <div className="flex justify-between">
+              <span>Total settled:</span>
+              <span className="font-bold money">{fmtBDT(calcTotal(restOrders, 'SETTLED'))}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Settled orders:</span>
+              <span>{restOrders.filter((o) => o.status === 'SETTLED').length}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Open orders:</span>
+              <span className="text-amber">
+                {restOrders.filter((o) => POS_ACTIVE_STATUSES.includes(o.status)).length}
+              </span>
+            </div>
           </div>
           <AedsDataGrid
             title="Restaurant Day Orders"
@@ -1279,10 +2157,9 @@ function DayClose({ flash, isAdmin, userName, role }) {
             data={restOrders.map((order) => ({
               ...order,
               total_amount: Number(order.total || 0),
-              order_context:
-                order.table_no
-                  ? `Table ${order.table_no}`
-                  : order.order_type || 'Walk-in',
+              order_context: order.table_no
+                ? `Table ${order.table_no}`
+                : order.order_type || 'Walk-in',
             }))}
             columns={[
               { accessorKey: 'order_no', header: 'Order', width: 150 },
@@ -1290,7 +2167,13 @@ function DayClose({ flash, isAdmin, userName, role }) {
               { accessorKey: 'order_context', header: 'Context', width: 160 },
               { accessorKey: 'guest_name', header: 'Guest', width: 200 },
               { accessorKey: 'payment_method', header: 'Payment', width: 140 },
-              { accessorKey: 'total_amount', header: 'Total', type: 'currency', aggregation: 'sum', width: 150 },
+              {
+                accessorKey: 'total_amount',
+                header: 'Total',
+                type: 'currency',
+                aggregation: 'sum',
+                width: 150,
+              },
               { accessorKey: 'status', header: 'Status', type: 'status', width: 140 },
             ]}
             pageSize={50}
@@ -1304,14 +2187,29 @@ function DayClose({ flash, isAdmin, userName, role }) {
           <div className="flex justify-between items-center">
             <div>
               <h3 className="font-semibold text-amber">Close Day</h3>
-              <p className="text-xs text-pine/60 mt-1">This creates a day close record for Restaurant POS only.</p>
+              <p className="text-xs text-pine/60 mt-1">
+                This creates a day close record for Restaurant POS only.
+              </p>
             </div>
-            <LegacyButton variant="amber" onClick={() => setShowConfirm(true)} disabled={busy}><Clock size={16} /> Close {day}</LegacyButton>
+            <LegacyButton variant="amber" onClick={() => setShowConfirm(true)} disabled={busy}>
+              <Clock size={16} /> Close {day}
+            </LegacyButton>
           </div>
-          {closedRow && <p className="text-xs text-pine/60 mt-2">Closed by {closedRow.closed_by || '—'} at {fmtDate(closedRow.closed_at || closedRow.created_at || day)}.</p>}
+          {closedRow && (
+            <p className="text-xs text-pine/60 mt-2">
+              Closed by {closedRow.closed_by || '—'} at{' '}
+              {fmtDate(closedRow.closed_at || closedRow.created_at || day)}.
+            </p>
+          )}
           {canOpenDay && closedRow && (
             <div className="mt-3">
-              <LegacyButton variant="ghost" size="xs" className="text-red-600" onClick={openDay} disabled={busy}>
+              <LegacyButton
+                variant="ghost"
+                size="xs"
+                className="text-red-600"
+                onClick={openDay}
+                disabled={busy}
+              >
                 <XCircle size={14} /> Day Open (SUPERUSER)
               </LegacyButton>
             </div>
@@ -1319,10 +2217,20 @@ function DayClose({ flash, isAdmin, userName, role }) {
           {showConfirm && (
             <div className="mt-4 p-3 bg-white rounded border border-amber flex gap-3 items-center">
               <p className="text-sm flex-1">
-                <span className="font-bold">Restaurant:</span> {fmtBDT(calcTotal(restOrders, 'SETTLED'))} settled
+                <span className="font-bold">Restaurant:</span>{' '}
+                {fmtBDT(calcTotal(restOrders, 'SETTLED'))} settled
               </p>
-              <LegacyButton size="xs" onClick={closeDay} disabled={busy}>Confirm</LegacyButton>
-              <LegacyButton variant="ghost" size="xs" onClick={() => setShowConfirm(false)} disabled={busy}>Cancel</LegacyButton>
+              <LegacyButton size="xs" onClick={closeDay} disabled={busy}>
+                Confirm
+              </LegacyButton>
+              <LegacyButton
+                variant="ghost"
+                size="xs"
+                onClick={() => setShowConfirm(false)}
+                disabled={busy}
+              >
+                Cancel
+              </LegacyButton>
             </div>
           )}
         </div>

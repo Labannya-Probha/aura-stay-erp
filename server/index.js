@@ -8,6 +8,7 @@ import process from 'node:process'
 import reportingRoutes from './reporting/routes.js'
 import posPrintRoutes from './posPrint/routes.js'
 import moneyReceiptRoutes from './moneyReceipt/routes.js'
+import inventoryOrchestrationRoutes from './inventoryOrchestration/routes.js'
 import { requestContext } from './middleware/requestContext.js'
 import { errorHandler, initErrorTracking } from './middleware/errorTracking.js'
 import { initTelemetry, shutdownTelemetry } from './observability/telemetry.js'
@@ -53,6 +54,7 @@ app.use(express.json({ limit: '2mb' }))
 app.use('/api', reportingRoutes)
 app.use('/api', posPrintRoutes)
 app.use('/api', moneyReceiptRoutes)
+app.use('/api', inventoryOrchestrationRoutes)
 
 app.get('/health', (req, res) => {
   res.json({ ok: true, service: 'aura-stay-reporting-api', time: new Date().toISOString() })
