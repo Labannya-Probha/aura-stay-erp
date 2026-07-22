@@ -3,7 +3,7 @@ import { Receipt } from 'lucide-react'
 import SearchableSelect from '../SearchableSelect.jsx'
 import { fmtBDT, fmtDate, todayISO } from '../../lib/helpers'
 import { logAudit } from '../../lib/pms.api.js'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 
 export function GuestRefundCard({ res, payments, charges, totals, paid, resRooms = [], reload, flash, userName, isAdmin }) {
   const [open, setOpen]               = useState(false)

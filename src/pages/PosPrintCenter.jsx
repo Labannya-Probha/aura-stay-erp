@@ -4,13 +4,14 @@ import {
   Activity, ChefHat, FileText, Printer, Receipt, Route, Save, Search,
   Settings2, SlidersHorizontal, TestTube2,
 } from 'lucide-react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import PrintPortal from '../components/PrintPortal.jsx'
 import { BarOrderTicket, KitchenTicket, PosReceipt } from '../components/print/PosDocs.jsx'
 import { getTenantId } from '../lib/tenant'
 import { getCompanySettingsQuery } from '../lib/companySettings'
 import { formatMoney } from '../lib/posPrintEngine'
 import { fmtDate } from '../lib/helpers'
+import { LegacyButton } from '../components/ui/legacy-controls'
 
 const TABS = [
   { id: 'receipt-preview', label: 'Receipt Preview', icon: Receipt },
@@ -248,8 +249,8 @@ export default function PosPrintCenter({ company: shellCompany, userName }) {
           <p className="text-sm text-pine/60">Receipt, KOT/BOT, printer routing, templates, test print and audit logs.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="btn-ghost" onClick={load} disabled={busy}><Activity size={15} /> Refresh</button>
-          <button className="btn-primary" onClick={openReceiptPreview}><Printer size={15} /> Preview receipt</button>
+          <LegacyButton variant="ghost" onClick={load} disabled={busy}><Activity size={15} /> Refresh</LegacyButton>
+          <LegacyButton onClick={openReceiptPreview}><Printer size={15} /> Preview receipt</LegacyButton>
         </div>
       </div>
 
@@ -373,7 +374,7 @@ function ReceiptPreviewPanel({ orders, selectedOrderId, setSelectedOrderId, sele
           ))}
         </select>
         {!orders.length && <p className="text-sm text-pine/50">No live POS order found for this tenant. Create a real POS order to preview and print.</p>}
-        <button className="btn-primary w-full" onClick={openReceiptPreview} disabled={!selectedOrder}><Printer size={15} /> Open thermal preview</button>
+        <LegacyButton className="w-full" onClick={openReceiptPreview} disabled={!selectedOrder}><Printer size={15} /> Open thermal preview</LegacyButton>
       </div>
       <div className="card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
@@ -426,7 +427,7 @@ function TicketCard({ title, copy, button, onClick, disabled }) {
     <div className="card p-5">
       <h2 className="font-display font-semibold text-pine mb-2">{title}</h2>
       <p className="text-sm text-pine/55 mb-4">{copy}</p>
-      <button className="btn-primary" onClick={onClick} disabled={disabled}><Printer size={15} /> {button}</button>
+      <LegacyButton onClick={onClick} disabled={disabled}><Printer size={15} /> {button}</LegacyButton>
     </div>
   )
 }
@@ -460,7 +461,7 @@ function ProfilesPanel({ profiles, saveProfile }) {
                       <Toggle label="QR" checked={!!draft.show_qr} onChange={(value) => updateDraft(profile, 'show_qr', value)} />
                     </div>
                   </td>
-                  <td className="td text-right"><button className="btn-ghost !py-1" onClick={() => saveProfile(draft)}><Save size={13} /> Save</button></td>
+                  <td className="td text-right"><LegacyButton variant="ghost" size="xs" onClick={() => saveProfile(draft)}><Save size={13} /> Save</LegacyButton></td>
                 </tr>
               )
             })}
@@ -496,7 +497,7 @@ function RoutingPanel({ devices, routes, profiles, saveDevice, saveRoute }) {
             <Toggle label="Cash drawer" checked={device.cash_drawer_enabled ?? false} onChange={(value) => setDevice({ ...device, cash_drawer_enabled: value })} />
             <Toggle label="Silent print" checked={device.silent_print_enabled ?? false} onChange={(value) => setDevice({ ...device, silent_print_enabled: value })} />
           </div>
-          <button className="btn-primary" onClick={() => saveDevice(device)}><Save size={15} /> Save device</button>
+          <LegacyButton onClick={() => saveDevice(device)}><Save size={15} /> Save device</LegacyButton>
         </div>
 
         <div className="card p-4 space-y-3">
@@ -510,7 +511,7 @@ function RoutingPanel({ devices, routes, profiles, saveDevice, saveRoute }) {
           </select>
           <input className="input" placeholder="Item category / station rule" value={route.item_category || ''} onChange={(event) => setRoute({ ...route, item_category: event.target.value })} />
           <input className="input" placeholder="Priority" type="number" value={route.priority || 100} onChange={(event) => setRoute({ ...route, priority: event.target.value })} />
-          <button className="btn-primary" onClick={() => saveRoute(route)}><Save size={15} /> Save route</button>
+          <LegacyButton onClick={() => saveRoute(route)}><Save size={15} /> Save route</LegacyButton>
         </div>
       </div>
 
@@ -560,7 +561,7 @@ function DesignerPanel({ settings, saveSettings, company }) {
             <Toggle key={key} label={key.replaceAll('_', ' ')} checked={!!draft[key]} onChange={(value) => setDraft({ ...draft, [key]: value })} />
           ))}
         </div>
-        <button className="btn-primary" onClick={() => saveSettings(draft)}><Save size={15} /> Save designer settings</button>
+        <LegacyButton onClick={() => saveSettings(draft)}><Save size={15} /> Save designer settings</LegacyButton>
       </div>
       <div className="card p-4">
         <h2 className="font-display font-semibold text-pine mb-3">Tenant branding</h2>
@@ -584,7 +585,7 @@ function ThermalTestPanel({ selectedOrder, items, company, openReceiptPreview })
       <p className="text-sm text-pine/55 mb-4">Runs a browser print preview using the selected live order. Hardware ESC/POS device routing is configured in Printer Routing.</p>
       {selectedOrder ? (
         <div className="flex flex-wrap gap-2">
-          <button className="btn-primary" onClick={openReceiptPreview}><Printer size={15} /> Test receipt preview</button>
+          <LegacyButton onClick={openReceiptPreview}><Printer size={15} /> Test receipt preview</LegacyButton>
           <span className="status-chip">{selectedOrder.order_no}</span>
           <span className="status-chip">{items.length} items</span>
           <span className="status-chip">{company?.name || 'Tenant'}</span>

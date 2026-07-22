@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('../supabase', () => ({
+vi.mock('../lib/supabase', () => ({
   supabase: {
     rpc: vi.fn(),
   },
 }))
 
 import { approvePayrollAndPostJv, generatePayrollJournal } from './generatePayrollJournal.js'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 
 describe('approvePayrollAndPostJv()', () => {
   beforeEach(() => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { Lock } from 'lucide-react'
 import { PRIV_MODULES, MODULE_LABELS } from './settingsConfig'
 

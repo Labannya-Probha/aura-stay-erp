@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { getTenantId } from '../../lib/tenant'
 
 const CARD_TYPES = ['VISA', 'MASTERCARD', 'AMEX', 'UNIONPAY', 'DBBL NEXUS', 'OTHER']

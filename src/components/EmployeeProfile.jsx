@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { fmtBDT, fmtDate, todayISO } from '../lib/helpers'
 import { ChevronLeft, Printer, CheckCircle2, Clock } from 'lucide-react'
 import PrintPortal from './PrintPortal.jsx'

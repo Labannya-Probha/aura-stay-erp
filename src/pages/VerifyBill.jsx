@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { PosReceipt } from '../components/print/PosDocs.jsx'
 import { Download, Printer } from 'lucide-react'
 import html2canvas from 'html2canvas'

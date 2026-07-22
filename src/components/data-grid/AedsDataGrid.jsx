@@ -12,8 +12,21 @@ import {
 
 import AedsDataGridToolbar from "./AedsDataGridToolbar"
 import AedsDataGridPagination from "./AedsDataGridPagination"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "src/components/ui/table"
 import "./aeds-data-grid.css"
 import "./aeds-v6-phase5-grid.css"
+
+function columnKey(column) {
+  return column?.accessorKey || column?.id || String(column?.header || "column")
+}
 
 function formatValue(value, column) {
   if (value === null || value === undefined || value === "") return "—"
@@ -173,14 +186,14 @@ export default function AedsDataGrid({
   const [page, setPage] = useState(0)
   const [columnWidths, setColumnWidths] = useState({})
   const [columnOrder, setColumnOrder] = useState(
-    columns.map((column) => column.accessorKey)
+    columns.map((column) => columnKey(column))
   )
   const [columnVisibility, setColumnVisibility] = useState({})
 
   useEffect(() => {
     setColumnOrder((current) => {
       const incoming = columns.map(
-        (column) => column.accessorKey
+        (column) => columnKey(column)
       )
 
       return [
@@ -197,7 +210,7 @@ export default function AedsDataGrid({
   const visibleColumns = useMemo(() => {
     const byKey = new Map(
       columns.map((column) => [
-        column.accessorKey,
+        columnKey(column),
         column,
       ])
     )
@@ -213,7 +226,7 @@ export default function AedsDataGrid({
       )
       .filter(
         (column) =>
-          columnVisibility[column.accessorKey] !== false
+          columnVisibility[columnKey(column)] !== false
       )
   }, [columns, columnOrder, columnVisibility])
 
@@ -257,7 +270,7 @@ export default function AedsDataGrid({
   )
 
   const onSort = (column) => {
-    if (column.sortable === false) return
+    if (!column?.accessorKey || column.sortable === false) return
 
     setSort((current) => {
       if (current?.key !== column.accessorKey) {
@@ -267,7 +280,7 @@ export default function AedsDataGrid({
         }
       }
 
-      if (current.direction === "asc") {
+      if (current?.direction === "asc") {
         return {
           key: column.accessorKey,
           direction: "desc",
@@ -311,7 +324,7 @@ export default function AedsDataGrid({
   }
 
   const renderSortIcon = (column) => {
-    if (sort?.key !== column.accessorKey) return null
+    if (!column?.accessorKey || !sort || sort.key !== column.accessorKey) return null
 
     return sort.direction === "asc" ? (
       <ArrowUp size={12} />
@@ -349,7 +362,7 @@ export default function AedsDataGrid({
     const clickable = typeof onRowClick === "function"
 
     return (
-      <tr
+      <TableRow
         key={rowId}
         className={`aeds-grid-row ${
           clickable ? "aeds-grid-row-clickable" : ""
@@ -379,7 +392,7 @@ export default function AedsDataGrid({
             frozenFirstColumn && columnIndex === 0
 
           return (
-            <td
+            <TableCell
               key={column.accessorKey}
               className={`aeds-grid-cell aeds-grid-align-${alignment(
                 column
@@ -394,19 +407,19 @@ export default function AedsDataGrid({
               }}
             >
               {renderCell(row, column, rowIndex)}
-            </td>
+            </TableCell>
           )
         })}
-      </tr>
+      </TableRow>
     )
   }
 
   return (
-    <section className="aeds-grid-card">
-      <header className="aeds-grid-header">
+    <section className="aeds-grid-card rounded-3xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.05)]">
+      <header className="aeds-grid-header border-b border-slate-200 px-5 py-4">
         <div>
-          <h2>{title}</h2>
-          <p>
+          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+          <p className="text-sm text-slate-500">
             {subtitle} ·{" "}
             {processedRows.length.toLocaleString("en-BD")}{" "}
             row(s)
@@ -432,10 +445,10 @@ export default function AedsDataGrid({
         </div>
       )}
 
-      <div className="aeds-grid-wrap">
-        <table className="aeds-grid-table">
-          <thead>
-            <tr>
+      <div className="aeds-grid-wrap overflow-x-auto">
+        <Table className="aeds-grid-table min-w-full text-sm">
+          <TableHeader>
+            <TableRow>
               {visibleColumns.map(
                 (column, columnIndex) => {
                   const frozen =
@@ -443,8 +456,8 @@ export default function AedsDataGrid({
                     columnIndex === 0
 
                   return (
-                    <th
-                      key={column.accessorKey}
+                    <TableHead
+                      key={columnKey(column)}
                       className={`aeds-grid-align-${alignment(
                         column
                       )} ${
@@ -455,7 +468,7 @@ export default function AedsDataGrid({
                       style={{
                         width:
                           columnWidths[
-                            column.accessorKey
+                            columnKey(column)
                           ] ||
                           column.width ||
                           170,
@@ -477,7 +490,7 @@ export default function AedsDataGrid({
                           className="aeds-grid-mini"
                           onClick={() =>
                             moveColumn(
-                              column.accessorKey,
+                              columnKey(column),
                               "left"
                             )
                           }
@@ -491,7 +504,7 @@ export default function AedsDataGrid({
                           className="aeds-grid-mini"
                           onClick={() =>
                             moveColumn(
-                              column.accessorKey,
+                              columnKey(column),
                               "right"
                             )
                           }
@@ -505,7 +518,7 @@ export default function AedsDataGrid({
                           role="separator"
                           onClick={() =>
                             resizeColumn(
-                              column.accessorKey,
+                              columnKey(column),
                               32
                             )
                           }
@@ -513,23 +526,23 @@ export default function AedsDataGrid({
                             setColumnWidths(
                               (current) => ({
                                 ...current,
-                                [column.accessorKey]: 170,
+                                [columnKey(column)]: 170,
                               })
                             )
                           }
                         />
                       </div>
-                    </th>
+                    </TableHead>
                   )
                 }
               )}
-            </tr>
-          </thead>
+            </TableRow>
+          </TableHeader>
 
-          <tbody>
+          <TableBody>
             {loading ? (
-              <tr>
-                <td
+              <TableRow>
+                <TableCell
                   colSpan={Math.max(
                     1,
                     visibleColumns.length
@@ -537,8 +550,8 @@ export default function AedsDataGrid({
                   className="aeds-grid-empty"
                 >
                   Loading data...
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : grouped ? (
               Object.entries(grouped).map(
                 ([groupValue, groupedRows]) => {
@@ -549,8 +562,8 @@ export default function AedsDataGrid({
 
                   return (
                     <Fragment key={`group-${groupValue}`}>
-                      <tr className="aeds-grid-group-row">
-                        <td
+                      <TableRow className="aeds-grid-group-row">
+                        <TableCell
                           colSpan={visibleColumns.length}
                         >
                           {
@@ -562,16 +575,16 @@ export default function AedsDataGrid({
                           }
                           : <strong>{groupValue}</strong> ·{" "}
                           {groupedRows.length} row(s)
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
 
                       {groupedRows.map(renderRow)}
 
-                      <tr className="aeds-grid-subtotal">
+                      <TableRow className="aeds-grid-subtotal">
                         {visibleColumns.map(
                           (column, index) => (
-                            <td
-                              key={column.accessorKey}
+                            <TableCell
+                              key={columnKey(column)}
                               className={`aeds-grid-align-${alignment(
                                 column
                               )}`}
@@ -589,10 +602,10 @@ export default function AedsDataGrid({
                                       column
                                     )
                                   : ""}
-                            </td>
+                            </TableCell>
                           )
                         )}
-                      </tr>
+                      </TableRow>
                     </Fragment>
                   )
                 }
@@ -602,8 +615,8 @@ export default function AedsDataGrid({
             )}
 
             {!loading && !pagedRows.length && (
-              <tr>
-                <td
+              <TableRow>
+                <TableCell
                   colSpan={Math.max(
                     1,
                     visibleColumns.length
@@ -611,18 +624,18 @@ export default function AedsDataGrid({
                   className="aeds-grid-empty"
                 >
                   {emptyText}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
+          </TableBody>
 
           {processedRows.length > 0 && (
-            <tfoot>
-              <tr className="aeds-grid-total">
+            <TableFooter>
+              <TableRow className="aeds-grid-total">
                 {visibleColumns.map(
                   (column, index) => (
-                    <td
-                      key={column.accessorKey}
+                    <TableCell
+                      key={columnKey(column)}
                       className={`aeds-grid-align-${alignment(
                         column
                       )}`}
@@ -639,21 +652,23 @@ export default function AedsDataGrid({
                               column
                             )
                           : ""}
-                    </td>
+                    </TableCell>
                   )
                 )}
-              </tr>
-            </tfoot>
+              </TableRow>
+            </TableFooter>
           )}
-        </table>
+        </Table>
       </div>
 
-      <AedsDataGridPagination
-        page={page}
-        pageSize={pageSize}
-        totalRows={processedRows.length}
-        setPage={setPage}
-      />
+      <div className="border-t border-slate-200 px-5 py-4">
+        <AedsDataGridPagination
+          page={page}
+          pageSize={pageSize}
+          totalRows={processedRows.length}
+          setPage={setPage}
+        />
+      </div>
     </section>
   )
 }

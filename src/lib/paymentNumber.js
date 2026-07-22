@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { getTenantId } from './tenant'
 
 const PAYMENT_PATTERN = /^RP-([A-Z0-9]+)-\d{8,}$/

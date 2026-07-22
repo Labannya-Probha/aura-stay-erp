@@ -2,8 +2,14 @@
   position: fixed;
   inset: 0;
   z-index: 80;
-  background: rgba(15, 23, 42, .22);
-  backdrop-filter: blur(5px);
+  background: rgba(15, 23, 42, .26);
+  backdrop-filter: blur(8px) saturate(120%);
+  animation: aedsFadeIn .2s ease-out;
+}
+
+@keyframes aedsFadeIn {
+  from { opacity: 0; backdrop-filter: blur(0px) saturate(100%); }
+  to { opacity: 1; backdrop-filter: blur(8px) saturate(120%); }
 }
 
 .aeds-side-drawer {
@@ -13,12 +19,13 @@
   bottom: 0;
   z-index: 90;
   width: min(620px, 100vw);
-  background: #fff;
-  border-left: 1px solid #dbe4dd;
-  box-shadow: -24px 0 80px rgba(15, 23, 42, .18);
+  background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(247,250,248,0.96));
+  border-left: 1px solid rgba(219,228,221,0.8);
+  box-shadow: -32px 0 120px rgba(15, 23, 42, .22), -8px 0 32px rgba(15, 23, 42, .08);
   display: flex;
   flex-direction: column;
-  animation: aedsSlideIn .18s ease-out;
+  animation: aedsSlideIn .22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(2px);
 }
 
 .aeds-side-drawer.sm { width: min(460px, 100vw); }
@@ -44,9 +51,11 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
-  padding: 22px;
-  border-bottom: 1px solid #e5ece7;
-  background: linear-gradient(135deg, rgba(247,244,236,.9), rgba(255,255,255,.95));
+  padding: 24px 28px;
+  border-bottom: 1px solid rgba(219,228,221,0.7);
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,250,248,0.92));
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
 }
 
 .aeds-dialog-eyebrow {
@@ -75,58 +84,92 @@
 }
 
 .aeds-dialog-icon-btn {
-  height: 40px;
-  width: 40px;
-  border: 1px solid #dbe4dd;
-  background: #fff;
+  height: 42px;
+  width: 42px;
+  border: 1px solid rgba(219,228,221,0.8);
+  background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(247,250,248,0.92));
   color: #334155;
-  border-radius: 14px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   cursor: pointer;
+  transition: all 200ms ease;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+.aeds-dialog-icon-btn:hover {
+  background: linear-gradient(135deg, rgba(255,255,255,1), rgba(247,250,248,0.98));
+  border-color: rgba(219,228,221,1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
 }
 
 .aeds-dialog-body {
-  padding: 22px;
+  padding: 28px;
   overflow: auto;
+  background: rgba(255,255,255,0.5);
 }
 
 .aeds-dialog-footer {
   margin-top: auto;
-  border-top: 1px solid #e5ece7;
-  padding: 16px 22px;
+  border-top: 1px solid rgba(219,228,221,0.7);
+  padding: 20px 28px;
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  background: rgba(255,255,255,.86);
+  gap: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,250,248,0.88));
   backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
 }
 
 .aeds-dialog-btn {
   height: 42px;
-  border: 1px solid #dbe4dd;
-  background: #fff;
+  border: 1px solid rgba(219,228,221,0.8);
+  background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(247,250,248,0.9));
   color: #334155;
-  border-radius: 15px;
-  padding: 0 14px;
+  border-radius: 12px;
+  padding: 0 16px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
   font-weight: 900;
   cursor: pointer;
+  transition: all 180ms ease;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+}
+
+.aeds-dialog-btn:hover {
+  background: linear-gradient(135deg, rgba(255,255,255,1), rgba(247,250,248,0.96));
+  border-color: rgba(219,228,221,1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .aeds-dialog-btn.primary {
-  background: #1b4d2e;
+  background: linear-gradient(135deg, #2d5c3d, #1b4d2e);
   border-color: #1b4d2e;
   color: #fff;
+  box-shadow: 0 10px 24px rgba(27, 77, 46, 0.18);
+}
+
+.aeds-dialog-btn.primary:hover {
+  background: linear-gradient(135deg, #3a6b4a, #2d5c3d);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(27, 77, 46, 0.24);
 }
 
 .aeds-dialog-btn.danger {
-  background: #dc2626;
+  background: linear-gradient(135deg, #e53e3e, #dc2626);
   border-color: #dc2626;
   color: #fff;
+  box-shadow: 0 10px 24px rgba(220, 38, 38, 0.18);
+}
+
+.aeds-dialog-btn.danger:hover {
+  background: linear-gradient(135deg, #f54e4e, #e53e3e);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(220, 38, 38, 0.24);
 }
 
 .aeds-confirm-dialog,
@@ -135,12 +178,13 @@
 .aeds-print-preview {
   position: relative;
   z-index: 95;
-  background: #fff;
-  border: 1px solid #dbe4dd;
+  background: linear-gradient(135deg, rgba(255,255,255,0.99), rgba(247,250,248,0.96));
+  border: 1px solid rgba(219,228,221,0.8);
   border-radius: 28px;
-  box-shadow: 0 30px 100px rgba(15, 23, 42, .24);
+  box-shadow: 0 40px 140px rgba(15, 23, 42, .28), 0 12px 40px rgba(15, 23, 42, .12);
   overflow: hidden;
-  animation: aedsPopIn .16s ease-out;
+  animation: aedsPopIn .2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(8px);
 }
 
 @keyframes aedsPopIn {

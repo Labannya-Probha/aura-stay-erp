@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import { getTenantId, withTenantInsert } from '../lib/tenant'
 import { getCompanySettingsQuery, getPrintBrandProps } from '../lib/companySettings'
 import { fmtBDT, fmtDate, todayISO } from '../lib/helpers'
@@ -12,6 +12,8 @@ import PrintPortal from '../components/PrintPortal.jsx'
 import VoucherDoc from '../components/print/VoucherDoc.jsx'
 import VendorPaymentTab from '../components/VendorPaymentTab.jsx'
 import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
+import { Button } from '../components/ui/button.jsx'
+import { Input } from '../components/ui/input.jsx'
 import '../styles/aeds-v6-workspaces.css'
 import PaymentTransactionsView from '../components/payments/PaymentTransactionsView.jsx'
 import { PAYMENT_SCOPES } from '../components/payments/paymentScope.js'
@@ -21,6 +23,7 @@ import { PAYMENT_SCOPES } from '../components/payments/paymentScope.js'
 /*  Matches chart_of_accounts code = '300100' (Retained Earnings)       */
 /* ------------------------------------------------------------------ */
 const RE_CODE = '300100'
+const selectClass = 'h-9 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
 
 async function fetchActiveAccounts(context = 'loadAccounts') {
   const tenantId = getTenantId()
@@ -289,17 +292,15 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="label">As at date <span className="text-red-500">*</span></label>
-            <input
+            <Input
               type="date"
-              className="input"
               value={obDate}
               onChange={(e) => setObDate(e.target.value)}
             />
           </div>
           <div className="sm:col-span-2">
             <label className="label">Narration</label>
-            <input
-              className="input"
+            <Input
               value={narration}
               onChange={(e) => setNarration(e.target.value)}
             />
@@ -319,7 +320,7 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
           {lines.map((l, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-center">
               <select
-                className="input col-span-5 text-sm"
+                className={`${selectClass} col-span-5 text-sm`}
                 value={l.account_id}
                 onChange={(e) => upd(i, 'account_id', e.target.value)}
               >
@@ -330,35 +331,37 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
                   </option>
                 ))}
               </select>
-              <input
+              <Input
                 type="number"
                 min="0"
-                className="input col-span-2 money text-right"
+                className="col-span-2 money text-right"
                 placeholder="0.00"
                 value={l.debit}
                 onChange={(e) => upd(i, 'debit', e.target.value)}
               />
-              <input
+              <Input
                 type="number"
                 min="0"
-                className="input col-span-2 money text-right"
+                className="col-span-2 money text-right"
                 placeholder="0.00"
                 value={l.credit}
                 onChange={(e) => upd(i, 'credit', e.target.value)}
               />
-              <input
-                className="input col-span-2 text-sm"
+              <Input
+                className="col-span-2 text-sm"
                 placeholder="Note"
                 value={l.line_note}
                 onChange={(e) => upd(i, 'line_note', e.target.value)}
               />
-              <button
-                className="col-span-1 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-300 hover:text-red-600"
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="col-span-1 text-red-300 hover:text-red-600"
                 onClick={() => delLine(i)}
                 title="Remove line"
               >
                 <X size={14} />
-              </button>
+              </Button>
             </div>
           ))}
 
@@ -383,9 +386,9 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
 
         {/* Add line + totals row */}
         <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-t border-leaf">
-          <button className="btn-ghost !py-1 text-sm" onClick={addLine}>
+          <Button variant="ghost" size="sm" className="text-sm" onClick={addLine}>
             <Plus size={14} /> Add account line
-          </button>
+          </Button>
 
           <div className="flex items-center gap-4 text-sm money font-semibold">
             <span className="text-pine/50">
@@ -408,32 +411,28 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
 
         {/* Confirm + Post */}
         {!confirmPost ? (
-          <button
-            className="btn-primary"
+          <Button
             disabled={!balanced || validLines.length === 0 || busy}
             onClick={() => setConfirmPost(true)}
           >
             <BookOpen size={15} /> Post Opening Balance
-          </button>
+          </Button>
         ) : (
           <div className="flex items-center gap-3 flex-wrap p-3 rounded-xl bg-amber-50 border border-amber-300">
             <AlertCircle size={16} className="text-amber-600 shrink-0" />
             <span className="text-sm text-amber-800 font-medium flex-1">
               This will be permanently locked. Are you sure?
             </span>
-            <button
-              className="btn-primary !bg-amber-600 hover:!bg-amber-700"
+            <Button
+              className="bg-amber-600 hover:bg-amber-700"
               disabled={busy}
               onClick={postOB}
             >
               <Lock size={14} /> {busy ? 'Posting…' : 'Yes, Post & Lock'}
-            </button>
-            <button
-              className="btn-ghost"
-              onClick={() => setConfirmPost(false)}
-            >
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirmPost(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -620,24 +619,24 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
             {editingId ? 'Edit voucher' : 'New voucher'}
           </h3>
           {editingId && (
-            <button className="btn-ghost !py-1 text-sm" onClick={resetForm}>Cancel edit</button>
+            <Button variant="ghost" size="sm" className="text-sm" onClick={resetForm}>Cancel edit</Button>
           )}
         </div>
         <div className="grid grid-cols-5 gap-2">
-          <input
-            type="date" className="input"
+          <Input
+            type="date"
             value={head.jv_date}
             onChange={(e) => setHead({ ...head, jv_date: e.target.value })}
           />
           <select
-            className="input"
+            className={selectClass}
             value={head.voucher_type}
             onChange={(e) => setHead({ ...head, voucher_type: e.target.value })}
           >
             {VOUCHER_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
-          <input
-            className="input col-span-3" placeholder="Narration"
+          <Input
+            className="col-span-3" placeholder="Narration"
             value={head.narration}
             onChange={(e) => setHead({ ...head, narration: e.target.value })}
           />
@@ -645,26 +644,26 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
         {lines.map((l, i) => (
           <div key={i} className="grid grid-cols-12 gap-2 items-center">
             <select
-              className="input col-span-4" value={l.account_id}
+              className={`${selectClass} col-span-4`} value={l.account_id}
               onChange={(e) => upd(i, 'account_id', e.target.value)}
             >
               <option value="">Account…</option>
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}
             </select>
-            <input type="number" className="input col-span-2 money" placeholder="Debit"  value={l.debit}  onChange={(e) => upd(i, 'debit',  e.target.value)} />
-            <input type="number" className="input col-span-2 money" placeholder="Credit" value={l.credit} onChange={(e) => upd(i, 'credit', e.target.value)} />
-            <input className="input col-span-3" placeholder="Note" value={l.line_note} onChange={(e) => upd(i, 'line_note', e.target.value)} />
-            <button className="text-red-400 hover:text-red-600 col-span-1" onClick={() => delLine(i)}><Trash2 size={15} /></button>
+            <Input type="number" className="col-span-2 money" placeholder="Debit"  value={l.debit}  onChange={(e) => upd(i, 'debit',  e.target.value)} />
+            <Input type="number" className="col-span-2 money" placeholder="Credit" value={l.credit} onChange={(e) => upd(i, 'credit', e.target.value)} />
+            <Input className="col-span-3" placeholder="Note" value={l.line_note} onChange={(e) => upd(i, 'line_note', e.target.value)} />
+            <Button variant="ghost" size="icon-xs" className="text-red-400 hover:text-red-600 col-span-1" onClick={() => delLine(i)}><Trash2 size={15} /></Button>
           </div>
         ))}
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <button className="btn-ghost !py-1" onClick={addLine}><Plus size={14} /> Add line</button>
+          <Button variant="ghost" size="sm" onClick={addLine}><Plus size={14} /> Add line</Button>
           <div className={`money font-semibold text-sm ${balanced ? 'text-forest' : 'text-red-600'}`}>
             Dr {totDr.toFixed(2)} · Cr {totCr.toFixed(2)} {balanced ? '✓ balanced' : '✗ not balanced'}
           </div>
-          <button className="btn-primary" disabled={!balanced} onClick={post}>
+          <Button disabled={!balanced} onClick={post}>
             <Plus size={15} /> {editingId ? 'Update voucher' : 'Post voucher'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -694,16 +693,16 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
             width: 220,
             cell: ({ row }) => (
               <div className="flex gap-1 justify-end items-center flex-wrap">
-                <button className="btn-ghost !py-1" title="Print voucher" onClick={(event) => { event.stopPropagation(); openVoucher(row) }}>
+                <Button variant="ghost" size="sm" title="Print voucher" onClick={(event) => { event.stopPropagation(); openVoucher(row) }}>
                   <Printer size={13} /> Voucher
-                </button>
-                <button className="btn-ghost !py-1" title="Edit" onClick={(event) => { event.stopPropagation(); edit(row) }}>
+                </Button>
+                <Button variant="ghost" size="sm" title="Edit" onClick={(event) => { event.stopPropagation(); edit(row) }}>
                   <Pencil size={13} />
-                </button>
+                </Button>
                 {isAdmin && !row.is_locked && (
-                  <button className="btn-ghost !py-1 text-red-600" title="Delete" onClick={(event) => { event.stopPropagation(); del(row.id) }}>
+                  <Button variant="ghost" size="sm" className="text-red-600" title="Delete" onClick={(event) => { event.stopPropagation(); del(row.id) }}>
                     <Trash2 size={13} />
-                  </button>
+                  </Button>
                 )}
               </div>
             ),
@@ -881,41 +880,42 @@ function CoaTab({ accounts, reload, flash, isAdmin }) {
   return (
     <div className="space-y-4">
       <div className="card p-4 grid grid-cols-1 md:grid-cols-6 gap-2">
-        <input
-          className="input money"
+        <Input
+          className="money"
           placeholder="Code"
           value={f.code}
           onChange={(e) => setF((p) => ({ ...p, code: e.target.value }))}
         />
-        <input
-          className="input md:col-span-2"
+        <Input
+          className="md:col-span-2"
           placeholder="Account name"
           value={f.name}
           onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))}
         />
-        <select className="input" value={f.type} onChange={(e) => setF((p) => ({ ...p, type: e.target.value }))}>
+        <select className={selectClass} value={f.type} onChange={(e) => setF((p) => ({ ...p, type: e.target.value }))}>
           {['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'].map((t) => <option key={t}>{t}</option>)}
         </select>
-        <button className="btn-primary justify-center" onClick={submit}>
+        <Button className="justify-center" onClick={submit}>
           <Plus size={15} /> {editId ? 'Update' : 'Add'}
-        </button>
+        </Button>
         {editId && (
-          <button className="btn-ghost justify-center" onClick={resetForm}>Cancel edit</button>
+          <Button variant="ghost" className="justify-center" onClick={resetForm}>Cancel edit</Button>
         )}
       </div>
 
       <div className="card p-3 flex items-center flex-wrap gap-2">
-        <input
-          className="input !w-64"
+        <Input
+          className="!w-64"
           placeholder="Search code/name/type"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         {isAdmin && (
           <>
-            <button className="btn-ghost !py-1.5" onClick={duplicateSelected} disabled={!selectedId}>Duplicate</button>
-            <button
-              className="btn-ghost !py-1.5"
+            <Button variant="ghost" size="sm" onClick={duplicateSelected} disabled={!selectedId}>Duplicate</Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 const row = accounts.find((a) => a.id === selectedId)
                 if (!row) return flash('Select an account first.')
@@ -924,10 +924,10 @@ function CoaTab({ accounts, reload, flash, isAdmin }) {
               disabled={!selectedId}
             >
               <Pencil size={13} /> Edit
-            </button>
-            <button className="btn-ghost !py-1.5 text-red-500" onClick={removeSelected} disabled={!selectedId}>
+            </Button>
+            <Button variant="ghost" size="sm" className="text-red-500" onClick={removeSelected} disabled={!selectedId}>
               <Trash2 size={13} /> Delete
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -1018,31 +1018,31 @@ function AssetsTab({ accounts, userName, flash }) {
   return (
     <div className="space-y-4">
       <div className="card p-4 grid grid-cols-6 gap-2">
-        <input className="input col-span-2" placeholder="Asset name"
+        <Input className="col-span-2" placeholder="Asset name"
           value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-        <input className="input" placeholder="Category"
+        <Input className="" placeholder="Category"
           value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} />
-        <input type="number" className="input money" placeholder="Cost"
+        <Input type="number" className="money" placeholder="Cost"
           value={f.cost} onChange={(e) => setF({ ...f, cost: e.target.value })} />
-        <input type="number" className="input money" placeholder="Salvage"
+        <Input type="number" className="money" placeholder="Salvage"
           value={f.salvage_value} onChange={(e) => setF({ ...f, salvage_value: e.target.value })} />
-        <input type="number" className="input money" placeholder="Life (months)"
+        <Input type="number" className="money" placeholder="Life (months)"
           value={f.useful_life_months} onChange={(e) => setF({ ...f, useful_life_months: e.target.value })} />
-        <button className="btn-primary justify-center col-span-6" onClick={add}>
+        <Button className="justify-center col-span-6" onClick={add}>
           <Building2 size={15} /> Add asset
-        </button>
+        </Button>
       </div>
       <div className="card p-4 flex items-center gap-3 flex-wrap">
         <span className="label !mb-0">Depreciation run</span>
-        <input type="month" className="input !w-44"
+        <Input type="month" className="!w-44"
           value={period} onChange={(e) => setPeriod(e.target.value)} />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="accent-forest" checked={makeJV} onChange={(e) => setMakeJV(e.target.checked)} />
           Post JV (Dr 5500 / Cr 1590)
         </label>
-        <button className="btn-amber" onClick={runDep}>
+        <Button variant="secondary" onClick={runDep}>
           <Scale size={15} /> Run straight-line depreciation
-        </button>
+        </Button>
       </div>
       <AedsDataGrid
         title="Fixed Assets Register"
@@ -1309,7 +1309,7 @@ function TransactionMappingTab({ accounts, flash, userName }) {
 
   const AccountSelect = ({ value, onChange, placeholder }) => (
     <select
-      className="input text-xs !py-1"
+      className={`${selectClass} text-xs !py-1`}
       value={value || ''}
       onChange={(e) => onChange(e.target.value)}
     >
@@ -1341,13 +1341,13 @@ function TransactionMappingTab({ accounts, flash, userName }) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="btn-ghost !py-1.5" onClick={triggerDefaultSync} disabled={syncBusy}>
+            <Button variant="ghost" size="sm" onClick={triggerDefaultSync} disabled={syncBusy}>
               {syncBusy ? 'Triggering…' : 'Manual trigger defaults'}
-            </button>
+            </Button>
             <div className="relative w-56">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-pine/30" />
-              <input
-                className="input !pl-8 text-sm"
+              <Input
+                className="!pl-8 text-sm"
                 placeholder="Search transaction..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -1357,14 +1357,13 @@ function TransactionMappingTab({ accounts, flash, userName }) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-6 gap-2 border-t border-leaf pt-3">
-          <input
-            className="input"
+          <Input
             placeholder="Transaction type (e.g. LAUNDRY_REVENUE)"
             value={addF.transaction_type}
             onChange={(e) => setAddF((p) => ({ ...p, transaction_type: e.target.value }))}
           />
-          <input
-            className="input md:col-span-2"
+          <Input
+            className="md:col-span-2"
             placeholder="Label"
             value={addF.label}
             onChange={(e) => setAddF((p) => ({ ...p, label: e.target.value }))}
@@ -1379,11 +1378,11 @@ function TransactionMappingTab({ accounts, flash, userName }) {
             onChange={(v) => setAddF((p) => ({ ...p, credit_account_id: v }))}
             placeholder="Credit"
           />
-          <button className="btn-primary justify-center" onClick={addMapping} disabled={addBusy}>
+          <Button className="justify-center" onClick={addMapping} disabled={addBusy}>
             <Plus size={14} /> {addBusy ? 'Adding…' : 'Add mapping'}
-          </button>
-          <input
-            className="input md:col-span-6"
+          </Button>
+          <Input
+            className="md:col-span-6"
             placeholder="Notes (optional)"
             value={addF.notes}
             onChange={(e) => setAddF((p) => ({ ...p, notes: e.target.value }))}
@@ -1418,17 +1417,17 @@ function TransactionMappingTab({ accounts, flash, userName }) {
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-mono text-[10px] text-pine/40 bg-pine/5 px-2 py-0.5 rounded">{m.transaction_type}</span>
-                          <input
-                            className="input !py-1 text-sm font-semibold flex-1 min-w-[160px]"
+                          <Input
+                            className="!py-1 text-sm font-semibold flex-1 min-w-[160px]"
                             value={editF.label}
                             onChange={(e) => setEditF((p) => ({ ...p, label: e.target.value }))}
                           />
                         </div>
                         <div className="flex gap-2">
-                          <button onClick={saveEdit} disabled={busy} className="btn-primary !py-1 text-xs">
+                          <Button onClick={saveEdit} disabled={busy} size="xs" className="text-xs">
                             <Save size={12} /> {busy ? 'Saving…' : 'Save'}
-                          </button>
-                          <button onClick={() => setEditId(null)} className="btn-ghost !py-1 text-xs">Cancel</button>
+                          </Button>
+                          <Button variant="ghost" size="xs" className="text-xs" onClick={() => setEditId(null)}>Cancel</Button>
                         </div>
                       </div>
 
@@ -1477,8 +1476,8 @@ function TransactionMappingTab({ accounts, flash, userName }) {
 
                       <div>
                         <label className="label !text-xs">Notes</label>
-                        <input
-                          className="input text-xs"
+                        <Input
+                          className="text-xs"
                           value={editF.notes}
                           onChange={(e) => setEditF((p) => ({ ...p, notes: e.target.value }))}
                         />
@@ -1517,13 +1516,15 @@ function TransactionMappingTab({ accounts, flash, userName }) {
                         {m.notes && <p className="text-[10px] text-pine/40 mt-1.5">{m.notes}</p>}
                       </div>
 
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
                         onClick={() => startEdit(m)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-leaf text-pine/40 hover:text-forest shrink-0"
+                        className="text-pine/40 hover:text-forest shrink-0"
                         title="Edit mapping"
                       >
                         <Pencil size={13} />
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>

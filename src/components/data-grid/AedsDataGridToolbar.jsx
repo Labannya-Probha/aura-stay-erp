@@ -1,5 +1,7 @@
 import { Download, FileSpreadsheet, Printer, Search } from "lucide-react"
 import AedsDataGridColumnMenu from "./AedsDataGridColumnMenu"
+import { Button } from "src/components/ui/button"
+import { Input } from "src/components/ui/input"
 
 function escapeCsv(value) {
   const text = String(value ?? "")
@@ -7,8 +9,13 @@ function escapeCsv(value) {
   return text
 }
 
+function columnKey(column) {
+  return column?.accessorKey || column?.id || String(column?.header || "column")
+}
+
 function exportCsv({ title, columns, rows }) {
-  const csv = [columns.map((column) => column.header), ...rows.map((row) => columns.map((column) => row[column.accessorKey] ?? ""))]
+  const exportableColumns = columns.filter((column) => column?.accessorKey)
+  const csv = [exportableColumns.map((column) => column.header), ...rows.map((row) => exportableColumns.map((column) => row[column.accessorKey] ?? ""))]
     .map((line) => line.map(escapeCsv).join(","))
     .join("\n")
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
@@ -25,16 +32,16 @@ export default function AedsDataGridToolbar({ title, columns, rows, search, setS
     <div className="aeds-grid-toolbar">
       <div className="aeds-grid-search">
         <Search size={16} />
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search table..." />
+        <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search table..." className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" />
       </div>
-      <select className="aeds-grid-select" value={groupBy || ""} onChange={(event) => setGroupBy(event.target.value)}>
+      <select className="aeds-grid-select rounded-xl border border-slate-200 bg-white px-2 text-sm" value={groupBy || ""} onChange={(event) => setGroupBy(event.target.value)}>
         <option value="">Group by: None</option>
-        {columns.map((column) => <option key={column.accessorKey} value={column.accessorKey}>{column.header}</option>)}
+        {columns.filter((column) => column?.accessorKey).map((column) => <option key={columnKey(column)} value={column.accessorKey}>{column.header}</option>)}
       </select>
       <AedsDataGridColumnMenu columns={columns} columnVisibility={columnVisibility} setColumnVisibility={setColumnVisibility} />
-      <button type="button" className="aeds-grid-btn" onClick={() => window.print()}><Printer size={16} /> Print</button>
-      <button type="button" className="aeds-grid-btn" onClick={() => exportCsv({ title, columns, rows })}><Download size={16} /> CSV</button>
-      <button type="button" className="aeds-grid-btn primary" onClick={() => exportCsv({ title, columns, rows })}><FileSpreadsheet size={16} /> Excel</button>
+      <Button type="button" variant="outline" size="sm" onClick={() => window.print()}><Printer size={16} /> Print</Button>
+      <Button type="button" variant="outline" size="sm" onClick={() => exportCsv({ title, columns, rows })}><Download size={16} /> CSV</Button>
+      <Button type="button" size="sm" onClick={() => exportCsv({ title, columns, rows })}><FileSpreadsheet size={16} /> Excel</Button>
     </div>
   )
 }

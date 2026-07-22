@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { setCurrency } from '../../lib/helpers'
 import { getTenantId } from '../../lib/tenant'
 import { getCompanySettingsQuery } from '../../lib/companySettings'
-import { Save, Building2, Image, Upload, ChevronDown } from 'lucide-react'
+import { Save, Building2, Image, Upload } from 'lucide-react'
 import { extractLogoPalette } from '../../theme'
 import { darken, getReadableText, mix } from '../../theme/color.utils'
+import { Combobox } from '../ui/combobox'
+import { sanitizeHtml } from '../../lib/sanitize'
 
 const TENANT_BRANDING_FIELDS = [
   'logo_url',
@@ -86,7 +88,7 @@ function RichTextEditor({ initialHtml, onSave, saveLabel = 'Save' }) {
   // This avoids React re-rendering the div and resetting cursor position
   useEffect(() => {
     if (editorRef.current) {
-      editorRef.current.innerHTML = initialHtml || ''
+      editorRef.current.innerHTML = sanitizeHtml(initialHtml || '')
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -101,7 +103,7 @@ function RichTextEditor({ initialHtml, onSave, saveLabel = 'Save' }) {
   }
 
   const handleSave = async () => {
-    const html = editorRef.current?.innerHTML || ''
+    const html = sanitizeHtml(editorRef.current?.innerHTML || '')
     setSaving(true)
     await onSave(html)
     setSaving(false)
@@ -110,7 +112,7 @@ function RichTextEditor({ initialHtml, onSave, saveLabel = 'Save' }) {
   }
 
   const togglePreview = () => {
-    const html = editorRef.current?.innerHTML || ''
+    const html = sanitizeHtml(editorRef.current?.innerHTML || '')
     setPreviewHtml(html)
     setPreview((v) => !v)
   }
@@ -251,109 +253,24 @@ const ALL_CIRCLES = VAT_CIRCLES.flatMap((c) =>
   c.circles.map((name) => ({ label: name, value: name, comm: c.comm, code: c.code }))
 )
 function VatCircleDropdown({ value, onChange }) {
-  const [query, setQuery] = useState('')
-  const [open, setOpen]   = useState(false)
-  const ref               = useRef(null)
-
-  // close on outside click
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const filtered = query.trim()
-    ? ALL_CIRCLES.filter((c) =>
-        c.label.toLowerCase().includes(query.toLowerCase()) ||
-        c.comm.toLowerCase().includes(query.toLowerCase()) ||
-        c.code.includes(query)
-      )
-    : ALL_CIRCLES
-
-  const select = (item) => {
-    onChange(item.value)
-    setQuery('')
-    setOpen(false)
-  }
-
-  // group filtered results by commissionerate
-  const groups = VAT_CIRCLES.map((c) => ({
-    comm: c.comm,
-    code: c.code,
-    items: filtered.filter((f) => f.comm === c.comm),
-  })).filter((g) => g.items.length > 0)
+  const items = ALL_CIRCLES.map((item) => ({
+    value: item.value,
+    label: item.label,
+    sublabel: `${item.comm} (${item.code})`,
+  }))
 
   return (
-    <div className="relative" ref={ref}>
-      {/* trigger button */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="input text-left flex items-center justify-between w-full"
-      >
-        <span className={value ? 'text-pine' : 'text-pine/40'}>
-          {value || 'সার্কেল নির্বাচন করুন…'}
-        </span>
-        <ChevronDown size={14} className={`text-pine/40 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {/* dropdown panel */}
-      {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-leaf rounded-xl shadow-lg overflow-hidden">
-          {/* search box inside dropdown */}
-          <div className="p-2 border-b border-leaf">
-            <input
-              autoFocus
-              className="input !py-1.5 text-sm"
-              placeholder="খুঁজুন… (যেমন: শ্রীমঙ্গল, সিলেট, 0018)"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="max-h-64 overflow-y-auto">
-            {groups.length === 0 && (
-              <div className="px-4 py-3 text-sm text-pine/40">কোনো ফলাফল নেই।</div>
-            )}
-            {groups.map((g) => (
-              <div key={g.comm}>
-                {/* group header */}
-                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-pine/40 bg-stone-50 border-b border-leaf/50 flex justify-between">
-                  <span>{g.comm}</span>
-                  <span className="font-mono text-forest/60">{g.code}</span>
-                </div>
-                {g.items.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => select(item)}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-leaf/60 transition-colors flex items-center justify-between ${
-                      value === item.label ? 'bg-forest/10 text-forest font-medium' : 'text-pine'
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                    {value === item.label && <span className="text-forest text-xs">✓</span>}
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
-
-          {/* clear button */}
-          {value && (
-            <div className="p-2 border-t border-leaf">
-              <button
-                type="button"
-                onClick={() => { onChange(''); setOpen(false) }}
-                className="w-full text-xs text-pine/50 hover:text-red-500 py-1 transition-colors"
-              >
-                ✕ Clear selection
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <Combobox
+      items={items}
+      value={value || ''}
+      onChange={(nextValue) => onChange(nextValue || '')}
+      placeholder="সার্কেল নির্বাচন করুন…"
+      searchPlaceholder="খুঁজুন… (যেমন: শ্রীমঙ্গল, সিলেট, 0018)"
+      emptyText="কোনো ফলাফল নেই।"
+      clearable
+      triggerClassName="input text-left"
+      contentClassName="border-leaf"
+    />
   )
 }
 const FONT_OPTIONS = [

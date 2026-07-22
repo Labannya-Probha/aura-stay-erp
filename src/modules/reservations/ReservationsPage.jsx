@@ -18,6 +18,7 @@ import ReservationPaymentsTab from "./tabs/ReservationPaymentsTab"
 import GuestCrmTab from "./tabs/GuestCrmTab"
 import QuotationsTab from "./tabs/QuotationsTab"
 import ReservationHistoryTab from "./tabs/ReservationHistoryTab"
+import ReservationWorkflowTab from "./tabs/ReservationWorkflowTab"
 import ReservationReportsTab from "./tabs/ReservationReportsTab"
 import ChannelManagerTab from "./tabs/ChannelManagerTab"
 
@@ -130,7 +131,10 @@ export default function ReservationsPage({
         )
 
       case "quotations":
-        return <QuotationsTab />
+        return <QuotationsTab openReservation={openReservation} />
+
+      case "workflow":
+        return <ReservationWorkflowTab />
 
       case "history":
         return <ReservationHistoryTab />
@@ -179,29 +183,17 @@ export default function ReservationsPage({
     </section>
   )
 
-  if (activeTab === "calendar") {
-    return (
-      <EnterpriseWorkspace
-        title="Reservations Workspace"
-        subtitle="Calendar, booking register, payments, guest CRM, quotations, distribution channels and analytics."
-        eyebrow="Front Office & Distribution"
-        icon={CalendarDays}
-        actions={null}
-        kpis={<ReservationKpiStrip />}
-        tabs={tabs}
-      >
-        {panel}
-      </EnterpriseWorkspace>
-    )
-  }
-
   return (
-    <section className="space-y-4">
-      <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-        {tabs}
-      </div>
-
+    <EnterpriseWorkspace
+      title="Reservations Workspace"
+      subtitle="Calendar, booking register, payments, guest CRM, quotations, distribution channels and analytics."
+      eyebrow="Front Office & Distribution"
+      icon={CalendarDays}
+      actions={null}
+      kpis={<ReservationKpiStrip />}
+      tabs={tabs}
+    >
       {panel}
-    </section>
+    </EnterpriseWorkspace>
   )
 }

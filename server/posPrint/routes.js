@@ -1,13 +1,9 @@
 import express from 'express'
+import { requireAuth } from '../middleware/auth.js'
 
 const router = express.Router()
 
-const currentUser = (req) => ({
-  id: req.header('x-user-id') || null,
-  name: req.header('x-user-name') || 'API User',
-  role: req.header('x-user-role') || 'SUPERUSER',
-  tenantId: req.header('x-tenant-id') || null,
-})
+router.use(requireAuth())
 
 const now = () => new Date().toISOString()
 
@@ -39,15 +35,15 @@ const profileCatalog = [
 
 const responseEnvelope = (req, payload = {}) => ({
   ok: true,
-  tenant_id: currentUser(req).tenantId,
-  generated_by: currentUser(req).name,
+  tenant_id: req.authUser.tenantId,
+  generated_by: req.authUser.email,
   generated_at: now(),
   ...payload,
 })
 
 const printJob = (req, copyType, status = 'QUEUED') => {
   const order = req.body?.order || {}
-  const documentHash = hashDocument([currentUser(req).tenantId, order.id, order.order_no, copyType, now()])
+  const documentHash = hashDocument([req.authUser.tenantId, order.id, order.order_no, copyType, now()])
   return responseEnvelope(req, {
     job: {
       id: `job_${documentHash.toLowerCase()}`,

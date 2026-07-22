@@ -1,3 +1,5 @@
+import { getCompanyLogo, getCompanyName, getTenantDisplayName } from '../theme/branding.service'
+
 const DEFAULT_TIMEZONE = 'Asia/Dhaka'
 const DEFAULT_CURRENCY = 'BDT'
 
@@ -109,17 +111,18 @@ export function getCopyProfile(copyLabel) {
 }
 
 export function resolvePosBrand(company = {}, order = {}) {
-  const tenantName = company?.name || company?.company_name || company?.tenant_name || order?.tenant_name || 'Tenant'
+  const tenantName = getTenantDisplayName(company) || order?.tenant_name || 'Tenant'
+  const companyName = company?.company_name || getCompanyName(company) || tenantName
   const restaurantName = company?.is_restaurant_available && company?.restaurant_name ? company.restaurant_name : tenantName
   return {
     tenantName,
-    outletName: order?.outlet || order?.outlet_name || company?.outlet_name || restaurantName,
+    outletName: order?.outlet || order?.outlet_name || company?.outlet_name || restaurantName || companyName,
     branchName: order?.property_name || company?.property_name || company?.branch_name || '',
     address: order?.outlet_address || company?.address || '',
     phone: order?.outlet_phone || company?.phone || '',
     email: company?.email || '',
     website: company?.website || '',
-    logoUrl: company?.logo_url || company?.logo || '',
+    logoUrl: getCompanyLogo(company),
     bin: company?.bin || company?.bin_no || '',
     vatRegNo: company?.vat_reg_no || company?.vat_registration_no || '',
     footerMessage: company?.pos_footer_text || company?.receipt_footer || company?.invoice_footer || 'Thank you. Visit again.',

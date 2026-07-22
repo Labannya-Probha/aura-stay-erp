@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Eye, EyeOff, LogIn, Shield, Loader2 } from "lucide-react"
-import { supabase } from "../../supabase"
+import { supabase } from "../../lib/supabase"
+import { setTenantId } from "../../lib/tenant"
 import { cleanSlug } from "./login.constants"
 
 export default function LoginForm({ brand = {}, routeSlug }) {
@@ -22,6 +23,24 @@ export default function LoginForm({ brand = {}, routeSlug }) {
       if (!input) throw new Error("Enter your username or email")
       if (!password) throw new Error("Enter your password")
       if (!tenantSlug) throw new Error("Tenant could not be detected from URL")
+
+      try {
+        sessionStorage.setItem("aura_tenant_slug", tenantSlug)
+      } catch {
+        // ignore storage errors
+      }
+
+      const { data: tenantRow, error: tenantError } = await supabase
+        .from("properties")
+        .select("id")
+        .eq("slug", tenantSlug)
+        .limit(1)
+        .maybeSingle()
+
+      if (tenantError) throw tenantError
+      if (!tenantRow?.id) throw new Error("Invalid tenant code")
+
+      setTenantId(tenantRow.id)
 
       const { data: email, error: rpcError } = await supabase.rpc(
         "email_for_username",

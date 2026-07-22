@@ -1,17 +1,18 @@
-import js from "@eslint/js"
-import globals from "globals"
-import reactHooks from "eslint-plugin-react-hooks"
-import react from "eslint-plugin-react"
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import react from 'eslint-plugin-react'
+import prettierConfig from 'eslint-config-prettier'
 
 export default [
   {
-    ignores: ["dist", "build", "node_modules", "coverage", "reports"],
+    ignores: ['dist', 'build', 'node_modules', 'coverage', 'reports'],
   },
 
   js.configs.recommended,
 
   {
-    files: ["scripts/**/*.js", "scripts/**/*.mjs"],
+    files: ['scripts/**/*.js', 'scripts/**/*.mjs'],
     languageOptions: {
       globals: {
         ...globals.node,
@@ -22,52 +23,60 @@ export default [
   {
     plugins: {
       react,
-      "react-hooks": reactHooks,
+      'react-hooks': reactHooks,
+    },
+
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
     },
 
     settings: {
       react: {
-        version: "detect",
+        version: 'detect',
       },
     },
 
     linterOptions: {
-      reportUnusedDisableDirectives: "warn",
+      reportUnusedDisableDirectives: 'warn',
     },
 
     rules: {
       ...react.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
 
-      "react/react-in-jsx-scope": "off",
-      "react/prop-types": "off",
+      'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off',
 
-      "react-hooks/rules-of-hooks": "error",
-      "react/jsx-no-undef": "error",
+      'react-hooks/rules-of-hooks': 'error',
+      'react/jsx-no-undef': 'error',
 
-      "no-undef": "warn",
-      "no-use-before-define": "warn",
-      "react/no-unescaped-entities": "warn",
+      'no-undef': 'warn',
+      'no-use-before-define': 'warn',
+      'react/no-unescaped-entities': 'warn',
 
-      "no-unused-vars": [
-        "warn",
+      'no-unused-vars': [
+        'warn',
         {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_"
-        }
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
       ],
 
-      "react-hooks/exhaustive-deps": "warn",
+      'react-hooks/exhaustive-deps': 'warn',
 
       /* React 19 migration rules — keep off until Sprint 7 */
-      "react-hooks/set-state-in-effect": "off",
-      "react-hooks/static-components": "off",
-      "react-hooks/immutability": "off",
-      "react-hooks/purity": "off",
-      "react-hooks/refs": "off",
-      "react-hooks/incompatible-library": "off",
-      "react-hooks/preserve-manual-memoization": "off"
-    }
-  }
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/static-components': 'off',
+      'react-hooks/immutability': 'off',
+      'react-hooks/purity': 'off',
+      'react-hooks/refs': 'off',
+      'react-hooks/incompatible-library': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
+    },
+  },
+
+  prettierConfig,
 ]

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 import {
   fmtBDT, fmtDate, todayISO, nightsBetween, eachNight,
   rateFor, computeCharge, sumCharges, applyRounding, STATUS_COLORS,
@@ -19,6 +19,9 @@ import {
 import Quotation from '../components/print/Quotation.jsx'
 import SearchableSelect from '../components/SearchableSelect.jsx'
 import { Combobox } from '../components/ui/combobox.jsx'
+import { Button } from '../components/ui/button.jsx'
+import { Input } from '../components/ui/input.jsx'
+import { Textarea } from '../components/ui/textarea.jsx'
 import { generateReservationPaymentNo, toPaymentReference, parsePaymentReference } from '../lib/paymentNumber'
 import { logAudit } from '../lib/pms.api.js'
 import { getPrintBrandProps } from '../lib/companySettings'
@@ -64,6 +67,20 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
 
   const setStatus = async (status, extra = {}) => {
     await supabase.from('reservations').update({ status, ...extra }).eq('id', id)
+    // Sync quotation status automatically
+    const quoteStatusMap = {
+      CONFIRMED: 'CONFIRMED',
+      CANCELLED: 'CANCELLED',
+      QUERY: 'DRAFT',
+      QUOTED: 'DRAFT',
+      CHECKED_IN: 'CONFIRMED',
+      CHECKED_OUT: 'CONFIRMED',
+      SETTLED: 'CONFIRMED',
+    }
+    const newQuoteStatus = quoteStatusMap[status]
+    if (newQuoteStatus) {
+      await supabase.from('quotations').update({ status: newQuoteStatus }).eq('reservation_id', id)
+    }
     await loadAll()
   }
 
@@ -73,7 +90,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
 
   return (
     <div>
-      <button className="btn-ghost mb-4" onClick={back}><ArrowLeft size={15} /> All reservations</button>
+      <Button variant="ghost" className="mb-4" onClick={back}><ArrowLeft size={15} /> All reservations</Button>
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3">
         <div>
@@ -88,14 +105,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
 
       {msg && <div className="mb-4 px-4 py-2 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
 
-      <div className="tab-strip-responsive border-b border-leaf mb-6 overflow-x-auto">
-        {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`tab-button-responsive px-3 sm:px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap ${tab === t ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'}`}>
-            {t}
-          </button>
-        ))}
-      </div>
+      {/* Tabs managed by sidebar context - no visible tab strip */}
 
       {tab === 'Overview' && (
         <Overview
@@ -213,7 +223,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
       )}
 
       {printDoc?.type === 'QUOTE' && (
-        <PrintPortal title="Quotation" onClose={() => setPrintDoc(null)} {...getPrintBrandProps(company)}>
+        <PrintPortal title="Quotation" onClose={() => { const cb = printDoc._afterClose; setPrintDoc(null); cb?.() }} {...getPrintBrandProps(company)}>
           <Quotation
             res={res}
             guest={guest}
@@ -310,22 +320,22 @@ function Overview({
         <div className="mt-5 pt-4 border-t border-leaf">
           <div className="space-y-2">
             {canConfirm && (
-              <button className="btn-primary w-full justify-center" onClick={() => {
+              <Button className="w-full justify-center" onClick={() => {
                 if (advance <= 0 && payments.length === 0) { flash('Record the advance payment first (Billings & Check-Out tab).'); return }
                 setStatus('CONFIRMED'); flash('Booking confirmed.')
               }}>
                 <CheckCircle2 size={16} /> Confirm booking
-              </button>
+              </Button>
             )}
             {['QUERY', 'QUOTED', 'CONFIRMED'].includes(res.status) && (
-              <button className="btn-ghost w-full justify-center text-red-600" onClick={() => setStatus('CANCELLED')}>
+              <Button variant="ghost" className="w-full justify-center text-red-600" onClick={() => setStatus('CANCELLED')}>
                 <Ban size={15} /> Cancel reservation
-              </button>
+              </Button>
             )}
             {unposted.length > 0 && (
-              <button className="btn-ghost w-full justify-center" onClick={postAddonCharges} disabled={posting}>
+              <Button variant="ghost" className="w-full justify-center" onClick={postAddonCharges} disabled={posting}>
                 <Receipt size={15} /> {posting ? 'Posting...' : 'Post addon charges'}
-              </button>
+              </Button>
             )}
             <p className="text-xs text-pine/50 pt-2">Advance received: <span className="money font-semibold">{fmtBDT(advance)}</span>.</p>
           </div>
@@ -592,7 +602,7 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
             <label className="label !text-xs">Amount (৳) *</label>
-            <input type="number" className="input money"
+            <Input type="number" className="money"
               placeholder="0.00" value={p.amount}
               onChange={(e) => setP({ ...p, amount: e.target.value })} />
           </div>
@@ -607,12 +617,12 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
           </div>
           <div>
             <label className="label !text-xs">Date</label>
-            <input type="date" className="input" value={p.received_date}
+            <Input type="date" value={p.received_date}
               onChange={(e) => setP({ ...p, received_date: e.target.value })} />
           </div>
           <div>
             <label className="label !text-xs">Reference / TrxID</label>
-            <input className="input" placeholder="Optional"
+            <Input placeholder="Optional"
               value={p.reference} onChange={(e) => setP({ ...p, reference: e.target.value })} />
           </div>
           <div className="sm:col-span-2">
@@ -644,9 +654,9 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
             />
           </div>
           <div className="sm:col-span-4 flex justify-end">
-            <button className="btn-primary" onClick={addPayment} disabled={!p.amount || +p.amount <= 0}>
+            <Button onClick={addPayment} disabled={!p.amount || +p.amount <= 0}>
               <Receipt size={15} /> Save payment
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -695,11 +705,11 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
                   </td>
                   <td className="td">
                     <div className="flex flex-wrap gap-1">
-                      <button className="btn-ghost !py-1 !px-2 text-xs" onClick={() => startEdit(pm)}>Edit</button>
-                      {isAdmin && <button className="btn-ghost !py-1 !px-2 text-xs text-red-600" onClick={() => delPayment(pm)}>Delete</button>}
-                      <button className="btn-ghost !py-1 !px-2 text-xs" onClick={() => printPayment(pm)}>Print</button>
-                      <button className="btn-ghost !py-1 !px-2 text-xs" onClick={() => openSend('WHATSAPP', pm)}><MessageCircle size={12} /> WhatsApp</button>
-                      <button className="btn-ghost !py-1 !px-2 text-xs" onClick={() => openSend('EMAIL', pm)}><Mail size={12} /> Email</button>
+                      <Button variant="ghost" size="xs" className="text-xs" onClick={() => startEdit(pm)}>Edit</Button>
+                      {isAdmin && <Button variant="ghost" size="xs" className="text-xs text-red-600" onClick={() => delPayment(pm)}>Delete</Button>}
+                      <Button variant="ghost" size="xs" className="text-xs" onClick={() => printPayment(pm)}>Print</Button>
+                      <Button variant="ghost" size="xs" className="text-xs" onClick={() => openSend('WHATSAPP', pm)}><MessageCircle size={12} /> WhatsApp</Button>
+                      <Button variant="ghost" size="xs" className="text-xs" onClick={() => openSend('EMAIL', pm)}><Mail size={12} /> Email</Button>
                     </div>
                   </td>
                 </tr>
@@ -743,16 +753,16 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
           <div className="card w-full max-w-xl p-5 space-y-3">
             <h4 className="font-display font-semibold text-pine">Edit Payment</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className="label !text-xs">Amount</label><input type="number" className="input money" value={editForm.amount} onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })} /></div>
+              <div><label className="label !text-xs">Amount</label><Input type="number" className="money" value={editForm.amount} onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })} /></div>
               <div><label className="label !text-xs">Method</label><SearchableSelect value={editForm.method} onChange={(v) => setEditForm({ ...editForm, method: v })} options={['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK_TRANSFER', 'CHEQUE', 'OTHER']} /></div>
-              <div><label className="label !text-xs">Date</label><input type="date" className="input" value={editForm.received_date} onChange={(e) => setEditForm({ ...editForm, received_date: e.target.value })} /></div>
-              <div><label className="label !text-xs">Reference</label><input className="input" value={editForm.reference} onChange={(e) => setEditForm({ ...editForm, reference: e.target.value })} /></div>
-              <div><label className="label !text-xs">Paid by</label><input className="input" value={editForm.paid_by_party} onChange={(e) => setEditForm({ ...editForm, paid_by_party: e.target.value })} /></div>
+              <div><label className="label !text-xs">Date</label><Input type="date" value={editForm.received_date} onChange={(e) => setEditForm({ ...editForm, received_date: e.target.value })} /></div>
+              <div><label className="label !text-xs">Reference</label><Input value={editForm.reference} onChange={(e) => setEditForm({ ...editForm, reference: e.target.value })} /></div>
+              <div><label className="label !text-xs">Paid by</label><Input value={editForm.paid_by_party} onChange={(e) => setEditForm({ ...editForm, paid_by_party: e.target.value })} /></div>
               <div><label className="label !text-xs">Class</label><SearchableSelect value={editForm.payment_class} onChange={(v) => setEditForm({ ...editForm, payment_class: v })} options={['ADVANCE', 'SETTLEMENT', 'PARTIAL']} /></div>
             </div>
             <div className="flex justify-end gap-2">
-              <button className="btn-ghost" onClick={() => setEditRow(null)}>Cancel</button>
-              <button className="btn-primary" onClick={saveEdit}>Update</button>
+              <Button variant="ghost" onClick={() => setEditRow(null)}>Cancel</Button>
+              <Button onClick={saveEdit}>Update</Button>
             </div>
           </div>
         </div>
@@ -765,17 +775,17 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="label !text-xs">To</label>
-                <input className="input" value={sendBox.to} onChange={(e) => setSendBox({ ...sendBox, to: e.target.value })} placeholder={sendBox.channel === 'WHATSAPP' ? 'Phone number' : 'Email address'} />
+                <Input value={sendBox.to} onChange={(e) => setSendBox({ ...sendBox, to: e.target.value })} placeholder={sendBox.channel === 'WHATSAPP' ? 'Phone number' : 'Email address'} />
               </div>
               {sendBox.channel === 'EMAIL' && (
                 <div>
                   <label className="label !text-xs">Subject</label>
-                  <input className="input" value={sendBox.subject} onChange={(e) => setSendBox({ ...sendBox, subject: e.target.value })} />
+                  <Input value={sendBox.subject} onChange={(e) => setSendBox({ ...sendBox, subject: e.target.value })} />
                 </div>
               )}
               <div className="sm:col-span-2">
                 <label className="label !text-xs">Message Body (Editable)</label>
-                <textarea className="input min-h-[140px]" value={sendBox.body} onChange={(e) => setSendBox({ ...sendBox, body: e.target.value })} />
+                <Textarea className="min-h-[140px]" value={sendBox.body} onChange={(e) => setSendBox({ ...sendBox, body: e.target.value })} />
               </div>
               <div className="sm:col-span-2">
                 <label className="label !text-xs">Attachment</label>
@@ -793,8 +803,8 @@ function ReservationPaymentsTab({ res, guest, payments, reload, userName, isAdmi
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <button className="btn-ghost" onClick={() => setSendBox({ ...sendBox, open: false })}>Cancel</button>
-              <button className="btn-primary" onClick={sendNow}>Send</button>
+              <Button variant="ghost" onClick={() => setSendBox({ ...sendBox, open: false })}>Cancel</Button>
+              <Button onClick={sendNow}>Send</Button>
             </div>
           </div>
         </div>

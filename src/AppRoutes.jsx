@@ -41,7 +41,13 @@ import {
   HrIncidentsPage,
   HrCompliancePage,
 } from './modules/hr/routePages.jsx'
-import { GuestPosKiosk, VerifyBillPage } from './modules/public/routePages.jsx'
+import {
+  GuestPosKiosk,
+  VerifyBillPage,
+  VerifyInvoicePage,
+  VerifyPaymentPage,
+  PreviewReservationPaymentReceiptPage,
+} from './modules/public/routePages.jsx'
 import { FRONT_OFFICE_LEGACY_TAB_REDIRECTS } from './modules/front-office/frontOffice.config'
 import ReservationsPage from './modules/reservations/ReservationsPage.jsx'
 import InventoryPage from './modules/inventory/InventoryPage.jsx'
@@ -80,7 +86,7 @@ export default function AppRoutes({
 }) {
   const visibleReservationTabs = getVisibleReservationTabs({ role, isAdmin, privileges })
   const hasFrontOfficeAccess = (
-    can(role, 'dashboard', privileges) ||
+    can(role, 'frontoffice', privileges) ||
     can(role, 'nightaudit', privileges) ||
     can(role, 'facilities', privileges)
   )
@@ -182,6 +188,9 @@ export default function AppRoutes({
       } />
       <Route path={PATHS.GUEST_KIOSK} element={<GuestPosKiosk />} />
       <Route path={PATHS.VERIFY_BILL} element={<VerifyBillPage />} />
+      <Route path={PATHS.VERIFY_INVOICE} element={<VerifyInvoicePage />} />
+      <Route path={PATHS.VERIFY_PAYMENT} element={<VerifyPaymentPage />} />
+      <Route path={PATHS.PREVIEW_RESERVATION_PAYMENT_RECEIPT} element={<PreviewReservationPaymentReceiptPage />} />
       <Route path={PATHS.MENU_MANAGEMENT} element={
         (isModuleEnabled('menu-management', modulesEnabled, role) && (isAdmin || role === 'SUPERUSER' || role === 'RESTAURANT'))
           ? <SaasModuleFrame moduleId="pos" company={company} role={role} userName={userName}><Navigate to={`${PATHS.RESTAURANT}?tab=menu`} replace /></SaasModuleFrame>

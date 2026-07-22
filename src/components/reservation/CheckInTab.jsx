@@ -4,7 +4,7 @@ import { fmtBDT, fmtDate } from '../../lib/helpers'
 import { todayISO } from '../../lib/helpers'
 import { canManualCheckIn, getCheckInActionCopy } from '../../lib/noShowAutomation'
 import { logAudit } from '../../lib/pms.api.js'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import SearchableSelect from '../SearchableSelect.jsx'
 import GuestIdManager from './GuestIdManager.jsx'
 

@@ -5,12 +5,15 @@ export default function SidebarBrandLogo({ url, softwareName }) {
 
   if (url && ok) {
     return (
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-white/30">
+      <div
+        className="pointer-events-none select-none flex flex-none items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-white/95 p-1.5 shadow-[0_8px_22px_rgba(15,23,42,0.14)]"
+        style={{ width: 44, height: 44, minWidth: 44, minHeight: 44, maxWidth: 44, maxHeight: 44 }}
+      >
         <img
           src={url}
           alt={softwareName || 'Tenant logo'}
           onError={() => setOk(false)}
-          className="h-full w-full object-contain"
+          className="pointer-events-none h-full w-full object-contain"
         />
       </div>
     )
@@ -24,8 +27,11 @@ export default function SidebarBrandLogo({ url, softwareName }) {
     .toUpperCase()
 
   return (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm ring-1 ring-white/30">
-      <span className="text-sm font-bold leading-none">{abbr}</span>
+    <div
+      className="pointer-events-none select-none flex flex-none items-center justify-center rounded-2xl border border-white/15 bg-white/95 text-slate-700 shadow-[0_8px_22px_rgba(15,23,42,0.14)]"
+      style={{ width: 44, height: 44, minWidth: 44, minHeight: 44, maxWidth: 44, maxHeight: 44 }}
+    >
+      <span className="text-sm font-black leading-none tracking-tight">{abbr}</span>
     </div>
   )
 }

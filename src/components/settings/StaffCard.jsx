@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase, SUPABASE_CONFIG } from '../../supabase'
+import { supabase, SUPABASE_CONFIG } from '../../lib/supabase'
 import { ROLES, ROLE_LABELS } from '../../lib/roles'
 import { Users, Plus, KeyRound, Save, Pencil, Eye, EyeOff } from 'lucide-react'
 

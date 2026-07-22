@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../supabase'
+import { supabase } from '../../lib/supabase'
 import { Save, Activity, Building2, Users, CreditCard, Database, Search } from 'lucide-react'
 import { MetricCard, InputField, SelectField } from './settingsHelpers'
 import { PLAN_OPTIONS, SUBSCRIPTION_STATUSES, BILLING_CYCLES } from './settingsConfig'

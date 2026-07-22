@@ -1,6 +1,6 @@
 import { Plus, RefreshCw, Search } from 'lucide-react'
 
-export default function PaymentTerminalToolbar({ search, onSearchChange, onRefresh, onCreate, isRefreshing = false }) {
+export default function PaymentTerminalToolbar({ search, onSearchChange, onRefresh, onCreate, isRefreshing = false, lastRefresh = null }) {
   return (
     <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
       <label className="relative block w-full sm:max-w-md">
@@ -25,6 +25,8 @@ export default function PaymentTerminalToolbar({ search, onSearchChange, onRefre
           Add
         </button>
       </div>
+
+      {lastRefresh ? <p className="text-xs text-slate-500 sm:ml-auto">Last refreshed {new Intl.DateTimeFormat(undefined,{hour:'2-digit',minute:'2-digit'}).format(lastRefresh)}</p> : null}
     </div>
   )
 }

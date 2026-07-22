@@ -1,2 +1,5 @@
 export { GuestPosKiosk } from '../../pages/RestaurantPOS.jsx'
 export { default as VerifyBillPage } from '../../pages/VerifyBill.jsx'
+export { default as VerifyInvoicePage } from '../../pages/VerifyInvoice.jsx'
+export { default as VerifyPaymentPage } from '../../pages/VerifyPayment.jsx'
+export { default as PreviewReservationPaymentReceiptPage } from '../../pages/PreviewReservationPaymentReceipt.jsx'

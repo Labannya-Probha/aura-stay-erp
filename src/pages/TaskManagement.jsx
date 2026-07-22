@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
-import { supabase, SUPABASE_CONFIG } from '../supabase'
+import { supabase, SUPABASE_CONFIG } from '../lib/supabase'
 import { fmtDate, todayISO, parseWorkflowMeta, routeAiIntent, buildWorkflowDescription, updateDescriptionStage } from '../lib/helpers'
 import KPICards from '../components/KPICards.jsx'
 import { ListChecks, Plus, Sparkles, Search, Clock, User, X, Bot, ArrowRight, RefreshCcw } from 'lucide-react'
+import { Button } from '../components/ui/button.jsx'
+import { Input } from '../components/ui/input.jsx'
+import { Textarea } from '../components/ui/textarea.jsx'
 
 const STATUSES = ['ALL', 'OPEN', 'IN_PROGRESS', 'DONE', 'CANCELLED']
 const STATUS_STYLE = {
@@ -23,6 +26,7 @@ const STAGE_STATUS = {
   SERVED: 'DONE',
   DONE: 'DONE',
 }
+const selectClass = 'h-9 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
 
 function AITaskerBoard({ userName }) {
   const [rawIntent, setRawIntent] = useState('')
@@ -113,20 +117,20 @@ function AITaskerBoard({ userName }) {
         <p className="text-sm text-pine/60 mt-1">Route guest intent to department queue and track workflow stages.</p>
         {msg && <div className="mt-3 px-3 py-2 rounded-lg bg-forest/10 text-forest text-sm">{msg}</div>}
         <div className="mt-3 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-2">
-          <textarea
-            className="input min-h-[92px]"
+          <Textarea
+            className="min-h-[92px]"
             placeholder="Example: Room 305 থেকে towel change দরকার urgently"
             value={rawIntent}
             onChange={(e) => setRawIntent(e.target.value)}
           />
-          <button className="btn-primary self-end" onClick={createIntentTask} disabled={busy}>
+          <Button className="self-end" onClick={createIntentTask} disabled={busy}>
             <Sparkles size={15} /> {busy ? 'Routing...' : 'Route Intent'}
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="flex justify-end">
-        <button className="btn-ghost !py-1" onClick={load}><RefreshCcw size={13} /> Refresh tracking</button>
+        <Button variant="ghost" size="sm" onClick={load}><RefreshCcw size={13} /> Refresh tracking</Button>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -151,9 +155,9 @@ function AITaskerBoard({ userName }) {
                     </div>
                     <div className="mt-2 text-xs text-pine/55">Status: {taskRow.status}</div>
                     {nextStage ? (
-                      <button onClick={() => advanceStage(taskRow)} className="btn-ghost !py-1 mt-2 w-full justify-center">
+                      <Button variant="ghost" size="sm" onClick={() => advanceStage(taskRow)} className="mt-2 w-full justify-center">
                         Next: {nextStage} <ArrowRight size={13} />
-                      </button>
+                      </Button>
                     ) : (
                       <div className="mt-2 text-xs text-forest font-medium">Workflow completed</div>
                     )}
@@ -221,15 +225,15 @@ export default function TaskManagement({ userName, aiTaskerMode = false }) {
         <h1 className="font-display text-xl sm:text-2xl font-bold text-pine flex items-center gap-2">
           <ListChecks className="text-forest" /> Task Management
         </h1>
-        <button className="btn-primary" onClick={() => setShowNew(true)}>
+        <Button onClick={() => setShowNew(true)}>
           <Plus size={16} /> New task
-        </button>
+        </Button>
       </div>
 
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <div className="relative w-full sm:w-64">
           <Search size={15} className="absolute left-3 top-2.5 text-pine/40" />
-          <input className="input pl-9 w-full" placeholder="Search task, assignee…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input className="pl-9 w-full" placeholder="Search task, assignee…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         {STATUSES.map((s) => (
           <button
@@ -392,7 +396,7 @@ function NewTask({ categories, employees, userName, close }) {
       <div className="card max-w-xl w-full p-4 sm:p-6 my-3 sm:my-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-lg font-bold text-pine">New task</h2>
-          <button onClick={close} className="text-pine/40 hover:text-pine"><X size={18} /></button>
+          <Button variant="ghost" size="icon-xs" onClick={close} className="text-pine/40 hover:text-pine"><X size={18} /></Button>
         </div>
 
         {mode === 'ai' && !aiMeta && (
@@ -400,8 +404,7 @@ function NewTask({ categories, employees, userName, close }) {
             <label className="label flex items-center gap-1.5">
               <Sparkles size={14} className="text-forest" /> সহজ ভাষায় লিখুন
             </label>
-            <textarea
-              className="input"
+            <Textarea
               rows={3}
               placeholder="যেমন: Room 12-এর AC ঠিক করতে হবে, urgent, আগামীকালের মধ্যে"
               value={rawInput}
@@ -409,12 +412,12 @@ function NewTask({ categories, employees, userName, close }) {
             />
             {parseErr && <p className="text-sm text-red-600 mt-2">{parseErr}</p>}
             <div className="flex justify-between items-center mt-3">
-              <button className="text-xs text-pine/50 underline" onClick={() => setMode('manual')}>
+              <Button variant="link" size="sm" className="text-xs text-pine/50 px-0" onClick={() => setMode('manual')}>
                 বা ম্যানুয়ালি লিখি
-              </button>
-              <button className="btn-primary" onClick={parseWithAI} disabled={parsing}>
+              </Button>
+              <Button onClick={parseWithAI} disabled={parsing}>
                 <Sparkles size={15} /> {parsing ? 'AI ভাবছে…' : 'AI দিয়ে Parse করুন'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -429,36 +432,36 @@ function NewTask({ categories, employees, userName, close }) {
             )}
             <div>
               <label className="label">Title *</label>
-              <input className="input" value={f.title} onChange={(e) => set('title', e.target.value)} />
+              <Input value={f.title} onChange={(e) => set('title', e.target.value)} />
             </div>
             <div>
               <label className="label">Description</label>
-              <textarea className="input" rows={2} value={f.description} onChange={(e) => set('description', e.target.value)} />
+              <Textarea rows={2} value={f.description} onChange={(e) => set('description', e.target.value)} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="label">Category</label>
-                <select className="input" value={f.category_id} onChange={(e) => set('category_id', e.target.value)}>
+                <select className={selectClass} value={f.category_id} onChange={(e) => set('category_id', e.target.value)}>
                   <option value="">—</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="label">Priority</label>
-                <select className="input" value={f.priority} onChange={(e) => set('priority', e.target.value)}>
+                <select className={selectClass} value={f.priority} onChange={(e) => set('priority', e.target.value)}>
                   {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div>
                 <label className="label">Assign to</label>
-                <select className="input" value={f.assigned_to} onChange={(e) => set('assigned_to', e.target.value)}>
+                <select className={selectClass} value={f.assigned_to} onChange={(e) => set('assigned_to', e.target.value)}>
                   <option value="">— Unassigned —</option>
                   {employees.map((e) => <option key={e.id} value={e.id}>{e.full_name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="label">Due date</label>
-                <input type="date" className="input" value={f.due_date} onChange={(e) => set('due_date', e.target.value)} />
+                <Input type="date" value={f.due_date} onChange={(e) => set('due_date', e.target.value)} />
               </div>
             </div>
           </div>
@@ -466,11 +469,11 @@ function NewTask({ categories, employees, userName, close }) {
 
         {err && <p className="text-sm text-red-600 mt-3">{err}</p>}
         <div className="flex justify-end gap-2 mt-5">
-          <button className="btn-ghost" onClick={close}>Cancel</button>
+          <Button variant="ghost" onClick={close}>Cancel</Button>
           {mode === 'manual' && (
-            <button className="btn-primary" onClick={save} disabled={busy}>
+            <Button onClick={save} disabled={busy}>
               {busy ? 'Saving…' : 'Create task'}
-            </button>
+            </Button>
           )}
         </div>
       </div>

@@ -15,9 +15,9 @@
 .aeds-panel,
 .aeds-surface {
   border: 1px solid var(--tenant-border);
-  background: var(--tenant-surface);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tenant-surface) 98%, white), var(--tenant-surface));
   border-radius: var(--aeds-radius-xl);
-  box-shadow: var(--aeds-shadow-sm);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
 }
 
 .aeds-btn-primary {
@@ -25,54 +25,56 @@
   color: var(--tenant-button-text);
   border-radius: var(--aeds-radius-md);
   font-weight: 800;
-  box-shadow: var(--aeds-shadow-sm);
-  transition: 180ms ease;
+  box-shadow: 0 14px 28px rgb(var(--tenant-primary-rgb) / 0.18);
+  transition: 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
 .aeds-btn-primary:hover {
-  filter: brightness(1.04);
+  filter: brightness(1.03);
   transform: translateY(-1px);
+  box-shadow: 0 18px 34px rgb(var(--tenant-primary-rgb) / 0.22);
 }
 
 .aeds-btn-secondary {
   border: 1px solid var(--tenant-border);
-  background: var(--tenant-surface);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tenant-surface) 98%, white), var(--tenant-surface));
   color: var(--tenant-text);
   border-radius: var(--aeds-radius-md);
   font-weight: 800;
-  box-shadow: var(--aeds-shadow-sm);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
 }
 
 .aeds-input {
   border: 1px solid var(--tenant-border);
-  background: var(--tenant-surface-muted);
+  background: color-mix(in srgb, var(--tenant-surface-muted) 86%, white);
   border-radius: var(--aeds-radius-md);
   color: var(--tenant-text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
 .aeds-input:focus {
   outline: none;
   border-color: var(--tenant-primary);
-  box-shadow: 0 0 0 4px var(--tenant-ring);
+  box-shadow: 0 0 0 4px var(--tenant-ring), 0 10px 24px rgba(15, 23, 42, 0.06);
 }
 
 .aeds-kpi-card {
   border: 1px solid color-mix(in srgb, var(--tenant-border) 82%, var(--tenant-primary));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tenant-surface) 95%, var(--tenant-primary)), var(--tenant-surface));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tenant-surface) 96%, var(--tenant-primary)), var(--tenant-surface));
   border-radius: var(--aeds-radius-xl);
-  box-shadow: var(--aeds-shadow-sm);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.07);
 }
 
 .aeds-icon-tile {
   background: linear-gradient(135deg, var(--tenant-primary), color-mix(in srgb, var(--tenant-primary) 76%, black));
   color: #fff;
-  box-shadow: 0 10px 22px color-mix(in srgb, var(--tenant-primary) 18%, transparent);
+  box-shadow: 0 14px 26px color-mix(in srgb, var(--tenant-primary) 22%, transparent);
 }
 
 .aeds-topbar {
   border-bottom: 1px solid var(--tenant-border);
-  background: color-mix(in srgb, var(--tenant-surface) 94%, transparent);
-  backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--tenant-surface) 90%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
 }
 
 .aeds-sidebar {
@@ -80,10 +82,21 @@
     linear-gradient(
       180deg,
       var(--sidebar-bg) 0%,
-      color-mix(in srgb, var(--sidebar-bg) 92%, black) 62%,
-      color-mix(in srgb, var(--sidebar-bg) 95%, black) 100%
+      color-mix(in srgb, var(--sidebar-bg) 90%, black) 62%,
+      color-mix(in srgb, var(--sidebar-bg) 94%, black) 100%
     );
   color: var(--sidebar-text);
+}
+
+.aeds-sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--sidebar-text) 10%, transparent), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 22%);
+  opacity: 0.9;
 }
 
 .aeds-sidebar .text-white\/60,

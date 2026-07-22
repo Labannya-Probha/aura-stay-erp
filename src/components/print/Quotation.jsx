@@ -1,4 +1,6 @@
 import { fmtBDT, fmtDate, nightsBetween, computeCharge, rateFor, todayISO } from '../../lib/helpers'
+import { getCompanyLogo, getCompanyName } from '../../theme/branding.service'
+import { sanitizeHtml } from '../../lib/sanitize'
 
 export default function Quotation({ res, guest, resRooms, company, taxConfig, terms, roomRate, roomCount, discountPct, validDays }) {
   const rate = rateFor(taxConfig, 'ROOM', todayISO())
@@ -32,13 +34,16 @@ export default function Quotation({ res, guest, resRooms, company, taxConfig, te
   const primary = 'var(--print-primary, #1B4D2E)'
   const line = 'var(--print-line, rgba(27,77,46,0.24))'
   const soft = 'var(--print-soft, rgba(46,125,50,0.08))'
+  const muted = 'var(--print-muted, #4b5563)'
+  const logo = getCompanyLogo(company)
+  const companyName = company?.company_name || getCompanyName(company) || 'Company'
 
   return (
     <div className="print-a4-doc" style={{ maxWidth: '186mm', margin: '0 auto' }}>
       <div className="print-avoid-break" style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: `2px solid ${primary}`, paddingBottom: 8, marginBottom: 12 }}>
-        {company?.logo_url && <img src={company.logo_url} alt="" style={{ height: 54, width: 54, objectFit: 'contain' }} />}
-        <div style={{ flex: 1, textAlign: company?.logo_url ? 'left' : 'center' }}>
-          <div style={{ fontSize: 20, fontWeight: 700, fontFamily: 'Fraunces, serif', color: primary }}>{company?.name || 'Novem Eco Resort'}</div>
+        {logo && <img src={logo} alt="" style={{ height: 54, width: 54, objectFit: 'contain' }} />}
+        <div style={{ flex: 1, textAlign: logo ? 'left' : 'center' }}>
+          <div style={{ fontSize: 20, fontWeight: 700, fontFamily: 'Fraunces, serif', color: primary }}>{companyName}</div>
           <div style={{ fontSize: 11 }}>{company?.address} · {company?.phone} · {company?.email}</div>
           {company?.bin && <div style={{ fontSize: 10 }}>BIN: {company.bin}</div>}
         </div>
@@ -87,17 +92,17 @@ export default function Quotation({ res, guest, resRooms, company, taxConfig, te
       {terms && (
         <div style={{ marginTop: 14, fontSize: 10.5, lineHeight: 1.6, borderTop: `1px solid ${line}`, paddingTop: 8 }}>
           {/<[a-z][\s\S]*>/i.test(terms)
-            ? <div dangerouslySetInnerHTML={{ __html: terms }} />
+            ? <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(terms) }} />
             : <div style={{ whiteSpace: 'pre-wrap' }}>{terms}</div>
           }
         </div>
       )}
 
       <div style={{ marginTop: 28, fontSize: 12 }}>
-        For {company?.legal_name || company?.name || 'the resort'},<br /><br /><br />
+        For {company?.legal_name || companyName || 'the company'},<br /><br /><br />
         ____________________________<br />Authorised Signature
       </div>
-      {company?.invoice_footer && <div style={{ textAlign: 'center', fontSize: 10, marginTop: 16, color: '#555' }}>{company.invoice_footer}</div>}
+      {company?.invoice_footer && <div style={{ textAlign: 'center', fontSize: 10, marginTop: 16, color: muted }}>{company.invoice_footer}</div>}
     </div>
   )
 }
