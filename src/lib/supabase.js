@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL
+const SUPABASE_ANON_KEY =
+  import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY
 
 export const SUPABASE_CONFIG = { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY }
 
@@ -21,7 +22,9 @@ const memorySessionStorage = {
 }
 
 if (!SUPABASE_CONFIGURED) {
-  console.error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY — set them in your Vercel project environment settings and redeploy.')
+  console.error(
+    'Missing Supabase env vars. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (or SUPABASE_URL and SUPABASE_ANON_KEY) in your deployment environment and redeploy.',
+  )
 }
 
 // storage: sessionStorage means the session is cleared automatically

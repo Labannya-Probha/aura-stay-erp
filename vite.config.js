@@ -6,6 +6,7 @@ const isWindows = process.platform === 'win32'
 
 export default defineConfig({
   plugins: [react()],
+  envPrefix: ['VITE_', 'SUPABASE_'],
 
   server: {
     watch: isWindows
