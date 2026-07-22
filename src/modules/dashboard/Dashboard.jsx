@@ -6,17 +6,17 @@ import {
   Moon,
   RefreshCw,
   Sparkles,
-} from "lucide-react"
-import { useNavigate } from "react-router-dom"
+} from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
-import { PATHS } from "../../app/paths"
-import DashboardHeader from "./DashboardHeader"
-import KPIGrid from "./widgets/KPIGrid"
-import RevenueChart from "./widgets/RevenueChart"
-import OccupancyChart from "./widgets/OccupancyChart"
-import ArrivalsDeparturesWidget from "./widgets/ArrivalsDeparturesWidget"
-import NotificationsWidget from "./widgets/NotificationsWidget"
-import "../../styles/aeds-v6-migration.css"
+import { PATHS } from '../../app/paths'
+import DashboardHeader from './DashboardHeader'
+import KPIGrid from './widgets/KPIGrid'
+import RevenueChart from './widgets/RevenueChart'
+import OccupancyChart from './widgets/OccupancyChart'
+import ArrivalsDeparturesWidget from './widgets/ArrivalsDeparturesWidget'
+import NotificationsWidget from './widgets/NotificationsWidget'
+import '../../styles/aeds-v6-migration.css'
 
 function numericValue(value, fallback = 0) {
   const number = Number(value)
@@ -26,29 +26,25 @@ function numericValue(value, fallback = 0) {
 function OperationalPulse({ summary, housekeeping, restaurant, tasks }) {
   const cards = [
     {
-      label: "Rooms to inspect",
+      label: 'Rooms to inspect',
       value: numericValue(
-        housekeeping?.inspectionPending ??
-          housekeeping?.pending ??
-          summary?.dirtyRooms
+        housekeeping?.inspectionPending ?? housekeeping?.pending ?? summary?.dirtyRooms,
       ),
-      detail: "Housekeeping queue",
+      detail: 'Housekeeping queue',
     },
     {
-      label: "Restaurant open orders",
+      label: 'Restaurant open orders',
       value: numericValue(
-        restaurant?.openOrders ??
-          restaurant?.pendingOrders ??
-          summary?.restaurantOrders
+        restaurant?.openOrders ?? restaurant?.pendingOrders ?? summary?.restaurantOrders,
       ),
-      detail: "Live POS operation",
+      detail: 'Live POS operation',
     },
     {
-      label: "Pending approvals",
+      label: 'Pending approvals',
       value: Array.isArray(tasks)
         ? tasks.length
         : numericValue(tasks?.pending ?? summary?.pendingTasks),
-      detail: "Needs management action",
+      detail: 'Needs management action',
     },
   ]
 
@@ -58,7 +54,7 @@ function OperationalPulse({ summary, housekeeping, restaurant, tasks }) {
         <article key={card.label} className="aeds-v6-pulse-card">
           <div>
             <span>{card.label}</span>
-            <strong>{card.value.toLocaleString("en-BD")}</strong>
+            <strong>{card.value.toLocaleString('en-BD')}</strong>
           </div>
           <small>{card.detail}</small>
         </article>
@@ -91,27 +87,27 @@ export default function Dashboard({
 
   const quickLinks = [
     {
-      label: "New Reservation",
+      label: 'New Reservation',
       icon: CalendarCheck,
       path: `${PATHS.RESERVATIONS}?tab=new`,
     },
     {
-      label: "Room Board",
+      label: 'Room Board',
       icon: BedDouble,
       path: `${PATHS.FRONT_OFFICE}?tab=room-board`,
     },
     {
-      label: "In-House Guests",
+      label: 'In-House Guests',
       icon: ClipboardList,
       path: `${PATHS.FRONT_OFFICE}?tab=in-house`,
     },
     {
-      label: "Night Audit",
+      label: 'Night Audit',
       icon: Moon,
       path: `${PATHS.FRONT_OFFICE}?tab=night-audit`,
     },
     {
-      label: "Reports Center",
+      label: 'Reports Center',
       icon: BarChart3,
       path: PATHS.REPORTS,
     },
@@ -132,6 +128,7 @@ export default function Dashboard({
             loading={loading}
             refreshing={refreshing}
             onRefresh={refresh}
+            onNewReservation={() => navigate(`${PATHS.RESERVATIONS}?tab=new`)}
           />
         </div>
 
@@ -141,14 +138,14 @@ export default function Dashboard({
           onClick={refresh}
           disabled={loading || refreshing}
         >
-          <RefreshCw
-            size={16}
-            className={refreshing ? "animate-spin" : ""}
-          />
+          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
           Refresh data
         </button>
         <div className="text-xs font-bold text-slate-500" aria-live="polite">
-          {isLive ? "Live" : "Manual"} · {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString("en-BD", { hour: "2-digit", minute: "2-digit" })}` : "Waiting for data"}
+          {isLive ? 'Live' : 'Manual'} ·{' '}
+          {lastUpdated
+            ? `Updated ${lastUpdated.toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' })}`
+            : 'Waiting for data'}
         </div>
       </div>
 
@@ -169,11 +166,7 @@ export default function Dashboard({
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-12">
         <div className="xl:col-span-7">
-          <RevenueChart
-            loading={loading}
-            data={revenueTrend}
-            summary={summary}
-          />
+          <RevenueChart loading={loading} data={revenueTrend} summary={summary} />
         </div>
 
         <div className="xl:col-span-5">
@@ -191,6 +184,7 @@ export default function Dashboard({
           <ArrivalsDeparturesWidget
             loading={loading}
             summary={summary}
+            onViewAll={() => navigate(PATHS.RESERVATIONS)}
           />
         </div>
 
@@ -199,6 +193,7 @@ export default function Dashboard({
             loading={notificationsLoading || loading}
             error={notificationsError}
             data={notifications?.length ? notifications : activities}
+            onViewAll={() => navigate(PATHS.TASKS || '/tasks')}
           />
         </div>
       </div>
@@ -211,11 +206,7 @@ export default function Dashboard({
 
         <div className="aeds-v6-quick-links-list">
           {quickLinks.map(({ label, icon: Icon, path }) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => navigate(path)}
-            >
+            <button key={label} type="button" onClick={() => navigate(path)}>
               <Icon size={15} />
               {label}
             </button>
