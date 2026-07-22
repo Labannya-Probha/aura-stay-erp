@@ -2,21 +2,21 @@
 /*  AEDS v3 SHELL — Single responsive ERP shell                       */
 /* ------------------------------------------------------------------ */
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useLocation } from "react-router-dom"
-import { Menu } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
+import { Menu } from 'lucide-react'
 
-import { PATHS } from "../../app/paths"
+import { PATHS } from '../../app/paths'
 
-import { AppTopBar } from "../../components/layout/topbar"
+import { AppTopBar } from '../../components/layout/topbar'
 
-import SidebarShell from "../../components/layout/sidebar/SidebarShell"
-import SidebarHeader from "../../components/layout/sidebar/SidebarHeader"
-import SidebarNavigation from "../../components/layout/sidebar/SidebarNavigation"
-import SidebarFooter from "../../components/layout/sidebar/SidebarFooter"
-import SidebarBrandLogo from "../../components/layout/sidebar/SidebarBrandLogo"
+import SidebarShell from '../../components/layout/sidebar/SidebarShell'
+import SidebarHeader from '../../components/layout/sidebar/SidebarHeader'
+import SidebarNavigation from '../../components/layout/sidebar/SidebarNavigation'
+import SidebarFooter from '../../components/layout/sidebar/SidebarFooter'
+import { Button } from '../../components/ui/button'
 
-import "./shell.css"
+import './shell.css'
 
 export default function AedsShell({
   company,
@@ -31,7 +31,11 @@ export default function AedsShell({
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const prevPathnameRef = useRef(location.pathname)
 
-  const softwareName = company?.software_name || "Aura Stay"
+  const softwareName = company?.software_name || 'Aura Stay'
+  const companyName = company?.name?.trim() || ''
+  const showCompanyName = Boolean(
+    companyName && companyName.toLowerCase() !== softwareName.trim().toLowerCase(),
+  )
   const sidebarHidden = location.pathname === PATHS.CALENDAR
 
   useEffect(() => {
@@ -62,25 +66,12 @@ export default function AedsShell({
         <SidebarFooter company={company} role={role} userName={userName} />
       </>
     ),
-    [
-      company,
-      softwareName,
-      mobileNavOpen,
-      role,
-      isAdmin,
-      privileges,
-      modulesEnabled,
-      userName,
-    ]
+    [company, softwareName, mobileNavOpen, role, isAdmin, privileges, modulesEnabled, userName],
   )
 
   return (
-    <div className={sidebarHidden ? "aeds-shell no-sidebar" : "aeds-shell"}>
-      {!sidebarHidden && (
-        <SidebarShell>
-          {sidebarContent}
-        </SidebarShell>
-      )}
+    <div className={sidebarHidden ? 'aeds-shell no-sidebar' : 'aeds-shell'}>
+      {!sidebarHidden && <SidebarShell>{sidebarContent}</SidebarShell>}
 
       {mobileNavOpen && !sidebarHidden && (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -91,34 +82,29 @@ export default function AedsShell({
             onClick={() => setMobileNavOpen(false)}
           />
 
-          <SidebarShell mobile>
-            {sidebarContent}
-          </SidebarShell>
+          <SidebarShell mobile>{sidebarContent}</SidebarShell>
         </div>
       )}
 
       {!sidebarHidden && (
         <div className="aeds-mobile-bar">
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => setMobileNavOpen(true)}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            className="aeds-mobile-menu-trigger"
+            aria-label="Open sidebar"
           >
             <Menu size={22} />
-          </button>
-
-          <SidebarBrandLogo
-            url={company?.logo_url}
-            softwareName={softwareName}
-          />
+          </Button>
 
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-black leading-tight text-slate-900">
+            <div className="truncate text-sm font-black leading-tight tracking-tight text-slate-900">
               {softwareName}
             </div>
-            {company?.name && (
-              <div className="truncate text-[11px] font-semibold text-slate-400">
-                {company.name}
+            {showCompanyName && (
+              <div className="truncate text-[11px] font-semibold tracking-[0.01em] text-slate-500">
+                {companyName}
               </div>
             )}
           </div>
@@ -129,9 +115,7 @@ export default function AedsShell({
         <AppTopBar company={company} role={role} />
 
         <main className="aeds-shell-main">
-          <div className="aeds-page-container">
-            {children}
-          </div>
+          <div className="aeds-page-container">{children}</div>
         </main>
       </div>
     </div>

@@ -6,7 +6,8 @@ begin;
 create or replace function public.current_tenant_id()
 returns uuid
 language sql stable
-security invoker
+security definer
+set search_path to 'public'
 as $$
   select tenant_id from public.app_users where id = auth.uid() limit 1;
 $$;
@@ -14,7 +15,8 @@ $$;
 create or replace function public.current_role_name()
 returns text
 language sql stable
-security invoker
+security definer
+set search_path to 'public'
 as $$
   select role from public.app_users where id = auth.uid() limit 1;
 $$;

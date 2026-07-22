@@ -14,9 +14,21 @@
   display: grid;
   grid-template-columns: var(--aeds-sidebar-width) minmax(0, 1fr);
   background:
-    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--tenant-primary) 12%, transparent), transparent 32%),
-    radial-gradient(circle at 100% 12%, color-mix(in srgb, var(--tenant-accent) 10%, transparent), transparent 24%),
-    linear-gradient(180deg, color-mix(in srgb, var(--tenant-shell-bg) 94%, white), var(--tenant-shell-bg));
+    radial-gradient(
+      circle at 12% 0%,
+      color-mix(in srgb, var(--tenant-primary) 12%, transparent),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 100% 12%,
+      color-mix(in srgb, var(--tenant-accent) 10%, transparent),
+      transparent 24%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--tenant-shell-bg) 94%, white),
+      var(--tenant-shell-bg)
+    );
   overflow-x: clip;
   isolation: isolate;
 }
@@ -45,7 +57,11 @@
   overflow-y: auto;
   min-height: 0;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--tenant-surface) 72%, transparent), transparent 26%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--tenant-surface) 72%, transparent),
+      transparent 26%
+    ),
     transparent;
 }
 
@@ -64,7 +80,7 @@
   display: none;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 639px) {
   .aeds-shell {
     display: block;
   }
@@ -74,19 +90,55 @@
     top: 0;
     z-index: 45;
     display: flex;
-    height: calc(var(--aeds-mobile-bar-height) + env(safe-area-inset-top));
+    min-height: calc(var(--aeds-mobile-bar-height) + env(safe-area-inset-top));
     align-items: center;
-    gap: 12px;
-    border-bottom: 1px solid color-mix(in srgb, var(--tenant-border) 92%, transparent);
-    background: color-mix(in srgb, var(--tenant-surface) 92%, transparent);
-    padding: env(safe-area-inset-top) 14px 0;
-    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
-    backdrop-filter: blur(18px) saturate(140%);
-    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    gap: 10px;
+    margin: 0;
+    padding: calc(env(safe-area-inset-top) + 6px) 14px 6px;
+    border: 1px solid color-mix(in srgb, var(--tenant-border) 88%, transparent);
+    border-top: 0;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0 0 14px 14px;
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.94), rgb(248 250 252 / 0.96)),
+      color-mix(in srgb, var(--tenant-surface) 94%, transparent);
+    box-shadow:
+      0 4px 16px rgb(15 23 42 / 0.08),
+      inset 0 1px 0 rgb(255 255 255 / 0.45);
+    backdrop-filter: blur(14px) saturate(130%);
+    -webkit-backdrop-filter: blur(14px) saturate(130%);
+  }
+
+  .aeds-mobile-menu-trigger {
+    height: 2.4rem;
+    width: 2.4rem;
+    border-radius: 12px;
+    color: rgb(51 65 85);
+    background: rgb(255 255 255 / 0.86);
+    border-color: color-mix(in srgb, var(--tenant-border) 88%, transparent);
+  }
+
+  .aeds-mobile-menu-trigger:hover {
+    color: rgb(15 23 42);
+    background: rgb(255 255 255 / 0.98);
   }
 
   .aeds-page-container {
     padding-top: 16px;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  :root {
+    --aeds-sidebar-width: 240px;
+    --aeds-topbar-height: 52px;
+    --aeds-page-x: clamp(12px, 1.6vw, 18px);
+    --aeds-page-y: clamp(12px, 1.6vw, 18px);
+  }
+
+  .aeds-shell > .aeds-sidebar {
+    display: flex !important;
   }
 }
 
