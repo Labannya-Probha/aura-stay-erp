@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   redis:
     image: redis:7-alpine
@@ -51,6 +49,36 @@ services:
       REDIS_URL: redis://redis:6379
     depends_on:
       redis: { condition: service_healthy }
+
+  notification-worker:
+    build: { context: ., target: api }
+    command: ["node", "queues/notification.queue.js"]
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis: { condition: service_healthy }
+
+  pdf-report-worker:
+    build: { context: ., target: api }
+    command: ["node", "queues/pdfReport.queue.js"]
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis: { condition: service_healthy }
+
+  iam-service:
+    build: { context: ., target: api }
+    command: ["node", "iam-service/index.js"]
+    ports: ["4100:4100"]
+    environment:
+      IAM_PORT: 4100
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
 
   frontend:
     build: { context: ., target: build }

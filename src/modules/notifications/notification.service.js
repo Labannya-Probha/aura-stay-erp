@@ -1,7 +1,7 @@
-import { supabase } from "../../lib/supabase"
+import { supabase } from '../../lib/supabase'
 
 function requireSupabase() {
-  if (!supabase) throw new Error("Supabase is not configured.")
+  if (!supabase) throw new Error('Supabase is not configured.')
 }
 
 async function hasSession() {
@@ -9,12 +9,12 @@ async function hasSession() {
   return Boolean(data?.session)
 }
 
-export async function getUnreadNotifications({ limit = 50, tenantId } = {}) {
+export async function getUnreadNotifications({ limit = 50 } = {}) {
   requireSupabase()
   if (!(await hasSession())) return []
 
   // DB function reads tenant from JWT app_metadata/current_tenant_id(); no tenant arg required.
-  const result = await supabase.rpc("notification_center_feed", { p_limit: limit })
+  const result = await supabase.rpc('notification_center_feed', { p_limit: limit })
   if (result.error) throw result.error
   return Array.isArray(result.data) ? result.data : []
 }
@@ -22,7 +22,7 @@ export async function getUnreadNotifications({ limit = 50, tenantId } = {}) {
 export async function markNotificationRead(id) {
   requireSupabase()
   if (!(await hasSession())) return false
-  const { error } = await supabase.rpc("mark_notification_read", { p_notification_id: id })
+  const { error } = await supabase.rpc('mark_notification_read', { p_notification_id: id })
   if (error) throw error
   return true
 }
@@ -30,7 +30,7 @@ export async function markNotificationRead(id) {
 export async function markAllNotificationsRead() {
   requireSupabase()
   if (!(await hasSession())) return 0
-  const { error } = await supabase.rpc("mark_all_notifications_read")
+  const { error } = await supabase.rpc('mark_all_notifications_read')
   if (error) throw error
   return 1
 }
@@ -41,34 +41,34 @@ export function subscribeToNotifications({ tenantId, onInsert, onChange }) {
   const channel = supabase
     .channel(`notification-center-${tenantId}-${Math.random().toString(36).slice(2, 8)}`)
     .on(
-      "postgres_changes",
+      'postgres_changes',
       {
-        event: "INSERT",
-        schema: "public",
-        table: "notifications",
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
         filter: `tenant_id=eq.${tenantId}`,
       },
-      (payload) => onInsert?.(payload.new)
+      (payload) => onInsert?.(payload.new),
     )
     .on(
-      "postgres_changes",
+      'postgres_changes',
       {
-        event: "UPDATE",
-        schema: "public",
-        table: "notifications",
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'notifications',
         filter: `tenant_id=eq.${tenantId}`,
       },
-      () => onChange?.()
+      () => onChange?.(),
     )
     .on(
-      "postgres_changes",
+      'postgres_changes',
       {
-        event: "DELETE",
-        schema: "public",
-        table: "notifications",
+        event: 'DELETE',
+        schema: 'public',
+        table: 'notifications',
         filter: `tenant_id=eq.${tenantId}`,
       },
-      () => onChange?.()
+      () => onChange?.(),
     )
     .subscribe()
 

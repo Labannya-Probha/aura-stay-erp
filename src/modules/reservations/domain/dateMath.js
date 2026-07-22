@@ -1,6 +1,6 @@
 export function toDateOnly(value) {
   if (!value) return null
-  const date = value instanceof Date ? value : new Date(`${String(value).slice(0, 10)}T00:00:00`)
+  const date = value instanceof Date ? value : new Date(`${String(value).slice(0, 10)}T00:00:00Z`)
   if (Number.isNaN(date.getTime())) return null
   return date.toISOString().slice(0, 10)
 }
