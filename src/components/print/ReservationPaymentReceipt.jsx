@@ -140,7 +140,11 @@ function OfficeCopy({ payment, company }) {
   const amount = Number(payment?.amount || 0)
   const amountWords = amountInWords(amount)
   const balanceDue = Number(
-    payment?.balance_due ?? payment?.due_amount ?? payment?.reservations?.balance ?? 0,
+    payment?.balance_due ??
+      payment?.due_amount ??
+      payment?.reservations?.balance_due ??
+      payment?.reservations?.balance ??
+      0,
   )
   const statusText = balanceDue > 0 ? 'Balance Due' : 'Paid in Full'
   const paymentMode = payment?.method || 'CARD'

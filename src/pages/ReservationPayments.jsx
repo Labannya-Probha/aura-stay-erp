@@ -276,7 +276,7 @@ export default function ReservationPayments({
       supabase
         .from('payments')
         .select(
-          'id,payment_id,reservation_id,received_date,amount,method,reference,received_by,paid_by_party,payment_class,source_module,reservations(res_no,reservation_name,check_in,check_out,primary_guest_id,guests:primary_guest_id(full_name,phone,email),reservation_rooms(rooms(room_no)),balance)',
+          'id,payment_id,reservation_id,received_date,amount,method,reference,received_by,paid_by_party,payment_class,source_module,reservations(res_no,reservation_name,check_in,check_out,primary_guest_id,guests:primary_guest_id(full_name,phone,email),reservation_rooms(rooms(room_no)),balance_due)',
         )
         .eq('id', pm.id)
         .limit(1)
