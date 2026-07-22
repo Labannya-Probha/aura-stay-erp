@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "vite",
@@ -21,6 +21,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit",
+    "check:json-keys": "node scripts/check-duplicate-json-keys.mjs package.json package-lock.json",
     "lint:metrics": "node scripts/lint-metrics.mjs",
     "architecture:report": "node scripts/aeds-architecture-report.mjs",
     "quality": "npm run lint && npm run test:run && npm run build",
