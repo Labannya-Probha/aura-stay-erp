@@ -6,45 +6,45 @@ export default {
       // ── Brand palette (Aura Stay) ──────────────────────────────────────────
       colors: {
         forest: 'rgb(var(--color-forest-rgb) / <alpha-value>)',
-        pine:   'rgb(var(--color-pine-rgb)   / <alpha-value>)',
-        ink:    'rgb(var(--color-ink-rgb)    / <alpha-value>)',
-        paper:  'rgb(var(--color-paper-rgb)  / <alpha-value>)',
-        leaf:   'rgb(var(--color-leaf-rgb)   / <alpha-value>)',
-        amber:  'rgb(var(--color-amber-rgb)  / <alpha-value>)',
+        pine: 'rgb(var(--color-pine-rgb)   / <alpha-value>)',
+        ink: 'rgb(var(--color-ink-rgb)    / <alpha-value>)',
+        paper: 'rgb(var(--color-paper-rgb)  / <alpha-value>)',
+        leaf: 'rgb(var(--color-leaf-rgb)   / <alpha-value>)',
+        amber: 'rgb(var(--color-amber-rgb)  / <alpha-value>)',
         // ── shadcn/ui semantic tokens (CSS-variable backed) ──────────────────
-        background:  'hsl(var(--background))',
-        foreground:  'hsl(var(--foreground))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
         card: {
-          DEFAULT:    'hsl(var(--card))',
+          DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
         popover: {
-          DEFAULT:    'hsl(var(--popover))',
+          DEFAULT: 'hsl(var(--popover))',
           foreground: 'hsl(var(--popover-foreground))',
         },
         primary: {
-          DEFAULT:    'hsl(var(--primary))',
+          DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
         },
         secondary: {
-          DEFAULT:    'hsl(var(--secondary))',
+          DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',
         },
         muted: {
-          DEFAULT:    'hsl(var(--muted))',
+          DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
-          DEFAULT:    'hsl(var(--accent))',
+          DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
         },
         destructive: {
-          DEFAULT:    'hsl(var(--destructive))',
+          DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
         },
-        border:  'hsl(var(--border))',
-        input:   'hsl(var(--input))',
-        ring:    'hsl(var(--ring))',
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -52,24 +52,25 @@ export default {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
+        sans: ['Inter', 'sans-serif'],
         display: ['Inter', 'sans-serif'],
-        body:    ['Inter', 'sans-serif'],
-        money:   ['Inter', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
+        money: ['Inter', 'sans-serif'],
       },
       // ── Animations ──────────────────────────────────────────────────────────
       keyframes: {
         'slide-in': {
-          '0%':   { opacity: '0', transform: 'translateX(100%)' },
+          '0%': { opacity: '0', transform: 'translateX(100%)' },
           '100%': { opacity: '1', transform: 'translateX(0)' },
         },
         'fade-in-up': {
-          '0%':   { opacity: '0', transform: 'translateY(20px)' },
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
       animation: {
-        'slide-in':    'slide-in 0.25s ease-out',
-        'fade-in-up':  'fade-in-up 0.5s ease-out both',
+        'slide-in': 'slide-in 0.25s ease-out',
+        'fade-in-up': 'fade-in-up 0.5s ease-out both',
       },
     },
   },

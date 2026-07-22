@@ -9,12 +9,14 @@ RUN npm run build
 # ---- API runtime stage ----
 FROM node:22-alpine AS api
 ENV NODE_ENV=production
+ENV HUSKY=0
 WORKDIR /usr/src/app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 COPY server ./server
 COPY gateway ./gateway
 COPY queues ./queues
+COPY iam-service ./iam-service
 COPY --from=build /app/dist ./dist
 EXPOSE 4000
 RUN chown -R node /usr/src/app

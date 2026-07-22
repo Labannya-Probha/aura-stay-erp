@@ -1,0 +1,6 @@
+if git diff --cached --name-only | grep -qE '^\.env(\.test)?$'; then
+	echo "BLOCKED: .env or .env.test is staged for commit. Run: git reset HEAD .env .env.test"
+	exit 1
+fi
+
+npx lint-staged

@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { SEARCH_CONFIG, SEARCH_ENTITIES } from './search.config';
+import { useCallback, useState } from 'react'
+import { SEARCH_CONFIG, SEARCH_ENTITIES } from './search.config'
 
 /**
  * useUniversalSearch
@@ -25,34 +25,37 @@ import { SEARCH_CONFIG, SEARCH_ENTITIES } from './search.config';
  * }}
  */
 export function useUniversalSearch() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [isSearching] = useState(false)
 
   // No backend search service exists yet. This stays false until one
   // is wired up (see search.config.js and the JSDoc above).
-  const isConfigured = false;
+  const isConfigured = false
 
-  const runSearch = useCallback((term) => {
-    const value = (term ?? query).trim();
-    if (value.length < SEARCH_CONFIG.minQueryLength) {
-      setResults([]);
-      return;
-    }
+  const runSearch = useCallback(
+    (term) => {
+      const value = (term ?? query).trim()
+      if (value.length < SEARCH_CONFIG.minQueryLength) {
+        setResults([])
+        return
+      }
 
-    if (!isConfigured) {
-      // Intentionally a no-op: no direct table queries are performed
-      // here. The UI shows SEARCH_CONFIG.notConfiguredMessage instead.
-      setResults([]);
-      return;
-    }
+      if (!isConfigured) {
+        // Intentionally a no-op: no direct table queries are performed
+        // here. The UI shows SEARCH_CONFIG.notConfiguredMessage instead.
+        setResults([])
+        return
+      }
 
-    // Placeholder for future implementation:
-    // setIsSearching(true);
-    // const data = await search(value);
-    // setResults(data);
-    // setIsSearching(false);
-  }, [query, isConfigured]);
+      // Placeholder for future implementation:
+      // setIsSearching(true);
+      // const data = await search(value);
+      // setResults(data);
+      // setIsSearching(false);
+    },
+    [query, isConfigured],
+  )
 
   return {
     query,
@@ -62,5 +65,5 @@ export function useUniversalSearch() {
     isConfigured,
     entities: SEARCH_ENTITIES,
     runSearch,
-  };
+  }
 }

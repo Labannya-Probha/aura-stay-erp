@@ -1,7 +1,8 @@
 import express from 'express'
 import { generateReport, getReport, listReports } from './reportService.js'
-import { toCsv, toExcel, toPdfHtml } from './exporters.js'
+import { toCsv, toPdfHtml } from './exporters.js'
 import { requireAuth } from '../middleware/auth.js'
+import { pdfReportQueue } from '../../queues/pdfReport.queue.js'
 
 const router = express.Router()
 
@@ -41,13 +42,31 @@ router.post('/reports/:reportCode/export/csv', (req, res) => {
   res.send(toCsv(payload))
 })
 
-router.post('/reports/:reportCode/export/excel', asyncRoute(async (req, res) => {
-  const payload = generateReport(req.params.reportCode, req.body, toReportUser(req))
-  const buffer = await toExcel(payload)
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-  res.setHeader('Content-Disposition', `attachment; filename="${payload.report.code}.xlsx"`)
-  res.send(Buffer.from(buffer))
-}))
+router.post(
+  '/reports/:reportCode/export/excel',
+  asyncRoute(async (req, res) => {
+    const job = await pdfReportQueue.add('generate', {
+      reportCode: req.params.reportCode,
+      params: req.body,
+      user: toReportUser(req),
+      format: 'excel',
+    })
+    res.status(202).json({ jobId: job.id, status: 'QUEUED' })
+  }),
+)
+
+router.get(
+  '/reports/jobs/:jobId',
+  asyncRoute(async (req, res) => {
+    const job = await pdfReportQueue.getJob(req.params.jobId)
+    if (!job) return res.status(404).json({ error: 'Job not found' })
+    const state = await job.getState()
+    const payload = { jobId: job.id, status: state }
+    if (state === 'completed') payload.result = job.returnvalue
+    if (state === 'failed') payload.error = job.failedReason
+    res.json(payload)
+  }),
+)
 
 router.post('/reports/:reportCode/export/pdf', (req, res) => {
   const payload = generateReport(req.params.reportCode, req.body, toReportUser(req))

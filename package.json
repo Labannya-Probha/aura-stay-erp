@@ -9,16 +9,22 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "node server/index.js",
+    "dev:iam": "node iam-service/index.js",
+    "dev:worker": "node queues/pdfReport.queue.js",
     "build": "vite build",
     "preview": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "eslint src",
     "lint:strict": "eslint src --max-warnings=0",
     "test": "vitest",
     "test:run": "vitest run",
+    "typecheck": "tsc --noEmit",
     "lint:metrics": "node scripts/lint-metrics.mjs",
     "architecture:report": "node scripts/aeds-architecture-report.mjs",
-    "quality": "npm run lint && npm run test:run && npm run build"
+    "quality": "npm run lint && npm run test:run && npm run build",
+    "prepare": "husky"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -35,6 +41,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.0",
@@ -58,21 +65,41 @@
     "uuid": "^11.1.1"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.1.1",
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^4.1.9",
     "autoprefixer": "^10.5.4",
     "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "git-filter-repo": "^0.0.30",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.1.0",
     "postcss": "^8.4.47",
+    "prettier": "^3.9.6",
+    "supabase": "^2.108.0",
+    "supertest": "^7.2.2",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^7.0.2",
     "supabase": "^2.109.1",
     "tailwindcss": "^3.4.13",
     "supabase": "^2.108.0",
     "tailwindcss": "^4.3.3",
     "vite": "^6.4.3",
     "vitest": "^4.1.9"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   },
   "allowScripts": {
     "esbuild@0.25.12": true,
