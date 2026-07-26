@@ -16,7 +16,8 @@ create table if not exists public.account_department_mapping (
   usali_line_group text not null check (usali_line_group in (
     'REVENUE',
     'PAYROLL_AND_RELATED',
-    'OTHER_EXPENSE'
+    'OTHER_EXPENSE',
+    'NOT_APPLICABLE'
   )),
   ifrs_statement_class text not null check (ifrs_statement_class in (
     'ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE', 'OTHER'
@@ -78,9 +79,10 @@ select
     else 'Administrative & General'
   end,
   case
-    when name ~ '(salary|salaries|wage|payroll|bonus|benefit|pf\b|provident|insurance|gratuity|overtime|allowance)' then 'PAYROLL_AND_RELATED'
     when account_type = 'REVENUE' then 'REVENUE'
-    else 'OTHER_EXPENSE'
+    when account_type in ('EXPENSE', 'OTHER') and name ~ '(salary|salaries|wage|payroll|bonus|benefit|pf\b|provident|insurance|gratuity|overtime|allowance)' then 'PAYROLL_AND_RELATED'
+    when account_type in ('EXPENSE', 'OTHER') then 'OTHER_EXPENSE'
+    else 'NOT_APPLICABLE'
   end,
   case
     when account_type in ('ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE', 'OTHER') then account_type
@@ -251,7 +253,14 @@ asof_balances as (
 select
   c.id, c.code, c.name, c.account_type,
   coalesce(c.usali_department, 'Administrative & General'),
-  coalesce(c.usali_line_group, case when c.account_type = 'REVENUE' then 'REVENUE' else 'OTHER_EXPENSE' end),
+  coalesce(
+    c.usali_line_group,
+    case
+      when c.account_type = 'REVENUE' then 'REVENUE'
+      when c.account_type in ('EXPENSE', 'OTHER') then 'OTHER_EXPENSE'
+      else 'NOT_APPLICABLE'
+    end
+  ),
   coalesce(c.ifrs_statement_class, c.account_type),
   coalesce(p.debit, 0)::numeric(20,2),
   coalesce(p.credit, 0)::numeric(20,2),
@@ -297,7 +306,8 @@ begin
   ), filtered as (
     select b.*, case when b.usali_line_group = 'REVENUE' then greatest(b.period_credit - b.period_debit, 0) else greatest(b.period_debit - b.period_credit, 0) end as amount
     from balances b
-    where p_department is null or b.usali_department = p_department
+    where (p_department is null or b.usali_department = p_department)
+      and b.usali_line_group in ('REVENUE', 'PAYROLL_AND_RELATED', 'OTHER_EXPENSE')
   )
   select coalesce(jsonb_agg(jsonb_build_object(
     'account_id', f.account_id,
@@ -372,12 +382,10 @@ begin
         when b.ifrs_statement_class = 'REVENUE' then 'Revenue'
         when b.ifrs_statement_class = 'EXPENSE' and b.usali_line_group = 'PAYROLL_AND_RELATED' then 'Payroll & Related Expense'
         when b.ifrs_statement_class = 'EXPENSE' then 'Operating Expense'
-        when b.ifrs_statement_class = 'LIABILITY' then 'Liability'
-        when b.ifrs_statement_class = 'ASSET' then 'Asset'
-        when b.ifrs_statement_class = 'EQUITY' then 'Equity'
         else 'Other'
       end as statement_line
     from balances b
+    where b.ifrs_statement_class in ('REVENUE', 'EXPENSE')
   )
   select coalesce(jsonb_agg(jsonb_build_object(
       'account_id', s.account_id,
