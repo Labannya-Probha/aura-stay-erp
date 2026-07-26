@@ -14,6 +14,7 @@ import SidebarShell from '../../components/layout/sidebar/SidebarShell'
 import SidebarHeader from '../../components/layout/sidebar/SidebarHeader'
 import SidebarNavigation from '../../components/layout/sidebar/SidebarNavigation'
 import SidebarFooter from '../../components/layout/sidebar/SidebarFooter'
+import UiDebugBadge from '../../components/debug/UiDebugBadge.jsx'
 import { Button } from '../../components/ui/button'
 
 import './shell.css'
@@ -117,6 +118,8 @@ export default function AedsShell({
         <main className="aeds-shell-main">
           <div className="aeds-page-container">{children}</div>
         </main>
+
+        <UiDebugBadge />
       </div>
     </div>
   )

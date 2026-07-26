@@ -3,9 +3,12 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 import { SUPABASE_CONFIGURED } from './lib/supabase.js'
+import { installUiDebugInstrumentation } from './debug/uiDebug'
 import { ToastProvider } from './components/Toast'
 import { PopoverProvider } from './contexts/PopoverContext'
 import { AedsDialogProvider } from './components/dialog-engine'
+
+installUiDebugInstrumentation()
 
 // Catch any React render-tree error and show a helpful message rather than a
 // blank page.  Module-level failures (e.g. missing env vars) are handled below
