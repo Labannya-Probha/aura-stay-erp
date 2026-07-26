@@ -276,6 +276,21 @@ set source_function = case
 end
 where is_active = true;
 
+create table if not exists public.report_result_cache (
+  id bigserial primary key,
+  tenant_id uuid not null,
+  report_id uuid not null references public.report_catalog(id) on delete cascade,
+  filters_hash text not null,
+  response jsonb not null,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (tenant_id, report_id, filters_hash)
+);
+
+create index if not exists idx_report_result_cache_lookup
+  on public.report_result_cache (tenant_id, report_id, expires_at desc);
+
 create or replace function public.aeds_run_report(
   p_department_slug text,
   p_report_slug text,
@@ -291,6 +306,10 @@ declare
   v_tenant_id uuid;
   v_payload jsonb;
   v_regprocedure regprocedure;
+  v_report_id uuid;
+  v_cache_minutes int := 0;
+  v_filters_hash text;
+  v_cached_response jsonb;
 begin
   if coalesce(trim(p_department_slug), '') = '' then
     raise exception 'department slug is required' using errcode = '22023';
@@ -306,7 +325,11 @@ begin
   end if;
 
   select r.source_function
+       , r.id
+       , coalesce(r.cache_minutes, 0)
     into v_source_function
+       , v_report_id
+       , v_cache_minutes
   from public.report_catalog r
   join public.report_departments d on d.id = r.department_id
   where d.slug = p_department_slug
@@ -331,11 +354,29 @@ begin
       using errcode = '42883';
   end if;
 
+  v_filters_hash := md5(coalesce(p_filters, '{}'::jsonb)::text);
+
+  if v_cache_minutes > 0 then
+    select rc.response
+      into v_cached_response
+    from public.report_result_cache rc
+    where rc.tenant_id = v_tenant_id
+      and rc.report_id = v_report_id
+      and rc.filters_hash = v_filters_hash
+      and rc.expires_at > now()
+    order by rc.expires_at desc
+    limit 1;
+
+    if v_cached_response is not null then
+      return v_cached_response;
+    end if;
+  end if;
+
   execute format('select public.%I($1, $2)', v_source_function)
     into v_payload
     using v_tenant_id, coalesce(p_filters, '{}'::jsonb);
 
-  return jsonb_build_object(
+  v_cached_response := jsonb_build_object(
     'rows', coalesce(v_payload -> 'rows', '[]'::jsonb),
     'summary', coalesce(v_payload -> 'summary', '{}'::jsonb) || jsonb_build_object(
       'department_slug', p_department_slug,
@@ -344,6 +385,32 @@ begin
       'tenant_id', v_tenant_id
     )
   );
+
+  if v_cache_minutes > 0 then
+    insert into public.report_result_cache (
+      tenant_id,
+      report_id,
+      filters_hash,
+      response,
+      expires_at,
+      created_at,
+      updated_at
+    ) values (
+      v_tenant_id,
+      v_report_id,
+      v_filters_hash,
+      v_cached_response,
+      now() + make_interval(mins => v_cache_minutes),
+      now(),
+      now()
+    )
+    on conflict (tenant_id, report_id, filters_hash) do update set
+      response = excluded.response,
+      expires_at = excluded.expires_at,
+      updated_at = excluded.updated_at;
+  end if;
+
+  return v_cached_response;
 end;
 $$;
 

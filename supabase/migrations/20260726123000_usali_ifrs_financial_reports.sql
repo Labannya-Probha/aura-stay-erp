@@ -199,6 +199,25 @@ with params as (
     coalesce(p_end_date, coalesce(p_as_of_date, current_date)) as end_date,
     coalesce(p_as_of_date, p_end_date, current_date) as as_of_date
 ),
+period_context as (
+  select
+    p.start_date,
+    p.end_date,
+    coalesce(
+      (
+        select min(ap.start_date)
+        from public.accounting_periods ap
+        where ap.tenant_id = p_tenant_id
+          and ap.status = 'OPEN'
+      ),
+      current_date
+    ) as open_period_start,
+    date_trunc('month', p.start_date)::date as start_month,
+    date_trunc('month', p.end_date)::date as end_month,
+    (date_trunc('month', p.start_date) + interval '1 month - 1 day')::date as start_month_end,
+    (date_trunc('month', p.end_date) + interval '1 month - 1 day')::date as end_month_end
+  from params p
+),
 classification as (
   select
     coa.id,
@@ -225,30 +244,119 @@ classification as (
     and coalesce(coa.is_active, true)
 ),
 period_balances as (
-  select jl.account_id,
-    round(sum(coalesce(jl.debit, 0)), 2) as debit,
-    round(sum(coalesce(jl.credit, 0)), 2) as credit,
-    round(sum(coalesce(jl.debit, 0) - coalesce(jl.credit, 0)), 2) as balance
-  from public.journal_lines jl
-  join public.journal_entries je on je.id = jl.entry_id
-  cross join params p
-  where jl.tenant_id = p_tenant_id
-    and je.tenant_id = p_tenant_id
-    and coalesce(je.jv_date, je.created_at::date) between p.start_date and p.end_date
-  group by jl.account_id
+  select
+    s.account_id,
+    round(sum(s.debit), 2) as debit,
+    round(sum(s.credit), 2) as credit,
+    round(sum(s.balance), 2) as balance
+  from (
+    select
+      jl.account_id,
+      round(sum(coalesce(jl.debit, 0)), 2) as debit,
+      round(sum(coalesce(jl.credit, 0)), 2) as credit,
+      round(sum(coalesce(jl.debit, 0) - coalesce(jl.credit, 0)), 2) as balance
+    from public.journal_lines jl
+    join public.journal_entries je on je.id = jl.entry_id
+    cross join period_context pc
+    where jl.tenant_id = p_tenant_id
+      and je.tenant_id = p_tenant_id
+      and pc.start_month = pc.end_month
+      and coalesce(je.jv_date, je.created_at::date) between pc.start_date and pc.end_date
+    group by jl.account_id
+
+    union all
+
+    select
+      jl.account_id,
+      round(sum(coalesce(jl.debit, 0)), 2) as debit,
+      round(sum(coalesce(jl.credit, 0)), 2) as credit,
+      round(sum(coalesce(jl.debit, 0) - coalesce(jl.credit, 0)), 2) as balance
+    from public.journal_lines jl
+    join public.journal_entries je on je.id = jl.entry_id
+    cross join period_context pc
+    where jl.tenant_id = p_tenant_id
+      and je.tenant_id = p_tenant_id
+      and pc.start_month <> pc.end_month
+      and pc.start_date > pc.start_month
+      and coalesce(je.jv_date, je.created_at::date) between pc.start_date and pc.start_month_end
+    group by jl.account_id
+
+    union all
+
+    select
+      mv.account_id,
+      round(sum(mv.monthly_debit), 2) as debit,
+      round(sum(mv.monthly_credit), 2) as credit,
+      round(sum(mv.net_change), 2) as balance
+    from public.mv_monthly_account_balances mv
+    cross join period_context pc
+    where mv.tenant_id = p_tenant_id
+      and pc.end_date < pc.open_period_start
+      and pc.start_month <> pc.end_month
+      and mv.period_month between
+        case
+          when pc.start_date = pc.start_month then pc.start_month
+          else (pc.start_month + interval '1 month')::date
+        end
+        and case
+          when pc.end_date = pc.end_month_end then pc.end_month
+          else (pc.end_month - interval '1 month')::date
+        end
+    group by mv.account_id
+
+    union all
+
+    select
+      jl.account_id,
+      round(sum(coalesce(jl.debit, 0)), 2) as debit,
+      round(sum(coalesce(jl.credit, 0)), 2) as credit,
+      round(sum(coalesce(jl.debit, 0) - coalesce(jl.credit, 0)), 2) as balance
+    from public.journal_lines jl
+    join public.journal_entries je on je.id = jl.entry_id
+    cross join period_context pc
+    where jl.tenant_id = p_tenant_id
+      and je.tenant_id = p_tenant_id
+      and pc.start_month <> pc.end_month
+      and pc.end_date > pc.end_month
+      and coalesce(je.jv_date, je.created_at::date) between pc.end_month and pc.end_date
+    group by jl.account_id
+  ) s
+  group by s.account_id
 ),
 asof_balances as (
-  select jl.account_id,
-    round(sum(coalesce(jl.debit, 0)), 2) as debit,
-    round(sum(coalesce(jl.credit, 0)), 2) as credit,
-    round(sum(coalesce(jl.debit, 0) - coalesce(jl.credit, 0)), 2) as balance
-  from public.journal_lines jl
-  join public.journal_entries je on je.id = jl.entry_id
-  cross join params p
-  where jl.tenant_id = p_tenant_id
-    and je.tenant_id = p_tenant_id
-    and coalesce(je.jv_date, je.created_at::date) <= p.as_of_date
-  group by jl.account_id
+  select
+    s.account_id,
+    round(sum(s.debit), 2) as debit,
+    round(sum(s.credit), 2) as credit,
+    round(sum(s.balance), 2) as balance
+  from (
+    select
+      mv.account_id,
+      round(sum(mv.monthly_debit), 2) as debit,
+      round(sum(mv.monthly_credit), 2) as credit,
+      round(sum(mv.net_change), 2) as balance
+    from public.mv_monthly_account_balances mv
+    cross join params p
+    where mv.tenant_id = p_tenant_id
+      and mv.period_month < date_trunc('month', p.as_of_date)::date
+    group by mv.account_id
+
+    union all
+
+    select
+      jl.account_id,
+      round(sum(coalesce(jl.debit, 0)), 2) as debit,
+      round(sum(coalesce(jl.credit, 0)), 2) as credit,
+      round(sum(coalesce(jl.debit, 0) - coalesce(jl.credit, 0)), 2) as balance
+    from public.journal_lines jl
+    join public.journal_entries je on je.id = jl.entry_id
+    cross join params p
+    where jl.tenant_id = p_tenant_id
+      and je.tenant_id = p_tenant_id
+      and coalesce(je.jv_date, je.created_at::date) between date_trunc('month', p.as_of_date)::date and p.as_of_date
+    group by jl.account_id
+  ) s
+  group by s.account_id
 )
 select
   c.id, c.code, c.name, c.account_type,
