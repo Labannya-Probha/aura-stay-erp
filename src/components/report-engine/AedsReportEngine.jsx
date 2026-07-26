@@ -15,7 +15,10 @@ import {
 } from './reportEngine.service'
 import { fieldsToDataGridColumns, filtersToFilterSchema } from './reportEngineAdapters'
 import './aeds-report-engine.css'
-
+import FinancialStatementView from './FinancialStatementView'
+import KpiGrid from './KpiGrid'
+import './financial-statement.css'
+import './kpi-grid.css'
 export default function AedsReportEngine({
   role = 'ADMIN',
   initialDepartment = 'accounts',
@@ -123,12 +126,30 @@ export default function AedsReportEngine({
 
           <AedsReportSavedViews views={views} onLoad={loadView} />
 
-          <AedsDataGrid
-            title={definition?.report?.title || 'Report'}
-            subtitle={definition?.report?.description || 'Metadata-driven report'}
-            data={reportData.rows || []}
-            columns={columns}
-          />
+          {definition?.report?.displayMode === 'financial_statement' ? (
+            <FinancialStatementView
+              title={definition?.report?.title}
+              description={definition?.report?.description}
+              rows={reportData.rows || []}
+              summary={reportData.summary || {}}
+              groupByField={definition?.report?.groupByField}
+              summaryTotalKey={definition?.report?.summaryTotalKey}
+            />
+          ) : definition?.report?.displayMode === 'kpi_grid' ? (
+            <KpiGrid
+              title={definition?.report?.title}
+              description={definition?.report?.description}
+              rows={reportData.rows || []}
+              summary={reportData.summary || {}}
+            />
+          ) : (
+            <AedsDataGrid
+              title={definition?.report?.title || 'Report'}
+              subtitle={definition?.report?.description || 'Metadata-driven report'}
+              data={reportData.rows || []}
+              columns={columns}
+            />
+          )}
         </main>
       </div>
     </section>

@@ -1,0 +1,106 @@
+.financial-statement {
+  background: #ffffff;
+  border: 1px solid rgb(var(--tenant-primary-rgb) / 0.12);
+  border-radius: 12px;
+  padding: 32px 40px;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.financial-statement__header {
+  text-align: center;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--tenant-primary, #1b4d2e);
+  padding-bottom: 16px;
+}
+
+.financial-statement__header h2 {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--tenant-primary, #1b4d2e);
+  margin: 0;
+}
+
+.financial-statement__description,
+.financial-statement__period {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  color: #5f5a55;
+  margin: 4px 0 0;
+}
+
+.financial-statement__empty {
+  font-family: 'Inter', sans-serif;
+  text-align: center;
+  padding: 48px 16px;
+  color: #8a8580;
+  font-size: 0.9rem;
+}
+
+.financial-statement__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.financial-statement__section-header td {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tenant-primary, #1b4d2e);
+  padding: 16px 0 6px;
+  border-bottom: 1px solid rgb(var(--tenant-primary-rgb) / 0.2);
+}
+
+.financial-statement__line td {
+  padding: 3px 0;
+}
+
+.financial-statement__line-label {
+  padding-left: 20px !important;
+  display: flex;
+  gap: 10px;
+}
+
+.financial-statement__account-code {
+  color: #a8a29a;
+  min-width: 56px;
+  display: inline-block;
+}
+
+.financial-statement__line-amount {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.financial-statement__subtotal td {
+  font-weight: 700;
+  padding: 6px 0 14px;
+  border-top: 1px solid #171717;
+}
+
+.financial-statement__subtotal td:first-child {
+  padding-left: 20px;
+}
+
+.financial-statement__grand-total td {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 16px 0;
+  border-top: 3px double #171717;
+  color: var(--tenant-primary, #1b4d2e);
+}
+
+@media print {
+  .financial-statement {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+}
