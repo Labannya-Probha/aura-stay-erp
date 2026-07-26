@@ -1,0 +1,63 @@
+.kpi-grid {
+  padding: 8px 0;
+}
+
+.kpi-grid__header h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--tenant-primary, #1b4d2e);
+  margin: 0;
+}
+
+.kpi-grid__header p {
+  font-size: 0.8rem;
+  color: #5f5a55;
+  margin: 4px 0 0;
+}
+
+.kpi-grid__period {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.kpi-grid__empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: #8a8580;
+  font-size: 0.9rem;
+}
+
+.kpi-grid__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.kpi-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid rgb(var(--tenant-primary-rgb) / 0.12);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+.kpi-card__label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8a8580;
+  margin: 0 0 6px;
+}
+
+.kpi-card__value {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--tenant-primary, #1b4d2e);
+  margin: 0;
+}
+
+.kpi-grid__footnote {
+  margin-top: 20px;
+  font-size: 0.75rem;
+  color: #8a8580;
+}
