@@ -19,7 +19,7 @@ This PR adds comprehensive discount policy and tax/VAT management to Novem ERP, 
 - Access via "Set Discount Policy" button in Overview tab
 - Applies only to room charges, not extras
 
-### Tax Configuration
+### Tax Configuration Checklist
 
 - Manage VAT, SD, and Service Charge rates in Settings
 - Effective-dated rates for regulatory changes

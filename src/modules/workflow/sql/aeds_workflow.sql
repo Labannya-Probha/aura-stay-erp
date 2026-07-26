@@ -1,2 +1,0 @@
--- Deprecated workflow SQL scaffold.
--- The workflow engine is config-driven in src/enterprise/workflow and this file is intentionally left non-executable to avoid SQL dialect diagnostics.

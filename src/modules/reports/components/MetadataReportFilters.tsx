@@ -121,6 +121,12 @@ export default function MetadataReportFilters({
           <label key={filter.filterKey} className="text-xs font-black uppercase tracking-wide text-slate-500">
             {filter.label}
 
+            {filter.filterKey === "compare_to" && (
+              <span className="mt-1 block max-w-[16rem] text-[11px] font-medium normal-case tracking-normal text-slate-400">
+                Compares the selected period against a prior slice.
+              </span>
+            )}
+
             {filter.filterType === "cycle" && (
               <select
                 value={values[filter.filterKey] || filter.defaultValue || "Monthly"}
