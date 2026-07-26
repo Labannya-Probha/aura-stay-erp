@@ -1,36 +1,36 @@
 /* ------------------------------------------------------------------ */
 /*  APP SESSION — auth state, company & profile loading                 */
 /* ------------------------------------------------------------------ */
-import { useCallback, useEffect, useState } from "react"
-import { Navigate, useLocation } from "react-router-dom"
+import { useCallback, useEffect, useState } from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
 
-import { supabase } from "./lib/supabase"
-import { setCurrency } from "./lib/helpers"
-import { getTenantId, setTenantId } from "./lib/tenant"
-import { PATHS } from "./app/paths"
+import { supabase } from './lib/supabase'
+import { setCurrency } from './lib/helpers'
+import { getTenantId, setTenantId } from './lib/tenant'
+import { PATHS } from './app/paths'
 
-import Login from "./components/Login.jsx"
+import Login from './components/Login.jsx'
 import {
   GuestPosKiosk,
   VerifyBillPage as VerifyBill,
   VerifyInvoicePage as VerifyInvoice,
   VerifyPaymentPage as VerifyPayment,
   PreviewReservationPaymentReceiptPage as PreviewReservationPaymentReceipt,
-} from "./modules/public/routePages.jsx"
-import AppShell from "./AppLayout.jsx"
+} from './modules/public/routePages.jsx'
+import AppShell from './AppLayout.jsx'
 
 const TENANT_BRANDING_FIELDS = [
-  "logo_url",
-  "primary_color",
-  "secondary_color",
-  "accent_color",
-  "sidebar_bg_color",
-  "sidebar_text_color",
-  "button_color",
-  "table_header_color",
-  "report_header_color",
-  "font_family",
-  "theme_mode",
+  'logo_url',
+  'primary_color',
+  'secondary_color',
+  'accent_color',
+  'sidebar_bg_color',
+  'sidebar_text_color',
+  'button_color',
+  'table_header_color',
+  'report_header_color',
+  'font_family',
+  'theme_mode',
 ]
 
 function mergeTenantBranding(company, branding) {
@@ -40,7 +40,7 @@ function mergeTenantBranding(company, branding) {
   const nextCompany = { ...company }
 
   TENANT_BRANDING_FIELDS.forEach((field) => {
-    if (branding[field] !== null && branding[field] !== undefined && branding[field] !== "") {
+    if (branding[field] !== null && branding[field] !== undefined && branding[field] !== '') {
       nextCompany[field] = branding[field]
     }
   })
@@ -51,15 +51,15 @@ function mergeTenantBranding(company, branding) {
 function getReservedRouteSegments() {
   return new Set(
     Object.values(PATHS)
-      .filter((path) => typeof path === "string" && path.startsWith("/") && !path.startsWith("/:"))
-      .map((path) => path.split("/").filter(Boolean)[0])
+      .filter((path) => typeof path === 'string' && path.startsWith('/') && !path.startsWith('/:'))
+      .map((path) => path.split('/').filter(Boolean)[0])
       .filter(Boolean)
-      .map((path) => path.toLowerCase())
+      .map((path) => path.toLowerCase()),
   )
 }
 
 function getTenantSlugFromPath(pathname) {
-  const firstPathPart = pathname.split("/").filter(Boolean)[0]
+  const firstPathPart = pathname.split('/').filter(Boolean)[0]
   if (!firstPathPart) return null
 
   const reservedPaths = getReservedRouteSegments()
@@ -67,30 +67,32 @@ function getTenantSlugFromPath(pathname) {
 }
 
 function getLoginSlug(pathname) {
-  const pathParts = pathname.split("/").filter(Boolean)
+  const pathParts = pathname.split('/').filter(Boolean)
   return pathParts.length > 1 ? pathParts[0] : undefined
 }
 
-function getTenantSlugHint(pathname) {
+function getTenantSlugHint(pathname, session) {
   const pathSlug = getTenantSlugFromPath(pathname)
   if (pathSlug) return pathSlug
 
+  if (session) return null
+
   try {
-    return sessionStorage.getItem("aura_tenant_slug") || null
+    return sessionStorage.getItem('aura_tenant_slug') || null
   } catch {
     return null
   }
 }
 
 function normalizeRole(rawRole) {
-  const value = String(rawRole || "")
+  const value = String(rawRole || '')
     .trim()
     .toUpperCase()
-    .replace(/[\s-]+/g, "_")
+    .replace(/[\s-]+/g, '_')
 
   if (!value) return null
-  if (value === "SUPER_USER") return "SUPERUSER"
-  if (value === "FRONT_OFFICE") return "FRONT_OFFICE"
+  if (value === 'SUPER_USER') return 'SUPERUSER'
+  if (value === 'FRONT_OFFICE') return 'FRONT_OFFICE'
   return value
 }
 
@@ -128,9 +130,9 @@ export default function AppSession() {
 
         if (slug) {
           const { data: slugProperty } = await supabase
-            .from("properties")
-            .select("id")
-            .eq("slug", slug)
+            .from('properties')
+            .select('id')
+            .eq('slug', slug)
             .maybeSingle()
 
           tenantId = slugProperty?.id || null
@@ -144,15 +146,15 @@ export default function AppSession() {
 
       const [{ data }, { data: branding }] = await Promise.all([
         supabase
-          .from("company_settings")
-          .select("*")
-          .eq("tenant_id", tenantId)
+          .from('company_settings')
+          .select('*')
+          .eq('tenant_id', tenantId)
           .limit(1)
           .maybeSingle(),
         supabase
-          .from("tenant_branding")
-          .select("*")
-          .eq("tenant_id", tenantId)
+          .from('tenant_branding')
+          .select('*')
+          .eq('tenant_id', tenantId)
           .limit(1)
           .maybeSingle(),
       ])
@@ -162,12 +164,12 @@ export default function AppSession() {
         return null
       }
 
-      setCurrency(data.currency || "৳")
+      setCurrency(data.currency || '৳')
 
       const { data: prop } = await supabase
-        .from("properties")
-        .select("slug")
-        .eq("id", tenantId)
+        .from('properties')
+        .select('slug')
+        .eq('id', tenantId)
         .limit(1)
         .maybeSingle()
 
@@ -176,7 +178,7 @@ export default function AppSession() {
       setCompany(nextCompany)
       return nextCompany
     },
-    [location.pathname]
+    [location.pathname],
   )
 
   useEffect(() => {
@@ -195,17 +197,17 @@ export default function AppSession() {
 
       const fallbackProfile = {
         role: null,
-        full_name: session.user.email?.split("@")[0],
+        full_name: session.user.email?.split('@')[0],
       }
 
       let tenantIdHint = null
-      const slugHint = getTenantSlugHint(location.pathname)
+      const slugHint = getTenantSlugHint(location.pathname, session)
 
       if (slugHint) {
         const { data: tenantRow } = await supabase
-          .from("properties")
-          .select("id")
-          .eq("slug", slugHint)
+          .from('properties')
+          .select('id')
+          .eq('slug', slugHint)
           .limit(1)
           .maybeSingle()
 
@@ -218,8 +220,8 @@ export default function AppSession() {
       }
 
       const { data: profileRows, error } = await supabase
-        .from("app_users")
-        .select("*")
+        .from('app_users')
+        .select('*')
         .or(`auth_id.eq.${session.user.id},id.eq.${session.user.id}`)
 
       if (!active) return
@@ -280,11 +282,11 @@ export default function AppSession() {
 
       const tenantId = getTenantId()
       let query = supabase
-        .from("role_privileges")
-        .select("module, can_create, can_view, can_edit, can_delete")
-        .eq("role", role)
+        .from('role_privileges')
+        .select('module, can_create, can_view, can_edit, can_delete')
+        .eq('role', role)
 
-      if (tenantId) query = query.eq("tenant_id", tenantId)
+      if (tenantId) query = query.eq('tenant_id', tenantId)
 
       const { data: basePrivs } = await query
 
@@ -292,26 +294,32 @@ export default function AppSession() {
 
       let nextPrivileges = basePrivs || []
 
-      if (role === "ADMIN") {
+      if (role === 'ADMIN') {
         let adminAccessQuery = supabase
-          .from("admin_feature_access")
-          .select("module, can_access")
-          .eq("user_id", profile?.id)
+          .from('admin_feature_access')
+          .select('module, can_access')
+          .eq('user_id', profile?.id)
 
-        if (tenantId) adminAccessQuery = adminAccessQuery.eq("tenant_id", tenantId)
+        if (tenantId) adminAccessQuery = adminAccessQuery.eq('tenant_id', tenantId)
 
         const { data: accessRows } = await adminAccessQuery
 
         if (accessRows && accessRows.length > 0) {
           const restricted = new Set(
-            accessRows.filter((row) => row.can_access === false).map((row) => row.module)
+            accessRows.filter((row) => row.can_access === false).map((row) => row.module),
           )
 
           if (restricted.size > 0) {
             nextPrivileges = nextPrivileges.map((item) =>
               restricted.has(item.module)
-                ? { ...item, can_view: false, can_create: false, can_edit: false, can_delete: false }
-                : item
+                ? {
+                    ...item,
+                    can_view: false,
+                    can_create: false,
+                    can_edit: false,
+                    can_delete: false,
+                  }
+                : item,
             )
           }
         }
@@ -327,9 +335,7 @@ export default function AppSession() {
 
   if (session === undefined) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-pine/60">
-        Loading...
-      </div>
+      <div className="min-h-screen flex items-center justify-center text-pine/60">Loading...</div>
     )
   }
 
@@ -339,10 +345,14 @@ export default function AppSession() {
   }
 
   if (!session && location.pathname.startsWith(PATHS.GUEST_KIOSK)) return <GuestPosKiosk />
-  if (!session && location.pathname.startsWith(PATHS.VERIFY_BILL.replace(":id", ""))) return <VerifyBill />
-  if (!session && location.pathname.startsWith(PATHS.VERIFY_INVOICE.replace(":id", ""))) return <VerifyInvoice />
-  if (!session && location.pathname.startsWith(PATHS.VERIFY_PAYMENT.replace(":id", ""))) return <VerifyPayment />
-  if (!session && location.pathname === PATHS.PREVIEW_RESERVATION_PAYMENT_RECEIPT) return <PreviewReservationPaymentReceipt />
+  if (!session && location.pathname.startsWith(PATHS.VERIFY_BILL.replace(':id', '')))
+    return <VerifyBill />
+  if (!session && location.pathname.startsWith(PATHS.VERIFY_INVOICE.replace(':id', '')))
+    return <VerifyInvoice />
+  if (!session && location.pathname.startsWith(PATHS.VERIFY_PAYMENT.replace(':id', '')))
+    return <VerifyPayment />
+  if (!session && location.pathname === PATHS.PREVIEW_RESERVATION_PAYMENT_RECEIPT)
+    return <PreviewReservationPaymentReceipt />
   if (!session) return <Login />
 
   if (!profile) {
@@ -362,8 +372,8 @@ export default function AppSession() {
     )
   }
 
-  const isAdmin = role === "ADMIN" || role === "SUPERUSER"
-  const userName = profile?.full_name || session.user?.email?.split("@")[0] || "User"
+  const isAdmin = role === 'ADMIN' || role === 'SUPERUSER'
+  const userName = profile?.full_name || session.user?.email?.split('@')[0] || 'User'
 
   return (
     <AppShell

@@ -29,6 +29,8 @@ import {
 } from 'lucide-react'
 import SearchableSelect from '../components/SearchableSelect.jsx'
 import KPICards from '../components/KPICards.jsx'
+import LoadingState from '../components/feedback/LoadingState'
+import EmptyState from '../components/feedback/EmptyState'
 import { Combobox } from '../components/ui/combobox'
 import { LegacyButton } from '../components/ui/legacy-controls'
 import { Button } from '../components/ui/button'
@@ -170,7 +172,12 @@ export default function Reservations({ openReservation, userName, prefill, clear
 
       <div className="card overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-pine/40 text-sm">Loading reservations...</div>
+          <LoadingState
+            variant="container"
+            label="Loading reservations"
+            description="Fetching the latest booking register and guest records."
+            className="border-0 bg-transparent"
+          />
         ) : (
           <>
             {/* Desktop table */}
@@ -240,8 +247,13 @@ export default function Reservations({ openReservation, userName, prefill, clear
                   ))}
                   {filtered.length === 0 && (
                     <tr>
-                      <td className="td text-pine/50 text-center py-8" colSpan={7}>
-                        No reservations found. Create a new query from Booking Calendar.
+                      <td className="td p-0" colSpan={7}>
+                        <EmptyState
+                          variant="table"
+                          title="No reservations found"
+                          description="Create a new query from Booking Calendar or adjust the status filter."
+                          className="py-8"
+                        />
                       </td>
                     </tr>
                   )}
@@ -304,9 +316,12 @@ export default function Reservations({ openReservation, userName, prefill, clear
                 </div>
               ))}
               {filtered.length === 0 && (
-                <div className="text-pine/50 text-center py-8 text-sm px-4">
-                  No reservations found. Create a new query from Booking Calendar.
-                </div>
+                <EmptyState
+                  variant="table"
+                  title="No reservations found"
+                  description="Create a new query from Booking Calendar or adjust the status filter."
+                  className="py-8 px-4"
+                />
               )}
             </div>
           </>

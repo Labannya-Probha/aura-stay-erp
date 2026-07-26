@@ -1,9 +1,11 @@
-import { Link, useLocation } from "react-router-dom"
-import { useReportMetadata } from "../hooks/useReportMetadata"
+import { Link, useLocation } from 'react-router-dom'
+import { useReportMetadata } from '../hooks/useReportMetadata'
+import LoadingState from '../../../components/feedback/LoadingState'
+import EmptyState from '../../../components/feedback/EmptyState'
 
 export default function ReportsMetadataSidebar({ role }) {
   const location = useLocation()
-  const { groups, loading } = useReportMetadata(role)
+  const { groups, loading, error } = useReportMetadata(role)
 
   return (
     <aside className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
@@ -11,7 +13,27 @@ export default function ReportsMetadataSidebar({ role }) {
         Reports Library
       </h2>
 
-      {loading && <div className="text-sm font-semibold text-slate-400">Loading reports...</div>}
+      {loading ? (
+        <LoadingState
+          variant="container"
+          label="Loading reports"
+          className="min-h-[140px] border-0 bg-transparent p-0"
+        />
+      ) : error ? (
+        <EmptyState
+          variant="container"
+          title="Report catalog unavailable"
+          description={error}
+          className="min-h-[140px] border-0 bg-transparent px-0 py-4 text-left"
+        />
+      ) : groups.length === 0 ? (
+        <EmptyState
+          variant="container"
+          title="No reports available"
+          description="This role does not currently expose any report groups."
+          className="min-h-[140px] border-0 bg-transparent px-0 py-4 text-left"
+        />
+      ) : null}
 
       <div className="space-y-5">
         {groups.map((group) => (
@@ -32,8 +54,8 @@ export default function ReportsMetadataSidebar({ role }) {
                   to={report.route}
                   className={`block rounded-2xl px-3 py-2 text-sm font-semibold ${
                     location.pathname === report.route
-                      ? "bg-[#1B4D2E] text-white"
-                      : "text-slate-600 hover:bg-[#F7F4EC] hover:text-[#1B4D2E]"
+                      ? 'bg-[#1B4D2E] text-white'
+                      : 'text-slate-600 hover:bg-[#F7F4EC] hover:text-[#1B4D2E]'
                   }`}
                 >
                   <span>{report.title}</span>

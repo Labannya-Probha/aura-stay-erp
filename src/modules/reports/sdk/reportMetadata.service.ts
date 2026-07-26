@@ -1,6 +1,8 @@
 import { supabase } from '../../../lib/supabase'
+import { getReportByRoute } from '../../../lib/reporting/reportConfig'
 
-const COMPARISON_FILTER_OPTIONS = 'Off,Previous Period,Previous Month,Previous Quarter,Previous Year'
+const COMPARISON_FILTER_OPTIONS =
+  'Off,Previous Period,Previous Month,Previous Quarter,Previous Year'
 
 function cloneFilters(filters = {}) {
   return { ...filters }
@@ -42,8 +44,10 @@ function getComparisonMode(value) {
 }
 
 function getRangeFromFilters(filters = {}) {
-  const start = filters.start_date || filters.startDate || filters.date_from || filters.dateFrom || filters.from
-  const end = filters.end_date || filters.endDate || filters.date_to || filters.dateTo || filters.to || start
+  const start =
+    filters.start_date || filters.startDate || filters.date_from || filters.dateFrom || filters.from
+  const end =
+    filters.end_date || filters.endDate || filters.date_to || filters.dateTo || filters.to || start
   if (!start || !end) return null
   const startDate = toUtcDate(start)
   const endDate = toUtcDate(end)
@@ -74,7 +78,10 @@ function getShiftedComparisonRange(range, compareMode) {
     }
   }
 
-  const inclusiveDays = Math.max(1, Math.round((range.endDate.getTime() - range.startDate.getTime()) / 86400000) + 1)
+  const inclusiveDays = Math.max(
+    1,
+    Math.round((range.endDate.getTime() - range.startDate.getTime()) / 86400000) + 1,
+  )
   return {
     start_date: shiftDate(range.start, 'day', -inclusiveDays),
     end_date: shiftDate(range.end, 'day', -inclusiveDays),
@@ -121,6 +128,13 @@ const FALLBACK_GROUPS = [
         slug: 'balance-sheet',
         route: '/reports/accounts/balance-sheet',
         description: 'Assets, liabilities and equity statement.',
+      },
+      {
+        reportCode: 'RPT-004',
+        title: 'Bank Book',
+        slug: 'bank-book',
+        route: '/reports/accounts/bank-book',
+        description: 'Bank-wise receipts, payments and running balance.',
       },
       {
         reportCode: 'RPT-011',
@@ -201,21 +215,198 @@ function fallbackDefinition(department, slug) {
         supportsSchedule: false,
       },
       fields: [
-        { fieldKey: 'property_name', label: 'Property', dataType: 'Text', alignment: 'left', sortable: true, filterable: true },
-        { fieldKey: 'occupancy_rate', label: 'Occupancy %', dataType: 'Percent', alignment: 'right', aggregation: 'SUM', sortable: true },
-        { fieldKey: 'adr', label: 'ADR', dataType: 'Currency-BDT', alignment: 'right', aggregation: 'SUM', sortable: true },
-        { fieldKey: 'revpar', label: 'RevPAR', dataType: 'Currency-BDT', alignment: 'right', aggregation: 'SUM', sortable: true },
-        { fieldKey: 'room_revenue', label: 'Room Revenue', dataType: 'Currency-BDT', alignment: 'right', aggregation: 'SUM', sortable: true },
-        { fieldKey: 'gop', label: 'GOP', dataType: 'Currency-BDT', alignment: 'right', aggregation: 'SUM', sortable: true },
-        { fieldKey: 'ebitda', label: 'EBITDA', dataType: 'Currency-BDT', alignment: 'right', aggregation: 'SUM', sortable: true },
-        { fieldKey: 'net_profit', label: 'Net Profit', dataType: 'Currency-BDT', alignment: 'right', aggregation: 'SUM', sortable: true },
-        { fieldKey: 'working_capital', label: 'Working Capital', dataType: 'Currency-BDT', alignment: 'right', aggregation: 'SUM', sortable: true },
+        {
+          fieldKey: 'property_name',
+          label: 'Property',
+          dataType: 'Text',
+          alignment: 'left',
+          sortable: true,
+          filterable: true,
+        },
+        {
+          fieldKey: 'occupancy_rate',
+          label: 'Occupancy %',
+          dataType: 'Percent',
+          alignment: 'right',
+          aggregation: 'SUM',
+          sortable: true,
+        },
+        {
+          fieldKey: 'adr',
+          label: 'ADR',
+          dataType: 'Currency-BDT',
+          alignment: 'right',
+          aggregation: 'SUM',
+          sortable: true,
+        },
+        {
+          fieldKey: 'revpar',
+          label: 'RevPAR',
+          dataType: 'Currency-BDT',
+          alignment: 'right',
+          aggregation: 'SUM',
+          sortable: true,
+        },
+        {
+          fieldKey: 'room_revenue',
+          label: 'Room Revenue',
+          dataType: 'Currency-BDT',
+          alignment: 'right',
+          aggregation: 'SUM',
+          sortable: true,
+        },
+        {
+          fieldKey: 'gop',
+          label: 'GOP',
+          dataType: 'Currency-BDT',
+          alignment: 'right',
+          aggregation: 'SUM',
+          sortable: true,
+        },
+        {
+          fieldKey: 'ebitda',
+          label: 'EBITDA',
+          dataType: 'Currency-BDT',
+          alignment: 'right',
+          aggregation: 'SUM',
+          sortable: true,
+        },
+        {
+          fieldKey: 'net_profit',
+          label: 'Net Profit',
+          dataType: 'Currency-BDT',
+          alignment: 'right',
+          aggregation: 'SUM',
+          sortable: true,
+        },
+        {
+          fieldKey: 'working_capital',
+          label: 'Working Capital',
+          dataType: 'Currency-BDT',
+          alignment: 'right',
+          aggregation: 'SUM',
+          sortable: true,
+        },
       ],
       filters: [
-        { filterKey: 'cycle', label: 'Cycle', filterType: 'cycle', sourceOptions: 'Monthly,Quarterly,Yearly,Custom Date Range', defaultValue: 'Monthly' },
-        { filterKey: 'property', label: 'Property', filterType: 'Dropdown', sourceOptions: 'All Properties', defaultValue: 'All Properties' },
+        {
+          filterKey: 'cycle',
+          label: 'Cycle',
+          filterType: 'cycle',
+          sourceOptions: 'Monthly,Quarterly,Yearly,Custom Date Range',
+          defaultValue: 'Monthly',
+        },
+        {
+          filterKey: 'property',
+          label: 'Property',
+          filterType: 'Dropdown',
+          sourceOptions: 'All Properties',
+          defaultValue: 'All Properties',
+        },
         { filterKey: 'start_date', label: 'Start Date', filterType: 'date' },
         { filterKey: 'end_date', label: 'End Date', filterType: 'date' },
+      ],
+      actions: [
+        { actionKey: 'print', label: 'Print' },
+        { actionKey: 'export_pdf', label: 'Export PDF' },
+        { actionKey: 'export_excel', label: 'Export Excel' },
+      ],
+    }
+  }
+
+  const template = getReportByRoute(department, slug)
+  if (template) {
+    return {
+      department: {
+        code: String(template.departmentSlug || department || 'REPORTS').toUpperCase(),
+        name: template.department || 'Reports',
+        slug: template.departmentSlug || department || 'reports',
+      },
+      report: {
+        reportCode: template.reportCode,
+        title: template.title,
+        slug: template.slug,
+        route: template.route,
+        description: template.description,
+        supportsPrint: true,
+        supportsExportPdf: true,
+        supportsExportExcel: true,
+        supportsSchedule: false,
+      },
+      fields: fallbackFieldsBySlug(slug) || [
+        {
+          fieldKey: 'transaction_date',
+          label: 'Date',
+          dataType: 'Date',
+          alignment: 'left',
+          sortable: true,
+          filterable: true,
+        },
+        {
+          fieldKey: 'reference_no',
+          label: 'Reference No',
+          dataType: 'Text',
+          alignment: 'left',
+          sortable: true,
+        },
+        {
+          fieldKey: 'account_name',
+          label: 'Account',
+          dataType: 'Text',
+          alignment: 'left',
+          sortable: true,
+          filterable: true,
+        },
+        { fieldKey: 'particulars', label: 'Particulars', dataType: 'Text', alignment: 'left' },
+        {
+          fieldKey: 'debit',
+          label: 'Debit',
+          dataType: 'Currency-BDT',
+          alignment: 'right',
+          aggregation: 'SUM',
+          sortable: true,
+        },
+        {
+          fieldKey: 'credit',
+          label: 'Credit',
+          dataType: 'Currency-BDT',
+          alignment: 'right',
+          aggregation: 'SUM',
+          sortable: true,
+        },
+        {
+          fieldKey: 'balance',
+          label: 'Balance',
+          dataType: 'Currency-BDT',
+          alignment: 'right',
+          aggregation: 'SUM',
+          sortable: true,
+        },
+        {
+          fieldKey: 'status',
+          label: 'Status',
+          dataType: 'Text',
+          alignment: 'left',
+          sortable: true,
+        },
+      ],
+      filters: [
+        {
+          filterKey: 'cycle',
+          label: 'Cycle',
+          filterType: 'cycle',
+          sourceOptions: 'Daily,Weekly,Monthly,Quarterly,Half-Yearly,Yearly,Custom Date Range',
+          defaultValue: 'Monthly',
+        },
+        { filterKey: 'start_date', label: 'Start Date', filterType: 'date' },
+        { filterKey: 'end_date', label: 'End Date', filterType: 'date' },
+        {
+          filterKey: 'compare_to',
+          label: 'Compare To',
+          filterType: 'Dropdown',
+          sourceOptions: COMPARISON_FILTER_OPTIONS,
+          defaultValue: 'Previous Period',
+        },
       ],
       actions: [
         { actionKey: 'print', label: 'Print' },
@@ -380,6 +571,7 @@ export async function loadReportMetadata(role = 'FRONT_OFFICE') {
 export async function loadReportDefinition(department, slug, role = 'FRONT_OFFICE') {
   const fallback = fallbackDefinition(department, slug)
   const slugFallbackFields = fallbackFieldsBySlug(slug)
+  const canonicalTemplate = getReportByRoute(department, slug)
 
   try {
     const { data, error } = await supabase.rpc('aeds_report_definition', {
@@ -388,26 +580,56 @@ export async function loadReportDefinition(department, slug, role = 'FRONT_OFFIC
       p_role: role,
     })
     if (!error && data) {
+      const canonicalReport = canonicalTemplate
+        ? {
+            reportCode: canonicalTemplate.reportCode,
+            title: canonicalTemplate.title,
+            slug: canonicalTemplate.slug,
+            route: canonicalTemplate.route,
+            description: canonicalTemplate.description,
+          }
+        : null
+
       return {
         ...fallback,
         ...data,
+        department: canonicalTemplate
+          ? {
+              code: String(
+                canonicalTemplate.departmentSlug || department || 'REPORTS',
+              ).toUpperCase(),
+              name: canonicalTemplate.department || fallback.department?.name || 'Reports',
+              slug:
+                canonicalTemplate.departmentSlug ||
+                department ||
+                fallback.department?.slug ||
+                'reports',
+            }
+          : data.department || fallback.department,
+        report: {
+          ...(data.report || fallback.report || {}),
+          ...(canonicalReport || {}),
+        },
         fields:
           Array.isArray(data.fields) && data.fields.length
             ? data.fields
             : slugFallbackFields || fallback.fields,
-        filters:
-          (() => {
-            const resolvedFilters = Array.isArray(data.filters) && data.filters.length ? data.filters : fallback.filters
-            return resolvedFilters.some((filter) => filter.filterKey === 'compare_to')
-              ? resolvedFilters
-              : [...resolvedFilters, {
+        filters: (() => {
+          const resolvedFilters =
+            Array.isArray(data.filters) && data.filters.length ? data.filters : fallback.filters
+          return resolvedFilters.some((filter) => filter.filterKey === 'compare_to')
+            ? resolvedFilters
+            : [
+                ...resolvedFilters,
+                {
                   filterKey: 'compare_to',
                   label: 'Compare To',
                   filterType: 'Dropdown',
                   sourceOptions: COMPARISON_FILTER_OPTIONS,
                   defaultValue: 'Previous Period',
-                }]
-          })(),
+                },
+              ]
+        })(),
         actions:
           Array.isArray(data.actions) && data.actions.length ? data.actions : fallback.actions,
       }
@@ -456,7 +678,10 @@ export async function runMetadataReport(department, slug, filters, tenantId) {
         comparisonSummary: {
           enabled: false,
           compareTo: comparisonMode || 'Off',
-          currentPeriodLabel: periodLabel(reportFilters.start_date || range?.start, reportFilters.end_date || range?.end),
+          currentPeriodLabel: periodLabel(
+            reportFilters.start_date || range?.start,
+            reportFilters.end_date || range?.end,
+          ),
           previousPeriodLabel: '',
         },
       }
@@ -473,7 +698,10 @@ export async function runMetadataReport(department, slug, filters, tenantId) {
       comparisonSummary: {
         enabled: true,
         compareTo: comparisonMode,
-        currentPeriodLabel: periodLabel(reportFilters.start_date || range?.start, reportFilters.end_date || range?.end),
+        currentPeriodLabel: periodLabel(
+          reportFilters.start_date || range?.start,
+          reportFilters.end_date || range?.end,
+        ),
         previousPeriodLabel: periodLabel(comparisonRange.start_date, comparisonRange.end_date),
       },
     }

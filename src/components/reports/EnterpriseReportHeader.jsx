@@ -2,14 +2,14 @@ import { Building2 } from 'lucide-react'
 import { fmtDate } from '../../lib/helpers'
 
 export default function EnterpriseReportHeader({ company, report, filters, generatedBy }) {
-  const companyName = company?.software_name || company?.name || 'Aura Stay ERP'
-  const resortName = company?.name || 'Novem Eco Resort'
-  const rawPropertyName = filters?.property && filters.property !== 'All Properties'
-    ? filters.property
-    : resortName
-  const propertyName = rawPropertyName && rawPropertyName !== 'All Properties'
-    ? rawPropertyName
-    : ''
+  const companyName =
+    company?.software_name || company?.name || company?.tenant_name || 'Aura Stay ERP'
+  const resortName =
+    company?.name || company?.tenant_name || company?.software_name || 'Aura Stay ERP'
+  const rawPropertyName =
+    filters?.property && filters.property !== 'All Properties' ? filters.property : companyName
+  const propertyName =
+    rawPropertyName && rawPropertyName !== 'All Properties' ? rawPropertyName : ''
   const generatedAt = new Date().toLocaleString([], {
     year: 'numeric',
     month: 'short',
@@ -19,22 +19,29 @@ export default function EnterpriseReportHeader({ company, report, filters, gener
   })
   const dateFrom = filters?.dateFrom ? fmtDate(filters.dateFrom) : ''
   const dateTo = filters?.dateTo ? fmtDate(filters.dateTo) : ''
-  const periodLabel = dateFrom && dateTo && dateFrom !== dateTo
-    ? `For the period ${dateFrom} - ${dateTo}`
-    : dateTo
-      ? `As at ${dateTo}`
-      : report.reportCategory
+  const periodLabel =
+    dateFrom && dateTo && dateFrom !== dateTo
+      ? `For the period ${dateFrom} - ${dateTo}`
+      : dateTo
+        ? `As at ${dateTo}`
+        : report.reportCategory
 
   return (
     <section className="enterprise-report-header">
       <div className="erp-header-brand">
         <div className="erp-brand-left">
           <div className="erp-logo-box">
-            {company?.logo_url ? <img src={company.logo_url} alt={resortName} /> : <Building2 size={18} />}
+            {company?.logo_url ? (
+              <img src={company.logo_url} alt={resortName} />
+            ) : (
+              <Building2 size={18} />
+            )}
           </div>
           <div className="erp-company-block">
             <p className="erp-company">{resortName}</p>
-            <p className="erp-property">{[propertyName, companyName].filter(Boolean).join(' · ')}</p>
+            <p className="erp-property">
+              {[propertyName, companyName].filter(Boolean).join(' · ')}
+            </p>
           </div>
         </div>
         <div className="erp-title-block">

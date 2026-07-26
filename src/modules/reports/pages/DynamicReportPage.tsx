@@ -11,7 +11,7 @@ import MetadataReportTable from '../components/MetadataReportTable'
 import { useDynamicReport } from '../hooks/useDynamicReport'
 import { exportReportExcel } from '../utils/reportExport'
 
-export default function DynamicReportPage({ role }) {
+export default function DynamicReportPage({ role, company }) {
   const params = useParams()
   const department = params.department || 'accounts'
   const slug = params.slug || 'accounts-payable-aging'
@@ -69,7 +69,7 @@ export default function DynamicReportPage({ role }) {
       <main className="min-w-0 space-y-5 enterprise-print-doc">
         <section className="print-only">
           <EnterpriseReportHeader
-            company={null}
+            company={company}
             report={printReportModel}
             filters={printFilters}
             generatedBy={role}
