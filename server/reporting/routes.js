@@ -47,9 +47,13 @@ router.get('/reports/:reportCode', (req, res) => {
   res.json(getReport(req.params.reportCode, toReportUser(req)))
 })
 
-router.post('/reports/:reportCode/generate', (req, res) => {
-  res.json(generateReport(req.params.reportCode, req.body, toReportUser(req)))
-})
+router.post(
+  '/reports/:reportCode/generate',
+  asyncRoute(async (req, res) => {
+    const payload = await generateReport(req.params.reportCode, req.body, toReportUser(req))
+    res.json(payload)
+  }),
+)
 
 router.post(
   '/reports/:reportCode/export/csv',
