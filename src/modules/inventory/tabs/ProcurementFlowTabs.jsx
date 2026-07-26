@@ -233,17 +233,15 @@ export function RequisitionsTab({ flash, userName, canApprove, onCreatePO, onCre
         .eq('id', editId)
       if (error) return flash(error.message, 'error')
       await supabase.from('requisition_items').delete().eq('requisition_id', editId)
-      await supabase
-        .from('requisition_items')
-        .insert(
-          lines.map((l) => ({
-            requisition_id: editId,
-            item_id: l.item_id,
-            item_name: l.item_name,
-            qty: +l.qty,
-            notes: l.notes || null,
-          })),
-        )
+      await supabase.from('requisition_items').insert(
+        lines.map((l) => ({
+          requisition_id: editId,
+          item_id: l.item_id,
+          item_name: l.item_name,
+          qty: +l.qty,
+          notes: l.notes || null,
+        })),
+      )
       resetForm()
       load()
       return flash('Requisition updated.')
@@ -255,17 +253,15 @@ export function RequisitionsTab({ flash, userName, canApprove, onCreatePO, onCre
       .select()
       .single()
     if (error) return flash(error.message, 'error')
-    await supabase
-      .from('requisition_items')
-      .insert(
-        lines.map((l) => ({
-          requisition_id: r.id,
-          item_id: l.item_id,
-          item_name: l.item_name,
-          qty: +l.qty,
-          notes: l.notes || null,
-        })),
-      )
+    await supabase.from('requisition_items').insert(
+      lines.map((l) => ({
+        requisition_id: r.id,
+        item_id: l.item_id,
+        item_name: l.item_name,
+        qty: +l.qty,
+        notes: l.notes || null,
+      })),
+    )
     resetForm()
     load()
     flash(`✓ ${r.req_no} তৈরি হয়েছে — Approve করলে PO বা Transfer তৈরি করা যাবে।`)
@@ -512,15 +508,6 @@ export function RequisitionsTab({ flash, userName, canApprove, onCreatePO, onCre
 
   return (
     <div className="space-y-4">
-      <div className="px-4 py-3 rounded-lg bg-forest/10 border border-forest/20 text-sm text-pine">
-        <div className="font-semibold text-forest mb-0.5">
-          ⚡ Approval &amp; Auto-routing workflow
-        </div>
-        <div className="text-xs text-pine/70">
-          Create a requisition → ADMIN/MANAGER approves → system checks on-hand stock → auto-routes
-          to <b>Stock Transfer</b> (stock available) or <b>Purchase Order</b> (stock insufficient).
-        </div>
-      </div>
       <div className="card p-4 space-y-3">
         <h3 className="font-display font-semibold text-pine">
           {editId ? 'Edit Requisition' : 'New Requisition'}
@@ -620,7 +607,7 @@ export function POTab({ flash, userName, canApprove, navReq, clearNav }) {
       })),
     )
     clearNav?.()
-  }, [navReq])
+  }, [clearNav, navReq])
 
   const resetForm = () => {
     setLines([])
@@ -643,17 +630,15 @@ export function POTab({ flash, userName, canApprove, navReq, clearNav }) {
         .eq('id', editId)
       if (error) return flash(error.message, 'error')
       await supabase.from('po_items').delete().eq('po_id', editId)
-      await supabase
-        .from('po_items')
-        .insert(
-          lines.map((l) => ({
-            po_id: editId,
-            item_id: l.item_id,
-            item_name: l.item_name,
-            qty: +l.qty,
-            unit_cost: +l.unit_cost,
-          })),
-        )
+      await supabase.from('po_items').insert(
+        lines.map((l) => ({
+          po_id: editId,
+          item_id: l.item_id,
+          item_name: l.item_name,
+          qty: +l.qty,
+          unit_cost: +l.unit_cost,
+        })),
+      )
       resetForm()
       load()
       return flash('Purchase order updated.')
@@ -671,17 +656,15 @@ export function POTab({ flash, userName, canApprove, navReq, clearNav }) {
       .select()
       .single()
     if (error) return flash(error.message, 'error')
-    await supabase
-      .from('po_items')
-      .insert(
-        lines.map((l) => ({
-          po_id: po.id,
-          item_id: l.item_id,
-          item_name: l.item_name,
-          qty: +l.qty,
-          unit_cost: +l.unit_cost,
-        })),
-      )
+    await supabase.from('po_items').insert(
+      lines.map((l) => ({
+        po_id: po.id,
+        item_id: l.item_id,
+        item_name: l.item_name,
+        qty: +l.qty,
+        unit_cost: +l.unit_cost,
+      })),
+    )
     resetForm()
     load()
     flash(`✓ ${po.po_no} তৈরি হয়েছে${reqNo ? ` (REQ: ${reqNo})` : ''}.`)
@@ -846,14 +829,6 @@ export function POTab({ flash, userName, canApprove, navReq, clearNav }) {
 
   return (
     <div className="space-y-4">
-      <div className="px-4 py-3 rounded-lg bg-amber/10 border border-amber/30 text-sm text-pine">
-        <div className="font-semibold text-amber mb-0.5">⚡ PO approval lifecycle</div>
-        <div className="text-xs text-pine/70">
-          <b>PENDING_APPROVAL</b> → ADMIN/MANAGER approves → <b>OPEN</b> → post GRN →{' '}
-          <b>RECEIVED</b> | Cancel at <b>PENDING_APPROVAL</b> or <b>OPEN</b> stage →{' '}
-          <b>CANCELLED</b>
-        </div>
-      </div>
       <div className="card p-4 space-y-3">
         <h3 className="font-display font-semibold text-pine flex items-center gap-2">
           <Truck size={18} /> {editId ? 'Edit Purchase Order' : 'New Purchase Order'}
@@ -1021,18 +996,16 @@ export function GRNTab({ flash, userName }) {
         .eq('id', editId)
       if (error) return flash(error.message, 'error')
       await supabase.from('grn_items').delete().eq('grn_id', editId)
-      await supabase
-        .from('grn_items')
-        .insert(
-          lines.map((l) => ({
-            grn_id: editId,
-            item_id: l.item_id,
-            item_name: l.item_name,
-            qty: +l.qty,
-            unit_cost: +l.unit_cost,
-            vat_amount: 0,
-          })),
-        )
+      await supabase.from('grn_items').insert(
+        lines.map((l) => ({
+          grn_id: editId,
+          item_id: l.item_id,
+          item_name: l.item_name,
+          qty: +l.qty,
+          unit_cost: +l.unit_cost,
+          vat_amount: 0,
+        })),
+      )
       resetForm()
       load()
       return flash('GRN updated.')
@@ -1053,18 +1026,16 @@ export function GRNTab({ flash, userName }) {
       .select()
       .single()
     if (error) return flash(error.message, 'error')
-    await supabase
-      .from('grn_items')
-      .insert(
-        lines.map((l) => ({
-          grn_id: grn.id,
-          item_id: l.item_id,
-          item_name: l.item_name,
-          qty: +l.qty,
-          unit_cost: +l.unit_cost,
-          vat_amount: 0,
-        })),
-      )
+    await supabase.from('grn_items').insert(
+      lines.map((l) => ({
+        grn_id: grn.id,
+        item_id: l.item_id,
+        item_name: l.item_name,
+        qty: +l.qty,
+        unit_cost: +l.unit_cost,
+        vat_amount: 0,
+      })),
+    )
     if (h.po_id)
       await supabase.from('purchase_orders').update({ status: 'RECEIVED' }).eq('id', h.po_id)
     resetForm()
@@ -1350,7 +1321,7 @@ export function TransfersTab({ flash, userName, navReq, clearNav }) {
       })),
     )
     clearNav?.()
-  }, [navReq])
+  }, [clearNav, navReq])
 
   const resetForm = () => {
     setLines([])
@@ -1375,16 +1346,14 @@ export function TransfersTab({ flash, userName, navReq, clearNav }) {
         .eq('id', editId)
       if (error) return flash(error.message, 'error')
       await supabase.from('transfer_items').delete().eq('transfer_id', editId)
-      await supabase
-        .from('transfer_items')
-        .insert(
-          lines.map((l) => ({
-            transfer_id: editId,
-            item_id: l.item_id,
-            item_name: l.item_name,
-            qty: +l.qty,
-          })),
-        )
+      await supabase.from('transfer_items').insert(
+        lines.map((l) => ({
+          transfer_id: editId,
+          item_id: l.item_id,
+          item_name: l.item_name,
+          qty: +l.qty,
+        })),
+      )
       resetForm()
       load()
       return flash('Transfer updated.')
@@ -1402,16 +1371,14 @@ export function TransfersTab({ flash, userName, navReq, clearNav }) {
       .select()
       .single()
     if (error) return flash(error.message, 'error')
-    await supabase
-      .from('transfer_items')
-      .insert(
-        lines.map((l) => ({
-          transfer_id: tr.id,
-          item_id: l.item_id,
-          item_name: l.item_name,
-          qty: +l.qty,
-        })),
-      )
+    await supabase.from('transfer_items').insert(
+      lines.map((l) => ({
+        transfer_id: tr.id,
+        item_id: l.item_id,
+        item_name: l.item_name,
+        qty: +l.qty,
+      })),
+    )
     resetForm()
     load()
     flash(
