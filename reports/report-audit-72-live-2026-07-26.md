@@ -1,0 +1,165 @@
+﻿# Report 72 Live Audit (2026-07-26)
+
+## Summary
+
+total=72, working=10, placeholder=62, missing_or_error=0
+
+## Department Breakdown
+
+- Accounts: total=17, working=5, placeholder=12, missing_or_error=0
+- Inventory: total=7, working=0, placeholder=7, missing_or_error=0
+- Admin & Audit: total=5, working=0, placeholder=5, missing_or_error=0
+- Housekeeping: total=3, working=0, placeholder=3, missing_or_error=0
+- Restaurant POS: total=8, working=2, placeholder=6, missing_or_error=0
+- Sales & Reservations: total=31, working=3, placeholder=28, missing_or_error=0
+- Cross Module: total=1, working=0, placeholder=1, missing_or_error=0
+
+## Expected Report Master List
+
+- RPT-001 — Accounts Payable Aging (department: accounts, slug: accounts-payable-aging)
+- RPT-002 — Accounts Receivable Aging (department: accounts, slug: accounts-receivable-aging)
+- RPT-003 — Balance Sheet (department: accounts, slug: balance-sheet)
+- RPT-004 — Bank Book (department: accounts, slug: bank-book)
+- RPT-005 — Bank Reconciliation (department: accounts, slug: bank-reconciliation)
+- RPT-006 — Cash Book (department: accounts, slug: cash-book)
+- RPT-007 — Cash Flow Statement (department: accounts, slug: cash-flow-statement)
+- RPT-008 — Depreciation (department: accounts, slug: depreciation)
+- RPT-009 — Due Balance (department: accounts, slug: due-balance)
+- RPT-010 — Expense By Category Department (department: accounts, slug: expense-by-category-department)
+- RPT-011 — Ledger (department: accounts, slug: ledger)
+- RPT-012 — Net Asset Value (department: accounts, slug: net-asset-value)
+- RPT-013 — Profit & Loss Statement (department: accounts, slug: profit-and-loss-statement)
+- RPT-014 — Trial Balance (department: accounts, slug: trial-balance)
+- RPT-015 — VAT & Tax Collection (department: accounts, slug: vat-tax-collection)
+- RPT-016 — VAT & Tax Collection vs Payment (department: accounts, slug: vat-tax-collection-vs-payment)
+- RPT-017 — VAT & Tax Payment (department: accounts, slug: vat-tax-payment)
+- RPT-018 — Item Wise Stock (department: inventory, slug: item-wise-stock)
+- RPT-019 — Low Stock Reorder Alert (department: inventory, slug: low-stock-reorder-alert)
+- RPT-020 — Price Comparison (department: inventory, slug: price-comparison)
+- RPT-021 — Product In (department: inventory, slug: product-in)
+- RPT-022 — Product Out (department: inventory, slug: product-out)
+- RPT-023 — Purchase (department: inventory, slug: purchase)
+- RPT-024 — Warehouse Wise Stock (department: inventory, slug: warehouse-wise-stock)
+- RPT-025 — Cost Controller (department: admin, slug: cost-controller)
+- RPT-026 — Executive Summary Dashboard KPI Snapshot (department: admin, slug: executive-summary-dashboard-kpi-snapshot)
+- RPT-027 — Multi Property Consolidated Performance (department: admin, slug: multi-property-consolidated-performance)
+- RPT-028 — Out Of Order Maintenance Room (department: admin, slug: out-of-order-maintenance-room)
+- RPT-029 — User Activity Audit Trail Log (department: admin, slug: user-activity-audit-trail-log)
+- RPT-030 — Consumption (department: housekeeping, slug: consumption)
+- RPT-031 — Lost And Found (department: housekeeping, slug: lost-and-found)
+- RPT-032 — Room Status Live (department: housekeeping, slug: room-status-live)
+- RPT-033 — Component Wise Sales Summary (department: restaurant, slug: component-wise-sales-summary)
+- RPT-034 — Consumption (department: restaurant, slug: consumption)
+- RPT-035 — Cost Of Goods Sold (department: restaurant, slug: cost-of-goods-sold)
+- RPT-036 — Night Audit Day Closing (department: restaurant, slug: night-audit-day-closing)
+- RPT-037 — Payment Transaction (department: restaurant, slug: payment-transaction)
+- RPT-038 — Sales (department: restaurant, slug: sales)
+- RPT-039 — Table Section Wise Sales (department: restaurant, slug: table-section-wise-sales)
+- RPT-040 — Void And Discount POS (department: restaurant, slug: void-and-discount-pos)
+- RPT-041 — ADR RevPAR Hotel KPI (department: sales, slug: adr-revpar-hotel-kpi)
+- RPT-042 — Agency Booking (department: sales, slug: agency-booking)
+- RPT-043 — Average Daily Revenue (department: sales, slug: average-daily-revenue)
+- RPT-044 — Booking Cancellation Income (department: sales, slug: booking-cancellation-income)
+- RPT-045 — Check In Log (department: sales, slug: check-in-log)
+- RPT-046 — Check Out Log (department: sales, slug: check-out-log)
+- RPT-047 — Complimentary And House Use Room (department: sales, slug: complimentary-and-house-use-room)
+- RPT-048 — Component Wise Sales Summary (department: sales, slug: component-wise-sales-summary)
+- RPT-049 — Cost Of Room Sold (department: sales, slug: cost-of-room-sold)
+- RPT-050 — Discount And Void Transaction (department: sales, slug: discount-and-void-transaction)
+- RPT-051 — Group Block Booking (department: sales, slug: group-block-booking)
+- RPT-052 — Guest Advance (department: sales, slug: guest-advance)
+- RPT-053 — Guest Loyalty And Repeat Stay (department: sales, slug: guest-loyalty-and-repeat-stay)
+- RPT-054 — Guest Refund (department: sales, slug: guest-refund)
+- RPT-055 — In House Guest (department: sales, slug: in-house-guest)
+- RPT-056 — Night Audit Day Closing (department: sales, slug: night-audit-day-closing)
+- RPT-057 — No Show Charge (department: sales, slug: no-show-charge)
+- RPT-058 — OTA Agency Commission (department: sales, slug: ota-agency-commission)
+- RPT-059 — Occupancy (department: sales, slug: occupancy)
+- RPT-060 — Payment Transaction (department: sales, slug: payment-transaction)
+- RPT-061 — Reservation Entry Log Sales Person Wise (department: sales, slug: reservation-entry-log-sales-person-wise)
+- RPT-062 — Reservation No History Missing Numbers (department: sales, slug: reservation-no-history-missing-numbers)
+- RPT-063 — Revenue Projection (department: sales, slug: revenue-projection)
+- RPT-064 — Room Type Rate Plan Wise Sales (department: sales, slug: room-type-rate-plan-wise-sales)
+- RPT-065 — Rooms On Books Booking Pace (department: sales, slug: rooms-on-books-booking-pace)
+- RPT-066 — Sales (department: sales, slug: sales)
+- RPT-067 — Shareholder Commission (department: sales, slug: shareholder-commission)
+- RPT-068 — Shareholder Entitlement Usage (department: sales, slug: shareholder-entitlement-usage)
+- RPT-069 — Source Channel Wise Booking Revenue (department: sales, slug: source-channel-wise-booking-revenue)
+- RPT-070 — Today's Arrival List (department: sales, slug: todays-arrival-list)
+- RPT-071 — Today's Departure List (department: sales, slug: todays-departure-list)
+- RPT-072 — Other Items Sales (department: cross-module, slug: other-items-sales)
+
+## Execution Results
+
+- [placeholder] RPT-001 — Accounts Payable Aging (department: Accounts, slug: accounts-payable-aging) :: rows=0;source=n/a
+- [working] RPT-002 — Accounts Receivable Aging (department: Accounts, slug: accounts-receivable-aging) :: rows=0;source=n/a
+- [working] RPT-003 — Balance Sheet (department: Accounts, slug: balance-sheet) :: rows=51;source=n/a
+- [placeholder] RPT-004 — Bank Book (department: Accounts, slug: bank-book) :: rows=0;source=n/a
+- [placeholder] RPT-005 — Bank Reconciliation (department: Accounts, slug: bank-reconciliation) :: rows=0;source=n/a
+- [placeholder] RPT-006 — Cash Book (department: Accounts, slug: cash-book) :: rows=0;source=n/a
+- [placeholder] RPT-007 — Cash Flow Statement (department: Accounts, slug: cash-flow-statement) :: rows=0;source=n/a
+- [placeholder] RPT-008 — Depreciation (department: Accounts, slug: depreciation) :: rows=0;source=n/a
+- [placeholder] RPT-009 — Due Balance (department: Accounts, slug: due-balance) :: rows=0;source=n/a
+- [placeholder] RPT-010 — Expense By Category Department (department: Accounts, slug: expense-by-category-department) :: rows=0;source=n/a
+- [working] RPT-011 — Ledger (department: Accounts, slug: ledger) :: rows=23;source=n/a
+- [placeholder] RPT-012 — Net Asset Value (department: Accounts, slug: net-asset-value) :: rows=0;source=n/a
+- [working] RPT-013 — Profit & Loss Statement (department: Accounts, slug: profit-and-loss-statement) :: rows=68;source=n/a
+- [working] RPT-014 — Trial Balance (department: Accounts, slug: trial-balance) :: rows=10;source=n/a
+- [placeholder] RPT-015 — VAT & Tax Collection (department: Accounts, slug: vat-tax-collection) :: rows=0;source=n/a
+- [placeholder] RPT-016 — VAT & Tax Collection vs Payment (department: Accounts, slug: vat-tax-collection-vs-payment) :: rows=0;source=n/a
+- [placeholder] RPT-017 — VAT & Tax Payment (department: Accounts, slug: vat-tax-payment) :: rows=0;source=n/a
+- [placeholder] RPT-018 — Item Wise Stock (department: Inventory, slug: item-wise-stock) :: rows=0;source=n/a
+- [placeholder] RPT-019 — Low Stock Reorder Alert (department: Inventory, slug: low-stock-reorder-alert) :: rows=0;source=n/a
+- [placeholder] RPT-020 — Price Comparison (department: Inventory, slug: price-comparison) :: rows=0;source=n/a
+- [placeholder] RPT-021 — Product In (department: Inventory, slug: product-in) :: rows=0;source=n/a
+- [placeholder] RPT-022 — Product Out (department: Inventory, slug: product-out) :: rows=0;source=n/a
+- [placeholder] RPT-023 — Purchase (department: Inventory, slug: purchase) :: rows=0;source=n/a
+- [placeholder] RPT-024 — Warehouse Wise Stock (department: Inventory, slug: warehouse-wise-stock) :: rows=0;source=n/a
+- [placeholder] RPT-025 — Cost Controller (department: Admin & Audit, slug: cost-controller) :: rows=0;source=n/a
+- [placeholder] RPT-026 — Executive Summary Dashboard KPI Snapshot (department: Admin & Audit, slug: executive-summary-dashboard-kpi-snapshot) :: rows=0;source=n/a
+- [placeholder] RPT-027 — Multi Property Consolidated Performance (department: Admin & Audit, slug: multi-property-consolidated-performance) :: rows=0;source=n/a
+- [placeholder] RPT-028 — Out Of Order Maintenance Room (department: Admin & Audit, slug: out-of-order-maintenance-room) :: rows=0;source=n/a
+- [placeholder] RPT-029 — User Activity Audit Trail Log (department: Admin & Audit, slug: user-activity-audit-trail-log) :: rows=0;source=n/a
+- [placeholder] RPT-030 — Consumption (department: Housekeeping, slug: consumption) :: rows=0;source=n/a
+- [placeholder] RPT-031 — Lost And Found (department: Housekeeping, slug: lost-and-found) :: rows=0;source=n/a
+- [placeholder] RPT-032 — Room Status Live (department: Housekeeping, slug: room-status-live) :: rows=0;source=n/a
+- [working] RPT-033 — Component Wise Sales Summary (department: Restaurant POS, slug: component-wise-sales-summary) :: rows=0;source=n/a
+- [placeholder] RPT-034 — Consumption (department: Restaurant POS, slug: consumption) :: rows=0;source=n/a
+- [placeholder] RPT-035 — Cost Of Goods Sold (department: Restaurant POS, slug: cost-of-goods-sold) :: rows=0;source=n/a
+- [placeholder] RPT-036 — Night Audit Day Closing (department: Restaurant POS, slug: night-audit-day-closing) :: rows=0;source=n/a
+- [placeholder] RPT-037 — Payment Transaction (department: Restaurant POS, slug: payment-transaction) :: rows=0;source=n/a
+- [working] RPT-038 — Sales (department: Restaurant POS, slug: sales) :: rows=0;source=n/a
+- [placeholder] RPT-039 — Table Section Wise Sales (department: Restaurant POS, slug: table-section-wise-sales) :: rows=0;source=n/a
+- [placeholder] RPT-040 — Void And Discount POS (department: Restaurant POS, slug: void-and-discount-pos) :: rows=0;source=n/a
+- [working] RPT-041 — ADR RevPAR Hotel KPI (department: Sales & Reservations, slug: adr-revpar-hotel-kpi) :: rows=1;source=n/a
+- [placeholder] RPT-042 — Agency Booking (department: Sales & Reservations, slug: agency-booking) :: rows=0;source=n/a
+- [placeholder] RPT-043 — Average Daily Revenue (department: Sales & Reservations, slug: average-daily-revenue) :: rows=0;source=n/a
+- [placeholder] RPT-044 — Booking Cancellation Income (department: Sales & Reservations, slug: booking-cancellation-income) :: rows=0;source=n/a
+- [placeholder] RPT-045 — Check In Log (department: Sales & Reservations, slug: check-in-log) :: rows=0;source=n/a
+- [placeholder] RPT-046 — Check Out Log (department: Sales & Reservations, slug: check-out-log) :: rows=0;source=n/a
+- [placeholder] RPT-047 — Complimentary And House Use Room (department: Sales & Reservations, slug: complimentary-and-house-use-room) :: rows=0;source=n/a
+- [placeholder] RPT-048 — Component Wise Sales Summary (department: Sales & Reservations, slug: component-wise-sales-summary) :: rows=0;source=n/a
+- [placeholder] RPT-049 — Cost Of Room Sold (department: Sales & Reservations, slug: cost-of-room-sold) :: rows=0;source=n/a
+- [placeholder] RPT-050 — Discount And Void Transaction (department: Sales & Reservations, slug: discount-and-void-transaction) :: rows=0;source=n/a
+- [placeholder] RPT-051 — Group Block Booking (department: Sales & Reservations, slug: group-block-booking) :: rows=0;source=n/a
+- [placeholder] RPT-052 — Guest Advance (department: Sales & Reservations, slug: guest-advance) :: rows=0;source=n/a
+- [placeholder] RPT-053 — Guest Loyalty And Repeat Stay (department: Sales & Reservations, slug: guest-loyalty-and-repeat-stay) :: rows=0;source=n/a
+- [placeholder] RPT-054 — Guest Refund (department: Sales & Reservations, slug: guest-refund) :: rows=0;source=n/a
+- [placeholder] RPT-055 — In House Guest (department: Sales & Reservations, slug: in-house-guest) :: rows=0;source=n/a
+- [placeholder] RPT-056 — Night Audit Day Closing (department: Sales & Reservations, slug: night-audit-day-closing) :: rows=0;source=n/a
+- [placeholder] RPT-057 — No Show Charge (department: Sales & Reservations, slug: no-show-charge) :: rows=0;source=n/a
+- [placeholder] RPT-058 — OTA Agency Commission (department: Sales & Reservations, slug: ota-agency-commission) :: rows=0;source=n/a
+- [working] RPT-059 — Occupancy (department: Sales & Reservations, slug: occupancy) :: rows=1;source=n/a
+- [placeholder] RPT-060 — Payment Transaction (department: Sales & Reservations, slug: payment-transaction) :: rows=0;source=n/a
+- [placeholder] RPT-061 — Reservation Entry Log Sales Person Wise (department: Sales & Reservations, slug: reservation-entry-log-sales-person-wise) :: rows=0;source=n/a
+- [placeholder] RPT-062 — Reservation No History Missing Numbers (department: Sales & Reservations, slug: reservation-no-history-missing-numbers) :: rows=0;source=n/a
+- [placeholder] RPT-063 — Revenue Projection (department: Sales & Reservations, slug: revenue-projection) :: rows=0;source=n/a
+- [placeholder] RPT-064 — Room Type Rate Plan Wise Sales (department: Sales & Reservations, slug: room-type-rate-plan-wise-sales) :: rows=0;source=n/a
+- [placeholder] RPT-065 — Rooms On Books Booking Pace (department: Sales & Reservations, slug: rooms-on-books-booking-pace) :: rows=0;source=n/a
+- [working] RPT-066 — Sales (department: Sales & Reservations, slug: sales) :: rows=0;source=n/a
+- [placeholder] RPT-067 — Shareholder Commission (department: Sales & Reservations, slug: shareholder-commission) :: rows=0;source=n/a
+- [placeholder] RPT-068 — Shareholder Entitlement Usage (department: Sales & Reservations, slug: shareholder-entitlement-usage) :: rows=0;source=n/a
+- [placeholder] RPT-069 — Source Channel Wise Booking Revenue (department: Sales & Reservations, slug: source-channel-wise-booking-revenue) :: rows=0;source=n/a
+- [placeholder] RPT-070 — Today's Arrival List (department: Sales & Reservations, slug: todays-arrival-list) :: rows=0;source=n/a
+- [placeholder] RPT-071 — Today's Departure List (department: Sales & Reservations, slug: todays-departure-list) :: rows=0;source=n/a
+- [placeholder] RPT-072 — Other Items Sales (department: Cross Module, slug: other-items-sales) :: rows=0;source=n/a

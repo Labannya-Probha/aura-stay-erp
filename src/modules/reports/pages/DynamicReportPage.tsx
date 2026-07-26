@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { Download, FileSpreadsheet, Printer } from 'lucide-react'
 import { useParams } from 'react-router-dom'
-import EnterpriseReportHeader from '../../../components/reports/EnterpriseReportHeader'
+import EnterpriseReportHeader, {
+  ReportAuditStrip,
+  ReportMetaStrip,
+  ReportSignatureFooter,
+} from '../../../components/reports/EnterpriseReportHeader'
 import {
   enqueueAedsReportExport,
   waitForAedsReportExportJob,
@@ -72,19 +76,9 @@ export default function DynamicReportPage({ role, company }) {
             company={company}
             report={printReportModel}
             filters={printFilters}
-            generatedBy={role}
           />
-          <div className="erp-print-filter-summary">
-            <span>
-              Cycle: <b>{filters?.cycle || 'Monthly'}</b>
-            </span>
-            <span>
-              Period:{' '}
-              <b>
-                {filters?.start_date || '-'} to {filters?.end_date || '-'}
-              </b>
-            </span>
-          </div>
+          <ReportMetaStrip filters={printFilters} />
+          <ReportAuditStrip generatedBy={role} />
         </section>
 
         <header className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm no-print">
@@ -147,6 +141,8 @@ export default function DynamicReportPage({ role, company }) {
           comparisonSummary={data.comparisonSummary || { enabled: false }}
           loading={loading}
         />
+
+        <ReportSignatureFooter />
       </main>
     </div>
   )

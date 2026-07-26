@@ -1,0 +1,231 @@
+/* ============================================================
+   AURA STAY ERP — Professional Report Print Layout
+   ============================================================
+   Design reference: Cloudbeds' reporting conventions —
+     - Consolidated letterhead (property brand + report identity)
+     - Clear field/column metadata (their CDF naming discipline)
+     - Grouped sections with subtotals
+     - Formatted export vs raw table vs details-only output
+   ============================================================ */
+
+.erp-print-doc {
+  font-family: 'Inter', sans-serif;
+  color: #1a1a1a;
+  max-width: 900px;
+  margin: 0 auto;
+  background: #fff;
+}
+
+.erp-letterhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding-bottom: 16px;
+  border-bottom: 3px solid var(--tenant-primary, #1b4d2e);
+}
+
+.erp-letterhead__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.erp-letterhead__logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tenant-primary, #1b4d2e);
+  color: #fff;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.erp-letterhead__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.erp-letterhead__company-name {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--tenant-primary, #1b4d2e);
+  margin: 0;
+}
+
+.erp-letterhead__company-meta {
+  font-size: 0.72rem;
+  color: #6b6b6b;
+  margin: 2px 0 0;
+}
+
+.erp-letterhead__report-id {
+  text-align: right;
+}
+
+.erp-letterhead__report-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin: 0;
+  color: #171717;
+}
+
+.erp-letterhead__report-period {
+  font-size: 0.8rem;
+  color: #6b6b6b;
+  margin: 2px 0 0;
+}
+
+.erp-meta-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  padding: 10px 0;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #e5e2da;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: #4a4a4a;
+}
+
+.erp-meta-strip b {
+  color: #171717;
+  font-weight: 700;
+}
+
+.erp-audit-strip {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: #8a8580;
+  padding: 6px 0 14px;
+}
+
+.erp-report-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.erp-report-body thead th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b6b6b;
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 2px solid #171717;
+}
+
+.erp-report-body thead th[data-align='right'] {
+  text-align: right;
+}
+
+.erp-report-body tbody td {
+  padding: 5px 6px;
+  border-bottom: 1px solid #f0ede6;
+}
+
+.erp-report-body .erp-group-row td {
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tenant-primary, #1b4d2e);
+  padding-top: 14px;
+  border-bottom: 1px solid rgb(var(--tenant-primary-rgb) / 0.2);
+}
+
+.erp-report-body .erp-subtotal-row td {
+  font-weight: 700;
+  border-top: 1px solid #171717;
+}
+
+.erp-report-body .erp-grandtotal-row td {
+  font-weight: 800;
+  font-size: 0.92rem;
+  border-top: 3px double #171717;
+  color: var(--tenant-primary, #1b4d2e);
+  padding-top: 12px;
+}
+
+.erp-drilldown-cell {
+  color: var(--tenant-primary, #1b4d2e);
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+
+@media print {
+  .erp-drilldown-cell {
+    color: inherit;
+    text-decoration: none;
+    cursor: default;
+  }
+}
+
+.erp-amount-negative {
+  color: #b91c1c;
+}
+
+.erp-currency-note {
+  font-size: 0.68rem;
+  color: #8a8580;
+  margin-top: 10px;
+  font-style: italic;
+}
+
+.erp-print-footer {
+  display: none;
+}
+
+@media print {
+  .erp-print-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid #d8d4cb;
+    font-size: 0.75rem;
+  }
+
+  .erp-signature-block {
+    text-align: center;
+    width: 180px;
+  }
+
+  .erp-signature-line {
+    border-top: 1px solid #171717;
+    margin-bottom: 4px;
+    padding-top: 4px;
+  }
+
+  @page {
+    margin: 20mm 14mm;
+  }
+
+  .erp-report-body thead {
+    display: table-header-group;
+  }
+
+  .no-print,
+  aside,
+  nav,
+  .report-action-btn,
+  .report-primary-btn {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+}
+
+@media screen {
+  .print-only {
+    display: none;
+  }
+}
