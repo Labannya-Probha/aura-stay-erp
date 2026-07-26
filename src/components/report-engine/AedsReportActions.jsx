@@ -11,7 +11,7 @@ export default function AedsReportActions({ onRefresh, onSaveView, onExport, exp
       </button>
       <button type="button" className="aeds-report-btn" onClick={() => window.print()}>
         <Printer size={16} />
-        Print
+        Print View
       </button>
       <button
         type="button"
@@ -20,7 +20,7 @@ export default function AedsReportActions({ onRefresh, onSaveView, onExport, exp
         disabled={busy}
       >
         <Download size={16} />
-        {exportBusy === 'pdf' ? 'PDF Queued...' : 'PDF'}
+        {exportBusy === 'pdf' ? 'Exporting PDF...' : 'Export PDF'}
       </button>
       <button
         type="button"

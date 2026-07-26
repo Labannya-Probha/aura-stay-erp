@@ -1,29 +1,67 @@
-import { Download, FileSpreadsheet, Printer } from "lucide-react"
-import { useParams } from "react-router-dom"
-import EnterpriseReportHeader from "../../../components/reports/EnterpriseReportHeader"
-import MetadataReportFilters from "../components/MetadataReportFilters"
-import MetadataReportTable from "../components/MetadataReportTable"
-import { useDynamicReport } from "../hooks/useDynamicReport"
-import { exportReportExcel, printReport } from "../utils/reportExport"
+import { useState } from 'react'
+import { Download, FileSpreadsheet, Printer } from 'lucide-react'
+import { useParams } from 'react-router-dom'
+import EnterpriseReportHeader from '../../../components/reports/EnterpriseReportHeader'
+import {
+  enqueueAedsReportExport,
+  waitForAedsReportExportJob,
+} from '../../../components/report-engine/reportEngine.service'
+import MetadataReportFilters from '../components/MetadataReportFilters'
+import MetadataReportTable from '../components/MetadataReportTable'
+import { useDynamicReport } from '../hooks/useDynamicReport'
+import { exportReportExcel } from '../utils/reportExport'
 
 export default function DynamicReportPage({ role }) {
   const params = useParams()
-  const department = params.department || "accounts"
-  const slug = params.slug || "accounts-payable-aging"
+  const department = params.department || 'accounts'
+  const slug = params.slug || 'accounts-payable-aging'
+  const [pdfBusy, setPdfBusy] = useState(false)
 
-  const { definition, data, filters, reportFilters, setFilters, loading } = useDynamicReport(department, slug, role)
+  const { definition, data, filters, reportFilters, setFilters, loading } = useDynamicReport(
+    department,
+    slug,
+    role,
+  )
   const report = definition?.report
   const fields = definition?.fields || []
   const printReportModel = {
-    name: report?.title || "Report",
-    reportCategory: definition?.department?.name || "Reports",
+    name: report?.title || 'Report',
+    reportCategory: definition?.department?.name || 'Reports',
   }
   const printFilters = {
     dateFrom: filters?.start_date,
     dateTo: filters?.end_date,
     cycle: filters?.cycle,
-    currency: "BDT",
+    currency: 'BDT',
     compareTo: filters?.compare_to,
+  }
+
+  const handlePdfExport = async () => {
+    const reportCode = report?.reportCode
+    if (!reportCode) {
+      window.alert('Missing report code for PDF export.')
+      return
+    }
+
+    try {
+      setPdfBusy(true)
+      const job = await enqueueAedsReportExport({
+        reportCode,
+        filters,
+        format: 'pdf',
+      })
+      const completed = await waitForAedsReportExportJob(job.jobId)
+      const downloadUrl = completed?.result?.downloadUrl
+      if (downloadUrl) {
+        window.open(downloadUrl, '_blank', 'noopener,noreferrer')
+      } else {
+        window.alert('PDF export finished but no download URL was returned.')
+      }
+    } catch (error) {
+      window.alert(error?.message || 'Unable to export PDF right now.')
+    } finally {
+      setPdfBusy(false)
+    }
   }
 
   return (
@@ -37,8 +75,15 @@ export default function DynamicReportPage({ role }) {
             generatedBy={role}
           />
           <div className="erp-print-filter-summary">
-            <span>Cycle: <b>{filters?.cycle || "Monthly"}</b></span>
-            <span>Period: <b>{filters?.start_date || "-"} to {filters?.end_date || "-"}</b></span>
+            <span>
+              Cycle: <b>{filters?.cycle || 'Monthly'}</b>
+            </span>
+            <span>
+              Period:{' '}
+              <b>
+                {filters?.start_date || '-'} to {filters?.end_date || '-'}
+              </b>
+            </span>
           </div>
         </section>
 
@@ -47,12 +92,12 @@ export default function DynamicReportPage({ role }) {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-[#F7F4EC] px-3 py-1 text-xs font-black text-[#1B4D2E]">
-                  {definition?.department?.name || "Reports"}
+                  {definition?.department?.name || 'Reports'}
                 </span>
               </div>
 
               <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950">
-                {report?.title || "Report"}
+                {report?.title || 'Report'}
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
                 {report?.description}
@@ -60,15 +105,30 @@ export default function DynamicReportPage({ role }) {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={printReport} className="report-action-btn">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="report-action-btn"
+                title="Print current page layout in browser"
+              >
                 <Printer size={16} />
-                Print
+                Print View
               </button>
-              <button type="button" onClick={printReport} className="report-action-btn">
+              <button
+                type="button"
+                onClick={handlePdfExport}
+                className="report-action-btn"
+                disabled={pdfBusy}
+                title="Generate PDF from server export queue"
+              >
                 <Download size={16} />
-                PDF
+                {pdfBusy ? 'Exporting PDF...' : 'Export PDF'}
               </button>
-              <button type="button" onClick={() => exportReportExcel(report, fields, data.rows)} className="report-primary-btn">
+              <button
+                type="button"
+                onClick={() => exportReportExcel(report, fields, data.rows)}
+                className="report-primary-btn"
+              >
                 <FileSpreadsheet size={16} />
                 Excel
               </button>
