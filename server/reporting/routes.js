@@ -91,7 +91,7 @@ router.post(
 // Example admin route pattern:
 // router.delete('/reports/:reportCode', requireRole('SUPERUSER', 'ADMIN'), asyncRoute(async (req, res) => { ... }))
 
-router.use((error, req, res, next) => {
+router.use((error, req, res, _next) => {
   res.status(error.status || 500).json({
     error: error.message || 'Report service failed',
     code: error.status || 500,

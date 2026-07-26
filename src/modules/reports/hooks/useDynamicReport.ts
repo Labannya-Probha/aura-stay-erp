@@ -13,8 +13,8 @@ function monthStart() {
 
 export function useDynamicReport(department = "accounts", slug = "accounts-payable-aging", role) {
   const [definition, setDefinition] = useState(null)
-  const [data, setData] = useState({ rows: [], summary: {} })
-  const [filters, setFilters] = useState({ cycle: "Monthly", start_date: monthStart(), end_date: today() })
+  const [data, setData] = useState({ rows: [], summary: {}, comparisonRows: [], comparisonSummary: { enabled: false } })
+  const [filters, setFilters] = useState({ cycle: "Monthly", start_date: monthStart(), end_date: today(), compare_to: "Previous Period" })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -35,5 +35,15 @@ export function useDynamicReport(department = "accounts", slug = "accounts-payab
     }
   }, [department, slug, role, filters])
 
-  return { definition, data, filters, setFilters, loading }
+  const reportFilters = definition?.filters?.some((filter) => filter.filterKey === "compare_to")
+    ? definition.filters
+    : [...(definition?.filters || []), {
+        filterKey: "compare_to",
+        label: "Compare To",
+        filterType: "Dropdown",
+        sourceOptions: "Off,Previous Period,Previous Month,Previous Quarter,Previous Year",
+        defaultValue: "Previous Period",
+      }]
+
+  return { definition, data, filters, reportFilters, setFilters, loading }
 }

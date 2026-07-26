@@ -1,6 +1,82 @@
 import { reportCategories, reportTemplates, sampleRows } from './reportTemplates.js'
 
-const currencyKeys = ['grossAmount', 'discount', 'vat', 'serviceCharge', 'netAmount', 'debit', 'credit', 'balance']
+const currencyKeys = [
+  'grossAmount',
+  'discount',
+  'vat',
+  'serviceCharge',
+  'netAmount',
+  'debit',
+  'credit',
+  'balance',
+]
+
+function hasReportAccess(user = {}, reportCode) {
+  if (!user.role || ['SUPERUSER', 'ADMIN', 'MANAGER'].includes(user.role)) return true
+  const allowed = user.reportCodes || []
+  return allowed.includes(reportCode)
+}
+
+function filterRows(rows, filters, report) {
+  return rows
+    .filter((row) => {
+      if (filters.dateFrom && row.transactionDate < filters.dateFrom) return false
+      if (filters.dateTo && row.transactionDate > filters.dateTo) return false
+      if (
+        filters.department &&
+        !filters.department.startsWith('All') &&
+        row.department !== filters.department
+      )
+        return false
+      if (
+        filters.paymentMethod &&
+        !filters.paymentMethod.startsWith('All') &&
+        row.paymentMethod !== filters.paymentMethod
+      )
+        return false
+      if (report.category === 'POS' && row.costCenter !== 'F&B') return false
+      if (report.category === 'HOTEL_KPI' && row.department !== 'Rooms') return false
+      return true
+    })
+    .map((row, index) => ({ ...row, slNo: index + 1 }))
+}
+
+function calculateTotals(rows) {
+  return currencyKeys.reduce((acc, key) => {
+    acc[key] = rows.reduce((sum, row) => sum + Number(row[key] || 0), 0)
+    return acc
+  }, {})
+}
+
+function calculateKpis(rows) {
+  const totals = calculateTotals(rows)
+  const roomRevenue = rows
+    .filter((row) => row.department === 'Rooms')
+    .reduce((sum, row) => sum + Number(row.netAmount || 0), 0)
+  const restaurantRevenue = rows
+    .filter((row) => row.department === 'Restaurant')
+    .reduce((sum, row) => sum + Number(row.netAmount || 0), 0)
+  return {
+    totalRevenue: totals.netAmount,
+    roomRevenue,
+    restaurantRevenue,
+    otherRevenue: Math.max(totals.netAmount - roomRevenue - restaurantRevenue, 0),
+    occupancy: 68.5,
+    adr: roomRevenue ? roomRevenue / 3 : 0,
+    revpar: roomRevenue ? roomRevenue / 5 : 0,
+    cashCollection: rows
+      .filter((row) => row.paymentMethod === 'Cash')
+      .reduce((sum, row) => sum + Number(row.netAmount || 0), 0),
+    cardCollection: rows
+      .filter((row) => row.paymentMethod === 'Card')
+      .reduce((sum, row) => sum + Number(row.netAmount || 0), 0),
+    outstandingReceivable: totals.balance,
+    vatPayable: totals.vat,
+    netProfit: totals.netAmount * 0.3,
+    gop: totals.netAmount * 0.45,
+    ebitdaMargin: totals.netAmount ? 29.9 : 0,
+  }
+}
 
 export function listReports(user = {}) {
   return {
@@ -50,54 +126,5 @@ export function generateReport(reportCode, payload = {}, user = {}) {
       generatedAt: new Date().toISOString(),
       filterHash: Buffer.from(JSON.stringify(filters)).toString('base64url'),
     },
-  }
-}
-
-export function hasReportAccess(user = {}, reportCode) {
-  if (!user.role || ['SUPERUSER', 'ADMIN', 'MANAGER'].includes(user.role)) return true
-  const allowed = user.reportCodes || []
-  return allowed.includes(reportCode)
-}
-
-function filterRows(rows, filters, report) {
-  return rows
-    .filter((row) => {
-      if (filters.dateFrom && row.transactionDate < filters.dateFrom) return false
-      if (filters.dateTo && row.transactionDate > filters.dateTo) return false
-      if (filters.department && !filters.department.startsWith('All') && row.department !== filters.department) return false
-      if (filters.paymentMethod && !filters.paymentMethod.startsWith('All') && row.paymentMethod !== filters.paymentMethod) return false
-      if (report.category === 'POS' && row.costCenter !== 'F&B') return false
-      if (report.category === 'HOTEL_KPI' && row.department !== 'Rooms') return false
-      return true
-    })
-    .map((row, index) => ({ ...row, slNo: index + 1 }))
-}
-
-function calculateTotals(rows) {
-  return currencyKeys.reduce((acc, key) => {
-    acc[key] = rows.reduce((sum, row) => sum + Number(row[key] || 0), 0)
-    return acc
-  }, {})
-}
-
-function calculateKpis(rows) {
-  const totals = calculateTotals(rows)
-  const roomRevenue = rows.filter((row) => row.department === 'Rooms').reduce((sum, row) => sum + Number(row.netAmount || 0), 0)
-  const restaurantRevenue = rows.filter((row) => row.department === 'Restaurant').reduce((sum, row) => sum + Number(row.netAmount || 0), 0)
-  return {
-    totalRevenue: totals.netAmount,
-    roomRevenue,
-    restaurantRevenue,
-    otherRevenue: Math.max(totals.netAmount - roomRevenue - restaurantRevenue, 0),
-    occupancy: 68.5,
-    adr: roomRevenue ? roomRevenue / 3 : 0,
-    revpar: roomRevenue ? roomRevenue / 5 : 0,
-    cashCollection: rows.filter((row) => row.paymentMethod === 'Cash').reduce((sum, row) => sum + Number(row.netAmount || 0), 0),
-    cardCollection: rows.filter((row) => row.paymentMethod === 'Card').reduce((sum, row) => sum + Number(row.netAmount || 0), 0),
-    outstandingReceivable: totals.balance,
-    vatPayable: totals.vat,
-    netProfit: totals.netAmount * 0.3,
-    gop: totals.netAmount * 0.45,
-    ebitdaMargin: totals.netAmount ? 29.9 : 0,
   }
 }

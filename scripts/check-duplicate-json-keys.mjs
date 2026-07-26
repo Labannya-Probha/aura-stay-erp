@@ -50,7 +50,7 @@ function checkFile(filePath) {
           const decoded = decodeJsonString(raw)
           if (top.keys.has(decoded)) {
             const line = source.slice(0, i).split("\n").length
-            errors.push(`Duplicate key \"${decoded}\" at line ${line}`)
+            errors.push(`Duplicate key "${decoded}" at line ${line}`)
           } else {
             top.keys.add(decoded)
           }

@@ -32,7 +32,7 @@ app.get('/health', (req, res) => {
   res.json({ ok: true, service: 'aura-iam', time: new Date().toISOString() })
 })
 
-app.use((error, req, res, next) => {
+app.use((error, req, res, _next) => {
   res.status(error.status || 500).json({ error: error.message || 'IAM service failed' })
 })
 

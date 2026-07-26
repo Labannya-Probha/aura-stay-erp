@@ -11,7 +11,7 @@ export default function DynamicReportPage({ role }) {
   const department = params.department || "accounts"
   const slug = params.slug || "accounts-payable-aging"
 
-  const { definition, data, filters, setFilters, loading } = useDynamicReport(department, slug, role)
+  const { definition, data, filters, reportFilters, setFilters, loading } = useDynamicReport(department, slug, role)
   const report = definition?.report
   const fields = definition?.fields || []
   const printReportModel = {
@@ -23,6 +23,7 @@ export default function DynamicReportPage({ role }) {
     dateTo: filters?.end_date,
     cycle: filters?.cycle,
     currency: "BDT",
+    compareTo: filters?.compare_to,
   }
 
   return (
@@ -76,10 +77,16 @@ export default function DynamicReportPage({ role }) {
         </header>
 
         <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm no-print">
-          <MetadataReportFilters filters={definition?.filters || []} values={filters} onChange={setFilters} />
+          <MetadataReportFilters filters={reportFilters} values={filters} onChange={setFilters} />
         </section>
 
-        <MetadataReportTable fields={fields} rows={data.rows} loading={loading} />
+        <MetadataReportTable
+          fields={fields}
+          rows={data.rows}
+          comparisonRows={data.comparisonRows || []}
+          comparisonSummary={data.comparisonSummary || { enabled: false }}
+          loading={loading}
+        />
       </main>
     </div>
   )

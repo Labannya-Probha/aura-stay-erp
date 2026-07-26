@@ -12,7 +12,14 @@ export default [
   js.configs.recommended,
 
   {
-    files: ['scripts/**/*.js', 'scripts/**/*.mjs'],
+    files: [
+      'server/**/*.js',
+      'gateway/**/*.js',
+      'queues/**/*.js',
+      'iam-service/**/*.js',
+      'scripts/**/*.js',
+      'scripts/**/*.mjs',
+    ],
     languageOptions: {
       globals: {
         ...globals.node,

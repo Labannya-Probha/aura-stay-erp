@@ -1,12 +1,4 @@
-import {
-  BarChart3,
-  BedDouble,
-  CalendarCheck,
-  ClipboardList,
-  Moon,
-  RefreshCw,
-  Sparkles,
-} from 'lucide-react'
+import { BarChart3, BedDouble, CalendarCheck, ClipboardList, Moon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import { PATHS } from '../../app/paths'
@@ -117,10 +109,7 @@ export default function Dashboard({
     <section className="aeds-dashboard aeds-v6-dashboard">
       <div className="aeds-v6-dashboard-hero">
         <div className="aeds-v6-dashboard-hero-copy">
-          <div className="aeds-v6-eyebrow">
-            <Sparkles size={14} />
-            AEDS v6 Management Workspace
-          </div>
+          <div className="aeds-v6-eyebrow"></div>
 
           <DashboardHeader
             company={company}
@@ -132,15 +121,6 @@ export default function Dashboard({
           />
         </div>
 
-        <button
-          type="button"
-          className="aeds-v6-refresh-button"
-          onClick={refresh}
-          disabled={loading || refreshing}
-        >
-          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-          Refresh data
-        </button>
         <div className="text-xs font-bold text-slate-500" aria-live="polite">
           {isLive ? 'Live' : 'Manual'} ·{' '}
           {lastUpdated
