@@ -1,5 +1,22 @@
 begin;
 
+do $$
+begin
+  if to_regclass('public.report_definitions') is not null then
+    alter table public.report_definitions
+      add column if not exists report_name text,
+      add column if not exists report_key text,
+      add column if not exists name text,
+      add column if not exists key_fields text,
+      add column if not exists status text not null default 'READY',
+      add column if not exists created_at timestamptz not null default now(),
+      add column if not exists updated_at timestamptz not null default now();
+  end if;
+end $$;
+
+create unique index if not exists report_definitions_department_name_key
+  on public.report_definitions (department, name);
+
 create or replace function public.rpt_multi_property_consolidated_performance(
   p_tenant_id uuid,
   p_filters jsonb default '{}'::jsonb
@@ -134,9 +151,12 @@ begin
 end;
 $$;
 
-insert into public.report_definitions (department, name, key_fields, status)
+insert into public.report_definitions (tenant_id, department, report_name, report_key, name, key_fields, status)
 values (
+  coalesce(public.current_tenant_id(), (select id from public.properties order by created_at asc limit 1)),
   'Admin & Audit',
+  'Multi Property Consolidated Performance',
+  'multi_property_consolidated_performance',
   'Multi Property Consolidated Performance',
   'Property, Occupancy %, ADR, RevPAR, Room Revenue, GOP, EBITDA, Net Profit, Working Capital',
   'READY'
@@ -146,6 +166,98 @@ on conflict (department, name) do update set
   status = 'READY',
   updated_at = now();
 
+with seed_payload as (
+  select
+    'RPT-032'::text as report_code,
+    d.id as department_id,
+    'Multi Property Consolidated Performance'::text as title,
+    'multi-property-consolidated-performance'::text as slug,
+    'Consolidated hospitality performance across all properties.'::text as description,
+    'reporting'::text as module_owner,
+    'Monthly'::text as cycle,
+    array['properties', 'reservations', 'reservation_rooms', 'rooms', 'journal_entries', 'journal_lines', 'invoices', 'payments', 'pos_orders']::text[] as primary_tables,
+    '/reports/' || d.slug || '/multi-property-consolidated-performance' as route,
+    40::int as display_order,
+    5::int as cache_minutes,
+    true as supports_table,
+    true as supports_chart,
+    true as supports_kpi,
+    true as supports_print,
+    true as supports_export_pdf,
+    true as supports_export_excel,
+    false as supports_schedule,
+    true as is_active,
+    'rpt_multi_property_consolidated_performance'::text as source_function
+  from public.report_departments d
+  where d.slug = 'admin'
+),
+deleted_slug_conflict as (
+  delete from public.report_catalog rc
+  using seed_payload p
+  where rc.department_id = p.department_id
+    and rc.slug = p.slug
+    and rc.report_code <> p.report_code
+    and exists (
+      select 1
+      from public.report_catalog by_code
+      where by_code.report_code = p.report_code
+    )
+  returning rc.id
+),
+updated_by_code as (
+  update public.report_catalog rc
+  set
+    department_id = p.department_id,
+    title = p.title,
+    slug = p.slug,
+    description = p.description,
+    module_owner = p.module_owner,
+    cycle = p.cycle,
+    primary_tables = p.primary_tables,
+    route = p.route,
+    display_order = p.display_order,
+    cache_minutes = p.cache_minutes,
+    supports_table = p.supports_table,
+    supports_chart = p.supports_chart,
+    supports_kpi = p.supports_kpi,
+    supports_print = p.supports_print,
+    supports_export_pdf = p.supports_export_pdf,
+    supports_export_excel = p.supports_export_excel,
+    supports_schedule = p.supports_schedule,
+    is_active = true,
+    source_function = p.source_function
+  from seed_payload p
+  left join deleted_slug_conflict dsc on true
+  where rc.report_code = p.report_code
+  returning rc.id
+),
+updated_by_slug as (
+  update public.report_catalog rc
+  set
+    report_code = p.report_code,
+    title = p.title,
+    description = p.description,
+    module_owner = p.module_owner,
+    cycle = p.cycle,
+    primary_tables = p.primary_tables,
+    route = p.route,
+    display_order = p.display_order,
+    cache_minutes = p.cache_minutes,
+    supports_table = p.supports_table,
+    supports_chart = p.supports_chart,
+    supports_kpi = p.supports_kpi,
+    supports_print = p.supports_print,
+    supports_export_pdf = p.supports_export_pdf,
+    supports_export_excel = p.supports_export_excel,
+    supports_schedule = p.supports_schedule,
+    is_active = true,
+    source_function = p.source_function
+  from seed_payload p
+  where rc.department_id = p.department_id
+    and rc.slug = p.slug
+    and not exists (select 1 from updated_by_code)
+  returning rc.id
+)
 insert into public.report_catalog (
   report_code,
   department_id,
@@ -169,47 +281,29 @@ insert into public.report_catalog (
   source_function
 )
 select
-  'RPT-032',
-  d.id,
-  'Multi Property Consolidated Performance',
-  'multi-property-consolidated-performance',
-  'Consolidated hospitality performance across all properties.',
-  'reporting',
-  'Monthly',
-  array['properties', 'reservations', 'reservation_rooms', 'rooms', 'journal_entries', 'journal_lines', 'invoices', 'payments', 'pos_orders'],
-  '/reports/' || d.slug || '/multi-property-consolidated-performance',
-  40,
-  5,
-  true,
-  true,
-  true,
-  true,
-  true,
-  true,
-  false,
-  true,
-  'rpt_multi_property_consolidated_performance'
-from public.report_departments d
-where d.slug = 'admin'
-on conflict (department_id, slug) do update set
-  report_code = excluded.report_code,
-  title = excluded.title,
-  description = excluded.description,
-  module_owner = excluded.module_owner,
-  cycle = excluded.cycle,
-  primary_tables = excluded.primary_tables,
-  route = excluded.route,
-  display_order = excluded.display_order,
-  cache_minutes = excluded.cache_minutes,
-  supports_table = excluded.supports_table,
-  supports_chart = excluded.supports_chart,
-  supports_kpi = excluded.supports_kpi,
-  supports_print = excluded.supports_print,
-  supports_export_pdf = excluded.supports_export_pdf,
-  supports_export_excel = excluded.supports_export_excel,
-  supports_schedule = excluded.supports_schedule,
-  is_active = true,
-  source_function = excluded.source_function;
+  p.report_code,
+  p.department_id,
+  p.title,
+  p.slug,
+  p.description,
+  p.module_owner,
+  p.cycle,
+  p.primary_tables,
+  p.route,
+  p.display_order,
+  p.cache_minutes,
+  p.supports_table,
+  p.supports_chart,
+  p.supports_kpi,
+  p.supports_print,
+  p.supports_export_pdf,
+  p.supports_export_excel,
+  p.supports_schedule,
+  p.is_active,
+  p.source_function
+from seed_payload p
+where not exists (select 1 from updated_by_code)
+  and not exists (select 1 from updated_by_slug);
 
 grant execute on function public.rpt_multi_property_consolidated_performance(uuid, jsonb) to authenticated;
 

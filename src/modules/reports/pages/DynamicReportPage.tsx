@@ -10,6 +10,7 @@ import {
   enqueueAedsReportExport,
   waitForAedsReportExportJob,
 } from '../../../components/report-engine/reportEngine.service'
+import ReportingStudioShell from '../components/ReportingStudioShell'
 import MetadataReportFilters from '../components/MetadataReportFilters'
 import MetadataReportTable from '../components/MetadataReportTable'
 import { useDynamicReport } from '../hooks/useDynamicReport'
@@ -40,6 +41,20 @@ export default function DynamicReportPage({ role, company }) {
     compareTo: filters?.compare_to,
   }
 
+  const summaryStrip = (
+    <div className="flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-wide text-slate-500">
+      <span className="rounded-full bg-[#F7F4EC] px-3 py-1 text-[#1B4D2E]">
+        {definition?.department?.name || 'Reports'}
+      </span>
+      <span className="rounded-full bg-slate-50 px-3 py-1">{data.rows.length} rows</span>
+      <span className="rounded-full bg-slate-50 px-3 py-1">
+        {data.comparisonSummary?.enabled
+          ? `Compare: ${data.comparisonSummary.compareTo}`
+          : 'Comparison off'}
+      </span>
+    </div>
+  )
+
   const handlePdfExport = async () => {
     const reportCode = report?.reportCode
     if (!reportCode) {
@@ -69,7 +84,48 @@ export default function DynamicReportPage({ role, company }) {
   }
 
   return (
-    <div>
+    <ReportingStudioShell
+      title={report?.title || 'Report'}
+      subtitle={report?.description}
+      eyebrow={definition?.department?.name || 'Reports'}
+      summary={summaryStrip}
+      actions={
+        <>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="report-action-btn"
+            title="Print current page layout in browser"
+          >
+            <Printer size={16} />
+            Print View
+          </button>
+          <button
+            type="button"
+            onClick={handlePdfExport}
+            className="report-action-btn"
+            disabled={pdfBusy}
+            title="Generate PDF from server export queue"
+          >
+            <Download size={16} />
+            {pdfBusy ? 'Exporting PDF...' : 'Export PDF'}
+          </button>
+          <button
+            type="button"
+            onClick={() => exportReportExcel(report, fields, data.rows)}
+            className="report-primary-btn"
+          >
+            <FileSpreadsheet size={16} />
+            Excel
+          </button>
+        </>
+      }
+      filters={
+        <MetadataReportFilters filters={reportFilters} values={filters} onChange={setFilters} />
+      }
+      loading={false}
+      empty={false}
+    >
       <main className="min-w-0 space-y-5 enterprise-print-doc">
         <section className="print-only">
           <EnterpriseReportHeader
@@ -79,59 +135,6 @@ export default function DynamicReportPage({ role, company }) {
           />
           <ReportMetaStrip filters={printFilters} />
           <ReportAuditStrip generatedBy={role} />
-        </section>
-
-        <header className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm no-print">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-[#F7F4EC] px-3 py-1 text-xs font-black text-[#1B4D2E]">
-                  {definition?.department?.name || 'Reports'}
-                </span>
-              </div>
-
-              <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950">
-                {report?.title || 'Report'}
-              </h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                {report?.description}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="report-action-btn"
-                title="Print current page layout in browser"
-              >
-                <Printer size={16} />
-                Print View
-              </button>
-              <button
-                type="button"
-                onClick={handlePdfExport}
-                className="report-action-btn"
-                disabled={pdfBusy}
-                title="Generate PDF from server export queue"
-              >
-                <Download size={16} />
-                {pdfBusy ? 'Exporting PDF...' : 'Export PDF'}
-              </button>
-              <button
-                type="button"
-                onClick={() => exportReportExcel(report, fields, data.rows)}
-                className="report-primary-btn"
-              >
-                <FileSpreadsheet size={16} />
-                Excel
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm no-print">
-          <MetadataReportFilters filters={reportFilters} values={filters} onChange={setFilters} />
         </section>
 
         <MetadataReportTable
@@ -144,6 +147,6 @@ export default function DynamicReportPage({ role, company }) {
 
         <ReportSignatureFooter />
       </main>
-    </div>
+    </ReportingStudioShell>
   )
 }

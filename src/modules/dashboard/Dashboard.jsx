@@ -2,12 +2,11 @@ import { BarChart3, BedDouble, CalendarCheck, ClipboardList, Moon } from 'lucide
 import { useNavigate } from 'react-router-dom'
 
 import { PATHS } from '../../app/paths'
-import DashboardHeader from './DashboardHeader'
-import KPIGrid from './widgets/KPIGrid'
 import RevenueChart from './widgets/RevenueChart'
 import OccupancyChart from './widgets/OccupancyChart'
 import ArrivalsDeparturesWidget from './widgets/ArrivalsDeparturesWidget'
 import NotificationsWidget from './widgets/NotificationsWidget'
+import ExecutiveCommandCenter from '../../components/executive/ExecutiveCommandCenter'
 import '../../styles/aeds-v6-migration.css'
 
 function numericValue(value, fallback = 0) {
@@ -74,8 +73,14 @@ export default function Dashboard({
   notifications,
   notificationsLoading,
   notificationsError,
+  rooms,
+  roomsLoading,
+  roomsError,
+  roomsRefreshing,
+  onRoomsRefresh,
 }) {
   const navigate = useNavigate()
+  const commandCenterError = error || roomsError
 
   const quickLinks = [
     {
@@ -106,93 +111,81 @@ export default function Dashboard({
   ]
 
   return (
-    <section className="aeds-dashboard aeds-v6-dashboard">
-      <div className="aeds-v6-dashboard-hero">
-        <div className="aeds-v6-dashboard-hero-copy">
-          <div className="aeds-v6-eyebrow"></div>
+    <ExecutiveCommandCenter
+      title="Executive Command Center"
+      subtitle="Live hotel operations, revenue pulse, and floor control in one command surface."
+      eyebrow="Hospitality Operations"
+      companyName={company?.name}
+      loading={loading}
+      error={commandCenterError}
+      isLive={isLive}
+      lastUpdated={lastUpdated}
+      refreshing={refreshing}
+      summary={summary}
+      revenueTrend={revenueTrend}
+      occupancyTrend={occupancyTrend}
+      rooms={rooms}
+      roomsLoading={roomsLoading || roomsRefreshing}
+      onRefresh={refresh}
+    >
+      <section className="aeds-dashboard aeds-v6-dashboard">
+        <OperationalPulse
+          summary={summary}
+          housekeeping={housekeeping}
+          restaurant={restaurant}
+          tasks={tasks}
+        />
 
-          <DashboardHeader
-            company={company}
-            userName={userName}
-            loading={loading}
-            refreshing={refreshing}
-            onRefresh={refresh}
-            onNewReservation={() => navigate(`${PATHS.RESERVATIONS}?tab=new`)}
-          />
+        <div className="grid min-w-0 gap-4 xl:grid-cols-12">
+          <div className="xl:col-span-7">
+            <RevenueChart loading={loading} data={revenueTrend} summary={summary} />
+          </div>
+
+          <div className="xl:col-span-5">
+            <OccupancyChart
+              loading={loading}
+              data={occupancyTrend}
+              summary={summary}
+              housekeeping={housekeeping}
+            />
+          </div>
         </div>
 
-        <div className="text-xs font-bold text-slate-500" aria-live="polite">
-          {isLive ? 'Live' : 'Manual'} ·{' '}
-          {lastUpdated
-            ? `Updated ${lastUpdated.toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' })}`
-            : 'Waiting for data'}
-        </div>
-      </div>
+        <div className="grid min-w-0 gap-4 xl:grid-cols-12">
+          <div className="xl:col-span-7">
+            <ArrivalsDeparturesWidget
+              loading={loading}
+              summary={summary}
+              onViewAll={() => navigate(PATHS.RESERVATIONS)}
+            />
+          </div>
 
-      {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-          {error}
-        </div>
-      )}
-
-      <KPIGrid loading={loading} data={summary} />
-
-      <OperationalPulse
-        summary={summary}
-        housekeeping={housekeeping}
-        restaurant={restaurant}
-        tasks={tasks}
-      />
-
-      <div className="grid min-w-0 gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-7">
-          <RevenueChart loading={loading} data={revenueTrend} summary={summary} />
+          <div className="xl:col-span-5">
+            <NotificationsWidget
+              loading={notificationsLoading || loading}
+              error={notificationsError}
+              data={notifications?.length ? notifications : activities}
+              onViewAll={() => navigate(PATHS.TASKS || '/tasks')}
+            />
+          </div>
         </div>
 
-        <div className="xl:col-span-5">
-          <OccupancyChart
-            loading={loading}
-            data={occupancyTrend}
-            summary={summary}
-            housekeeping={housekeeping}
-          />
-        </div>
-      </div>
+        <div className="aeds-v6-quick-links">
+          <div className="aeds-v6-quick-links-title">
+            <span>Quick actions</span>
+            <small>Frequently used operations</small>
+          </div>
 
-      <div className="grid min-w-0 gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-7">
-          <ArrivalsDeparturesWidget
-            loading={loading}
-            summary={summary}
-            onViewAll={() => navigate(PATHS.RESERVATIONS)}
-          />
+          <div className="aeds-v6-quick-links-list">
+            {quickLinks.map(({ label, icon: Icon, path }) => (
+              <button key={label} type="button" onClick={() => navigate(path)}>
+                <Icon size={15} />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-
-        <div className="xl:col-span-5">
-          <NotificationsWidget
-            loading={notificationsLoading || loading}
-            error={notificationsError}
-            data={notifications?.length ? notifications : activities}
-            onViewAll={() => navigate(PATHS.TASKS || '/tasks')}
-          />
-        </div>
-      </div>
-
-      <div className="aeds-v6-quick-links">
-        <div className="aeds-v6-quick-links-title">
-          <span>Quick actions</span>
-          <small>Frequently used operations</small>
-        </div>
-
-        <div className="aeds-v6-quick-links-list">
-          {quickLinks.map(({ label, icon: Icon, path }) => (
-            <button key={label} type="button" onClick={() => navigate(path)}>
-              <Icon size={15} />
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </section>
+      </section>
+    </ExecutiveCommandCenter>
   )
 }
