@@ -3,8 +3,7 @@ import { DASHBOARD_DEFAULT_DATA } from '../types/dashboard.types'
 
 const RPC_TIMEOUT_MS = 6000
 const missingRpcCache = new Set()
-const dashboardRpcEnabled =
-  !import.meta.env.DEV || import.meta.env.VITE_ENABLE_DASHBOARD_RPC === 'true'
+const dashboardRpcEnabled = import.meta.env.VITE_ENABLE_DASHBOARD_RPC !== 'false'
 
 function safeArray(value) {
   return Array.isArray(value) ? value : []

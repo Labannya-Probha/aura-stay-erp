@@ -5,9 +5,15 @@
   background: var(--tenant-shell-bg);
   color: var(--tenant-text);
   font-family: var(--aeds-font-body);
-  --aeds-sidebar-width: 184px;
+  --aeds-sidebar-width: 220px;
   --aeds-gold-text: #412402;
   font-variant-numeric: lining-nums tabular-nums;
+}
+
+@media (max-width: 1280px) {
+  .aeds-theme-root {
+    --aeds-sidebar-width: 208px;
+  }
 }
 
 .app-shell {
