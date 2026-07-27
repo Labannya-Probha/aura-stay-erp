@@ -97,6 +97,11 @@
   font-weight: 700;
 }
 
+.erp-print-numeric {
+  font-family: var(--aeds-font-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
 .erp-audit-strip {
   display: flex;
   justify-content: space-between;

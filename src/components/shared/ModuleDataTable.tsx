@@ -82,7 +82,7 @@ export default function ModuleDataTable<T extends Record<string, any>>({
               {columns.map((col) => (
                 <TableCell
                   key={String(col.key)}
-                  className={`px-5 py-4 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : ''}`}
+                  className={`px-5 py-4 ${col.align === 'right' ? 'text-right font-mono tabular-nums' : col.align === 'center' ? 'text-center' : ''}`}
                 >
                   {col.render ? col.render(row) : (row[col.key as keyof T] ?? '-')}
                 </TableCell>

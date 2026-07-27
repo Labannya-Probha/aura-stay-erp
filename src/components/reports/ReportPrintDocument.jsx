@@ -18,11 +18,17 @@ const filterLabels = {
   currency: 'Currency',
 }
 
+function isNumericType(column = {}) {
+  return ['currency', 'percent', 'date'].includes(column.type)
+}
+
 function formatValue(value, column) {
-  if (column.type === 'currency') return fmtBDT(value)
-  if (column.type === 'date') return fmtDate(value)
-  if (column.type === 'percent') return `${Number(value || 0).toFixed(2)}%`
-  if (column.type === 'status') return <span className={`erp-status-pill ${statusTone(value)}`}>{value ?? '-'}</span>
+  if (column.type === 'currency') return <span className="erp-print-numeric">{fmtBDT(value)}</span>
+  if (column.type === 'date') return <span className="erp-print-numeric">{fmtDate(value)}</span>
+  if (column.type === 'percent')
+    return <span className="erp-print-numeric">{`${Number(value || 0).toFixed(2)}%`}</span>
+  if (column.type === 'status')
+    return <span className={`erp-status-pill ${statusTone(value)}`}>{value ?? '-'}</span>
   return value ?? ''
 }
 
@@ -37,14 +43,18 @@ function statusTone(value) {
 
 function printTotals(columns, rows) {
   return columns.reduce((acc, column) => {
-    if (column.total) acc[column.key] = rows.reduce((sum, row) => sum + Number(row[column.key] || 0), 0)
+    if (column.total)
+      acc[column.key] = rows.reduce((sum, row) => sum + Number(row[column.key] || 0), 0)
     return acc
   }, {})
 }
 
 export default function ReportPrintDocument({ company, report, filters, rows, generatedBy }) {
   const totals = printTotals(report.columns, rows)
-  const totalColumnWidth = report.columns.reduce((sum, column) => sum + Number(column?.width || 120), 0)
+  const totalColumnWidth = report.columns.reduce(
+    (sum, column) => sum + Number(column?.width || 120),
+    0,
+  )
   const visibleFilters = Object.entries(filters).filter(([key, value]) => {
     if (!value) return false
     if (key === 'dateFrom' || key === 'dateTo') return false
@@ -54,11 +64,18 @@ export default function ReportPrintDocument({ company, report, filters, rows, ge
 
   return (
     <div className="enterprise-print-doc">
-      <EnterpriseReportHeader company={company} report={report} filters={filters} generatedBy={generatedBy} />
+      <EnterpriseReportHeader
+        company={company}
+        report={report}
+        filters={filters}
+        generatedBy={generatedBy}
+      />
       {visibleFilters.length > 0 && (
         <div className="erp-print-filter-summary">
           {visibleFilters.map(([key, value]) => (
-            <span key={key}>{filterLabels[key] || key}: <b>{value}</b></span>
+            <span key={key}>
+              {filterLabels[key] || key}: <b>{value}</b>
+            </span>
           ))}
         </div>
       )}
@@ -70,7 +87,9 @@ export default function ReportPrintDocument({ company, report, filters, rows, ge
                 key={column.key}
                 style={{
                   textAlign: column.align || 'left',
-                  width: totalColumnWidth ? `${((Number(column?.width || 120) / totalColumnWidth) * 100).toFixed(2)}%` : undefined,
+                  width: totalColumnWidth
+                    ? `${((Number(column?.width || 120) / totalColumnWidth) * 100).toFixed(2)}%`
+                    : undefined,
                 }}
               >
                 {column.label}
@@ -82,7 +101,20 @@ export default function ReportPrintDocument({ company, report, filters, rows, ge
           {rows.map((row, index) => (
             <tr key={`${row.documentNo || row.slNo}-${index}`}>
               {report.columns.map((column) => (
-                <td key={column.key} style={{ textAlign: column.align || 'left' }}>
+                <td
+                  key={column.key}
+                  style={{
+                    textAlign: column.align || 'left',
+                    fontFamily:
+                      column.align === 'right' || isNumericType(column)
+                        ? 'var(--aeds-font-mono)'
+                        : undefined,
+                    fontVariantNumeric:
+                      column.align === 'right' || isNumericType(column)
+                        ? 'tabular-nums lining-nums'
+                        : undefined,
+                  }}
+                >
                   {formatValue(row[column.key], column)}
                 </td>
               ))}
@@ -92,8 +124,25 @@ export default function ReportPrintDocument({ company, report, filters, rows, ge
         <tfoot>
           <tr>
             {report.columns.map((column, index) => (
-              <td key={column.key} style={{ textAlign: column.align || 'left' }}>
-                {index === 0 ? 'Grand Total' : column.total ? formatValue(totals[column.key], column) : ''}
+              <td
+                key={column.key}
+                style={{
+                  textAlign: column.align || 'left',
+                  fontFamily:
+                    column.align === 'right' || isNumericType(column)
+                      ? 'var(--aeds-font-mono)'
+                      : undefined,
+                  fontVariantNumeric:
+                    column.align === 'right' || isNumericType(column)
+                      ? 'tabular-nums lining-nums'
+                      : undefined,
+                }}
+              >
+                {index === 0
+                  ? 'Grand Total'
+                  : column.total
+                    ? formatValue(totals[column.key], column)
+                    : ''}
               </td>
             ))}
           </tr>

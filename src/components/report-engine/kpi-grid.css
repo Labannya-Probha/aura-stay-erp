@@ -16,7 +16,7 @@
 }
 
 .kpi-grid__period {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--aeds-font-mono);
 }
 
 .kpi-grid__empty {
@@ -49,11 +49,12 @@
 }
 
 .kpi-card__value {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--aeds-font-mono);
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--tenant-primary, #1b4d2e);
   margin: 0;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .kpi-grid__footnote {

@@ -22,18 +22,46 @@ const alignClass = {
 }
 
 const comparisonColumns = [
-  { key: 'currentPeriod', label: 'Current Period', type: 'currency', align: 'right', width: 160, total: true },
-  { key: 'previousPeriod', label: 'Previous Period', type: 'currency', align: 'right', width: 160, total: true },
+  {
+    key: 'currentPeriod',
+    label: 'Current Period',
+    type: 'currency',
+    align: 'right',
+    width: 160,
+    total: true,
+  },
+  {
+    key: 'previousPeriod',
+    label: 'Previous Period',
+    type: 'currency',
+    align: 'right',
+    width: 160,
+    total: true,
+  },
   { key: 'variance', label: 'Variance', type: 'currency', align: 'right', width: 140, total: true },
-  { key: 'variancePercent', label: 'Variance %', type: 'percent', align: 'right', width: 120, total: false },
+  {
+    key: 'variancePercent',
+    label: 'Variance %',
+    type: 'percent',
+    align: 'right',
+    width: 120,
+    total: false,
+  },
 ]
 
 const metricKeyPriority = ['balance', 'netAmount', 'grossAmount', 'credit', 'debit']
 
+function isNumericColumn(column = {}) {
+  return ['currency', 'percent', 'number', 'date'].includes(column.type)
+}
+
 const amountFormatter = (value, currency = 'BDT') => {
   const safeValue = Number(value || 0)
   const absoluteValue = Math.abs(safeValue)
-  const formatted = absoluteValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const formatted = absoluteValue.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
   return safeValue < 0 ? `(${currency} ${formatted})` : `${currency} ${formatted}`
 }
 
@@ -46,24 +74,32 @@ function percentFormatter(value) {
 
 function statusTone(value) {
   const text = String(value || '').toLowerCase()
-  if (/cancel|dirty|void|failed|overdue/.test(text)) return 'border-rose-200 bg-rose-50 text-rose-700'
+  if (/cancel|dirty|void|failed|overdue/.test(text))
+    return 'border-rose-200 bg-rose-50 text-rose-700'
   if (/pending|inspect|hold|draft/.test(text)) return 'border-amber-200 bg-amber-50 text-amber-700'
-  if (/complete|checked|bill|posted|transfer/.test(text)) return 'border-sky-200 bg-sky-50 text-sky-700'
-  if (/clean|settled|confirm|approve|balanced|open/.test(text)) return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+  if (/complete|checked|bill|posted|transfer/.test(text))
+    return 'border-sky-200 bg-sky-50 text-sky-700'
+  if (/clean|settled|confirm|approve|balanced|open/.test(text))
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700'
   return 'border-slate-200 bg-slate-50 text-slate-700'
 }
 
 function compareValues(a, b, direction) {
   const av = a ?? ''
   const bv = b ?? ''
-  const result = typeof av === 'number' && typeof bv === 'number'
-    ? av - bv
-    : String(av).localeCompare(String(bv), undefined, { numeric: true })
+  const result =
+    typeof av === 'number' && typeof bv === 'number'
+      ? av - bv
+      : String(av).localeCompare(String(bv), undefined, { numeric: true })
   return direction === 'asc' ? result : -result
 }
 
 function inferMetricKey(columns = []) {
-  return metricKeyPriority.find((key) => columns.some((column) => column.key === key)) || columns.find((column) => column.total)?.key || columns[0]?.key
+  return (
+    metricKeyPriority.find((key) => columns.some((column) => column.key === key)) ||
+    columns.find((column) => column.total)?.key ||
+    columns[0]?.key
+  )
 }
 
 function buildRowKey(row, fallbackIndex) {
@@ -77,14 +113,26 @@ function buildRowKey(row, fallbackIndex) {
     row.guestName,
     row.roomNo,
     fallbackIndex,
-  ].filter(Boolean).join('|')
+  ]
+    .filter(Boolean)
+    .join('|')
 }
 
 function formatValue(value, column, currency) {
-  if (column.type === 'currency') return amountFormatter(value, currency)
-  if (column.type === 'date') return fmtDate(value)
-  if (column.type === 'percent') return percentFormatter(value)
-  if (column.type === 'status') return <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${statusTone(value)}`}>{value ?? '—'}</span>
+  if (column.type === 'currency')
+    return <span className="font-mono tabular-nums">{amountFormatter(value, currency)}</span>
+  if (column.type === 'date')
+    return <span className="font-mono tabular-nums">{fmtDate(value)}</span>
+  if (column.type === 'percent')
+    return <span className="font-mono tabular-nums">{percentFormatter(value)}</span>
+  if (column.type === 'status')
+    return (
+      <span
+        className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${statusTone(value)}`}
+      >
+        {value ?? '—'}
+      </span>
+    )
   return value ?? '—'
 }
 
@@ -99,17 +147,23 @@ export function calculateTotals(columns, rows) {
 
 function downloadSelectedRows(report, columns, rows) {
   const header = columns.map((column) => column.label)
-  const body = rows.map((row) => columns.map((column) => {
-    const raw = row[column.key]
-    if (column.type === 'currency') return Number(raw || 0).toFixed(2)
-    if (column.type === 'percent') return `${Number(raw || 0).toFixed(2)}%`
-    return raw ?? ''
-  }))
+  const body = rows.map((row) =>
+    columns.map((column) => {
+      const raw = row[column.key]
+      if (column.type === 'currency') return Number(raw || 0).toFixed(2)
+      if (column.type === 'percent') return `${Number(raw || 0).toFixed(2)}%`
+      return raw ?? ''
+    }),
+  )
   const csv = [header, ...body]
-    .map((line) => line.map((cell) => {
-      const value = String(cell ?? '')
-      return /[",\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value
-    }).join(','))
+    .map((line) =>
+      line
+        .map((cell) => {
+          const value = String(cell ?? '')
+          return /[",\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value
+        })
+        .join(','),
+    )
     .join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
@@ -146,10 +200,17 @@ export default function DynamicReportTable({
   const [freezeFirstColumn, setFreezeFirstColumn] = useState(true)
   const [selectedRowKeys, setSelectedRowKeys] = useState(() => new Set())
   const [columnChooserOpen, setColumnChooserOpen] = useState(false)
-  const [visibleColumnKeys, setVisibleColumnKeys] = useState(() => report.columns.map((column) => column.key))
-  const [columnWidths, setColumnWidths] = useState(() => Object.fromEntries(
-    [...report.columns, ...comparisonColumns].map((column) => [column.key, Number(column.width || 140)])
-  ))
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState(() =>
+    report.columns.map((column) => column.key),
+  )
+  const [columnWidths, setColumnWidths] = useState(() =>
+    Object.fromEntries(
+      [...report.columns, ...comparisonColumns].map((column) => [
+        column.key,
+        Number(column.width || 140),
+      ]),
+    ),
+  )
   const chooserRef = useRef(null)
   const resizeRef = useRef(null)
 
@@ -197,7 +258,10 @@ export default function DynamicReportTable({
   const mergedRows = useMemo(() => {
     const currentMap = new Map(rows.map((row, index) => [buildRowKey(row, index), row]))
     const previousMap = new Map(comparisonRows.map((row, index) => [buildRowKey(row, index), row]))
-    const orderedKeys = [...currentMap.keys(), ...previousMap.keys().filter((key) => !currentMap.has(key))]
+    const orderedKeys = [
+      ...currentMap.keys(),
+      ...previousMap.keys().filter((key) => !currentMap.has(key)),
+    ]
 
     return orderedKeys.map((key, index) => {
       const currentRow = currentMap.get(key)
@@ -206,7 +270,11 @@ export default function DynamicReportTable({
       const currentValue = Number(currentRow?.[metricKey] || 0)
       const previousValue = Number(previousRow?.[metricKey] || 0)
       const variance = currentValue - previousValue
-      const variancePercent = previousValue ? (variance / Math.abs(previousValue)) * 100 : currentValue ? 100 : 0
+      const variancePercent = previousValue
+        ? (variance / Math.abs(previousValue)) * 100
+        : currentValue
+          ? 100
+          : 0
 
       return {
         ...sourceRow,
@@ -221,12 +289,12 @@ export default function DynamicReportTable({
 
   const baseColumns = useMemo(
     () => report.columns.filter((column) => visibleColumnKeys.includes(column.key)),
-    [report.columns, visibleColumnKeys]
+    [report.columns, visibleColumnKeys],
   )
 
   const displayColumns = useMemo(
     () => baseColumns.concat(comparisonEnabled ? comparisonColumns : []),
-    [baseColumns, comparisonEnabled]
+    [baseColumns, comparisonEnabled],
   )
 
   const sortedRows = useMemo(() => {
@@ -235,13 +303,16 @@ export default function DynamicReportTable({
     return sortable
   }, [mergedRows, sort])
 
-  const totals = useMemo(() => calculateTotals(displayColumns, sortedRows), [displayColumns, sortedRows])
+  const totals = useMemo(
+    () => calculateTotals(displayColumns, sortedRows),
+    [displayColumns, sortedRows],
+  )
   const pageSize = density === 'compact' ? 16 : 12
   const pageCount = Math.max(1, Math.ceil(sortedRows.length / pageSize))
   const safePage = Math.min(page, pageCount)
   const pageRows = useMemo(
     () => sortedRows.slice((safePage - 1) * pageSize, safePage * pageSize),
-    [pageSize, safePage, sortedRows]
+    [pageSize, safePage, sortedRows],
   )
 
   const groupedRows = useMemo(() => {
@@ -255,7 +326,8 @@ export default function DynamicReportTable({
   }, [groupBy, pageRows])
 
   const pageRowKeys = pageRows.map((row) => row.__rowKey)
-  const allPageRowsSelected = pageRowKeys.length > 0 && pageRowKeys.every((key) => selectedRowKeys.has(key))
+  const allPageRowsSelected =
+    pageRowKeys.length > 0 && pageRowKeys.every((key) => selectedRowKeys.has(key))
   const firstVisibleColumnKey = displayColumns[0]?.key
 
   const toggleSort = (key) => {
@@ -266,11 +338,13 @@ export default function DynamicReportTable({
   }
 
   const toggleColumn = (key) => {
-    setVisibleColumnKeys((current) => (
+    setVisibleColumnKeys((current) =>
       current.includes(key)
         ? current.filter((columnKey) => columnKey !== key)
-        : report.columns.filter((column) => current.includes(column.key) || column.key === key).map((column) => column.key)
-    ))
+        : report.columns
+            .filter((column) => current.includes(column.key) || column.key === key)
+            .map((column) => column.key),
+    )
   }
 
   const toggleSelectAllPage = () => {
@@ -304,12 +378,15 @@ export default function DynamicReportTable({
     }
   }
 
-  const groupingOptions = useMemo(() => [
-    { value: 'none', label: 'No Grouping' },
-    ...report.columns
-      .filter((column) => ['text', 'code', 'status'].includes(column.type))
-      .map((column) => ({ value: column.key, label: column.label })),
-  ], [report.columns])
+  const groupingOptions = useMemo(
+    () => [
+      { value: 'none', label: 'No Grouping' },
+      ...report.columns
+        .filter((column) => ['text', 'code', 'status'].includes(column.type))
+        .map((column) => ({ value: column.key, label: column.label })),
+    ],
+    [report.columns],
+  )
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -318,9 +395,15 @@ export default function DynamicReportTable({
           <div className="flex flex-wrap items-center gap-2">
             <label className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm text-slate-700">
               <Rows3 className="size-4 text-slate-500" />
-              <select value={groupBy} onChange={(event) => setGroupBy(event.target.value)} className="bg-transparent outline-none">
+              <select
+                value={groupBy}
+                onChange={(event) => setGroupBy(event.target.value)}
+                className="bg-transparent outline-none"
+              >
                 {groupingOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
                 ))}
               </select>
             </label>
@@ -346,7 +429,9 @@ export default function DynamicReportTable({
               type="button"
               onClick={() => setFreezeFirstColumn((current) => !current)}
               className={`inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-medium transition ${
-                freezeFirstColumn ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'
+                freezeFirstColumn
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-200 bg-white text-slate-700'
               }`}
             >
               <TableProperties className="size-4" />
@@ -368,7 +453,10 @@ export default function DynamicReportTable({
                 <div className="absolute left-0 top-12 z-40 w-64 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
                   <div className="grid gap-2">
                     {report.columns.map((column) => (
-                      <label key={column.key} className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                      <label
+                        key={column.key}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      >
                         <input
                           type="checkbox"
                           checked={visibleColumnKeys.includes(column.key)}
@@ -408,7 +496,9 @@ export default function DynamicReportTable({
               type="button"
               onClick={onToggleBookmark}
               className={`inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-medium transition ${
-                bookmarked ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                bookmarked
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
               }`}
             >
               <Bookmark className="size-4" />
@@ -463,9 +553,15 @@ export default function DynamicReportTable({
                     className={`${alignClass[column.align] || 'text-left'} border-b border-slate-200 bg-white px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 ${isSticky ? 'sticky z-20 shadow-[8px_0_16px_-16px_rgba(15,23,42,0.35)]' : ''}`}
                   >
                     <div className="group relative flex items-center gap-2">
-                      <button type="button" onClick={() => toggleSort(column.key)} className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort(column.key)}
+                        className="flex items-center gap-2"
+                      >
                         <span>{column.label}</span>
-                        <ChevronDown className={`size-4 transition ${sort.key === column.key && sort.direction === 'asc' ? 'rotate-180 text-slate-900' : 'text-slate-400'}`} />
+                        <ChevronDown
+                          className={`size-4 transition ${sort.key === column.key && sort.direction === 'asc' ? 'rotate-180 text-slate-900' : 'text-slate-400'}`}
+                        />
                       </button>
                       <button
                         type="button"
@@ -485,14 +581,19 @@ export default function DynamicReportTable({
               <Fragment key={groupName}>
                 {groupBy !== 'none' ? (
                   <tr className="bg-slate-50">
-                    <td colSpan={displayColumns.length + 1} className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
+                    <td
+                      colSpan={displayColumns.length + 1}
+                      className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
+                    >
                       {groupName}
                     </td>
                   </tr>
                 ) : null}
                 {groupRows.map((row) => (
                   <tr key={row.__rowKey} className="odd:bg-white even:bg-slate-50/50">
-                    <td className={`sticky left-0 z-10 border-b border-slate-100 bg-inherit px-4 ${density === 'compact' ? 'py-2' : 'py-3'}`}>
+                    <td
+                      className={`sticky left-0 z-10 border-b border-slate-100 bg-inherit px-4 ${density === 'compact' ? 'py-2' : 'py-3'}`}
+                    >
                       <input
                         type="checkbox"
                         checked={selectedRowKeys.has(row.__rowKey)}
@@ -505,8 +606,12 @@ export default function DynamicReportTable({
                       return (
                         <td
                           key={column.key}
-                          style={{ width: columnWidths[column.key] || column.width || 140, minWidth: columnWidths[column.key] || column.width || 140, left: isSticky ? 48 : undefined }}
-                          className={`${alignClass[column.align] || 'text-left'} border-b border-slate-100 px-4 text-slate-700 ${density === 'compact' ? 'py-2' : 'py-3'} ${isSticky ? 'sticky z-10 bg-inherit shadow-[8px_0_16px_-16px_rgba(15,23,42,0.35)]' : ''}`}
+                          style={{
+                            width: columnWidths[column.key] || column.width || 140,
+                            minWidth: columnWidths[column.key] || column.width || 140,
+                            left: isSticky ? 48 : undefined,
+                          }}
+                          className={`${alignClass[column.align] || 'text-left'} ${column.align === 'right' || isNumericColumn(column) ? 'font-mono tabular-nums' : ''} border-b border-slate-100 px-4 text-slate-700 ${density === 'compact' ? 'py-2' : 'py-3'} ${isSticky ? 'sticky z-10 bg-inherit shadow-[8px_0_16px_-16px_rgba(15,23,42,0.35)]' : ''}`}
                         >
                           {formatValue(row[column.key], column, currency)}
                         </td>
@@ -519,7 +624,10 @@ export default function DynamicReportTable({
 
             {!pageRows.length ? (
               <tr>
-                <td colSpan={displayColumns.length + 1} className="px-4 py-12 text-center text-sm text-slate-500">
+                <td
+                  colSpan={displayColumns.length + 1}
+                  className="px-4 py-12 text-center text-sm text-slate-500"
+                >
                   No report rows match the current filters.
                 </td>
               </tr>
@@ -533,10 +641,19 @@ export default function DynamicReportTable({
               {displayColumns.map((column, index) => (
                 <td
                   key={column.key}
-                  style={{ width: columnWidths[column.key] || column.width || 140, minWidth: columnWidths[column.key] || column.width || 140, left: freezeFirstColumn && column.key === firstVisibleColumnKey ? 48 : undefined }}
-                  className={`${alignClass[column.align] || 'text-left'} border-t border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 ${freezeFirstColumn && column.key === firstVisibleColumnKey ? 'sticky z-10 bg-slate-50 shadow-[8px_0_16px_-16px_rgba(15,23,42,0.35)]' : ''}`}
+                  style={{
+                    width: columnWidths[column.key] || column.width || 140,
+                    minWidth: columnWidths[column.key] || column.width || 140,
+                    left:
+                      freezeFirstColumn && column.key === firstVisibleColumnKey ? 48 : undefined,
+                  }}
+                  className={`${alignClass[column.align] || 'text-left'} ${column.align === 'right' || isNumericColumn(column) ? 'font-mono tabular-nums' : ''} border-t border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 ${freezeFirstColumn && column.key === firstVisibleColumnKey ? 'sticky z-10 bg-slate-50 shadow-[8px_0_16px_-16px_rgba(15,23,42,0.35)]' : ''}`}
                 >
-                  {index === 0 && !column.total ? 'Grand Total' : column.total ? formatValue(totals[column.key], column, currency) : '—'}
+                  {index === 0 && !column.total
+                    ? 'Grand Total'
+                    : column.total
+                      ? formatValue(totals[column.key], column, currency)
+                      : '—'}
                 </td>
               ))}
             </tr>
@@ -559,7 +676,9 @@ export default function DynamicReportTable({
           >
             <ChevronLeft className="size-4" />
           </button>
-          <span className="min-w-24 text-center text-sm font-medium text-slate-700">Page {safePage} of {pageCount}</span>
+          <span className="min-w-24 text-center text-sm font-medium text-slate-700">
+            Page {safePage} of {pageCount}
+          </span>
           <button
             type="button"
             onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
