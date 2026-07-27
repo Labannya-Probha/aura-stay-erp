@@ -44,16 +44,18 @@ export function LoadingState({
       role="status"
       aria-live="polite"
       className={cn(
-        'rounded-xl border border-border/70 bg-card text-card-foreground',
+        'rounded-2xl border border-border/60 bg-card/80 text-card-foreground shadow-sm backdrop-blur',
         isFullscreen
-          ? 'fixed inset-0 z-50 flex min-h-screen items-center justify-center rounded-none border-0 bg-background/95 p-6'
-          : 'flex min-h-[180px] items-center justify-center p-8',
+          ? 'fixed inset-0 z-50 flex min-h-screen items-center justify-center rounded-none border-0 bg-background/85 p-6'
+          : 'flex min-h-[160px] items-center justify-center p-6',
         className,
       )}
     >
-      <div className="flex max-w-md flex-col items-center gap-3 text-center">
-        <Loader2 className="size-7 animate-spin text-muted-foreground" aria-hidden="true" />
-        <p className="text-sm font-medium text-foreground">{label}</p>
+      <div className="flex max-w-md flex-col items-center gap-2.5 text-center">
+        <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-2">
+          <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden="true" />
+          <p className="text-sm font-semibold text-foreground">{label}</p>
+        </div>
         {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
       </div>
     </section>

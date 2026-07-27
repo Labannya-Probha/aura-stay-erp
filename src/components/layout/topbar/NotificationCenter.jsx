@@ -21,7 +21,14 @@ export default function NotificationCenter() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+        className="relative flex h-9 w-9 items-center justify-center rounded-xl border transition"
+        style={{
+          borderColor: 'color-mix(in srgb, var(--tenant-border) 88%, transparent)',
+          background:
+            'linear-gradient(180deg, color-mix(in srgb, var(--tenant-surface) 95%, white), var(--tenant-surface))',
+          color: 'var(--tenant-text-muted)',
+          boxShadow: '0 8px 18px rgb(15 23 42 / 0.06)',
+        }}
         aria-label="Open notification center"
       >
         <Bell size={17} />

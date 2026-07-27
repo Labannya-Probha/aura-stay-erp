@@ -2,7 +2,6 @@ import { RefreshCw, TrendingDown, TrendingUp, ShieldCheck } from 'lucide-react'
 
 import { Button } from 'src/components/ui/button'
 import { EmptyState } from 'src/components/feedback/EmptyState'
-import { LoadingState } from 'src/components/feedback/LoadingState'
 import { cn } from 'src/lib/utils'
 import { useComparativeSeries } from 'src/hooks/useComparativeSeries'
 
@@ -149,12 +148,40 @@ export default function ExecutiveCommandCenter({
 
   if (loading && !metrics.some((item) => item.current)) {
     return (
-      <LoadingState
-        variant="container"
-        label="Loading executive command center"
-        description="Syncing live KPI, room and revenue feeds."
-        className={className}
-      />
+      <section className={cn('w-full space-y-4', className)}>
+        <div className="w-full overflow-hidden rounded-[32px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(248,245,238,0.94))] p-5 shadow-sm sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="h-3 w-24 animate-pulse rounded-full bg-slate-200" />
+              <div className="mt-3 h-8 w-56 animate-pulse rounded-2xl bg-slate-200" />
+              <div className="mt-2 h-3 w-72 animate-pulse rounded-full bg-slate-200/80" />
+            </div>
+            <div className="h-9 w-24 animate-pulse rounded-full bg-slate-200" />
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="rounded-[24px] border border-slate-200/70 bg-white/70 p-4"
+              >
+                <div className="h-3 w-20 animate-pulse rounded-full bg-slate-200" />
+                <div className="mt-3 h-7 w-24 animate-pulse rounded-xl bg-slate-200" />
+                <div className="mt-3 h-3 w-28 animate-pulse rounded-full bg-slate-200/80" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid w-full gap-4 xl:grid-cols-12">
+          <div className="xl:col-span-7">
+            <div className="h-72 w-full animate-pulse rounded-[24px] border border-slate-200/70 bg-white/70" />
+          </div>
+          <div className="xl:col-span-5">
+            <div className="h-72 w-full animate-pulse rounded-[24px] border border-slate-200/70 bg-white/70" />
+          </div>
+        </div>
+      </section>
     )
   }
 

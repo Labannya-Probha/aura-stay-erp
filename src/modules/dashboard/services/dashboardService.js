@@ -1,9 +1,18 @@
 import { supabase } from '../../../lib/supabase'
 import { DASHBOARD_DEFAULT_DATA } from '../types/dashboard.types'
 
-const RPC_TIMEOUT_MS = 6000
+const RPC_TIMEOUT_MS = 2500
 const missingRpcCache = new Set()
 const dashboardRpcEnabled = import.meta.env.VITE_ENABLE_DASHBOARD_RPC !== 'false'
+
+export function withTimeoutFallback(promise, fallback, timeoutMs = RPC_TIMEOUT_MS) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => {
+      globalThis.setTimeout(() => resolve(fallback), timeoutMs)
+    }),
+  ])
+}
 
 function safeArray(value) {
   return Array.isArray(value) ? value : []
@@ -36,15 +45,11 @@ async function rpcJson(name, fallback, tenantId) {
   if (missingRpcCache.has(name)) return fallback
 
   const withTimeout = (promise) =>
-    Promise.race([
+    withTimeoutFallback(
       promise,
-      new Promise((resolve) => {
-        window.setTimeout(
-          () => resolve({ data: fallback, error: { message: `RPC timeout: ${name}` } }),
-          RPC_TIMEOUT_MS,
-        )
-      }),
-    ])
+      { data: fallback, error: { message: `RPC timeout: ${name}` } },
+      RPC_TIMEOUT_MS,
+    )
 
   const args = tenantId ? { p_tenant_id: tenantId } : undefined
   let result = await withTimeout(supabase.rpc(name, args))
@@ -76,15 +81,11 @@ async function rpcJsonWithMeta(name, fallback, tenantId) {
   if (missingRpcCache.has(name)) return { data: fallback, missingRpc: true }
 
   const withTimeout = (promise) =>
-    Promise.race([
+    withTimeoutFallback(
       promise,
-      new Promise((resolve) => {
-        window.setTimeout(
-          () => resolve({ data: fallback, error: { message: `RPC timeout: ${name}` } }),
-          RPC_TIMEOUT_MS,
-        )
-      }),
-    ])
+      { data: fallback, error: { message: `RPC timeout: ${name}` } },
+      RPC_TIMEOUT_MS,
+    )
 
   const args = tenantId ? { p_tenant_id: tenantId } : undefined
   let result = await withTimeout(supabase.rpc(name, args))
@@ -135,9 +136,8 @@ export async function getDashboardData({ tenantId } = {}) {
     return DASHBOARD_DEFAULT_DATA
   }
 
-  const results = await Promise.allSettled(
-    calls.slice(1).map(([name, fallback]) => rpcJson(name, fallback, tenantId)),
-  )
+  const remainingCalls = calls.slice(1).map(([name, fallback]) => rpcJson(name, fallback, tenantId))
+  const results = await Promise.allSettled(remainingCalls)
 
   const value = (index, fallback) => {
     if (index === 0) return summary.data
