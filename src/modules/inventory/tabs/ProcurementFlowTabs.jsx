@@ -19,7 +19,7 @@ import { Input } from '../../../components/ui/input.jsx'
 import ModuleStatusPill from 'src/components/shared/ModuleStatusPill'
 
 const selectClass =
-  'h-9 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
+  'h-[38px] w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
 
 const INVENTORY_STATUS_TONES = {
   PENDING: 'warning',

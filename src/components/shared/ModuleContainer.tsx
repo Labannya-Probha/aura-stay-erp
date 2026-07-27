@@ -17,6 +17,7 @@ type ModuleContainerProps = {
   kpis?: ReactNode
   filterBar?: ReactNode
   tabs?: ReactNode
+  showTabs?: boolean
   loading?: boolean
   empty?: boolean
   emptyTitle?: string
@@ -39,6 +40,7 @@ export default function ModuleContainer({
   kpis,
   filterBar,
   tabs,
+  showTabs = false,
   loading = false,
   empty = false,
   emptyTitle = 'No data found',
@@ -73,7 +75,7 @@ export default function ModuleContainer({
 
           {kpis ? <div>{kpis}</div> : null}
           {filterBar ? <div>{filterBar}</div> : null}
-          {tabs ? <div>{tabs}</div> : null}
+          {showTabs && tabs ? <div>{tabs}</div> : null}
 
           {error ? (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">

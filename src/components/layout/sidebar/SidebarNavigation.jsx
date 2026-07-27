@@ -29,6 +29,8 @@ import {
   getVisibleReservationTabs,
   resolveReservationTab,
 } from '../../../modules/reservations/reservations.config'
+import { RESTAURANT_TABS } from '../../../modules/restaurant/restaurant.config'
+import { INVENTORY_TABS } from '../../../modules/inventory/inventory.config'
 import {
   isUiDebugEnabled,
   recordPermissionHidden,
@@ -415,20 +417,15 @@ function buildFrontOfficeChildren({ role, isAdmin, privileges, location }) {
 }
 
 function buildPosChildren(location) {
-  return [
-    {
-      id: 'restaurant',
-      label: 'Restaurant',
-      path: PATHS.RESTAURANT || PATHS.POS || '/restaurant',
-      active: isRestaurantRoute(location.pathname),
-    },
-    {
-      id: 'pos-print-center',
-      label: 'POS Print Center',
-      path: PATHS.POS_PRINT_CENTER || '/pos/print-center',
-      active: location.pathname.startsWith('/pos/print-center'),
-    },
-  ]
+  const requestedTab = getSearchParam(location, 'tab')
+  const activeTab = RESTAURANT_TABS.some((tab) => tab.id === requestedTab) ? requestedTab : 'pos'
+
+  return RESTAURANT_TABS.map((tab) => ({
+    id: `pos-${tab.id}`,
+    label: tab.label,
+    path: `${PATHS.RESTAURANT || PATHS.POS || '/restaurant'}?tab=${tab.id}`,
+    active: isRestaurantRoute(location.pathname) && activeTab === tab.id,
+  }))
 }
 
 function buildAccountingChildren({ role, isAdmin, location }) {
@@ -583,14 +580,14 @@ function buildNestedChildren(id, context) {
       return buildPosChildren(context.location)
 
     case 'inventory':
-      return [
-        {
-          id: 'inventory',
-          label: 'Inventory',
-          path: PATHS.INVENTORY || '/inventory',
-          active: getTopSegment(context.location.pathname) === 'inventory',
-        },
-      ]
+      return INVENTORY_TABS.map((tab) => ({
+        id: `inventory-${tab.id}`,
+        label: tab.label,
+        path: `${PATHS.INVENTORY || '/inventory'}?tab=${tab.id}`,
+        active:
+          getTopSegment(context.location.pathname) === 'inventory' &&
+          (getSearchParam(context.location, 'tab') || 'stock') === tab.id,
+      }))
 
     case 'accounting':
       return buildAccountingChildren(context)

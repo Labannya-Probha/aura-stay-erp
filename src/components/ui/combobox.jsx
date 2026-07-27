@@ -159,7 +159,7 @@ function Combobox({
           }}
           onKeyDown={handleKeyDown}
           className={cn(
-            'flex h-10 w-full items-center rounded-xl border border-slate-200 bg-white px-9 pr-10 text-sm text-slate-900 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60',
+            'flex h-[38px] w-full items-center rounded-xl border border-slate-200 bg-white px-9 pr-10 text-sm text-slate-900 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60',
             open && 'ring-2 ring-emerald-500/30',
             triggerClassName,
           )}
