@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Boxes, RefreshCw } from 'lucide-react'
 
 import Breadcrumb from 'src/components/layout/Breadcrumb'
-import ModuleTabs from '../../components/layout/ModuleTabs'
 import KpiStrip from '../../components/layout/KpiStrip'
 import { Button } from '../../components/ui/button'
 import ModuleLayout from 'src/components/shared/ModuleLayout'
@@ -187,7 +186,6 @@ export default function InventoryPage({ userName, role, isAdmin }) {
         </Button>
       }
       kpis={<KpiStrip items={kpiItems} />}
-      tabs={<ModuleTabs tabs={INVENTORY_TABS} activeTab={activeTab} onChange={setActiveTab} />}
     >
       <div
         id={`module-tab-panel-${activeTab}`}

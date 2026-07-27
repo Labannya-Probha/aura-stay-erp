@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import { Utensils } from 'lucide-react'
 import { isModuleEnabled } from 'src/lib/saasModules'
 import Breadcrumb from 'src/components/layout/Breadcrumb'
-import ModuleTabs from 'src/components/layout/ModuleTabs'
 import ModuleLayout from 'src/components/shared/ModuleLayout'
 import PosOrdersTab from './tabs/PosOrdersTab'
 import TableViewTab from './tabs/TableViewTab'
@@ -15,7 +14,7 @@ export default function RestaurantPage({ userName, isAdmin, role, modulesEnabled
   const canManageMenu =
     isModuleEnabled('menu-management', modulesEnabled, role) &&
     (isAdmin || role === 'SUPERUSER' || role === 'RESTAURANT')
-  const { activeTab, tabs, setTab } = useRestaurantTabs({ canManageMenu })
+  const { activeTab } = useRestaurantTabs({ canManageMenu })
 
   const tabContent = useMemo(() => {
     if (activeTab === 'tables') return <TableViewTab />
@@ -37,7 +36,6 @@ export default function RestaurantPage({ userName, isAdmin, role, modulesEnabled
       breadcrumb={
         <Breadcrumb items={[{ label: 'Modules' }, { label: 'Restaurant', current: true }]} />
       }
-      tabs={<ModuleTabs tabs={tabs} activeTab={activeTab} onChange={setTab} />}
     >
       <section
         id={`module-tab-panel-${activeTab}`}

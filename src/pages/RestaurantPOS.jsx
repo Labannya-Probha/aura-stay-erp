@@ -44,7 +44,6 @@ import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
 import { LegacyButton } from '../components/ui/legacy-controls'
 import SearchableSelect from '../components/SearchableSelect.jsx'
 
-const TABS = ['Orders', 'Menu', 'Day Close']
 const PAYMENT_METHODS = ['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER']
 const RESTAURANT_WORKFLOW = ['ACCEPTED', 'READY', 'SERVED']
 const POS_ACTIVE_STATUSES = ['DRAFT', 'OPEN', 'ACCEPTED', 'READY', 'SERVED']
@@ -163,7 +162,6 @@ const buildOrderTotals = ({ cart, cats, rate, discountScope, discountType, disco
 export default function RestaurantPOS({ userName, isAdmin, role }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const [tab, setTab] = useState('Orders')
   const [taxConfig, setTaxConfig] = useState([])
   const [company, setCompany] = useState(null)
   const [cats, setCats] = useState([])
@@ -202,14 +200,12 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
     setEditOrder({ order, items: oi || [] })
     setDraftSeed(null)
     setShowOrderBuilder(true)
-    setTab('Orders')
   }, [])
 
   const startNewOrder = useCallback((seed = null) => {
     setEditOrder(null)
     setDraftSeed(seed)
     setShowOrderBuilder(true)
-    setTab('Orders')
   }, [])
 
   const openTable = useCallback(
@@ -237,7 +233,6 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
     setShowOrderBuilder(false)
     setTableRefreshKey((value) => value + 1)
     if (doc) setPrintDoc(doc)
-    setTab('Orders')
   }
 
   useEffect(() => {
@@ -264,25 +259,7 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
           {msg}
         </div>
       )}
-      <div className="aeds-v6-tab-strip">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => {
-              setTab(t)
-              if (t !== 'Orders') {
-                setEditOrder(null)
-                setDraftSeed(null)
-                setShowOrderBuilder(false)
-              }
-            }}
-            className={tab === t ? 'aeds-v6-tab-active' : ''}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-      {tab === 'Orders' && showOrderBuilder && (
+      {showOrderBuilder && (
         <div className="mb-3">
           <LegacyButton
             variant="ghost"
@@ -297,7 +274,7 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
           </LegacyButton>
         </div>
       )}
-      {tab === 'Orders' && showOrderBuilder && (
+      {showOrderBuilder && (
         <OrderBuilder
           key={editOrder?.order?.id || draftSeed?.table_no || 'new'}
           cats={cats}
@@ -311,7 +288,7 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
           onDone={finishOrderFlow}
         />
       )}
-      {tab === 'Orders' && !showOrderBuilder && (
+      {!showOrderBuilder && (
         <div className="space-y-4">
           <RestaurantTableGrid
             refreshKey={tableRefreshKey}
@@ -328,12 +305,6 @@ export default function RestaurantPOS({ userName, isAdmin, role }) {
             onOrdersChanged={() => setTableRefreshKey((value) => value + 1)}
           />
         </div>
-      )}
-      {tab === 'Menu' && (
-        <MenuManager cats={cats} items={items} reload={loadMenu} isAdmin={isAdmin} />
-      )}
-      {tab === 'Day Close' && (
-        <DayClose flash={flash} isAdmin={isAdmin} userName={userName} role={role} />
       )}
       {printDoc?.type === 'RECEIPT' && printDoc?.phase !== 'RESORT' && (
         <PrintPortal

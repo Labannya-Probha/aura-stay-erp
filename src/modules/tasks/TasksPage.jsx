@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import PageHeader from '../../components/layout/PageHeader'
-import KpiStrip   from '../../components/layout/KpiStrip'
-import ModuleTabs  from '../../components/layout/ModuleTabs'
-import { TASK_TABS } from './tasks.config'
+import KpiStrip from '../../components/layout/KpiStrip'
 import { useTaskTabs } from './hooks/useTaskTabs'
-import MyTasksTab  from './tabs/MyTasksTab'
+import MyTasksTab from './tabs/MyTasksTab'
 import AllTasksTab from './tabs/AllTasksTab'
 import AiTaskerTab from './tabs/AiTaskerTab'
 import { ListChecks, Clock, CheckCircle2 } from 'lucide-react'
@@ -16,13 +14,19 @@ function useTaskKpi(userName) {
     let cancelled = false
     const load = async () => {
       const queries = [
-        supabase.from('tasks').select('id', { count: 'exact', head: true }).in('status', ['OPEN', 'IN_PROGRESS']),
+        supabase
+          .from('tasks')
+          .select('id', { count: 'exact', head: true })
+          .in('status', ['OPEN', 'IN_PROGRESS']),
         supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'DONE'),
       ]
       if (userName) {
         queries.push(
-          supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .in('status', ['OPEN', 'IN_PROGRESS']).eq('created_by', userName)
+          supabase
+            .from('tasks')
+            .select('id', { count: 'exact', head: true })
+            .in('status', ['OPEN', 'IN_PROGRESS'])
+            .eq('created_by', userName),
         )
       }
       const results = await Promise.all(queries)
@@ -33,19 +37,21 @@ function useTaskKpi(userName) {
       setKpi({ open, mine, done })
     }
     load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [userName])
   return kpi
 }
 
 export default function TasksPage({ userName, role, isAdmin }) {
-  const { tab, setTab } = useTaskTabs()
+  const { tab } = useTaskTabs()
   const kpi = useTaskKpi(userName)
 
   const kpiItems = [
     { label: 'Open / In Progress', value: kpi.open ?? '—', icon: Clock },
-    { label: 'Created by Me',      value: kpi.mine ?? '—', icon: ListChecks },
-    { label: 'Completed',          value: kpi.done ?? '—', icon: CheckCircle2 },
+    { label: 'Created by Me', value: kpi.mine ?? '—', icon: ListChecks },
+    { label: 'Completed', value: kpi.done ?? '—', icon: CheckCircle2 },
   ]
 
   return (
@@ -55,19 +61,12 @@ export default function TasksPage({ userName, role, isAdmin }) {
         subtitle="Track, assign and route tasks across all departments."
         breadcrumb={[{ label: 'Tasks', current: true }]}
         kpiStrip={<KpiStrip items={kpiItems} />}
-        tabs={
-          <ModuleTabs
-            tabs={TASK_TABS}
-            activeTab={tab}
-            onChange={setTab}
-          />
-        }
       />
 
       <div role="tabpanel" id={`module-tab-panel-${tab}`} aria-labelledby={`module-tab-${tab}`}>
-        {tab === 'my'  && <MyTasksTab  userName={userName} role={role} isAdmin={isAdmin} />}
+        {tab === 'my' && <MyTasksTab userName={userName} role={role} isAdmin={isAdmin} />}
         {tab === 'all' && <AllTasksTab userName={userName} role={role} isAdmin={isAdmin} />}
-        {tab === 'ai'  && <AiTaskerTab userName={userName} role={role} isAdmin={isAdmin} />}
+        {tab === 'ai' && <AiTaskerTab userName={userName} role={role} isAdmin={isAdmin} />}
       </div>
     </div>
   )

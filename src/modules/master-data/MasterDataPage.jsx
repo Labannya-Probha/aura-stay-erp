@@ -1,9 +1,7 @@
 import { useMemo } from 'react'
 import PageHeader from '../../components/layout/PageHeader'
 import Breadcrumb from '../../components/layout/Breadcrumb'
-import ModuleTabs from '../../components/layout/ModuleTabs'
 import { useMasterDataTabs } from './hooks/useMasterDataTabs'
-import { MASTER_DATA_TABS } from './masterData.config'
 import CompaniesTab from './tabs/CompaniesTab.jsx'
 import RoomsTab from './tabs/RoomsTab.jsx'
 import GuestsTab from './tabs/GuestsTab.jsx'
@@ -17,7 +15,7 @@ import ReservationPoliciesTab from './tabs/ReservationPoliciesTab.jsx'
 import AgenciesShareholdersTab from './tabs/AgenciesShareholdersTab.jsx'
 
 export default function MasterDataPage({ role, isAdmin }) {
-  const { activeTab, setActiveTab } = useMasterDataTabs()
+  const { activeTab } = useMasterDataTabs()
 
   const tabContent = useMemo(() => {
     const shared = { role, isAdmin }
@@ -41,11 +39,16 @@ export default function MasterDataPage({ role, isAdmin }) {
       <PageHeader
         title="Master Data"
         subtitle="Manage operational records used across reservations, front office, restaurant, inventory, and accounting."
-        breadcrumb={<Breadcrumb items={[{ label: 'Modules' }, { label: 'Master Data', current: true }]} />}
-        tabs={<ModuleTabs tabs={MASTER_DATA_TABS} activeTab={activeTab} onChange={setActiveTab} />}
+        breadcrumb={
+          <Breadcrumb items={[{ label: 'Modules' }, { label: 'Master Data', current: true }]} />
+        }
       />
 
-      <section id={`module-tab-panel-${activeTab}`} role="tabpanel" aria-labelledby={`module-tab-${activeTab}`}>
+      <section
+        id={`module-tab-panel-${activeTab}`}
+        role="tabpanel"
+        aria-labelledby={`module-tab-${activeTab}`}
+      >
         {tabContent}
       </section>
     </div>
