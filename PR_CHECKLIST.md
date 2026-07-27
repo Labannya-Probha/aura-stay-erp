@@ -62,6 +62,14 @@ CREATE INDEX IF NOT EXISTS idx_reservations_discount_pct
 
 ## 🧪 Testing Checklist
 
+### Phase 4 UI Governance Gates
+
+- [ ] Module pages use shared `LoadingState` instead of inline loading text or ad-hoc skeletons.
+- [ ] Empty or no-data views use shared `EmptyState` with a meaningful title and description.
+- [ ] Route-level module roots are wrapped in `ModuleErrorBoundary`.
+- [ ] Dense tables keep keyboard navigation and ARIA behavior intact.
+- [ ] New UI work reuses shared primitives instead of introducing one-off loading/empty placeholders.
+
 ### Discount Policy
 
 - [ ] Open a reservation → Overview tab → "Set Discount Policy" button visible

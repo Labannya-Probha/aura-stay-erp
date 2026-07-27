@@ -16,6 +16,8 @@ import {
 } from '../lib/helpers'
 import { canManualCheckIn, getCheckInActionCopy } from '../lib/noShowAutomation'
 import PrintPortal from '../components/PrintPortal.jsx'
+import LoadingState from '../components/feedback/LoadingState'
+import EmptyState from '../components/feedback/EmptyState'
 import RegistrationCard from '../components/print/RegistrationCard.jsx'
 import GuestBill from '../components/print/GuestBill.jsx'
 import Mushak63 from '../components/print/Mushak63.jsx'
@@ -70,6 +72,7 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
     addons,
     taxConfig,
     company,
+    loading,
     loadAll,
     totals,
     paid,
@@ -90,7 +93,16 @@ export default function ReservationDetail({ id, back, userName, isAdmin }) {
     await loadAll()
   }
 
-  if (!res) return <div className="text-pine/50">Loading…</div>
+  if (loading) return <LoadingState variant="fullscreen" label="Loading reservation" />
+  if (!res) {
+    return (
+      <EmptyState
+        variant="fullscreen"
+        title="Reservation not found"
+        description="The reservation could not be loaded. Check the route or try reloading the page."
+      />
+    )
+  }
 
   const flash = (m) => {
     setMsg(m)
