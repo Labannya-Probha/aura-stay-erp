@@ -12,7 +12,7 @@
   gap: 16px;
   padding: 22px 24px;
   border-bottom: 1px solid #e5ece7;
-  background: linear-gradient(135deg, rgba(247,244,236,.9), rgba(255,255,255,.9));
+  background: linear-gradient(135deg, rgba(247, 244, 236, 0.9), rgba(255, 255, 255, 0.9));
 }
 
 .aeds-report-engine-header h2 {
@@ -33,7 +33,7 @@
 .aeds-report-eyebrow {
   text-transform: uppercase;
   color: #2e7d32 !important;
-  letter-spacing: .12em;
+  letter-spacing: 0.12em;
   font-size: 11px !important;
 }
 
@@ -135,7 +135,7 @@
   position: absolute;
   right: 0;
   top: 52px;
-  z-index: 30;
+  z-index: var(--layer-popover, 40);
   width: 260px;
   max-height: 360px;
   overflow: auto;
@@ -143,7 +143,7 @@
   background: white;
   border: 1px solid #dbe4dd;
   border-radius: 18px;
-  box-shadow: 0 24px 80px rgba(15, 23, 42, .18);
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
 }
 
 .aeds-column-toggle {
@@ -181,13 +181,13 @@
 .aeds-report-table thead th {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: var(--layer-sticky-header, 20);
   background: #f7f4ec;
   color: #1b4d2e;
   border-bottom: 1px solid #d0d8d2;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   padding: 0;
 }
 
@@ -225,7 +225,7 @@
   width: 9px;
   height: 24px;
   cursor: col-resize;
-  border-right: 2px solid rgba(27, 77, 46, .18);
+  border-right: 2px solid rgba(27, 77, 46, 0.18);
 }
 
 .aeds-report-cell,
@@ -244,14 +244,14 @@
 
 .aeds-frozen-head,
 .aeds-frozen-cell {
-  position: sticky !important;
+  position: sticky;
   left: 0;
-  z-index: 12 !important;
+  z-index: var(--layer-sticky-column, 24);
   box-shadow: 1px 0 0 #e5ece7;
 }
 
 .aeds-frozen-cell {
-  z-index: 8 !important;
+  z-index: calc(var(--layer-sticky-column, 24) - 1);
 }
 
 .aeds-align-right {
@@ -280,6 +280,7 @@
 .aeds-group-row td {
   position: sticky;
   left: 0;
+  z-index: var(--layer-sticky-group, 22);
   background: #ecfdf3;
   color: #1b4d2e;
   font-weight: 950;
@@ -301,17 +302,17 @@
 .aeds-report-table tfoot td {
   position: sticky;
   bottom: 0;
-  z-index: 15;
+  z-index: var(--layer-sticky-footer, 26);
   background: #f1f5f9;
   font-weight: 950;
   border-top: 1px solid #dbe4dd;
 }
 
 .aeds-empty-cell {
-  padding: 42px !important;
+  padding: 42px;
   text-align: center;
-  color: #94a3b8 !important;
-  font-weight: 800 !important;
+  color: #94a3b8;
+  font-weight: 800;
 }
 
 .aeds-load-more {

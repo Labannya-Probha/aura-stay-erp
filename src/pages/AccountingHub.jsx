@@ -1,12 +1,25 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getTenantId, withTenantInsert } from '../lib/tenant'
 import { getCompanySettingsQuery, getPrintBrandProps } from '../lib/companySettings'
 import { fmtBDT, fmtDate, todayISO } from '../lib/helpers'
 import {
-  Calculator, Plus, Trash2, Scale, Building2, Printer, Pencil,
-  Lock, BookOpen, AlertCircle, CheckCircle2, X, ArrowRight, Save, Search,
+  Calculator,
+  Plus,
+  Trash2,
+  Scale,
+  Building2,
+  Printer,
+  Pencil,
+  Lock,
+  BookOpen,
+  AlertCircle,
+  CheckCircle2,
+  X,
+  ArrowRight,
+  Save,
+  Search,
 } from 'lucide-react'
 import PrintPortal from '../components/PrintPortal.jsx'
 import VoucherDoc from '../components/print/VoucherDoc.jsx'
@@ -14,6 +27,8 @@ import VendorPaymentTab from '../components/VendorPaymentTab.jsx'
 import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
 import { Button } from '../components/ui/button.jsx'
 import { Input } from '../components/ui/input.jsx'
+import SearchableSelect from '../components/SearchableSelect.jsx'
+import { cn } from '../lib/utils'
 import '../styles/aeds-v6-workspaces.css'
 import PaymentTransactionsView from '../components/payments/PaymentTransactionsView.jsx'
 import { PAYMENT_SCOPES } from '../components/payments/paymentScope.js'
@@ -23,14 +38,21 @@ import { PAYMENT_SCOPES } from '../components/payments/paymentScope.js'
 /*  Matches chart_of_accounts code = '300100' (Retained Earnings)       */
 /* ------------------------------------------------------------------ */
 const RE_CODE = '300100'
-const selectClass = 'h-9 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
+const VOUCHER_TYPE_OPTIONS = [
+  { value: 'JV', label: 'JV - Journal Voucher' },
+  { value: 'DEBIT', label: 'DEBIT - Debit Voucher' },
+  { value: 'CREDIT', label: 'CREDIT - Credit Voucher' },
+  { value: 'CONTRA', label: 'CONTRA - Contra Voucher' },
+]
+
+const ACCOUNT_TYPE_OPTIONS = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'].map((type) => ({
+  value: type,
+  label: type,
+}))
 
 async function fetchActiveAccounts(context = 'loadAccounts') {
   const tenantId = getTenantId()
-  let q = supabase
-    .from('chart_of_accounts')
-    .select('*')
-    .eq('is_active', true)
+  let q = supabase.from('chart_of_accounts').select('*').eq('is_active', true)
   if (tenantId) q = q.eq('tenant_id', tenantId)
   const { data, error } = await q.order('code')
   if (error) {
@@ -60,11 +82,14 @@ export default function AccountingHub({ userName, isAdmin, role }) {
   ]
 
   const initialTab = TABS.includes(urlTab) ? urlTab : 'Journal Vouchers'
-  const [tab, setTab]         = useState(initialTab)
+  const [tab, setTab] = useState(initialTab)
   const [accounts, setAccounts] = useState([])
   const [company, setCompany] = useState(null)
-  const [msg, setMsg]         = useState('')
-  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
+  const [msg, setMsg] = useState('')
+  const flash = (m) => {
+    setMsg(m)
+    setTimeout(() => setMsg(''), 5000)
+  }
 
   const loadAccounts = async () => {
     setAccounts(await fetchActiveAccounts('AccountingHub loadAccounts'))
@@ -72,7 +97,9 @@ export default function AccountingHub({ userName, isAdmin, role }) {
 
   useEffect(() => {
     loadAccounts()
-    getCompanySettingsQuery('*').limit(1).single()
+    getCompanySettingsQuery('*')
+      .limit(1)
+      .single()
       .then(({ data }) => setCompany(data))
   }, [])
 
@@ -97,7 +124,9 @@ export default function AccountingHub({ userName, isAdmin, role }) {
         <span className="aeds-core-badge">Live finance workspace</span>
       </div>
       {msg && (
-        <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>
+        <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">
+          {msg}
+        </div>
       )}
       <div className="aeds-v6-tab-strip">
         {TABS.map((t) => (
@@ -117,13 +146,19 @@ export default function AccountingHub({ userName, isAdmin, role }) {
       </div>
 
       {tab === 'Journal Vouchers' && (
-        <JournalsTab accounts={accounts} userName={userName} flash={flash} company={company} isAdmin={isAdmin} />
+        <JournalsTab
+          accounts={accounts}
+          userName={userName}
+          flash={flash}
+          company={company}
+          isAdmin={isAdmin}
+        />
       )}
-      {tab === 'Trial Balance'    && <TrialBalance />}
+      {tab === 'Trial Balance' && <TrialBalance />}
       {tab === 'Chart of Accounts' && (
         <CoaTab accounts={accounts} reload={loadAccounts} flash={flash} isAdmin={isAdmin} />
       )}
-      {tab === 'Fixed Assets'     && (
+      {tab === 'Fixed Assets' && (
         <AssetsTab accounts={accounts} userName={userName} flash={flash} />
       )}
       {tab === 'Opening Balance' && isAdmin && (
@@ -133,7 +168,9 @@ export default function AccountingHub({ userName, isAdmin, role }) {
         <TransactionMappingTab accounts={accounts} flash={flash} userName={userName} />
       )}
       {tab === 'Vendor Payments' && <VendorPaymentTab role={role} />}
-      {tab === 'Payment Transactions' && <PaymentTransactionsView scope={PAYMENT_SCOPES.ACCOUNTING} />}
+      {tab === 'Payment Transactions' && (
+        <PaymentTransactionsView scope={PAYMENT_SCOPES.ACCOUNTING} />
+      )}
     </div>
   )
 }
@@ -142,14 +179,14 @@ export default function AccountingHub({ userName, isAdmin, role }) {
 /*  OPENING BALANCE TAB                                                 */
 /* ================================================================== */
 function OpeningBalanceTab({ accounts, userName, flash }) {
-  const [obDate, setObDate]   = useState(todayISO())
+  const [obDate, setObDate] = useState(todayISO())
   const [narration, setNarration] = useState('Opening balances as at commencement of accounting')
-  const [lines, setLines]     = useState([
+  const [lines, setLines] = useState([
     { account_id: '', debit: '', credit: '', line_note: '' },
     { account_id: '', debit: '', credit: '', line_note: '' },
   ])
   const [postedList, setPostedList] = useState([])
-  const [busy, setBusy]       = useState(false)
+  const [busy, setBusy] = useState(false)
   const [confirmPost, setConfirmPost] = useState(false)
 
   // Retained Earnings account id for the offsetting line
@@ -165,51 +202,60 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
     setPostedList(data || [])
   }, [])
 
-  useEffect(() => { loadPosted() }, [loadPosted])
+  useEffect(() => {
+    loadPosted()
+  }, [loadPosted])
 
   /* ---------- form helpers ---------- */
   const upd = (i, k, v) => {
     const n = [...lines]
     // Enforce mutual exclusivity: if entering debit, clear credit & vice versa
-    if (k === 'debit'  && v) n[i] = { ...n[i], debit: v,  credit: '' }
+    if (k === 'debit' && v) n[i] = { ...n[i], debit: v, credit: '' }
     else if (k === 'credit' && v) n[i] = { ...n[i], credit: v, debit: '' }
     else n[i] = { ...n[i], [k]: v }
     setLines(n)
   }
   const addLine = () =>
     setLines([...lines, { account_id: '', debit: '', credit: '', line_note: '' }])
-  const delLine = (i) =>
-    setLines(lines.length > 1 ? lines.filter((_, idx) => idx !== i) : lines)
+  const delLine = (i) => setLines(lines.length > 1 ? lines.filter((_, idx) => idx !== i) : lines)
 
   // Filter out RE account from user-selectable list (it's the auto-offset)
   const selectableAccounts = accounts.filter((a) => a.code !== RE_CODE)
+  const selectableAccountOptions = selectableAccounts.map((account) => ({
+    value: account.id,
+    label: `${account.code} · ${account.name}`,
+    sublabel: account.type,
+  }))
 
   // Valid lines only (has account + at least one amount)
   const validLines = lines.filter((l) => l.account_id && (+l.debit || +l.credit))
 
-  const totDr  = validLines.reduce((s, l) => s + (+l.debit  || 0), 0)
-  const totCr  = validLines.reduce((s, l) => s + (+l.credit || 0), 0)
-  const netDiff = +(totDr - totCr).toFixed(2)   // positive → needs offsetting CR, negative → needs DR
+  const totDr = validLines.reduce((s, l) => s + (+l.debit || 0), 0)
+  const totCr = validLines.reduce((s, l) => s + (+l.credit || 0), 0)
+  const netDiff = +(totDr - totCr).toFixed(2) // positive → needs offsetting CR, negative → needs DR
 
   // The auto-generated RE offset line
-  const reOffsetLine = netDiff !== 0
-    ? {
-        account_id: reAccount?.id,
-        debit:  netDiff < 0 ? Math.abs(netDiff) : 0,
-        credit: netDiff > 0 ? netDiff : 0,
-        line_note: 'Auto-offset to Retained Earnings',
-      }
-    : null
+  const reOffsetLine =
+    netDiff !== 0
+      ? {
+          account_id: reAccount?.id,
+          debit: netDiff < 0 ? Math.abs(netDiff) : 0,
+          credit: netDiff > 0 ? netDiff : 0,
+          line_note: 'Auto-offset to Retained Earnings',
+        }
+      : null
 
-  const totalDrWithOffset = totDr  + (reOffsetLine?.debit  || 0)
-  const totalCrWithOffset = totCr  + (reOffsetLine?.credit || 0)
+  const totalDrWithOffset = totDr + (reOffsetLine?.debit || 0)
+  const totalCrWithOffset = totCr + (reOffsetLine?.credit || 0)
   const balanced = validLines.length >= 1 && Math.abs(totalDrWithOffset - totalCrWithOffset) < 0.01
 
   /* ---------- post ---------- */
   const postOB = async () => {
     if (!balanced || validLines.length === 0) return
     if (!reAccount && netDiff !== 0) {
-      flash(`Retained Earnings account (${RE_CODE}) not found in chart of accounts. Please add it first.`)
+      flash(
+        `Retained Earnings account (${RE_CODE}) not found in chart of accounts. Please add it first.`,
+      )
       return
     }
     setBusy(true)
@@ -230,13 +276,13 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
       const { data: jv, error: jvErr } = await supabase
         .from('journal_entries')
         .insert({
-          jv_no:      jvNo,
-          jv_date:    obDate,
-          ob_date:    obDate,
+          jv_no: jvNo,
+          jv_date: obDate,
+          ob_date: obDate,
           narration,
-          source:     'OPENING_BALANCE',
-          posted_by:  userName,
-          is_locked:  true,
+          source: 'OPENING_BALANCE',
+          posted_by: userName,
+          is_locked: true,
         })
         .select()
         .single()
@@ -245,20 +291,22 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
       // Build lines array incl. RE offset
       const allLines = [
         ...validLines.map((l) => ({
-          entry_id:   jv.id,
+          entry_id: jv.id,
           account_id: l.account_id,
-          debit:      +l.debit  || 0,
-          credit:     +l.credit || 0,
-          line_note:  l.line_note || null,
+          debit: +l.debit || 0,
+          credit: +l.credit || 0,
+          line_note: l.line_note || null,
         })),
         ...(reOffsetLine
-          ? [{
-              entry_id:   jv.id,
-              account_id: reOffsetLine.account_id,
-              debit:      reOffsetLine.debit,
-              credit:     reOffsetLine.credit,
-              line_note:  reOffsetLine.line_note,
-            }]
+          ? [
+              {
+                entry_id: jv.id,
+                account_id: reOffsetLine.account_id,
+                debit: reOffsetLine.debit,
+                credit: reOffsetLine.credit,
+                line_note: reOffsetLine.line_note,
+              },
+            ]
           : []),
       ]
 
@@ -281,7 +329,7 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
 
   /* ---------- render ---------- */
   return (
-    <div className="space-y-5">      
+    <div className="space-y-5">
       {/* ── Entry form ── */}
       <div className="card p-5 space-y-4">
         <h3 className="font-display font-semibold text-pine flex items-center gap-2">
@@ -291,19 +339,14 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
         {/* Header row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="label">As at date <span className="text-red-500">*</span></label>
-            <Input
-              type="date"
-              value={obDate}
-              onChange={(e) => setObDate(e.target.value)}
-            />
+            <label className="label">
+              As at date <span className="text-red-500">*</span>
+            </label>
+            <Input type="date" value={obDate} onChange={(e) => setObDate(e.target.value)} />
           </div>
           <div className="sm:col-span-2">
             <label className="label">Narration</label>
-            <Input
-              value={narration}
-              onChange={(e) => setNarration(e.target.value)}
-            />
+            <Input value={narration} onChange={(e) => setNarration(e.target.value)} />
           </div>
         </div>
 
@@ -319,18 +362,14 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
 
           {lines.map((l, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-center">
-              <select
-                className={`${selectClass} col-span-5 text-sm`}
+              <SearchableSelect
+                className="col-span-5"
                 value={l.account_id}
-                onChange={(e) => upd(i, 'account_id', e.target.value)}
-              >
-                <option value="">Select account…</option>
-                {selectableAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.code} · {a.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => upd(i, 'account_id', value)}
+                options={selectableAccountOptions}
+                placeholder="Select account…"
+                searchPlaceholder="Search account code or name…"
+              />
               <Input
                 type="number"
                 min="0"
@@ -354,9 +393,9 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
                 onChange={(e) => upd(i, 'line_note', e.target.value)}
               />
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon-xs"
-                className="col-span-1 text-red-300 hover:text-red-600"
+                className="col-span-1 text-red-600 hover:text-red-700"
                 onClick={() => delLine(i)}
                 title="Remove line"
               >
@@ -371,7 +410,9 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
               <div className="col-span-5 flex items-center gap-2 text-sm text-pine/70 pl-1">
                 <Lock size={12} className="text-amber-500 shrink-0" />
                 <span className="font-medium truncate">{RE_CODE} · Retained Earnings</span>
-                <span className="text-[10px] bg-amber-100 text-amber-700 rounded px-1 shrink-0">auto-offset</span>
+                <span className="text-[10px] bg-amber-100 text-amber-700 rounded px-1 shrink-0">
+                  auto-offset
+                </span>
               </div>
               <div className="col-span-2 money text-right text-sm font-medium text-pine/70">
                 {reOffsetLine.debit > 0 ? fmtBDT(reOffsetLine.debit) : '—'}
@@ -379,14 +420,16 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
               <div className="col-span-2 money text-right text-sm font-medium text-pine/70">
                 {reOffsetLine.credit > 0 ? fmtBDT(reOffsetLine.credit) : '—'}
               </div>
-              <div className="col-span-3 text-xs text-pine/40 italic">Auto-offset to Retained Earnings</div>
+              <div className="col-span-3 text-xs text-pine/40 italic">
+                Auto-offset to Retained Earnings
+              </div>
             </div>
           )}
         </div>
 
         {/* Add line + totals row */}
         <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-t border-leaf">
-          <Button variant="ghost" size="sm" className="text-sm" onClick={addLine}>
+          <Button variant="outline" size="sm" className="text-sm" onClick={addLine}>
             <Plus size={14} /> Add account line
           </Button>
 
@@ -402,9 +445,7 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
                 <CheckCircle2 size={15} /> Balanced
               </span>
             ) : (
-              <span className="text-red-500">
-                ✗ Diff: {fmtBDT(Math.abs(netDiff))}
-              </span>
+              <span className="text-red-500">✗ Diff: {fmtBDT(Math.abs(netDiff))}</span>
             )}
           </div>
         </div>
@@ -412,6 +453,7 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
         {/* Confirm + Post */}
         {!confirmPost ? (
           <Button
+            variant="default"
             disabled={!balanced || validLines.length === 0 || busy}
             onClick={() => setConfirmPost(true)}
           >
@@ -423,14 +465,10 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
             <span className="text-sm text-amber-800 font-medium flex-1">
               This will be permanently locked. Are you sure?
             </span>
-            <Button
-              className="bg-amber-600 hover:bg-amber-700"
-              disabled={busy}
-              onClick={postOB}
-            >
+            <Button className="bg-amber-600 hover:bg-amber-700" disabled={busy} onClick={postOB}>
               <Lock size={14} /> {busy ? 'Posting…' : 'Yes, Post & Lock'}
             </Button>
-            <Button variant="ghost" onClick={() => setConfirmPost(false)}>
+            <Button variant="outline" onClick={() => setConfirmPost(false)}>
               Cancel
             </Button>
           </div>
@@ -443,7 +481,7 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
         data={postedList.map((entry) => {
           const totalDebit = (entry.journal_lines || []).reduce(
             (sum, line) => sum + Number(line.debit || 0),
-            0
+            0,
           )
           const accountNames = (entry.journal_lines || [])
             .map((line) => line.chart_of_accounts?.name)
@@ -461,7 +499,13 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
           { accessorKey: 'jv_no', header: 'Voucher No', width: 160 },
           { accessorKey: 'entry_date', header: 'As at Date', type: 'date', width: 140 },
           { accessorKey: 'narration', header: 'Narration', width: 300 },
-          { accessorKey: 'total_debit', header: 'Total Debit', type: 'currency', aggregation: 'sum', width: 160 },
+          {
+            accessorKey: 'total_debit',
+            header: 'Total Debit',
+            type: 'currency',
+            aggregation: 'sum',
+            width: 160,
+          },
           { accessorKey: 'accounts_summary', header: 'Accounts', width: 320 },
           { accessorKey: 'lock_status', header: 'Status', type: 'status', width: 120 },
         ]}
@@ -469,6 +513,92 @@ function OpeningBalanceTab({ accounts, userName, flash }) {
         emptyText="No opening balance entries posted yet."
         getRowId={(row) => row.id}
       />
+    </div>
+  )
+}
+
+function DirectAccountSearchBox({
+  value,
+  onChange,
+  options = [],
+  placeholder = 'Account…',
+  searchPlaceholder = 'Search account code or name...',
+  className = '',
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const rootRef = useRef(null)
+
+  const selectedOption = options.find((option) => option.value === value) || null
+  const displayValue = open ? query : selectedOption?.label || ''
+
+  const filteredOptions = options.filter((option) => {
+    if (!query.trim()) return true
+    const haystack =
+      `${option.label || ''} ${option.sublabel || ''} ${option.value || ''}`.toLowerCase()
+    return haystack.includes(query.toLowerCase())
+  })
+
+  useEffect(() => {
+    if (open) return
+    setQuery(selectedOption?.label || '')
+  }, [open, selectedOption])
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (rootRef.current && !rootRef.current.contains(event.target)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [])
+
+  return (
+    <div ref={rootRef} className={cn('relative', className)}>
+      <Input
+        value={displayValue}
+        placeholder={placeholder}
+        onFocus={() => setOpen(true)}
+        onChange={(event) => {
+          setQuery(event.target.value)
+          if (!open) setOpen(true)
+        }}
+        aria-autocomplete="list"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      />
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+          <div className="max-h-64 overflow-y-auto p-1">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={cn(
+                    'w-full rounded-lg px-3 py-2 text-left transition hover:bg-slate-50',
+                    option.value === value && 'bg-emerald-50 text-emerald-900',
+                  )}
+                  onMouseDown={(event) => {
+                    event.preventDefault()
+                    onChange(option.value)
+                    setQuery(option.label || '')
+                    setOpen(false)
+                  }}
+                >
+                  <div className="text-sm font-medium text-slate-900">{option.label}</div>
+                  {option.sublabel ? (
+                    <div className="text-xs text-slate-500">{option.sublabel}</div>
+                  ) : null}
+                </button>
+              ))
+            ) : (
+              <div className="px-3 py-6 text-center text-sm text-slate-500">No matches.</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -492,31 +622,44 @@ const voucherNoForType = (no = '', type = 'JOURNAL') => {
 }
 
 function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
-  const [rows, setRows]       = useState([])
+  const [rows, setRows] = useState([])
   const [head, setHead] = useState({ jv_date: todayISO(), narration: '', voucher_type: 'JV' })
-  const [lines, setLines]     = useState([
+  const [lines, setLines] = useState([
     { account_id: '', debit: '', credit: '', line_note: '' },
     { account_id: '', debit: '', credit: '', line_note: '' },
   ])
   const [editingId, setEditingId] = useState(null)
-  const [printV, setPrintV]   = useState(null)
+  const [printV, setPrintV] = useState(null)
 
   const load = async () => {
     const { data } = await supabase
       .from('journal_entries')
       .select('*, journal_lines(*, chart_of_accounts(code,name))')
-      .neq('source', 'OPENING_BALANCE')   // OB entries shown in OB tab only
+      .neq('source', 'OPENING_BALANCE') // OB entries shown in OB tab only
       .order('created_at', { ascending: false })
       .limit(60)
     setRows(data || [])
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+  }, [])
 
-  const upd = (i, k, v) => { const n = [...lines]; n[i][k] = v; setLines(n) }
-  const addLine = () => setLines([...lines, { account_id: '', debit: '', credit: '', line_note: '' }])
+  const accountOptions = accounts.map((account) => ({
+    value: account.id,
+    label: `${account.code} · ${account.name}`,
+    sublabel: account.type,
+  }))
+
+  const upd = (i, k, v) => {
+    const n = [...lines]
+    n[i][k] = v
+    setLines(n)
+  }
+  const addLine = () =>
+    setLines([...lines, { account_id: '', debit: '', credit: '', line_note: '' }])
   const delLine = (i) => setLines(lines.length > 2 ? lines.filter((_, idx) => idx !== i) : lines)
-  const totDr   = lines.reduce((a, l) => a + (+l.debit  || 0), 0)
-  const totCr   = lines.reduce((a, l) => a + (+l.credit || 0), 0)
+  const totDr = lines.reduce((a, l) => a + (+l.debit || 0), 0)
+  const totCr = lines.reduce((a, l) => a + (+l.credit || 0), 0)
   const balanced = totDr > 0 && Math.abs(totDr - totCr) < 0.01
 
   const resetForm = () => {
@@ -529,36 +672,55 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
   }
 
   const post = async () => {
-    if (!balanced) { flash('Debit and credit must be equal and non-zero.'); return }
+    if (!balanced) {
+      flash('Debit and credit must be equal and non-zero.')
+      return
+    }
     const valid = lines.filter((l) => l.account_id && (+l.debit || +l.credit))
-    if (valid.length < 2) { flash('A voucher needs at least two valid lines.'); return }
+    if (valid.length < 2) {
+      flash('A voucher needs at least two valid lines.')
+      return
+    }
     try {
       if (editingId) {
         const existing = rows.find((r) => r.id === editingId)
         const updatePayload = {
           jv_date: head.jv_date,
           narration: head.narration,
-          source: head.voucher_type === 'JV' ? 'MANUAL' : `MANUAL_${head.voucher_type}`, 
+          source: head.voucher_type === 'JV' ? 'MANUAL' : `MANUAL_${head.voucher_type}`,
         }
-        if (existing?.jv_no) updatePayload.jv_no = voucherNoForType(existing.jv_no, head.voucher_type)
-        const { error: ue } = await supabase.from('journal_entries')
+        if (existing?.jv_no)
+          updatePayload.jv_no = voucherNoForType(existing.jv_no, head.voucher_type)
+        const { error: ue } = await supabase
+          .from('journal_entries')
           .update(updatePayload)
           .eq('id', editingId)
         if (ue) throw ue
         await supabase.from('journal_lines').delete().eq('entry_id', editingId)
-        const { error: le } = await supabase.from('journal_lines').insert(
-          valid.map((l) => ({ entry_id: editingId, account_id: l.account_id, debit: +l.debit || 0, credit: +l.credit || 0, line_note: l.line_note }))
-        )
+        const { error: le } = await supabase
+          .from('journal_lines')
+          .insert(
+            valid.map((l) => ({
+              entry_id: editingId,
+              account_id: l.account_id,
+              debit: +l.debit || 0,
+              credit: +l.credit || 0,
+              line_note: l.line_note,
+            })),
+          )
         if (le) throw le
         flash('Voucher updated.')
       } else {
         const prefix = VOUCHER_PREFIX[head.voucher_type] || 'JV'
-        const { data: seqData, error: seqErr } = await supabase.rpc('next_tenant_seq', { p_seq_name: 'jv_no_seq' })
+        const { data: seqData, error: seqErr } = await supabase.rpc('next_tenant_seq', {
+          p_seq_name: 'jv_no_seq',
+        })
         const seqNo = seqErr || seqData == null ? rows.length + 1 : Number(seqData)
         const year = new Date(head.jv_date || todayISO()).getFullYear()
         const jvNo = `${prefix}-${year}-${String(seqNo).padStart(4, '0')}`
 
-        const { data: jv, error: je } = await supabase.from('journal_entries')
+        const { data: jv, error: je } = await supabase
+          .from('journal_entries')
           .insert({
             jv_no: jvNo,
             jv_date: head.jv_date,
@@ -566,32 +728,62 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
             source: head.voucher_type === 'JOURNAL' ? 'MANUAL' : `MANUAL_${head.voucher_type}`,
             posted_by: userName,
           })
-          .select().single()
+          .select()
+          .single()
         if (je) throw je
-        const { error: le } = await supabase.from('journal_lines').insert(
-          valid.map((l) => ({ entry_id: jv.id, account_id: l.account_id, debit: +l.debit || 0, credit: +l.credit || 0, line_note: l.line_note }))
-        )
+        const { error: le } = await supabase
+          .from('journal_lines')
+          .insert(
+            valid.map((l) => ({
+              entry_id: jv.id,
+              account_id: l.account_id,
+              debit: +l.debit || 0,
+              credit: +l.credit || 0,
+              line_note: l.line_note,
+            })),
+          )
         if (le) throw le
         flash(`${jv.jv_no} posted.`)
       }
-      resetForm(); load()
-    } catch (e) { flash(e.message) }
+      resetForm()
+      load()
+    } catch (e) {
+      flash(e.message)
+    }
   }
 
   const edit = (r) => {
     setEditingId(r.id)
-    setHead({ jv_date: r.jv_date, narration: r.narration || '', voucher_type: voucherTypeFromNo(r.jv_no || '') })
-    setLines((r.journal_lines || []).map((l) => ({
-      account_id: l.account_id, debit: l.debit || '', credit: l.credit || '', line_note: l.line_note || '',
-    })))
+    setHead({
+      jv_date: r.jv_date,
+      narration: r.narration || '',
+      voucher_type: voucherTypeFromNo(r.jv_no || ''),
+    })
+    setLines(
+      (r.journal_lines || []).map((l) => ({
+        account_id: l.account_id,
+        debit: l.debit || '',
+        credit: l.credit || '',
+        line_note: l.line_note || '',
+      })),
+    )
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const del = async (id) => {
     if (!window.confirm('Delete this voucher permanently? This cannot be undone.')) return
     const { error } = await supabase.from('journal_entries').delete().eq('id', id)
-    if (error) flash(error.message.includes('locked') ? 'This entry is locked and cannot be deleted.' : error.message)
-    else { if (editingId === id) resetForm(); load(); flash('Voucher deleted.') }
+    if (error)
+      flash(
+        error.message.includes('locked')
+          ? 'This entry is locked and cannot be deleted.'
+          : error.message,
+      )
+    else {
+      if (editingId === id) resetForm()
+      load()
+      flash('Voucher deleted.')
+    }
   }
 
   const openVoucher = (r) => {
@@ -608,8 +800,17 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
   return (
     <div className="space-y-4">
       {printV && (
-        <PrintPortal title={`Voucher — ${printV.entry.jv_no}`} onClose={() => setPrintV(null)} {...getPrintBrandProps(company)}>
-          <VoucherDoc entry={printV.entry} lines={printV.lines} company={company} voucherType={printV.voucherType} />
+        <PrintPortal
+          title={`Voucher — ${printV.entry.jv_no}`}
+          onClose={() => setPrintV(null)}
+          {...getPrintBrandProps(company)}
+        >
+          <VoucherDoc
+            entry={printV.entry}
+            lines={printV.lines}
+            company={company}
+            voucherType={printV.voucherType}
+          />
         </PrintPortal>
       )}
 
@@ -619,7 +820,9 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
             {editingId ? 'Edit voucher' : 'New voucher'}
           </h3>
           {editingId && (
-            <Button variant="ghost" size="sm" className="text-sm" onClick={resetForm}>Cancel edit</Button>
+            <Button variant="outline" size="sm" className="text-sm" onClick={resetForm}>
+              Cancel edit
+            </Button>
           )}
         </div>
         <div className="grid grid-cols-5 gap-2">
@@ -628,40 +831,71 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
             value={head.jv_date}
             onChange={(e) => setHead({ ...head, jv_date: e.target.value })}
           />
-          <select
-            className={selectClass}
+          <SearchableSelect
             value={head.voucher_type}
-            onChange={(e) => setHead({ ...head, voucher_type: e.target.value })}
-          >
-            {VOUCHER_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
+            onChange={(value) => setHead({ ...head, voucher_type: value })}
+            options={VOUCHER_TYPE_OPTIONS}
+            placeholder="Voucher type"
+            searchPlaceholder="Search voucher type…"
+          />
           <Input
-            className="col-span-3" placeholder="Narration"
+            className="col-span-3"
+            placeholder="Narration"
             value={head.narration}
             onChange={(e) => setHead({ ...head, narration: e.target.value })}
           />
         </div>
         {lines.map((l, i) => (
           <div key={i} className="grid grid-cols-12 gap-2 items-center">
-            <select
-              className={`${selectClass} col-span-4`} value={l.account_id}
-              onChange={(e) => upd(i, 'account_id', e.target.value)}
+            <DirectAccountSearchBox
+              className="col-span-4"
+              value={l.account_id}
+              onChange={(value) => upd(i, 'account_id', value)}
+              options={accountOptions}
+              placeholder="Account..."
+              searchPlaceholder="Search account code or name..."
+            />
+            <Input
+              type="number"
+              className="col-span-2 money"
+              placeholder="Debit"
+              value={l.debit}
+              onChange={(e) => upd(i, 'debit', e.target.value)}
+            />
+            <Input
+              type="number"
+              className="col-span-2 money"
+              placeholder="Credit"
+              value={l.credit}
+              onChange={(e) => upd(i, 'credit', e.target.value)}
+            />
+            <Input
+              className="col-span-3"
+              placeholder="Note"
+              value={l.line_note}
+              onChange={(e) => upd(i, 'line_note', e.target.value)}
+            />
+            <Button
+              variant="outline"
+              size="icon-xs"
+              className="text-red-600 hover:text-red-700 col-span-1"
+              onClick={() => delLine(i)}
             >
-              <option value="">Account…</option>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}
-            </select>
-            <Input type="number" className="col-span-2 money" placeholder="Debit"  value={l.debit}  onChange={(e) => upd(i, 'debit',  e.target.value)} />
-            <Input type="number" className="col-span-2 money" placeholder="Credit" value={l.credit} onChange={(e) => upd(i, 'credit', e.target.value)} />
-            <Input className="col-span-3" placeholder="Note" value={l.line_note} onChange={(e) => upd(i, 'line_note', e.target.value)} />
-            <Button variant="ghost" size="icon-xs" className="text-red-400 hover:text-red-600 col-span-1" onClick={() => delLine(i)}><Trash2 size={15} /></Button>
+              <Trash2 size={15} />
+            </Button>
           </div>
         ))}
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <Button variant="ghost" size="sm" onClick={addLine}><Plus size={14} /> Add line</Button>
-          <div className={`money font-semibold text-sm ${balanced ? 'text-forest' : 'text-red-600'}`}>
-            Dr {totDr.toFixed(2)} · Cr {totCr.toFixed(2)} {balanced ? '✓ balanced' : '✗ not balanced'}
+          <Button variant="outline" size="sm" onClick={addLine}>
+            <Plus size={14} /> Add line
+          </Button>
+          <div
+            className={`money font-semibold text-sm ${balanced ? 'text-forest' : 'text-red-600'}`}
+          >
+            Dr {totDr.toFixed(2)} · Cr {totCr.toFixed(2)}{' '}
+            {balanced ? '✓ balanced' : '✗ not balanced'}
           </div>
-          <Button disabled={!balanced} onClick={post}>
+          <Button variant="default" disabled={!balanced} onClick={post}>
             <Plus size={15} /> {editingId ? 'Update voucher' : 'Post voucher'}
           </Button>
         </div>
@@ -675,7 +909,7 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
           voucher_type: voucherTypeFromNo(entry.jv_no || ''),
           amount: (entry.journal_lines || []).reduce(
             (sum, line) => sum + Number(line.debit || 0),
-            0
+            0,
           ),
           posting_status: entry.is_locked ? 'LOCKED' : 'POSTED',
         }))}
@@ -684,7 +918,13 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
           { accessorKey: 'jv_date', header: 'Date', type: 'date', width: 130 },
           { accessorKey: 'voucher_type', header: 'Type', type: 'status', width: 120 },
           { accessorKey: 'narration', header: 'Narration', width: 320 },
-          { accessorKey: 'amount', header: 'Amount', type: 'currency', aggregation: 'sum', width: 160 },
+          {
+            accessorKey: 'amount',
+            header: 'Amount',
+            type: 'currency',
+            aggregation: 'sum',
+            width: 160,
+          },
           { accessorKey: 'posting_status', header: 'Status', type: 'status', width: 120 },
           {
             accessorKey: 'actions',
@@ -693,14 +933,39 @@ function JournalsTab({ accounts, userName, flash, company, isAdmin }) {
             width: 220,
             cell: ({ row }) => (
               <div className="flex gap-1 justify-end items-center flex-wrap">
-                <Button variant="ghost" size="sm" title="Print voucher" onClick={(event) => { event.stopPropagation(); openVoucher(row) }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  title="Print voucher"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    openVoucher(row)
+                  }}
+                >
                   <Printer size={13} /> Voucher
                 </Button>
-                <Button variant="ghost" size="sm" title="Edit" onClick={(event) => { event.stopPropagation(); edit(row) }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  title="Edit"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    edit(row)
+                  }}
+                >
                   <Pencil size={13} />
                 </Button>
                 {isAdmin && !row.is_locked && (
-                  <Button variant="ghost" size="sm" className="text-red-600" title="Delete" onClick={(event) => { event.stopPropagation(); del(row.id) }}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700"
+                    title="Delete"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      del(row.id)
+                    }}
+                  >
                     <Trash2 size={13} />
                   </Button>
                 )}
@@ -727,14 +992,20 @@ function TrialBalance() {
       const { data, error } = await supabase.from('journal_lines').select(`
         debit, credit, chart_of_accounts(code, name, type)
       `)
-      if (error) { console.error('TB error:', error); return }
-      if (!data?.length) { setRows([]); return }
+      if (error) {
+        console.error('TB error:', error)
+        return
+      }
+      if (!data?.length) {
+        setRows([])
+        return
+      }
       const summary = data.reduce((acc, l) => {
         const info = l.chart_of_accounts
         if (!info) return acc
         const code = info.code
         if (!acc[code]) acc[code] = { code, name: info.name, type: info.type, dr: 0, cr: 0 }
-        acc[code].dr += Number(l.debit  || 0)
+        acc[code].dr += Number(l.debit || 0)
         acc[code].cr += Number(l.credit || 0)
         return acc
       }, {})
@@ -796,10 +1067,7 @@ function CoaTab({ accounts, reload, flash, isAdmin }) {
     const payload = withTenantInsert({ code: f.code.trim(), name: f.name.trim(), type: f.type })
 
     if (editId) {
-      let query = supabase
-        .from('chart_of_accounts')
-        .update(payload)
-        .eq('id', editId)
+      let query = supabase.from('chart_of_accounts').update(payload).eq('id', editId)
       if (tenantId) query = query.eq('tenant_id', tenantId)
       const { error } = await query
       if (error) {
@@ -812,9 +1080,7 @@ function CoaTab({ accounts, reload, flash, isAdmin }) {
       return
     }
 
-    const { error } = await supabase
-      .from('chart_of_accounts')
-      .insert(payload)
+    const { error } = await supabase.from('chart_of_accounts').insert(payload)
     if (error) {
       flash(error.message)
       return
@@ -892,14 +1158,20 @@ function CoaTab({ accounts, reload, flash, isAdmin }) {
           value={f.name}
           onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))}
         />
-        <select className={selectClass} value={f.type} onChange={(e) => setF((p) => ({ ...p, type: e.target.value }))}>
-          {['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'].map((t) => <option key={t}>{t}</option>)}
-        </select>
-        <Button className="justify-center" onClick={submit}>
+        <SearchableSelect
+          value={f.type}
+          onChange={(value) => setF((p) => ({ ...p, type: value }))}
+          options={ACCOUNT_TYPE_OPTIONS}
+          placeholder="Account type"
+          searchPlaceholder="Search account type…"
+        />
+        <Button variant="default" className="justify-center" onClick={submit}>
           <Plus size={15} /> {editId ? 'Update' : 'Add'}
         </Button>
         {editId && (
-          <Button variant="ghost" className="justify-center" onClick={resetForm}>Cancel edit</Button>
+          <Button variant="outline" className="justify-center" onClick={resetForm}>
+            Cancel edit
+          </Button>
         )}
       </div>
 
@@ -912,9 +1184,11 @@ function CoaTab({ accounts, reload, flash, isAdmin }) {
         />
         {isAdmin && (
           <>
-            <Button variant="ghost" size="sm" onClick={duplicateSelected} disabled={!selectedId}>Duplicate</Button>
+            <Button variant="outline" size="sm" onClick={duplicateSelected} disabled={!selectedId}>
+              Duplicate
+            </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => {
                 const row = accounts.find((a) => a.id === selectedId)
@@ -925,7 +1199,13 @@ function CoaTab({ accounts, reload, flash, isAdmin }) {
             >
               <Pencil size={13} /> Edit
             </Button>
-            <Button variant="ghost" size="sm" className="text-red-500" onClick={removeSelected} disabled={!selectedId}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 hover:text-red-700"
+              onClick={removeSelected}
+              disabled={!selectedId}
+            >
               <Trash2 size={13} /> Delete
             </Button>
           </>
@@ -954,30 +1234,49 @@ function CoaTab({ accounts, reload, flash, isAdmin }) {
 /*  FIXED ASSETS + DEPRECIATION                                         */
 /* ================================================================== */
 function AssetsTab({ accounts, userName, flash }) {
-  const [rows, setRows]   = useState([])
+  const [rows, setRows] = useState([])
   const [period, setPeriod] = useState(todayISO().slice(0, 7))
   const [makeJV, setMakeJV] = useState(true)
   const [f, setF] = useState({
-    name: '', category: 'GENERAL', purchase_date: todayISO(),
-    cost: '', salvage_value: 0, useful_life_months: 60, location: '',
+    name: '',
+    category: 'GENERAL',
+    purchase_date: todayISO(),
+    cost: '',
+    salvage_value: 0,
+    useful_life_months: 60,
+    location: '',
   })
 
   const load = async () => {
-    const { data } = await supabase.from('fixed_assets')
+    const { data } = await supabase
+      .from('fixed_assets')
       .select('*, asset_depreciation(*)')
       .order('created_at', { ascending: false })
     setRows(data || [])
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+  }, [])
 
   const add = async () => {
     if (!f.name || !f.cost) return
     const { error } = await supabase.from('fixed_assets').insert({
-      ...f, cost: +f.cost, salvage_value: +f.salvage_value, useful_life_months: +f.useful_life_months,
+      ...f,
+      cost: +f.cost,
+      salvage_value: +f.salvage_value,
+      useful_life_months: +f.useful_life_months,
     })
     if (error) flash(error.message)
     else {
-      setF({ name: '', category: 'GENERAL', purchase_date: todayISO(), cost: '', salvage_value: 0, useful_life_months: 60, location: '' })
+      setF({
+        name: '',
+        category: 'GENERAL',
+        purchase_date: todayISO(),
+        cost: '',
+        salvage_value: 0,
+        useful_life_months: 60,
+        location: '',
+      })
       load()
     }
   }
@@ -987,57 +1286,111 @@ function AssetsTab({ accounts, userName, flash }) {
 
   const runDep = async () => {
     const active = rows.filter(
-      (a) => a.status === 'ACTIVE' && !(a.asset_depreciation || []).some((d) => d.period === period)
+      (a) =>
+        a.status === 'ACTIVE' && !(a.asset_depreciation || []).some((d) => d.period === period),
     )
-    if (active.length === 0) { flash('All active assets already have depreciation for this period.'); return }
+    if (active.length === 0) {
+      flash('All active assets already have depreciation for this period.')
+      return
+    }
     let jvId = null
     const totalDep = active.reduce((s, a) => s + monthly(a), 0)
     if (makeJV && totalDep > 0) {
       const acc = Object.fromEntries(accounts.map((a) => [a.code, a.id]))
       if (acc['5500'] && acc['1590']) {
-        const { data: jv } = await supabase.from('journal_entries').insert({
-          jv_date: `${period}-28`,
-          narration: `Depreciation — ${period}`,
-          source: 'DEPRECIATION',
-          posted_by: userName,
-        }).select().single()
+        const { data: jv } = await supabase
+          .from('journal_entries')
+          .insert({
+            jv_date: `${period}-28`,
+            narration: `Depreciation — ${period}`,
+            source: 'DEPRECIATION',
+            posted_by: userName,
+          })
+          .select()
+          .single()
         await supabase.from('journal_lines').insert([
-          { entry_id: jv.id, account_id: acc['5500'], debit: totalDep,    credit: 0,        line_note: 'Depreciation expense' },
-          { entry_id: jv.id, account_id: acc['1590'], debit: 0,           credit: totalDep, line_note: 'Accumulated depreciation' },
+          {
+            entry_id: jv.id,
+            account_id: acc['5500'],
+            debit: totalDep,
+            credit: 0,
+            line_note: 'Depreciation expense',
+          },
+          {
+            entry_id: jv.id,
+            account_id: acc['1590'],
+            debit: 0,
+            credit: totalDep,
+            line_note: 'Accumulated depreciation',
+          },
         ])
         jvId = jv.id
       }
     }
-    await supabase.from('asset_depreciation').insert(
-      active.map((a) => ({ asset_id: a.id, period, amount: monthly(a), jv_id: jvId }))
-    )
+    await supabase
+      .from('asset_depreciation')
+      .insert(active.map((a) => ({ asset_id: a.id, period, amount: monthly(a), jv_id: jvId })))
     load()
-    flash(`Depreciation posted for ${active.length} asset(s)${jvId ? ' with journal voucher' : ''}.`)
+    flash(
+      `Depreciation posted for ${active.length} asset(s)${jvId ? ' with journal voucher' : ''}.`,
+    )
   }
 
   return (
     <div className="space-y-4">
       <div className="card p-4 grid grid-cols-6 gap-2">
-        <Input className="col-span-2" placeholder="Asset name"
-          value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-        <Input className="" placeholder="Category"
-          value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} />
-        <Input type="number" className="money" placeholder="Cost"
-          value={f.cost} onChange={(e) => setF({ ...f, cost: e.target.value })} />
-        <Input type="number" className="money" placeholder="Salvage"
-          value={f.salvage_value} onChange={(e) => setF({ ...f, salvage_value: e.target.value })} />
-        <Input type="number" className="money" placeholder="Life (months)"
-          value={f.useful_life_months} onChange={(e) => setF({ ...f, useful_life_months: e.target.value })} />
+        <Input
+          className="col-span-2"
+          placeholder="Asset name"
+          value={f.name}
+          onChange={(e) => setF({ ...f, name: e.target.value })}
+        />
+        <Input
+          className=""
+          placeholder="Category"
+          value={f.category}
+          onChange={(e) => setF({ ...f, category: e.target.value })}
+        />
+        <Input
+          type="number"
+          className="money"
+          placeholder="Cost"
+          value={f.cost}
+          onChange={(e) => setF({ ...f, cost: e.target.value })}
+        />
+        <Input
+          type="number"
+          className="money"
+          placeholder="Salvage"
+          value={f.salvage_value}
+          onChange={(e) => setF({ ...f, salvage_value: e.target.value })}
+        />
+        <Input
+          type="number"
+          className="money"
+          placeholder="Life (months)"
+          value={f.useful_life_months}
+          onChange={(e) => setF({ ...f, useful_life_months: e.target.value })}
+        />
         <Button className="justify-center col-span-6" onClick={add}>
           <Building2 size={15} /> Add asset
         </Button>
       </div>
       <div className="card p-4 flex items-center gap-3 flex-wrap">
         <span className="label !mb-0">Depreciation run</span>
-        <Input type="month" className="!w-44"
-          value={period} onChange={(e) => setPeriod(e.target.value)} />
+        <Input
+          type="month"
+          className="!w-44"
+          value={period}
+          onChange={(e) => setPeriod(e.target.value)}
+        />
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" className="accent-forest" checked={makeJV} onChange={(e) => setMakeJV(e.target.checked)} />
+          <input
+            type="checkbox"
+            className="accent-forest"
+            checked={makeJV}
+            onChange={(e) => setMakeJV(e.target.checked)}
+          />
           Post JV (Dr 5500 / Cr 1590)
         </label>
         <Button variant="secondary" onClick={runDep}>
@@ -1050,7 +1403,7 @@ function AssetsTab({ accounts, userName, flash }) {
         data={rows.map((asset) => {
           const accumulated = (asset.asset_depreciation || []).reduce(
             (sum, depreciation) => sum + Number(depreciation.amount || 0),
-            0
+            0,
           )
 
           return {
@@ -1065,9 +1418,26 @@ function AssetsTab({ accounts, userName, flash }) {
           { accessorKey: 'name', header: 'Asset', width: 260 },
           { accessorKey: 'category', header: 'Category', width: 150 },
           { accessorKey: 'cost', header: 'Cost', type: 'currency', aggregation: 'sum', width: 150 },
-          { accessorKey: 'monthly_depreciation', header: 'Monthly Dep.', type: 'currency', width: 160 },
-          { accessorKey: 'accumulated_depreciation', header: 'Accumulated', type: 'currency', aggregation: 'sum', width: 160 },
-          { accessorKey: 'book_value', header: 'Book Value', type: 'currency', aggregation: 'sum', width: 160 },
+          {
+            accessorKey: 'monthly_depreciation',
+            header: 'Monthly Dep.',
+            type: 'currency',
+            width: 160,
+          },
+          {
+            accessorKey: 'accumulated_depreciation',
+            header: 'Accumulated',
+            type: 'currency',
+            aggregation: 'sum',
+            width: 160,
+          },
+          {
+            accessorKey: 'book_value',
+            header: 'Book Value',
+            type: 'currency',
+            aggregation: 'sum',
+            width: 160,
+          },
           { accessorKey: 'status', header: 'Status', type: 'status', width: 120 },
         ]}
         pageSize={100}
@@ -1100,7 +1470,15 @@ const TRANSACTION_GROUPS = [
     title: 'Payments Received',
     // PAYMENT is the generic fallback used by the DB trigger;
     // PAYMENT_<METHOD> entries are matched first by method name.
-    types: ['PAYMENT', 'PAYMENT_CASH', 'PAYMENT_BKASH', 'PAYMENT_NAGAD', 'PAYMENT_CARD', 'PAYMENT_BANK', 'PAYMENT_ADVANCE'],
+    types: [
+      'PAYMENT',
+      'PAYMENT_CASH',
+      'PAYMENT_BKASH',
+      'PAYMENT_NAGAD',
+      'PAYMENT_CARD',
+      'PAYMENT_BANK',
+      'PAYMENT_ADVANCE',
+    ],
   },
   {
     title: 'Payroll',
@@ -1109,7 +1487,12 @@ const TRANSACTION_GROUPS = [
   },
   {
     title: 'Adjustments',
-    types: ['DISCOUNT_GIVEN', 'SHAREHOLDER_REDEEM', 'BREAKFAST_COMPLIMENTARY_EXPENSE', 'BREAKFAST_CHARGE_EXPENSE'],
+    types: [
+      'DISCOUNT_GIVEN',
+      'SHAREHOLDER_REDEEM',
+      'BREAKFAST_COMPLIMENTARY_EXPENSE',
+      'BREAKFAST_CHARGE_EXPENSE',
+    ],
   },
   {
     title: 'Tax & SC Settlement',
@@ -1138,17 +1521,21 @@ function TransactionMappingTab({ accounts, flash, userName }) {
   const load = async () => {
     const { data } = await supabase
       .from('accounting_transaction_mapping')
-      .select(`
+      .select(
+        `
         *,
         debit:debit_account_id(code, name),
         credit:credit_account_id(code, name),
         vat:vat_account_id(code, name),
         sc:sc_account_id(code, name)
-      `)
+      `,
+      )
       .order('transaction_type')
     setMappings(data || [])
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+  }, [])
 
   const startEdit = (m) => {
     setEditId(m.id)
@@ -1235,7 +1622,11 @@ function TransactionMappingTab({ accounts, flash, userName }) {
       return
     }
 
-    flash(automated ? `${missing.length} default mapping row(s) auto-synced.` : `${missing.length} mapping row(s) added.`)
+    flash(
+      automated
+        ? `${missing.length} default mapping row(s) auto-synced.`
+        : `${missing.length} mapping row(s) added.`,
+    )
     await load()
   }
 
@@ -1301,51 +1692,51 @@ function TransactionMappingTab({ accounts, flash, userName }) {
   }))
 
   const filteredMappings = (types) =>
-    mappings.filter((m) =>
-      types.includes(m.transaction_type) &&
-      (!search || m.label.toLowerCase().includes(search.toLowerCase()) ||
-        m.transaction_type.toLowerCase().includes(search.toLowerCase()))
+    mappings.filter(
+      (m) =>
+        types.includes(m.transaction_type) &&
+        (!search ||
+          m.label.toLowerCase().includes(search.toLowerCase()) ||
+          m.transaction_type.toLowerCase().includes(search.toLowerCase())),
     )
 
-  const AccountSelect = ({ value, onChange, placeholder }) => (
-    <select
-      className={`${selectClass} text-xs !py-1`}
+  const AccountSelect = ({ value, onChange, placeholder, searchPlaceholder }) => (
+    <SearchableSelect
+      className="text-xs"
       value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="">- {placeholder || 'Select account'} -</option>
-      {['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'].map((type) => {
-        const group = acctOptions.filter((a) => a.type === type)
-        if (!group.length) return null
-        return (
-          <optgroup key={type} label={type}>
-            {group.map((a) => (
-              <option key={a.value} value={a.value}>{a.label}</option>
-            ))}
-          </optgroup>
-        )
-      })}
-    </select>
+      onChange={onChange}
+      options={acctOptions.map((account) => ({
+        value: account.value,
+        label: account.label,
+        sublabel: account.type,
+      }))}
+      placeholder={placeholder || 'Select account'}
+      searchPlaceholder={searchPlaceholder || 'Search account code or name…'}
+    />
   )
 
   return (
     <div className="space-y-5">
-
       <div className="card p-4 space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h3 className="font-display font-semibold text-pine">Transaction → GL Account Mapping</h3>
+            <h3 className="font-display font-semibold text-pine">
+              Transaction → GL Account Mapping
+            </h3>
             <p className="text-xs text-pine/50 mt-0.5">
-              Defines which accounts to Debit and Credit for each transaction type.
-              Changes apply to newly posted vouchers only.
+              Defines which accounts to Debit and Credit for each transaction type. Changes apply to
+              newly posted vouchers only.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={triggerDefaultSync} disabled={syncBusy}>
+            <Button variant="outline" size="sm" onClick={triggerDefaultSync} disabled={syncBusy}>
               {syncBusy ? 'Triggering…' : 'Manual trigger defaults'}
             </Button>
             <div className="relative w-56">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-pine/30" />
+              <Search
+                size={13}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-pine/30"
+              />
               <Input
                 className="!pl-8 text-sm"
                 placeholder="Search transaction..."
@@ -1372,13 +1763,20 @@ function TransactionMappingTab({ accounts, flash, userName }) {
             value={addF.debit_account_id}
             onChange={(v) => setAddF((p) => ({ ...p, debit_account_id: v }))}
             placeholder="Debit"
+            searchPlaceholder="Search debit account…"
           />
           <AccountSelect
             value={addF.credit_account_id}
             onChange={(v) => setAddF((p) => ({ ...p, credit_account_id: v }))}
             placeholder="Credit"
+            searchPlaceholder="Search credit account…"
           />
-          <Button className="justify-center" onClick={addMapping} disabled={addBusy}>
+          <Button
+            variant="default"
+            className="justify-center"
+            onClick={addMapping}
+            disabled={addBusy}
+          >
             <Plus size={14} /> {addBusy ? 'Adding…' : 'Add mapping'}
           </Button>
           <Input
@@ -1390,10 +1788,20 @@ function TransactionMappingTab({ accounts, flash, userName }) {
         </div>
 
         <div className="flex flex-wrap gap-3 text-xs text-pine/50">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400 inline-block" /> Dr = Debit account</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-forest inline-block" /> Cr = Credit account</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> VAT = VAT Output account</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-400 inline-block" /> SC = Service Charge account</span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-sky-400 inline-block" /> Dr = Debit account
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-forest inline-block" /> Cr = Credit account
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> VAT = VAT Output
+            account
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-violet-400 inline-block" /> SC = Service Charge
+            account
+          </span>
         </div>
       </div>
 
@@ -1416,7 +1824,9 @@ function TransactionMappingTab({ accounts, flash, userName }) {
                     <div className="space-y-3">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-[10px] text-pine/40 bg-pine/5 px-2 py-0.5 rounded">{m.transaction_type}</span>
+                          <span className="font-mono text-[10px] text-pine/40 bg-pine/5 px-2 py-0.5 rounded">
+                            {m.transaction_type}
+                          </span>
                           <Input
                             className="!py-1 text-sm font-semibold flex-1 min-w-[160px]"
                             value={editF.label}
@@ -1427,49 +1837,64 @@ function TransactionMappingTab({ accounts, flash, userName }) {
                           <Button onClick={saveEdit} disabled={busy} size="xs" className="text-xs">
                             <Save size={12} /> {busy ? 'Saving…' : 'Save'}
                           </Button>
-                          <Button variant="ghost" size="xs" className="text-xs" onClick={() => setEditId(null)}>Cancel</Button>
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            className="text-xs"
+                            onClick={() => setEditId(null)}
+                          >
+                            Cancel
+                          </Button>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         <div>
                           <label className="label !text-[10px] flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-sky-400 inline-block" /> Debit account
+                            <span className="w-2 h-2 rounded-full bg-sky-400 inline-block" /> Debit
+                            account
                           </label>
                           <AccountSelect
                             value={editF.debit_account_id}
                             onChange={(v) => setEditF((p) => ({ ...p, debit_account_id: v }))}
                             placeholder="Debit"
+                            searchPlaceholder="Search debit account…"
                           />
                         </div>
                         <div>
                           <label className="label !text-[10px] flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-forest inline-block" /> Credit account
+                            <span className="w-2 h-2 rounded-full bg-forest inline-block" /> Credit
+                            account
                           </label>
                           <AccountSelect
                             value={editF.credit_account_id}
                             onChange={(v) => setEditF((p) => ({ ...p, credit_account_id: v }))}
                             placeholder="Credit"
+                            searchPlaceholder="Search credit account…"
                           />
                         </div>
                         <div>
                           <label className="label !text-[10px] flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> VAT account
+                            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> VAT
+                            account
                           </label>
                           <AccountSelect
                             value={editF.vat_account_id}
                             onChange={(v) => setEditF((p) => ({ ...p, vat_account_id: v }))}
                             placeholder="VAT (optional)"
+                            searchPlaceholder="Search VAT account…"
                           />
                         </div>
                         <div>
                           <label className="label !text-[10px] flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-violet-400 inline-block" /> SC account
+                            <span className="w-2 h-2 rounded-full bg-violet-400 inline-block" /> SC
+                            account
                           </label>
                           <AccountSelect
                             value={editF.sc_account_id}
                             onChange={(v) => setEditF((p) => ({ ...p, sc_account_id: v }))}
                             placeholder="SC (optional)"
+                            searchPlaceholder="Search service charge account…"
                           />
                         </div>
                       </div>
@@ -1488,28 +1913,38 @@ function TransactionMappingTab({ accounts, flash, userName }) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-2">
                           <span className="font-semibold text-sm text-pine">{m.label}</span>
-                          <span className="font-mono text-[10px] text-pine/40 bg-pine/5 px-1.5 py-0.5 rounded">{m.transaction_type}</span>
+                          <span className="font-mono text-[10px] text-pine/40 bg-pine/5 px-1.5 py-0.5 rounded">
+                            {m.transaction_type}
+                          </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-xs">
                           <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-700">
                             <span className="font-bold">Dr</span>
-                            <span className="truncate max-w-[160px]">{m.debit ? `${m.debit.code} · ${m.debit.name}` : '—'}</span>
+                            <span className="truncate max-w-[160px]">
+                              {m.debit ? `${m.debit.code} · ${m.debit.name}` : '—'}
+                            </span>
                           </span>
                           <ArrowRight size={12} className="text-pine/30 shrink-0" />
                           <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-forest/10 border border-forest/20 text-forest">
                             <span className="font-bold">Cr</span>
-                            <span className="truncate max-w-[160px]">{m.credit ? `${m.credit.code} · ${m.credit.name}` : '—'}</span>
+                            <span className="truncate max-w-[160px]">
+                              {m.credit ? `${m.credit.code} · ${m.credit.name}` : '—'}
+                            </span>
                           </span>
                           {m.vat && (
                             <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-700">
                               <span className="font-bold">VAT</span>
-                              <span className="truncate max-w-[120px]">{m.vat.code} · {m.vat.name}</span>
+                              <span className="truncate max-w-[120px]">
+                                {m.vat.code} · {m.vat.name}
+                              </span>
                             </span>
                           )}
                           {m.sc && (
                             <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 border border-violet-200 text-violet-700">
                               <span className="font-bold">SC</span>
-                              <span className="truncate max-w-[120px]">{m.sc.code} · {m.sc.name}</span>
+                              <span className="truncate max-w-[120px]">
+                                {m.sc.code} · {m.sc.name}
+                              </span>
                             </span>
                           )}
                         </div>
@@ -1517,10 +1952,10 @@ function TransactionMappingTab({ accounts, flash, userName }) {
                       </div>
 
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon-xs"
                         onClick={() => startEdit(m)}
-                        className="text-pine/40 hover:text-forest shrink-0"
+                        className="text-pine/70 hover:text-forest shrink-0"
                         title="Edit mapping"
                       >
                         <Pencil size={13} />
@@ -1535,7 +1970,8 @@ function TransactionMappingTab({ accounts, flash, userName }) {
       })}
 
       <div className="text-xs text-pine/40 px-1">
-        ℹ These mappings define accounting entries when transactions are posted from Reservations, POS, and Inventory modules.
+        ℹ These mappings define accounting entries when transactions are posted from Reservations,
+        POS, and Inventory modules.
       </div>
     </div>
   )
@@ -1545,9 +1981,12 @@ function TransactionMappingTab({ accounts, flash, userName }) {
 /* ================================================================== */
 export function VoucherEntryPage({ userName, isAdmin, role }) {
   const [accounts, setAccounts] = useState([])
-  const [company, setCompany]   = useState(null)
-  const [msg, setMsg]           = useState('')
-  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
+  const [company, setCompany] = useState(null)
+  const [msg, setMsg] = useState('')
+  const flash = (m) => {
+    setMsg(m)
+    setTimeout(() => setMsg(''), 5000)
+  }
 
   const loadAccounts = async () => {
     setAccounts(await fetchActiveAccounts('VoucherEntryPage loadAccounts'))
@@ -1555,7 +1994,9 @@ export function VoucherEntryPage({ userName, isAdmin, role }) {
 
   useEffect(() => {
     loadAccounts()
-    getCompanySettingsQuery('*').limit(1).single()
+    getCompanySettingsQuery('*')
+      .limit(1)
+      .single()
       .then(({ data }) => setCompany(data))
   }, [])
 
@@ -1566,8 +2007,18 @@ export function VoucherEntryPage({ userName, isAdmin, role }) {
           <Calculator className="text-forest" /> Voucher Entry
         </h1>
       </div>
-      {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
-      <JournalsTab accounts={accounts} userName={userName} flash={flash} company={company} isAdmin={isAdmin} />
+      {msg && (
+        <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">
+          {msg}
+        </div>
+      )}
+      <JournalsTab
+        accounts={accounts}
+        userName={userName}
+        flash={flash}
+        company={company}
+        isAdmin={isAdmin}
+      />
     </div>
   )
 }
@@ -1587,13 +2038,18 @@ export function TrialBalancePage() {
 
 export function ChartOfAccountsPage({ isAdmin }) {
   const [accounts, setAccounts] = useState([])
-  const [msg, setMsg]           = useState('')
-  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
+  const [msg, setMsg] = useState('')
+  const flash = (m) => {
+    setMsg(m)
+    setTimeout(() => setMsg(''), 5000)
+  }
 
   const loadAccounts = async () => {
     setAccounts(await fetchActiveAccounts('ChartOfAccountsPage loadAccounts'))
   }
-  useEffect(() => { loadAccounts() }, [])
+  useEffect(() => {
+    loadAccounts()
+  }, [])
 
   return (
     <div className="space-y-5">
@@ -1602,7 +2058,11 @@ export function ChartOfAccountsPage({ isAdmin }) {
           <Calculator className="text-forest" /> Chart of Accounts
         </h1>
       </div>
-      {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
+      {msg && (
+        <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">
+          {msg}
+        </div>
+      )}
       <CoaTab accounts={accounts} reload={loadAccounts} flash={flash} isAdmin={isAdmin} />
     </div>
   )
@@ -1610,8 +2070,11 @@ export function ChartOfAccountsPage({ isAdmin }) {
 
 export function FixedAssetsPage({ userName }) {
   const [accounts, setAccounts] = useState([])
-  const [msg, setMsg]           = useState('')
-  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
+  const [msg, setMsg] = useState('')
+  const flash = (m) => {
+    setMsg(m)
+    setTimeout(() => setMsg(''), 5000)
+  }
 
   useEffect(() => {
     fetchActiveAccounts('FixedAssetsPage loadAccounts').then(setAccounts)
@@ -1624,7 +2087,11 @@ export function FixedAssetsPage({ userName }) {
           <Calculator className="text-forest" /> Fixed Assets
         </h1>
       </div>
-      {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
+      {msg && (
+        <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">
+          {msg}
+        </div>
+      )}
       <AssetsTab accounts={accounts} userName={userName} flash={flash} />
     </div>
   )
@@ -1632,8 +2099,11 @@ export function FixedAssetsPage({ userName }) {
 
 export function OpeningBalancePage({ userName }) {
   const [accounts, setAccounts] = useState([])
-  const [msg, setMsg]           = useState('')
-  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
+  const [msg, setMsg] = useState('')
+  const flash = (m) => {
+    setMsg(m)
+    setTimeout(() => setMsg(''), 5000)
+  }
 
   useEffect(() => {
     fetchActiveAccounts('OpeningBalancePage loadAccounts').then(setAccounts)
@@ -1646,7 +2116,11 @@ export function OpeningBalancePage({ userName }) {
           <Calculator className="text-forest" /> Opening Balance
         </h1>
       </div>
-      {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
+      {msg && (
+        <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">
+          {msg}
+        </div>
+      )}
       <OpeningBalanceTab accounts={accounts} userName={userName} flash={flash} />
     </div>
   )
@@ -1654,8 +2128,11 @@ export function OpeningBalancePage({ userName }) {
 
 export function TransactionMappingPage({ userName }) {
   const [accounts, setAccounts] = useState([])
-  const [msg, setMsg]           = useState('')
-  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 5000) }
+  const [msg, setMsg] = useState('')
+  const flash = (m) => {
+    setMsg(m)
+    setTimeout(() => setMsg(''), 5000)
+  }
 
   useEffect(() => {
     fetchActiveAccounts('TransactionMappingPage loadAccounts').then(setAccounts)
@@ -1668,7 +2145,11 @@ export function TransactionMappingPage({ userName }) {
           <Calculator className="text-forest" /> Transaction Mapping
         </h1>
       </div>
-      {msg && <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">{msg}</div>}
+      {msg && (
+        <div className="px-4 py-3 rounded-lg bg-forest/10 text-forest text-sm font-medium">
+          {msg}
+        </div>
+      )}
       <TransactionMappingTab accounts={accounts} flash={flash} userName={userName} />
     </div>
   )

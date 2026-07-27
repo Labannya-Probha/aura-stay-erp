@@ -311,7 +311,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <PosPrintCenterPage company={company} userName={userName} />
+            {withModuleBoundary(
+              'Restaurant POS',
+              'pos-print-center',
+              <PosPrintCenterPage company={company} userName={userName} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -388,7 +392,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <VatCenterPage userName={userName} company={company} />
+            {withModuleBoundary(
+              'Accounting',
+              'vat-center',
+              <VatCenterPage userName={userName} company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -404,7 +412,7 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <VATReturnPage />
+            {withModuleBoundary('Accounting', 'vat-return', <VATReturnPage />)}
           </SaasModuleRoute>
         }
       />
@@ -441,7 +449,7 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <TrialBalancePage />
+            {withModuleBoundary('Accounting', 'trial-balance', <TrialBalancePage />)}
           </SaasModuleRoute>
         }
       />
@@ -457,7 +465,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <ChartOfAccountsPage isAdmin={isAdmin} />
+            {withModuleBoundary(
+              'Accounting',
+              'chart-of-accounts',
+              <ChartOfAccountsPage isAdmin={isAdmin} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -473,7 +485,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <FixedAssetsPage userName={userName} />
+            {withModuleBoundary(
+              'Accounting',
+              'fixed-assets',
+              <FixedAssetsPage userName={userName} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -489,7 +505,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <OpeningBalancePage userName={userName} />
+            {withModuleBoundary(
+              'Accounting',
+              'opening-balance',
+              <OpeningBalancePage userName={userName} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -505,7 +525,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <TransactionMappingPage userName={userName} />
+            {withModuleBoundary(
+              'Accounting',
+              'transaction-mapping',
+              <TransactionMappingPage userName={userName} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -521,7 +545,7 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <VendorPaymentPage role={role} />
+            {withModuleBoundary('Accounting', 'vendor-payments', <VendorPaymentPage role={role} />)}
           </SaasModuleRoute>
         }
       />
@@ -537,7 +561,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <PaymentConfigurationPage />
+            {withModuleBoundary(
+              'Accounting',
+              'payment-configuration',
+              <PaymentConfigurationPage />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -553,7 +581,7 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <PaymentPostingPage />
+            {withModuleBoundary('Accounting', 'payment-posting', <PaymentPostingPage />)}
           </SaasModuleRoute>
         }
       />
@@ -569,7 +597,7 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <PaymentSettlementPage />
+            {withModuleBoundary('Accounting', 'payment-settlement', <PaymentSettlementPage />)}
           </SaasModuleRoute>
         }
       />
@@ -613,12 +641,16 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrServiceBookPage
-              userName={userName}
-              role={role}
-              isAdmin={isAdmin}
-              company={company}
-            />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/service-book',
+              <HrServiceBookPage
+                userName={userName}
+                role={role}
+                isAdmin={isAdmin}
+                company={company}
+              />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -634,7 +666,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrNomineePage userName={userName} role={role} isAdmin={isAdmin} company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/nominee',
+              <HrNomineePage userName={userName} role={role} isAdmin={isAdmin} company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -650,7 +686,16 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLeaveEntryPage userName={userName} role={role} isAdmin={isAdmin} company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/leave-entry',
+              <HrLeaveEntryPage
+                userName={userName}
+                role={role}
+                isAdmin={isAdmin}
+                company={company}
+              />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -666,7 +711,16 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrCompLeavePage userName={userName} role={role} isAdmin={isAdmin} company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/comp-leave',
+              <HrCompLeavePage
+                userName={userName}
+                role={role}
+                isAdmin={isAdmin}
+                company={company}
+              />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -682,12 +736,16 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrFestivalLeavePage
-              userName={userName}
-              role={role}
-              isAdmin={isAdmin}
-              company={company}
-            />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/festival-leave',
+              <HrFestivalLeavePage
+                userName={userName}
+                role={role}
+                isAdmin={isAdmin}
+                company={company}
+              />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -703,12 +761,16 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrPayrollConfigPage
-              userName={userName}
-              role={role}
-              isAdmin={isAdmin}
-              company={company}
-            />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/payroll-config',
+              <HrPayrollConfigPage
+                userName={userName}
+                role={role}
+                isAdmin={isAdmin}
+                company={company}
+              />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -724,7 +786,16 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrPayrollGenPage userName={userName} role={role} isAdmin={isAdmin} company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/payroll-gen',
+              <HrPayrollGenPage
+                userName={userName}
+                role={role}
+                isAdmin={isAdmin}
+                company={company}
+              />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -740,12 +811,16 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrPayrollRegisterPage
-              userName={userName}
-              role={role}
-              isAdmin={isAdmin}
-              company={company}
-            />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/payroll-register',
+              <HrPayrollRegisterPage
+                userName={userName}
+                role={role}
+                isAdmin={isAdmin}
+                company={company}
+              />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -761,7 +836,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="OFFER_LETTER" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/offer-letter',
+              <HrLetterPage type="OFFER_LETTER" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -777,7 +856,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="APPOINTMENT" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/appointment-letter',
+              <HrLetterPage type="APPOINTMENT" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -793,7 +876,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="JOINING" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/joining-letter',
+              <HrLetterPage type="JOINING" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -809,7 +896,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="CONFIRMATION" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/confirmation-letter',
+              <HrLetterPage type="CONFIRMATION" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -825,7 +916,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="SALARY_INCREMENT" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/increment-letter',
+              <HrLetterPage type="SALARY_INCREMENT" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -841,7 +936,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="PROMOTION" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/promotion-letter',
+              <HrLetterPage type="PROMOTION" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -857,7 +956,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="OBJECTION" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/objection-letter',
+              <HrLetterPage type="OBJECTION" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -873,7 +976,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="SHOW_CAUSE" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/show-cause',
+              <HrLetterPage type="SHOW_CAUSE" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -889,7 +996,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="WARNING" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/warning-letter',
+              <HrLetterPage type="WARNING" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -905,7 +1016,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="RELIEVING" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/dismissal-letter',
+              <HrLetterPage type="RELIEVING" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -921,7 +1036,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="NOC" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/noc',
+              <HrLetterPage type="NOC" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -937,7 +1056,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="EXP_CERT" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/experience-cert',
+              <HrLetterPage type="EXP_CERT" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -953,7 +1076,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="SALARY_CERT" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/employment-cert',
+              <HrLetterPage type="SALARY_CERT" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -969,7 +1096,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrLetterPage type="FINAL_PAYMENT" company={company} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/final-payment',
+              <HrLetterPage type="FINAL_PAYMENT" company={company} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -985,7 +1116,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrAttendanceRegisterPage flash={(m) => m} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/attendance-register',
+              <HrAttendanceRegisterPage flash={(m) => m} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -1001,7 +1136,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrEmployeeRegisterPage role={role} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/employee-register',
+              <HrEmployeeRegisterPage role={role} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -1017,7 +1156,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrServiceBookRegPage userName={userName} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/service-book-reg',
+              <HrServiceBookRegPage userName={userName} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -1033,7 +1176,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrIncidentsPage userName={userName} flash={(m) => m} />
+            {withModuleBoundary(
+              'HR & Payroll',
+              '/hr/incidents',
+              <HrIncidentsPage userName={userName} flash={(m) => m} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -1049,7 +1196,7 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <HrCompliancePage role={role} />
+            {withModuleBoundary('HR & Payroll', '/hr/compliance', <HrCompliancePage role={role} />)}
           </SaasModuleRoute>
         }
       />

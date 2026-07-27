@@ -58,6 +58,17 @@
     --sidebar-bg: var(--tenant-dark);
     --sidebar-text: #ffffff;
 
+    /* Layer scale tokens: keep stacking order deterministic across modules. */
+    --layer-base: 1;
+    --layer-sticky-header: 20;
+    --layer-sticky-group: 22;
+    --layer-sticky-column: 24;
+    --layer-sticky-footer: 26;
+    --layer-popover: 40;
+    --layer-drag-preview: 50;
+    --layer-drawer: 60;
+    --layer-modal: 80;
+
     min-height: 100vh;
     font-family: var(--tenant-font-family);
     font-size: 1rem;

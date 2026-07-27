@@ -42,6 +42,7 @@ import '../styles/aeds-v6-workspaces.css'
 import '../styles/aeds-v6-restaurant.css'
 import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
 import { LegacyButton } from '../components/ui/legacy-controls'
+import SearchableSelect from '../components/SearchableSelect.jsx'
 
 const TABS = ['Orders', 'Menu', 'Day Close']
 const PAYMENT_METHODS = ['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK', 'OTHER']
@@ -656,19 +657,17 @@ function OrderBuilder({
           .select()
           .single()
         if (fe) throw fe
-        const { error: pe } = await supabase
-          .from('payments')
-          .insert(
-            withTenantInsert({
-              reservation_id: order.reservation_id,
-              received_date: todayISO(),
-              amount: t.total,
-              method: paidMethods.map(([m]) => m).join(', '),
-              reference: order.order_no,
-              received_by: userName,
-              notes: 'Restaurant POS',
-            }),
-          )
+        const { error: pe } = await supabase.from('payments').insert(
+          withTenantInsert({
+            reservation_id: order.reservation_id,
+            received_date: todayISO(),
+            amount: t.total,
+            method: paidMethods.map(([m]) => m).join(', '),
+            reference: order.order_no,
+            received_by: userName,
+            notes: 'Restaurant POS',
+          }),
+        )
         if (pe) throw pe
         await withTenant(
           supabase.from('pos_orders').update({ folio_charge_id: fc.id }).eq('id', order.id),
@@ -846,15 +845,18 @@ function OrderBuilder({
               {existing ? `Editing ${existing.order.order_no}` : 'Current order'}
             </h3>
             <div className="flex gap-2 flex-wrap w-full sm:w-auto">
-              <select
-                className="input !w-full sm:!w-auto !py-1 text-xs"
+              <SearchableSelect
+                className="!w-full sm:!w-44"
                 value={meta.order_type}
-                onChange={(e) => setMeta({ ...meta, order_type: e.target.value })}
-              >
-                <option value="DINE_IN">Dine-in</option>
-                <option value="ROOM_SERVICE">Room service</option>
-                <option value="TAKEAWAY">Takeaway</option>
-              </select>
+                onChange={(value) => setMeta({ ...meta, order_type: value })}
+                options={[
+                  { value: 'DINE_IN', label: 'Dine-in' },
+                  { value: 'ROOM_SERVICE', label: 'Room service' },
+                  { value: 'TAKEAWAY', label: 'Takeaway' },
+                ]}
+                placeholder="Order type"
+                searchPlaceholder="Search order type"
+              />
               <input
                 className="input !w-full sm:!w-20 !py-1 text-xs"
                 placeholder="Table"
@@ -946,30 +948,28 @@ function OrderBuilder({
               <span>{t.base_amount.toFixed(2)}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-center">
-              <select
-                className="input !py-0.5 !px-1.5 text-xs"
+              <SearchableSelect
+                className="!w-full"
                 value={meta.discount_scope}
-                onChange={(e) =>
-                  setMeta({ ...meta, discount_scope: e.target.value, discount_value: 0 })
-                }
-              >
-                {DISCOUNT_SCOPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setMeta({ ...meta, discount_scope: value, discount_value: 0 })}
+                options={DISCOUNT_SCOPE_OPTIONS}
+                placeholder="Discount scope"
+                searchPlaceholder="Search discount scope"
+              />
               <div className="flex gap-2">
-                <select
-                  className="input flex-1 !py-0.5 !px-1.5 text-xs"
+                <SearchableSelect
+                  className="flex-1"
                   value={meta.discount_type}
-                  onChange={(e) =>
-                    setMeta({ ...meta, discount_type: e.target.value, discount_value: 0 })
+                  onChange={(value) =>
+                    setMeta({ ...meta, discount_type: value, discount_value: 0 })
                   }
-                >
-                  <option value="PERCENT">Percentage</option>
-                  <option value="FIXED">Fixed ৳</option>
-                </select>
+                  options={[
+                    { value: 'PERCENT', label: 'Percentage' },
+                    { value: 'FIXED', label: 'Fixed' },
+                  ]}
+                  placeholder="Discount type"
+                  searchPlaceholder="Search discount type"
+                />
                 <input
                   type="number"
                   min="0"
@@ -1605,18 +1605,13 @@ function MenuManager({ cats, items, reload, isAdmin }) {
           <div className="grid grid-cols-4 gap-2 mb-4 items-end">
             <div>
               <label className="label">Category</label>
-              <select
-                className="input"
+              <SearchableSelect
                 value={ni.category_id}
-                onChange={(e) => setNi({ ...ni, category_id: e.target.value })}
-              >
-                <option value="">Select…</option>
-                {cats.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setNi({ ...ni, category_id: value })}
+                options={cats.map((c) => ({ value: c.id, label: c.name }))}
+                placeholder="Select category"
+                searchPlaceholder="Search category"
+              />
             </div>
             <div>
               <label className="label">Item name</label>
@@ -2084,16 +2079,14 @@ function DayClose({ flash, isAdmin, userName, role }) {
       await withTenant(
         supabase.from('day_closes').delete().eq('close_date', day).eq('type', 'RESTAURANT'),
       )
-      const { error: rError } = await supabase
-        .from('day_closes')
-        .insert(
-          withTenantInsert({
-            ...closeData,
-            type: 'RESTAURANT',
-            settled_amount: restTotal,
-            settled_orders: restOrders.filter((o) => o.status === 'SETTLED').length,
-          }),
-        )
+      const { error: rError } = await supabase.from('day_closes').insert(
+        withTenantInsert({
+          ...closeData,
+          type: 'RESTAURANT',
+          settled_amount: restTotal,
+          settled_orders: restOrders.filter((o) => o.status === 'SETTLED').length,
+        }),
+      )
       if (rError) throw rError
       flash(`Day closed for ${day} — Restaurant ৳${restTotal.toFixed(2)}`)
       setShowConfirm(false)

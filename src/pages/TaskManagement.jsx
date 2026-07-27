@@ -1,11 +1,30 @@
 import { useEffect, useState } from 'react'
 import { supabase, SUPABASE_CONFIG } from '../lib/supabase'
-import { fmtDate, todayISO, parseWorkflowMeta, routeAiIntent, buildWorkflowDescription, updateDescriptionStage } from '../lib/helpers'
+import {
+  fmtDate,
+  todayISO,
+  parseWorkflowMeta,
+  routeAiIntent,
+  buildWorkflowDescription,
+  updateDescriptionStage,
+} from '../lib/helpers'
 import KPICards from '../components/KPICards.jsx'
-import { ListChecks, Plus, Sparkles, Search, Clock, User, X, Bot, ArrowRight, RefreshCcw } from 'lucide-react'
+import {
+  ListChecks,
+  Plus,
+  Sparkles,
+  Search,
+  Clock,
+  User,
+  X,
+  Bot,
+  ArrowRight,
+  RefreshCcw,
+} from 'lucide-react'
 import { Button } from '../components/ui/button.jsx'
 import { Input } from '../components/ui/input.jsx'
 import { Textarea } from '../components/ui/textarea.jsx'
+import SearchableSelect from '../components/SearchableSelect.jsx'
 
 const STATUSES = ['ALL', 'OPEN', 'IN_PROGRESS', 'DONE', 'CANCELLED']
 const STATUS_STYLE = {
@@ -26,7 +45,8 @@ const STAGE_STATUS = {
   SERVED: 'DONE',
   DONE: 'DONE',
 }
-const selectClass = 'h-9 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
+const selectClass =
+  'h-9 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30'
 
 function AITaskerBoard({ userName }) {
   const [rawIntent, setRawIntent] = useState('')
@@ -34,7 +54,10 @@ function AITaskerBoard({ userName }) {
   const [msg, setMsg] = useState('')
   const [tasks, setTasks] = useState([])
 
-  const flash = (text) => { setMsg(text); setTimeout(() => setMsg(''), 4000) }
+  const flash = (text) => {
+    setMsg(text)
+    setTimeout(() => setMsg(''), 4000)
+  }
 
   const load = async () => {
     const { data, error } = await supabase
@@ -43,11 +66,16 @@ function AITaskerBoard({ userName }) {
       .in('source', ['AI_ROUTED', 'GUEST_POS_ORDER', 'CHECKOUT_CLEARANCE'])
       .order('created_at', { ascending: false })
       .limit(250)
-    if (error) { flash(error.message); return }
+    if (error) {
+      flash(error.message)
+      return
+    }
     setTasks(data || [])
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+  }, [])
 
   const byDepartment = { RESTAURANT: [], HOUSEKEEPING: [], FRONT_OFFICE: [], MAINTENANCE: [] }
   tasks.forEach((task) => {
@@ -58,7 +86,10 @@ function AITaskerBoard({ userName }) {
   })
 
   const createIntentTask = async () => {
-    if (!rawIntent.trim()) { flash('Write the guest request first.'); return }
+    if (!rawIntent.trim()) {
+      flash('Write the guest request first.')
+      return
+    }
     setBusy(true)
     const routed = routeAiIntent(rawIntent)
     const description = buildWorkflowDescription('', {
@@ -82,7 +113,10 @@ function AITaskerBoard({ userName }) {
     }
     const { error } = await supabase.from('tasks').insert(payload)
     setBusy(false)
-    if (error) { flash(error.message); return }
+    if (error) {
+      flash(error.message)
+      return
+    }
     setRawIntent('')
     flash(`${routed.department.replace('_', ' ')} queue তে task routed হয়েছে.`)
     load()
@@ -104,7 +138,10 @@ function AITaskerBoard({ userName }) {
       patch.completed_by = userName || 'AI Tasker'
     }
     const { error } = await supabase.from('tasks').update(patch).eq('id', taskRow.id)
-    if (error) { flash(error.message); return }
+    if (error) {
+      flash(error.message)
+      return
+    }
     load()
   }
 
@@ -114,8 +151,12 @@ function AITaskerBoard({ userName }) {
         <h1 className="font-display text-2xl font-bold text-pine flex items-center gap-2">
           <Bot size={22} className="text-forest" /> AI Tasker
         </h1>
-        <p className="text-sm text-pine/60 mt-1">Route guest intent to department queue and track workflow stages.</p>
-        {msg && <div className="mt-3 px-3 py-2 rounded-lg bg-forest/10 text-forest text-sm">{msg}</div>}
+        <p className="text-sm text-pine/60 mt-1">
+          Route guest intent to department queue and track workflow stages.
+        </p>
+        {msg && (
+          <div className="mt-3 px-3 py-2 rounded-lg bg-forest/10 text-forest text-sm">{msg}</div>
+        )}
         <div className="mt-3 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-2">
           <Textarea
             className="min-h-[92px]"
@@ -130,32 +171,46 @@ function AITaskerBoard({ userName }) {
       </div>
 
       <div className="flex justify-end">
-        <Button variant="ghost" size="sm" onClick={load}><RefreshCcw size={13} /> Refresh tracking</Button>
+        <Button variant="ghost" size="sm" onClick={load}>
+          <RefreshCcw size={13} /> Refresh tracking
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {Object.entries(byDepartment).map(([department, rows]) => (
           <div key={department} className="card p-4">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-display font-semibold text-pine">{department.replace('_', ' ')}</h3>
+              <h3 className="font-display font-semibold text-pine">
+                {department.replace('_', ' ')}
+              </h3>
               <span className="status-chip bg-pine/10 text-pine">{rows.length}</span>
             </div>
             <div className="space-y-2 max-h-[52vh] overflow-auto pr-1">
               {rows.map((taskRow) => {
-                const nextStage = taskRow.meta.workflow[taskRow.meta.workflow.indexOf(taskRow.meta.stage) + 1]
+                const nextStage =
+                  taskRow.meta.workflow[taskRow.meta.workflow.indexOf(taskRow.meta.stage) + 1]
                 return (
                   <div key={taskRow.id} className="rounded-lg border border-leaf p-3 bg-white">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-xs text-pine/40 font-mono">{taskRow.task_no || taskRow.id.slice(0, 8)}</p>
+                        <p className="text-xs text-pine/40 font-mono">
+                          {taskRow.task_no || taskRow.id.slice(0, 8)}
+                        </p>
                         <p className="text-sm font-semibold text-pine">{taskRow.title}</p>
                         <p className="text-xs text-pine/50 mt-0.5">{fmtDate(taskRow.created_at)}</p>
                       </div>
-                      <span className="status-chip bg-sky-100 text-sky-700">{taskRow.meta.stage}</span>
+                      <span className="status-chip bg-sky-100 text-sky-700">
+                        {taskRow.meta.stage}
+                      </span>
                     </div>
                     <div className="mt-2 text-xs text-pine/55">Status: {taskRow.status}</div>
                     {nextStage ? (
-                      <Button variant="ghost" size="sm" onClick={() => advanceStage(taskRow)} className="mt-2 w-full justify-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => advanceStage(taskRow)}
+                        className="mt-2 w-full justify-center"
+                      >
                         Next: {nextStage} <ArrowRight size={13} />
                       </Button>
                     ) : (
@@ -184,10 +239,11 @@ export default function TaskManagement({ userName, aiTaskerMode = false }) {
 
   const load = async () => {
     setLoading(true)
-    const { data } = await supabase.from('tasks')
+    const { data } = await supabase
+      .from('tasks')
       .select(
         'id, task_no, title, description, priority, status, due_date, source, created_at, ' +
-        'category:task_categories(id,name), assignee:employees!tasks_assigned_to_fkey(id,full_name)'
+          'category:task_categories(id,name), assignee:employees!tasks_assigned_to_fkey(id,full_name)',
       )
       .order('created_at', { ascending: false })
       .limit(300)
@@ -198,22 +254,38 @@ export default function TaskManagement({ userName, aiTaskerMode = false }) {
   useEffect(() => {
     if (aiTaskerMode) return
     load()
-    supabase.from('task_categories').select('id,name').eq('is_active', true).order('name')
+    supabase
+      .from('task_categories')
+      .select('id,name')
+      .eq('is_active', true)
+      .order('name')
       .then(({ data }) => setCategories(data || []))
-    supabase.from('employees').select('id,full_name').eq('status', 'ACTIVE').order('full_name')
+    supabase
+      .from('employees')
+      .select('id,full_name')
+      .eq('status', 'ACTIVE')
+      .order('full_name')
       .then(({ data }) => setEmployees(data || []))
   }, [aiTaskerMode])
 
   if (aiTaskerMode) return <AITaskerBoard userName={userName} />
 
-  const filtered = rows.filter((r) =>
-    (filter === 'ALL' || r.status === filter) &&
-    (!q || [r.task_no, r.title, r.description, r.assignee?.full_name].join(' ').toLowerCase().includes(q.toLowerCase()))
+  const filtered = rows.filter(
+    (r) =>
+      (filter === 'ALL' || r.status === filter) &&
+      (!q ||
+        [r.task_no, r.title, r.description, r.assignee?.full_name]
+          .join(' ')
+          .toLowerCase()
+          .includes(q.toLowerCase())),
   )
 
   const quickStatus = async (id, status) => {
     const patch = { status, updated_at: new Date().toISOString() }
-    if (status === 'DONE') { patch.completed_at = new Date().toISOString(); patch.completed_by = userName }
+    if (status === 'DONE') {
+      patch.completed_at = new Date().toISOString()
+      patch.completed_by = userName
+    }
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
     await supabase.from('tasks').update(patch).eq('id', id)
   }
@@ -233,14 +305,21 @@ export default function TaskManagement({ userName, aiTaskerMode = false }) {
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <div className="relative w-full sm:w-64">
           <Search size={15} className="absolute left-3 top-2.5 text-pine/40" />
-          <Input className="pl-9 w-full" placeholder="Search task, assignee…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input
+            className="pl-9 w-full"
+            placeholder="Search task, assignee…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
         </div>
         {STATUSES.map((s) => (
           <button
             key={s}
             onClick={() => setFilter(s)}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${
-              filter === s ? 'bg-pine text-white' : 'bg-white border border-leaf text-pine/70 hover:bg-leaf/40'
+              filter === s
+                ? 'bg-pine text-white'
+                : 'bg-white border border-leaf text-pine/70 hover:bg-leaf/40'
             }`}
           >
             {s.replace('_', ' ')}
@@ -255,41 +334,57 @@ export default function TaskManagement({ userName, aiTaskerMode = false }) {
           {filtered.map((t) => {
             const wf = parseWorkflowMeta(t)
             return (
-            <div key={t.id} className="card p-4 flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="text-xs font-mono text-pine/40">{t.task_no}</span>
-                  <span className={`status-chip ${PRIORITY_STYLE[t.priority]}`}>{t.priority}</span>
-                  {t.category?.name && <span className="text-xs text-pine/50">· {t.category.name}</span>}
-                  {(t.source === 'NLP' || t.source === 'AI_ROUTED') && (
-                    <span className="text-[10px] flex items-center gap-0.5 text-forest font-medium">
-                      <Sparkles size={10} /> AI
-                    </span>
-                  )}
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-pine/10 text-pine">{wf.department.replace('_', ' ')}</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-sky-100 text-sky-700">{wf.stage}</span>
-                </div>
-                <div className="font-semibold text-sm truncate">{t.title}</div>
-                {t.description && <div className="text-xs text-pine/60 mt-0.5 line-clamp-2">{t.description}</div>}
-                <div className="flex items-center gap-3 text-xs text-pine/50 mt-1.5 flex-wrap">
-                  {t.assignee?.full_name && (
-                    <span className="flex items-center gap-1"><User size={11} /> {t.assignee.full_name}</span>
-                  )}
-                  {t.due_date && (
-                    <span className="flex items-center gap-1"><Clock size={11} /> {fmtDate(t.due_date)}</span>
-                  )}
-                </div>
-              </div>
-              <select
-                value={t.status}
-                onChange={(e) => quickStatus(t.id, e.target.value)}
-                className={`status-chip border-0 cursor-pointer shrink-0 ${STATUS_STYLE[t.status]}`}
+              <div
+                key={t.id}
+                className="card p-4 flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap"
               >
-                {['OPEN', 'IN_PROGRESS', 'DONE', 'CANCELLED'].map((s) => (
-                  <option key={s} value={s}>{s.replace('_', ' ')}</option>
-                ))}
-              </select>
-            </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="text-xs font-mono text-pine/40">{t.task_no}</span>
+                    <span className={`status-chip ${PRIORITY_STYLE[t.priority]}`}>
+                      {t.priority}
+                    </span>
+                    {t.category?.name && (
+                      <span className="text-xs text-pine/50">· {t.category.name}</span>
+                    )}
+                    {(t.source === 'NLP' || t.source === 'AI_ROUTED') && (
+                      <span className="text-[10px] flex items-center gap-0.5 text-forest font-medium">
+                        <Sparkles size={10} /> AI
+                      </span>
+                    )}
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-pine/10 text-pine">
+                      {wf.department.replace('_', ' ')}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-sky-100 text-sky-700">
+                      {wf.stage}
+                    </span>
+                  </div>
+                  <div className="font-semibold text-sm truncate">{t.title}</div>
+                  {t.description && (
+                    <div className="text-xs text-pine/60 mt-0.5 line-clamp-2">{t.description}</div>
+                  )}
+                  <div className="flex items-center gap-3 text-xs text-pine/50 mt-1.5 flex-wrap">
+                    {t.assignee?.full_name && (
+                      <span className="flex items-center gap-1">
+                        <User size={11} /> {t.assignee.full_name}
+                      </span>
+                    )}
+                    {t.due_date && (
+                      <span className="flex items-center gap-1">
+                        <Clock size={11} /> {fmtDate(t.due_date)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <SearchableSelect
+                  className={`shrink-0 ${STATUS_STYLE[t.status]}`}
+                  value={t.status}
+                  onChange={(value) => quickStatus(t.id, value)}
+                  options={['OPEN', 'IN_PROGRESS', 'DONE', 'CANCELLED']}
+                  placeholder="Status"
+                  searchPlaceholder="Search status"
+                />
+              </div>
             )
           })}
           {filtered.length === 0 && (
@@ -305,7 +400,10 @@ export default function TaskManagement({ userName, aiTaskerMode = false }) {
           categories={categories}
           employees={employees}
           userName={userName}
-          close={() => { setShowNew(false); load() }}
+          close={() => {
+            setShowNew(false)
+            load()
+          }}
         />
       )}
     </div>
@@ -320,8 +418,12 @@ function NewTask({ categories, employees, userName, close }) {
   const [aiMeta, setAiMeta] = useState(null)
 
   const [f, setF] = useState({
-    title: '', description: '', category_id: '', priority: 'MEDIUM',
-    assigned_to: '', due_date: '',
+    title: '',
+    description: '',
+    category_id: '',
+    priority: 'MEDIUM',
+    assigned_to: '',
+    due_date: '',
   })
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
 
@@ -329,13 +431,22 @@ function NewTask({ categories, employees, userName, close }) {
   const [err, setErr] = useState('')
 
   const parseWithAI = async () => {
-    if (!rawInput.trim()) { setParseErr('কিছু লিখুন আগে।'); return }
-    setParsing(true); setParseErr('')
+    if (!rawInput.trim()) {
+      setParseErr('কিছু লিখুন আগে।')
+      return
+    }
+    setParsing(true)
+    setParseErr('')
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       const res = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/parse-task-nlp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
         body: JSON.stringify({ raw_input: rawInput }),
       })
       const json = await res.json()
@@ -362,8 +473,12 @@ function NewTask({ categories, employees, userName, close }) {
   }
 
   const save = async () => {
-    if (!f.title.trim()) { setErr('Title লাগবে।'); return }
-    setBusy(true); setErr('')
+    if (!f.title.trim()) {
+      setErr('Title লাগবে।')
+      return
+    }
+    setBusy(true)
+    setErr('')
     const routed = routeAiIntent(`${f.title} ${f.description || ''}`)
     const descriptionWithFlow = buildWorkflowDescription(f.description || '', {
       department: routed.department,
@@ -382,7 +497,7 @@ function NewTask({ categories, employees, userName, close }) {
       raw_input: aiMeta ? rawInput : null,
       ai_confidence: aiMeta?.confidence ?? null,
       ai_suggested_priority: aiMeta ? f.priority : null,
-      ai_suggested_assignee_id: aiMeta ? (f.assigned_to || null) : null,
+      ai_suggested_assignee_id: aiMeta ? f.assigned_to || null : null,
       ai_reasoning: aiMeta?.reasoning || null,
       created_by: userName,
     })
@@ -396,7 +511,14 @@ function NewTask({ categories, employees, userName, close }) {
       <div className="card max-w-xl w-full p-4 sm:p-6 my-3 sm:my-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-lg font-bold text-pine">New task</h2>
-          <Button variant="ghost" size="icon-xs" onClick={close} className="text-pine/40 hover:text-pine"><X size={18} /></Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={close}
+            className="text-pine/40 hover:text-pine"
+          >
+            <X size={18} />
+          </Button>
         </div>
 
         {mode === 'ai' && !aiMeta && (
@@ -412,7 +534,12 @@ function NewTask({ categories, employees, userName, close }) {
             />
             {parseErr && <p className="text-sm text-red-600 mt-2">{parseErr}</p>}
             <div className="flex justify-between items-center mt-3">
-              <Button variant="link" size="sm" className="text-xs text-pine/50 px-0" onClick={() => setMode('manual')}>
+              <Button
+                variant="link"
+                size="sm"
+                className="text-xs text-pine/50 px-0"
+                onClick={() => setMode('manual')}
+              >
                 বা ম্যানুয়ালি লিখি
               </Button>
               <Button onClick={parseWithAI} disabled={parsing}>
@@ -427,7 +554,10 @@ function NewTask({ categories, employees, userName, close }) {
             {aiMeta && (
               <div className="px-3 py-2 rounded-lg bg-forest/10 text-xs text-forest flex items-start gap-1.5">
                 <Sparkles size={13} className="mt-0.5 shrink-0" />
-                <span>AI suggestion (confidence {Math.round((aiMeta.confidence || 0) * 100)}%): {aiMeta.reasoning}</span>
+                <span>
+                  AI suggestion (confidence {Math.round((aiMeta.confidence || 0) * 100)}%):{' '}
+                  {aiMeta.reasoning}
+                </span>
               </div>
             )}
             <div>
@@ -436,32 +566,57 @@ function NewTask({ categories, employees, userName, close }) {
             </div>
             <div>
               <label className="label">Description</label>
-              <Textarea rows={2} value={f.description} onChange={(e) => set('description', e.target.value)} />
+              <Textarea
+                rows={2}
+                value={f.description}
+                onChange={(e) => set('description', e.target.value)}
+              />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="label">Category</label>
-                <select className={selectClass} value={f.category_id} onChange={(e) => set('category_id', e.target.value)}>
-                  <option value="">—</option>
-                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <SearchableSelect
+                  className={selectClass}
+                  value={f.category_id}
+                  onChange={(value) => set('category_id', value)}
+                  options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                  placeholder="Category"
+                  searchPlaceholder="Search category"
+                />
               </div>
               <div>
                 <label className="label">Priority</label>
-                <select className={selectClass} value={f.priority} onChange={(e) => set('priority', e.target.value)}>
-                  {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
+                <SearchableSelect
+                  className={selectClass}
+                  value={f.priority}
+                  onChange={(value) => set('priority', value)}
+                  options={['LOW', 'MEDIUM', 'HIGH', 'URGENT']}
+                  placeholder="Priority"
+                  searchPlaceholder="Search priority"
+                />
               </div>
               <div>
                 <label className="label">Assign to</label>
-                <select className={selectClass} value={f.assigned_to} onChange={(e) => set('assigned_to', e.target.value)}>
-                  <option value="">— Unassigned —</option>
-                  {employees.map((e) => <option key={e.id} value={e.id}>{e.full_name}</option>)}
-                </select>
+                <SearchableSelect
+                  className={selectClass}
+                  value={f.assigned_to}
+                  onChange={(value) => set('assigned_to', value)}
+                  options={employees.map((employee) => ({
+                    value: employee.id,
+                    label: employee.full_name,
+                  }))}
+                  placeholder="Unassigned"
+                  searchPlaceholder="Search employee"
+                  clearable
+                />
               </div>
               <div>
                 <label className="label">Due date</label>
-                <Input type="date" value={f.due_date} onChange={(e) => set('due_date', e.target.value)} />
+                <Input
+                  type="date"
+                  value={f.due_date}
+                  onChange={(e) => set('due_date', e.target.value)}
+                />
               </div>
             </div>
           </div>
@@ -469,7 +624,9 @@ function NewTask({ categories, employees, userName, close }) {
 
         {err && <p className="text-sm text-red-600 mt-3">{err}</p>}
         <div className="flex justify-end gap-2 mt-5">
-          <Button variant="ghost" onClick={close}>Cancel</Button>
+          <Button variant="ghost" onClick={close}>
+            Cancel
+          </Button>
           {mode === 'manual' && (
             <Button onClick={save} disabled={busy}>
               {busy ? 'Saving…' : 'Create task'}

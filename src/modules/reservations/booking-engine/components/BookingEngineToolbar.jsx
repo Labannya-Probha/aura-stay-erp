@@ -1,15 +1,8 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  Search,
-} from "lucide-react"
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
-import {
-  addMonths,
-  monthFromInput,
-  monthInputValue,
-  monthLabel,
-} from "../utils/dateRange"
+import SearchableSelect from '../../../../components/SearchableSelect.jsx'
+
+import { addMonths, monthFromInput, monthInputValue, monthLabel } from '../utils/dateRange'
 
 export default function BookingEngineToolbar({
   filters,
@@ -18,6 +11,27 @@ export default function BookingEngineToolbar({
   setMonthCursor,
   roomTypes = [],
 }) {
+  const roomTypeOptions = [
+    { value: 'ALL', label: 'All room types' },
+    ...roomTypes.map((roomType) => ({
+      value: roomType,
+      label: roomType,
+    })),
+  ]
+
+  const statusOptions = [
+    { value: 'ALL', label: 'All statuses' },
+    { value: 'QUERY', label: 'Query' },
+    { value: 'QUOTED', label: 'Quoted' },
+    { value: 'TENTATIVE', label: 'Tentative' },
+    { value: 'CONFIRMED', label: 'Confirmed' },
+    { value: 'CHECKED_IN', label: 'In-house' },
+    { value: 'CHECKED_OUT', label: 'Checked out' },
+    { value: 'SETTLED', label: 'Settled' },
+    { value: 'NO_SHOW', label: 'No show' },
+    { value: 'BLOCKED', label: 'Blocked' },
+  ]
+
   function updateFilter(key, value) {
     setFilters((previous) => ({
       ...previous,
@@ -31,74 +45,33 @@ export default function BookingEngineToolbar({
         <Search size={16} />
         <input
           value={filters.search}
-          onChange={(event) =>
-            updateFilter(
-              "search",
-              event.target.value
-            )
-          }
+          onChange={(event) => updateFilter('search', event.target.value)}
           placeholder="Search guest, room, reservation, source..."
         />
       </div>
 
-      <select
+      <SearchableSelect
         value={filters.roomType}
-        onChange={(event) =>
-          updateFilter(
-            "roomType",
-            event.target.value
-          )
-        }
-      >
-        <option value="ALL">All room types</option>
+        onChange={(value) => updateFilter('roomType', value)}
+        options={roomTypeOptions}
+        placeholder="All room types"
+        searchPlaceholder="Search room type..."
+        className="min-w-[220px]"
+      />
 
-        {roomTypes.map((roomType) => (
-          <option
-            key={roomType}
-            value={roomType}
-          >
-            {roomType}
-          </option>
-        ))}
-      </select>
-
-      <select
+      <SearchableSelect
         value={filters.status}
-        onChange={(event) =>
-          updateFilter(
-            "status",
-            event.target.value
-          )
-        }
-      >
-        <option value="ALL">All statuses</option>
-        <option value="QUERY">Query</option>
-        <option value="QUOTED">Quoted</option>
-        <option value="TENTATIVE">
-          Tentative
-        </option>
-        <option value="CONFIRMED">
-          Confirmed
-        </option>
-        <option value="CHECKED_IN">
-          In-house
-        </option>
-        <option value="CHECKED_OUT">
-          Checked out
-        </option>
-        <option value="SETTLED">Settled</option>
-        <option value="NO_SHOW">No show</option>
-        <option value="BLOCKED">Blocked</option>
-      </select>
+        onChange={(value) => updateFilter('status', value)}
+        options={statusOptions}
+        placeholder="All statuses"
+        searchPlaceholder="Search status..."
+        className="min-w-[200px]"
+      />
 
       <div className="aeds-month-control">
         <button
           type="button"
-          onClick={() =>
-            setMonthCursor((current) =>
-              addMonths(current, -1)
-            )
-          }
+          onClick={() => setMonthCursor((current) => addMonths(current, -1))}
           aria-label="Previous month"
         >
           <ChevronLeft size={16} />
@@ -110,23 +83,13 @@ export default function BookingEngineToolbar({
           <input
             type="month"
             value={monthInputValue(monthCursor)}
-            onChange={(event) =>
-              setMonthCursor(
-                monthFromInput(
-                  event.target.value
-                )
-              )
-            }
+            onChange={(event) => setMonthCursor(monthFromInput(event.target.value))}
           />
         </label>
 
         <button
           type="button"
-          onClick={() =>
-            setMonthCursor((current) =>
-              addMonths(current, 1)
-            )
-          }
+          onClick={() => setMonthCursor((current) => addMonths(current, 1))}
           aria-label="Next month"
         >
           <ChevronRight size={16} />

@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
-  Activity, ChefHat, FileText, Printer, Receipt, Route, Save, Search,
-  Settings2, SlidersHorizontal, TestTube2,
+  Activity,
+  ChefHat,
+  FileText,
+  Printer,
+  Receipt,
+  Route,
+  Save,
+  Search,
+  Settings2,
+  SlidersHorizontal,
+  TestTube2,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import PrintPortal from '../components/PrintPortal.jsx'
@@ -12,6 +21,7 @@ import { getCompanySettingsQuery } from '../lib/companySettings'
 import { formatMoney } from '../lib/posPrintEngine'
 import { fmtDate } from '../lib/helpers'
 import { LegacyButton } from '../components/ui/legacy-controls'
+import SearchableSelect from '../components/SearchableSelect.jsx'
 
 const TABS = [
   { id: 'receipt-preview', label: 'Receipt Preview', icon: Receipt },
@@ -29,7 +39,7 @@ const withTenant = (query) => {
   return query.eq('tenant_id', tenantId || NO_TENANT_SENTINEL)
 }
 
-const safeArray = (value) => Array.isArray(value) ? value : []
+const safeArray = (value) => (Array.isArray(value) ? value : [])
 
 function tabFromLocation(search) {
   const requested = new URLSearchParams(search).get('tab')
@@ -70,25 +80,29 @@ export default function PosPrintCenter({ company: shellCompany, userName }) {
 
   const load = async () => {
     setBusy(true)
-    const [
-      companyRes,
-      settingsRes,
-      profilesRes,
-      devicesRes,
-      routesRes,
-      logsRes,
-      ordersRes,
-    ] = await Promise.all([
-      getCompanySettingsQuery('*', tenantId).limit(1).maybeSingle(),
-      withTenant(supabase.from('print_settings').select('*')).limit(1).maybeSingle(),
-      withTenant(supabase.from('print_profiles').select('*')).order('profile_code'),
-      withTenant(supabase.from('printer_devices').select('*')).order('device_name'),
-      withTenant(supabase.from('printer_routes').select('*')).order('priority'),
-      withTenant(supabase.from('print_logs').select('*')).order('printed_at', { ascending: false }).limit(50),
-      withTenant(supabase.from('pos_orders').select('*')).order('created_at', { ascending: false }).limit(25),
-    ])
+    const [companyRes, settingsRes, profilesRes, devicesRes, routesRes, logsRes, ordersRes] =
+      await Promise.all([
+        getCompanySettingsQuery('*', tenantId).limit(1).maybeSingle(),
+        withTenant(supabase.from('print_settings').select('*')).limit(1).maybeSingle(),
+        withTenant(supabase.from('print_profiles').select('*')).order('profile_code'),
+        withTenant(supabase.from('printer_devices').select('*')).order('device_name'),
+        withTenant(supabase.from('printer_routes').select('*')).order('priority'),
+        withTenant(supabase.from('print_logs').select('*'))
+          .order('printed_at', { ascending: false })
+          .limit(50),
+        withTenant(supabase.from('pos_orders').select('*'))
+          .order('created_at', { ascending: false })
+          .limit(25),
+      ])
     setBusy(false)
-    const error = companyRes.error || settingsRes.error || profilesRes.error || devicesRes.error || routesRes.error || logsRes.error || ordersRes.error
+    const error =
+      companyRes.error ||
+      settingsRes.error ||
+      profilesRes.error ||
+      devicesRes.error ||
+      routesRes.error ||
+      logsRes.error ||
+      ordersRes.error
     if (error) {
       flash(error.message)
       return
@@ -108,14 +122,22 @@ export default function PosPrintCenter({ company: shellCompany, userName }) {
       setOrderItems([])
       return
     }
-    const { data, error } = await withTenant(supabase.from('pos_order_items').select('*').eq('order_id', orderId))
+    const { data, error } = await withTenant(
+      supabase.from('pos_order_items').select('*').eq('order_id', orderId),
+    )
     if (error) flash(error.message)
     else setOrderItems(data || [])
   }
 
-  useEffect(() => { setActiveTab(tabFromLocation(location.search)) }, [location.search])
-  useEffect(() => { load() }, [])
-  useEffect(() => { loadItems(selectedOrder?.id) }, [selectedOrder?.id])
+  useEffect(() => {
+    setActiveTab(tabFromLocation(location.search))
+  }, [location.search])
+  useEffect(() => {
+    load()
+  }, [])
+  useEffect(() => {
+    loadItems(selectedOrder?.id)
+  }, [selectedOrder?.id])
 
   const saveSettings = async (next) => {
     if (!tenantId) {
@@ -144,17 +166,25 @@ export default function PosPrintCenter({ company: shellCompany, userName }) {
   }
 
   const saveProfile = async (profile) => {
-    const { error } = await withTenant(supabase.from('print_profiles').update({
-      copies: Number(profile.copies) || 1,
-      active: !!profile.active,
-      auto_print_enabled: !!profile.auto_print_enabled,
-      ask_before_print_enabled: !!profile.ask_before_print_enabled,
-      show_qr: !!profile.show_qr,
-      show_logo: !!profile.show_logo,
-      updated_at: new Date().toISOString(),
-    }).eq('id', profile.id))
+    const { error } = await withTenant(
+      supabase
+        .from('print_profiles')
+        .update({
+          copies: Number(profile.copies) || 1,
+          active: !!profile.active,
+          auto_print_enabled: !!profile.auto_print_enabled,
+          ask_before_print_enabled: !!profile.ask_before_print_enabled,
+          show_qr: !!profile.show_qr,
+          show_logo: !!profile.show_logo,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', profile.id),
+    )
     if (error) flash(error.message)
-    else { flash('Print profile saved.'); load() }
+    else {
+      flash('Print profile saved.')
+      load()
+    }
   }
 
   const saveDevice = async (device) => {
@@ -181,7 +211,10 @@ export default function PosPrintCenter({ company: shellCompany, userName }) {
       ? await withTenant(supabase.from('printer_devices').update(payload).eq('id', device.id))
       : await supabase.from('printer_devices').insert(payload)
     if (error) flash(error.message)
-    else { flash('Printer device saved.'); load() }
+    else {
+      flash('Printer device saved.')
+      load()
+    }
   }
 
   const saveRoute = async (route) => {
@@ -203,7 +236,10 @@ export default function PosPrintCenter({ company: shellCompany, userName }) {
       ? await withTenant(supabase.from('printer_routes').update(payload).eq('id', route.id))
       : await supabase.from('printer_routes').insert(payload)
     if (error) flash(error.message)
-    else { flash('Printer route saved.'); load() }
+    else {
+      flash('Printer route saved.')
+      load()
+    }
   }
 
   const logPrint = async (copyType, documentHash = null) => {
@@ -246,15 +282,25 @@ export default function PosPrintCenter({ company: shellCompany, userName }) {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-pine">POS Print Center</h1>
-          <p className="text-sm text-pine/60">Receipt, KOT/BOT, printer routing, templates, test print and audit logs.</p>
+          <p className="text-sm text-pine/60">
+            Receipt, KOT/BOT, printer routing, templates, test print and audit logs.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <LegacyButton variant="ghost" onClick={load} disabled={busy}><Activity size={15} /> Refresh</LegacyButton>
-          <LegacyButton onClick={openReceiptPreview}><Printer size={15} /> Preview receipt</LegacyButton>
+          <LegacyButton variant="ghost" onClick={load} disabled={busy}>
+            <Activity size={15} /> Refresh
+          </LegacyButton>
+          <LegacyButton onClick={openReceiptPreview}>
+            <Printer size={15} /> Preview receipt
+          </LegacyButton>
         </div>
       </div>
 
-      {message && <div className="rounded-xl border border-forest/20 bg-forest/10 px-4 py-2 text-sm text-forest">{message}</div>}
+      {message && (
+        <div className="rounded-xl border border-forest/20 bg-forest/10 px-4 py-2 text-sm text-forest">
+          {message}
+        </div>
+      )}
 
       <div className="grid md:grid-cols-4 gap-3">
         <MetricCard icon={FileText} label="Profiles" value={profiles.length} />
@@ -269,7 +315,9 @@ export default function PosPrintCenter({ company: shellCompany, userName }) {
             key={tab.id}
             onClick={() => openTab(tab.id)}
             className={`tab-button-responsive px-4 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap flex items-center gap-2 ${
-              activeTab === tab.id ? 'bg-white border border-leaf border-b-white text-forest -mb-px' : 'text-pine/60 hover:text-pine'
+              activeTab === tab.id
+                ? 'bg-white border border-leaf border-b-white text-forest -mb-px'
+                : 'text-pine/60 hover:text-pine'
             }`}
           >
             <tab.icon size={15} /> {tab.label}
@@ -310,7 +358,12 @@ export default function PosPrintCenter({ company: shellCompany, userName }) {
         <DesignerPanel settings={settings} saveSettings={saveSettings} company={company} />
       )}
       {activeTab === 'thermal-test' && (
-        <ThermalTestPanel selectedOrder={selectedOrder} items={orderItems} company={company} openReceiptPreview={openReceiptPreview} />
+        <ThermalTestPanel
+          selectedOrder={selectedOrder}
+          items={orderItems}
+          company={company}
+          openReceiptPreview={openReceiptPreview}
+        />
       )}
       {activeTab === 'logs' && <LogsPanel logs={logs} />}
 
@@ -358,23 +411,48 @@ function MetricCard({ icon: Icon, label, value }) {
         <p className="text-[10px] uppercase tracking-wider text-pine/45 font-bold">{label}</p>
         <strong className="text-xl text-pine">{value}</strong>
       </div>
-      <span className="h-10 w-10 rounded-lg bg-forest/10 text-forest grid place-items-center"><Icon size={18} /></span>
+      <span className="h-10 w-10 rounded-lg bg-forest/10 text-forest grid place-items-center">
+        <Icon size={18} />
+      </span>
     </div>
   )
 }
 
-function ReceiptPreviewPanel({ orders, selectedOrderId, setSelectedOrderId, selectedOrder, items, settings, company, openReceiptPreview }) {
+function ReceiptPreviewPanel({
+  orders,
+  selectedOrderId,
+  setSelectedOrderId,
+  selectedOrder,
+  items,
+  settings,
+  company,
+  openReceiptPreview,
+}) {
   return (
     <div className="grid xl:grid-cols-[360px_minmax(0,1fr)] gap-4">
       <div className="card p-4 space-y-3">
-        <h2 className="font-display font-semibold text-pine flex items-center gap-2"><Search size={17} /> Live POS orders</h2>
-        <select className="input" value={selectedOrderId} onChange={(event) => setSelectedOrderId(event.target.value)}>
-          {orders.map((order) => (
-            <option key={order.id} value={order.id}>{order.order_no || order.id} - {order.status} - {formatMoney(order.total, company?.currency || 'BDT')}</option>
-          ))}
-        </select>
-        {!orders.length && <p className="text-sm text-pine/50">No live POS order found for this tenant. Create a real POS order to preview and print.</p>}
-        <LegacyButton className="w-full" onClick={openReceiptPreview} disabled={!selectedOrder}><Printer size={15} /> Open thermal preview</LegacyButton>
+        <h2 className="font-display font-semibold text-pine flex items-center gap-2">
+          <Search size={17} /> Live POS orders
+        </h2>
+        <SearchableSelect
+          value={selectedOrderId}
+          onChange={(value) => setSelectedOrderId(value)}
+          options={orders.map((order) => ({
+            value: order.id,
+            label: order.order_no || order.id,
+            sublabel: `${order.status} - ${formatMoney(order.total, company?.currency || 'BDT')}`,
+          }))}
+          placeholder="Select order"
+          searchPlaceholder="Search order"
+        />
+        {!orders.length && (
+          <p className="text-sm text-pine/50">
+            No live POS order found for this tenant. Create a real POS order to preview and print.
+          </p>
+        )}
+        <LegacyButton className="w-full" onClick={openReceiptPreview} disabled={!selectedOrder}>
+          <Printer size={15} /> Open thermal preview
+        </LegacyButton>
       </div>
       <div className="card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
@@ -390,7 +468,10 @@ function ReceiptPreviewPanel({ orders, selectedOrderId, setSelectedOrderId, sele
               <InfoRow label="Order" value={selectedOrder.order_no || selectedOrder.id} />
               <InfoRow label="Status" value={selectedOrder.status || 'OPEN'} />
               <InfoRow label="Order type" value={selectedOrder.order_type || 'DINE_IN'} />
-              <InfoRow label="Total" value={formatMoney(selectedOrder.total, company?.currency || 'BDT')} />
+              <InfoRow
+                label="Total"
+                value={formatMoney(selectedOrder.total, company?.currency || 'BDT')}
+              />
               <InfoRow label="Items loaded" value={items.length} />
               <InfoRow label="Tenant" value={company?.name || 'Tenant'} />
             </tbody>
@@ -406,15 +487,45 @@ function ReceiptPreviewPanel({ orders, selectedOrderId, setSelectedOrderId, sele
 function KitchenPreviewPanel({ selectedOrder, items, openKitchenPreview }) {
   return (
     <div className="grid lg:grid-cols-2 gap-4">
-      <TicketCard title="Kitchen Order Ticket" copy="No price, tax, discount or payment details are shown to kitchen staff." button="Preview KOT" onClick={() => openKitchenPreview('kot')} disabled={!selectedOrder} />
-      <TicketCard title="Bar Order Ticket" copy="Beverage/bar routed items print as BOT; if no bar item exists, the preview uses the selected order items." button="Preview BOT" onClick={() => openKitchenPreview('bot')} disabled={!selectedOrder} />
+      <TicketCard
+        title="Kitchen Order Ticket"
+        copy="No price, tax, discount or payment details are shown to kitchen staff."
+        button="Preview KOT"
+        onClick={() => openKitchenPreview('kot')}
+        disabled={!selectedOrder}
+      />
+      <TicketCard
+        title="Bar Order Ticket"
+        copy="Beverage/bar routed items print as BOT; if no bar item exists, the preview uses the selected order items."
+        button="Preview BOT"
+        onClick={() => openKitchenPreview('bot')}
+        disabled={!selectedOrder}
+      />
       <div className="card p-4 lg:col-span-2">
         <h2 className="font-display font-semibold text-pine mb-3">Selected ticket items</h2>
         <table className="w-full">
-          <thead><tr><th className="th">Item</th><th className="th text-right">Qty</th><th className="th">Notes</th></tr></thead>
+          <thead>
+            <tr>
+              <th className="th">Item</th>
+              <th className="th text-right">Qty</th>
+              <th className="th">Notes</th>
+            </tr>
+          </thead>
           <tbody>
-            {items.map((item) => <tr key={item.id || item.item_name}><td className="td">{item.item_name}</td><td className="td text-right">{Number(item.qty || 0)}</td><td className="td">{item.notes || item.note || '-'}</td></tr>)}
-            {!items.length && <tr><td className="td text-pine/50" colSpan={3}>No ticket items loaded.</td></tr>}
+            {items.map((item) => (
+              <tr key={item.id || item.item_name}>
+                <td className="td">{item.item_name}</td>
+                <td className="td text-right">{Number(item.qty || 0)}</td>
+                <td className="td">{item.notes || item.note || '-'}</td>
+              </tr>
+            ))}
+            {!items.length && (
+              <tr>
+                <td className="td text-pine/50" colSpan={3}>
+                  No ticket items loaded.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -427,7 +538,9 @@ function TicketCard({ title, copy, button, onClick, disabled }) {
     <div className="card p-5">
       <h2 className="font-display font-semibold text-pine mb-2">{title}</h2>
       <p className="text-sm text-pine/55 mb-4">{copy}</p>
-      <LegacyButton onClick={onClick} disabled={disabled}><Printer size={15} /> {button}</LegacyButton>
+      <LegacyButton onClick={onClick} disabled={disabled}>
+        <Printer size={15} /> {button}
+      </LegacyButton>
     </div>
   )
 }
@@ -435,14 +548,24 @@ function TicketCard({ title, copy, button, onClick, disabled }) {
 function ProfilesPanel({ profiles, saveProfile }) {
   const [drafts, setDrafts] = useState({})
   const draftFor = (profile) => drafts[profile.id] || profile
-  const updateDraft = (profile, key, value) => setDrafts((prev) => ({ ...prev, [profile.id]: { ...draftFor(profile), [key]: value } }))
+  const updateDraft = (profile, key, value) =>
+    setDrafts((prev) => ({ ...prev, [profile.id]: { ...draftFor(profile), [key]: value } }))
 
   return (
     <div className="card p-4">
       <h2 className="font-display font-semibold text-pine mb-3">Configurable print profiles</h2>
       <div className="table-scroll">
         <table className="w-full">
-          <thead><tr><th className="th">Code</th><th className="th">Copy title</th><th className="th">Template</th><th className="th text-right">Copies</th><th className="th">Options</th><th className="th"></th></tr></thead>
+          <thead>
+            <tr>
+              <th className="th">Code</th>
+              <th className="th">Copy title</th>
+              <th className="th">Template</th>
+              <th className="th text-right">Copies</th>
+              <th className="th">Options</th>
+              <th className="th"></th>
+            </tr>
+          </thead>
           <tbody>
             {profiles.map((profile) => {
               const draft = draftFor(profile)
@@ -451,21 +574,62 @@ function ProfilesPanel({ profiles, saveProfile }) {
                   <td className="td font-semibold">{profile.profile_code}</td>
                   <td className="td">{profile.copy_title}</td>
                   <td className="td">{profile.template_code}</td>
-                  <td className="td text-right"><input className="input !w-20 !py-1 text-right" type="number" min="1" max="5" value={draft.copies || 1} onChange={(event) => updateDraft(profile, 'copies', event.target.value)} /></td>
+                  <td className="td text-right">
+                    <input
+                      className="input !w-20 !py-1 text-right"
+                      type="number"
+                      min="1"
+                      max="5"
+                      value={draft.copies || 1}
+                      onChange={(event) => updateDraft(profile, 'copies', event.target.value)}
+                    />
+                  </td>
                   <td className="td">
                     <div className="flex flex-wrap gap-2 text-xs">
-                      <Toggle label="Active" checked={!!draft.active} onChange={(value) => updateDraft(profile, 'active', value)} />
-                      <Toggle label="Auto" checked={!!draft.auto_print_enabled} onChange={(value) => updateDraft(profile, 'auto_print_enabled', value)} />
-                      <Toggle label="Ask" checked={!!draft.ask_before_print_enabled} onChange={(value) => updateDraft(profile, 'ask_before_print_enabled', value)} />
-                      <Toggle label="Logo" checked={!!draft.show_logo} onChange={(value) => updateDraft(profile, 'show_logo', value)} />
-                      <Toggle label="QR" checked={!!draft.show_qr} onChange={(value) => updateDraft(profile, 'show_qr', value)} />
+                      <Toggle
+                        label="Active"
+                        checked={!!draft.active}
+                        onChange={(value) => updateDraft(profile, 'active', value)}
+                      />
+                      <Toggle
+                        label="Auto"
+                        checked={!!draft.auto_print_enabled}
+                        onChange={(value) => updateDraft(profile, 'auto_print_enabled', value)}
+                      />
+                      <Toggle
+                        label="Ask"
+                        checked={!!draft.ask_before_print_enabled}
+                        onChange={(value) =>
+                          updateDraft(profile, 'ask_before_print_enabled', value)
+                        }
+                      />
+                      <Toggle
+                        label="Logo"
+                        checked={!!draft.show_logo}
+                        onChange={(value) => updateDraft(profile, 'show_logo', value)}
+                      />
+                      <Toggle
+                        label="QR"
+                        checked={!!draft.show_qr}
+                        onChange={(value) => updateDraft(profile, 'show_qr', value)}
+                      />
                     </div>
                   </td>
-                  <td className="td text-right"><LegacyButton variant="ghost" size="xs" onClick={() => saveProfile(draft)}><Save size={13} /> Save</LegacyButton></td>
+                  <td className="td text-right">
+                    <LegacyButton variant="ghost" size="xs" onClick={() => saveProfile(draft)}>
+                      <Save size={13} /> Save
+                    </LegacyButton>
+                  </td>
                 </tr>
               )
             })}
-            {!profiles.length && <tr><td className="td text-pine/50" colSpan={6}>No profiles found. Run the POS print engine migration.</td></tr>}
+            {!profiles.length && (
+              <tr>
+                <td className="td text-pine/50" colSpan={6}>
+                  No profiles found. Run the POS print engine migration.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -474,7 +638,12 @@ function ProfilesPanel({ profiles, saveProfile }) {
 }
 
 function RoutingPanel({ devices, routes, profiles, saveDevice, saveRoute }) {
-  const [device, setDevice] = useState({ device_name: '', device_type: 'THERMAL', connection_type: 'BROWSER', paper_size: '80mm' })
+  const [device, setDevice] = useState({
+    device_name: '',
+    device_type: 'THERMAL',
+    connection_type: 'BROWSER',
+    paper_size: '80mm',
+  })
   const [route, setRoute] = useState({ profile_code: 'CUSTOMER_COPY', priority: 100 })
 
   return (
@@ -482,42 +651,125 @@ function RoutingPanel({ devices, routes, profiles, saveDevice, saveRoute }) {
       <div className="space-y-4">
         <div className="card p-4 space-y-3">
           <h2 className="font-display font-semibold text-pine">Printer device</h2>
-          <input className="input" placeholder="Device name" value={device.device_name} onChange={(event) => setDevice({ ...device, device_name: event.target.value })} />
+          <input
+            className="input"
+            placeholder="Device name"
+            value={device.device_name}
+            onChange={(event) => setDevice({ ...device, device_name: event.target.value })}
+          />
           <div className="grid grid-cols-2 gap-2">
-            <select className="input" value={device.device_type} onChange={(event) => setDevice({ ...device, device_type: event.target.value })}><option>THERMAL</option><option>A4</option><option>PDF</option></select>
-            <select className="input" value={device.paper_size} onChange={(event) => setDevice({ ...device, paper_size: event.target.value })}><option>80mm</option><option>58mm</option><option>A4</option></select>
+            <SearchableSelect
+              value={device.device_type}
+              onChange={(value) => setDevice({ ...device, device_type: value })}
+              options={['THERMAL', 'A4', 'PDF']}
+              placeholder="Device type"
+              searchPlaceholder="Search device type"
+            />
+            <SearchableSelect
+              value={device.paper_size}
+              onChange={(value) => setDevice({ ...device, paper_size: value })}
+              options={['80mm', '58mm', 'A4']}
+              placeholder="Paper size"
+              searchPlaceholder="Search paper size"
+            />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <input className="input" placeholder="IP address" value={device.ip_address || ''} onChange={(event) => setDevice({ ...device, ip_address: event.target.value })} />
-            <input className="input" placeholder="Port" value={device.port || ''} onChange={(event) => setDevice({ ...device, port: event.target.value })} />
+            <input
+              className="input"
+              placeholder="IP address"
+              value={device.ip_address || ''}
+              onChange={(event) => setDevice({ ...device, ip_address: event.target.value })}
+            />
+            <input
+              className="input"
+              placeholder="Port"
+              value={device.port || ''}
+              onChange={(event) => setDevice({ ...device, port: event.target.value })}
+            />
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <Toggle label="ESC/POS" checked={device.escpos_enabled ?? true} onChange={(value) => setDevice({ ...device, escpos_enabled: value })} />
-            <Toggle label="Auto cut" checked={device.auto_cut_enabled ?? true} onChange={(value) => setDevice({ ...device, auto_cut_enabled: value })} />
-            <Toggle label="Cash drawer" checked={device.cash_drawer_enabled ?? false} onChange={(value) => setDevice({ ...device, cash_drawer_enabled: value })} />
-            <Toggle label="Silent print" checked={device.silent_print_enabled ?? false} onChange={(value) => setDevice({ ...device, silent_print_enabled: value })} />
+            <Toggle
+              label="ESC/POS"
+              checked={device.escpos_enabled ?? true}
+              onChange={(value) => setDevice({ ...device, escpos_enabled: value })}
+            />
+            <Toggle
+              label="Auto cut"
+              checked={device.auto_cut_enabled ?? true}
+              onChange={(value) => setDevice({ ...device, auto_cut_enabled: value })}
+            />
+            <Toggle
+              label="Cash drawer"
+              checked={device.cash_drawer_enabled ?? false}
+              onChange={(value) => setDevice({ ...device, cash_drawer_enabled: value })}
+            />
+            <Toggle
+              label="Silent print"
+              checked={device.silent_print_enabled ?? false}
+              onChange={(value) => setDevice({ ...device, silent_print_enabled: value })}
+            />
           </div>
-          <LegacyButton onClick={() => saveDevice(device)}><Save size={15} /> Save device</LegacyButton>
+          <LegacyButton onClick={() => saveDevice(device)}>
+            <Save size={15} /> Save device
+          </LegacyButton>
         </div>
 
         <div className="card p-4 space-y-3">
           <h2 className="font-display font-semibold text-pine">Printer route</h2>
-          <select className="input" value={route.profile_code} onChange={(event) => setRoute({ ...route, profile_code: event.target.value })}>
-            {profiles.map((profile) => <option key={profile.profile_code} value={profile.profile_code}>{profile.profile_code}</option>)}
-          </select>
-          <select className="input" value={route.printer_device_id || ''} onChange={(event) => setRoute({ ...route, printer_device_id: event.target.value })}>
-            <option value="">Browser default</option>
-            {devices.map((deviceRow) => <option key={deviceRow.id} value={deviceRow.id}>{deviceRow.device_name}</option>)}
-          </select>
-          <input className="input" placeholder="Item category / station rule" value={route.item_category || ''} onChange={(event) => setRoute({ ...route, item_category: event.target.value })} />
-          <input className="input" placeholder="Priority" type="number" value={route.priority || 100} onChange={(event) => setRoute({ ...route, priority: event.target.value })} />
-          <LegacyButton onClick={() => saveRoute(route)}><Save size={15} /> Save route</LegacyButton>
+          <SearchableSelect
+            value={route.profile_code}
+            onChange={(value) => setRoute({ ...route, profile_code: value })}
+            options={profiles.map((profile) => ({
+              value: profile.profile_code,
+              label: profile.profile_code,
+            }))}
+            placeholder="Print profile"
+            searchPlaceholder="Search profile"
+          />
+          <SearchableSelect
+            value={route.printer_device_id || ''}
+            onChange={(value) => setRoute({ ...route, printer_device_id: value })}
+            options={[
+              { value: '', label: 'Browser default' },
+              ...devices.map((deviceRow) => ({
+                value: deviceRow.id,
+                label: deviceRow.device_name,
+              })),
+            ]}
+            placeholder="Printer device"
+            searchPlaceholder="Search printer device"
+            clearable
+          />
+          <input
+            className="input"
+            placeholder="Item category / station rule"
+            value={route.item_category || ''}
+            onChange={(event) => setRoute({ ...route, item_category: event.target.value })}
+          />
+          <input
+            className="input"
+            placeholder="Priority"
+            type="number"
+            value={route.priority || 100}
+            onChange={(event) => setRoute({ ...route, priority: event.target.value })}
+          />
+          <LegacyButton onClick={() => saveRoute(route)}>
+            <Save size={15} /> Save route
+          </LegacyButton>
         </div>
       </div>
 
       <div className="space-y-4">
-        <RouteTable title="Printer devices" rows={devices} columns={['device_name', 'device_type', 'connection_type', 'paper_size', 'active']} />
-        <RouteTable title="Routing rules" rows={routes} columns={['profile_code', 'item_category', 'terminal_code', 'priority', 'active']} />
+        <RouteTable
+          title="Printer devices"
+          rows={devices}
+          columns={['device_name', 'device_type', 'connection_type', 'paper_size', 'active']}
+        />
+        <RouteTable
+          title="Routing rules"
+          rows={routes}
+          columns={['profile_code', 'item_category', 'terminal_code', 'priority', 'active']}
+        />
       </div>
     </div>
   )
@@ -529,10 +781,32 @@ function RouteTable({ title, rows, columns }) {
       <h2 className="font-display font-semibold text-pine mb-3">{title}</h2>
       <div className="table-scroll">
         <table className="w-full">
-          <thead><tr>{columns.map((column) => <th key={column} className="th">{column.replaceAll('_', ' ')}</th>)}</tr></thead>
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th key={column} className="th">
+                  {column.replaceAll('_', ' ')}
+                </th>
+              ))}
+            </tr>
+          </thead>
           <tbody>
-            {rows.map((row) => <tr key={row.id}>{columns.map((column) => <td key={column} className="td">{String(row[column] ?? '-')}</td>)}</tr>)}
-            {!rows.length && <tr><td className="td text-pine/50" colSpan={columns.length}>No records yet.</td></tr>}
+            {rows.map((row) => (
+              <tr key={row.id}>
+                {columns.map((column) => (
+                  <td key={column} className="td">
+                    {String(row[column] ?? '-')}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {!rows.length && (
+              <tr>
+                <td className="td text-pine/50" colSpan={columns.length}>
+                  No records yet.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -542,32 +816,88 @@ function RouteTable({ title, rows, columns }) {
 
 function DesignerPanel({ settings, saveSettings, company }) {
   const [draft, setDraft] = useState(settings || {})
-  useEffect(() => { setDraft(settings || {}) }, [settings?.id])
+  useEffect(() => {
+    setDraft(settings || {})
+  }, [settings?.id])
 
   return (
     <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-4">
       <div className="card p-4 space-y-3">
-        <h2 className="font-display font-semibold text-pine flex items-center gap-2"><Settings2 size={17} /> Receipt designer</h2>
+        <h2 className="font-display font-semibold text-pine flex items-center gap-2">
+          <Settings2 size={17} /> Receipt designer
+        </h2>
         <div className="grid md:grid-cols-3 gap-3">
-          <Input label="Receipt template" value={draft.receipt_template_code || 'THERMAL_RECEIPT_V1'} onChange={(value) => setDraft({ ...draft, receipt_template_code: value })} />
-          <Input label="KOT template" value={draft.kot_template_code || 'THERMAL_KOT_V1'} onChange={(value) => setDraft({ ...draft, kot_template_code: value })} />
-          <Input label="BOT template" value={draft.bot_template_code || 'THERMAL_BOT_V1'} onChange={(value) => setDraft({ ...draft, bot_template_code: value })} />
-          <div><label className="label">Width</label><select className="input" value={draft.print_width || '80mm'} onChange={(event) => setDraft({ ...draft, print_width: event.target.value })}><option>80mm</option><option>58mm</option></select></div>
-          <Input label="Header text" value={draft.header_text || ''} onChange={(value) => setDraft({ ...draft, header_text: value })} />
-          <Input label="Footer text" value={draft.footer_text || ''} onChange={(value) => setDraft({ ...draft, footer_text: value })} />
+          <Input
+            label="Receipt template"
+            value={draft.receipt_template_code || 'THERMAL_RECEIPT_V1'}
+            onChange={(value) => setDraft({ ...draft, receipt_template_code: value })}
+          />
+          <Input
+            label="KOT template"
+            value={draft.kot_template_code || 'THERMAL_KOT_V1'}
+            onChange={(value) => setDraft({ ...draft, kot_template_code: value })}
+          />
+          <Input
+            label="BOT template"
+            value={draft.bot_template_code || 'THERMAL_BOT_V1'}
+            onChange={(value) => setDraft({ ...draft, bot_template_code: value })}
+          />
+          <div>
+            <label className="label">Width</label>
+            <SearchableSelect
+              value={draft.print_width || '80mm'}
+              onChange={(value) => setDraft({ ...draft, print_width: value })}
+              options={['80mm', '58mm']}
+              placeholder="Width"
+              searchPlaceholder="Search width"
+            />
+          </div>
+          <Input
+            label="Header text"
+            value={draft.header_text || ''}
+            onChange={(value) => setDraft({ ...draft, header_text: value })}
+          />
+          <Input
+            label="Footer text"
+            value={draft.footer_text || ''}
+            onChange={(value) => setDraft({ ...draft, footer_text: value })}
+          />
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          {['show_logo', 'show_qr', 'show_vat', 'show_service_charge', 'show_discount', 'show_round_off', 'loyalty_section_enabled'].map((key) => (
-            <Toggle key={key} label={key.replaceAll('_', ' ')} checked={!!draft[key]} onChange={(value) => setDraft({ ...draft, [key]: value })} />
+          {[
+            'show_logo',
+            'show_qr',
+            'show_vat',
+            'show_service_charge',
+            'show_discount',
+            'show_round_off',
+            'loyalty_section_enabled',
+          ].map((key) => (
+            <Toggle
+              key={key}
+              label={key.replaceAll('_', ' ')}
+              checked={!!draft[key]}
+              onChange={(value) => setDraft({ ...draft, [key]: value })}
+            />
           ))}
         </div>
-        <LegacyButton onClick={() => saveSettings(draft)}><Save size={15} /> Save designer settings</LegacyButton>
+        <LegacyButton onClick={() => saveSettings(draft)}>
+          <Save size={15} /> Save designer settings
+        </LegacyButton>
       </div>
       <div className="card p-4">
         <h2 className="font-display font-semibold text-pine mb-3">Tenant branding</h2>
         <div className="rounded-xl border border-leaf p-4">
           <div className="h-12 w-12 rounded-lg border border-leaf bg-white grid place-items-center overflow-hidden mb-3">
-            {company?.logo_url ? <img src={company.logo_url} alt="" className="h-full w-full object-contain grayscale contrast-150" /> : <Printer size={20} className="text-pine/40" />}
+            {company?.logo_url ? (
+              <img
+                src={company.logo_url}
+                alt=""
+                className="h-full w-full object-contain grayscale contrast-150"
+              />
+            ) : (
+              <Printer size={20} className="text-pine/40" />
+            )}
           </div>
           <div className="font-semibold text-pine">{company?.name || 'Tenant'}</div>
           <div className="text-xs text-pine/50">{company?.address || 'No address configured'}</div>
@@ -582,10 +912,15 @@ function ThermalTestPanel({ selectedOrder, items, company, openReceiptPreview })
   return (
     <div className="card p-5">
       <h2 className="font-display font-semibold text-pine mb-2">Thermal print test</h2>
-      <p className="text-sm text-pine/55 mb-4">Runs a browser print preview using the selected live order. Hardware ESC/POS device routing is configured in Printer Routing.</p>
+      <p className="text-sm text-pine/55 mb-4">
+        Runs a browser print preview using the selected live order. Hardware ESC/POS device routing
+        is configured in Printer Routing.
+      </p>
       {selectedOrder ? (
         <div className="flex flex-wrap gap-2">
-          <LegacyButton onClick={openReceiptPreview}><Printer size={15} /> Test receipt preview</LegacyButton>
+          <LegacyButton onClick={openReceiptPreview}>
+            <Printer size={15} /> Test receipt preview
+          </LegacyButton>
           <span className="status-chip">{selectedOrder.order_no}</span>
           <span className="status-chip">{items.length} items</span>
           <span className="status-chip">{company?.name || 'Tenant'}</span>
@@ -603,18 +938,38 @@ function LogsPanel({ logs }) {
       <h2 className="font-display font-semibold text-pine mb-3">Print audit logs</h2>
       <div className="table-scroll">
         <table className="w-full">
-          <thead><tr><th className="th">Printed at</th><th className="th">Copy</th><th className="th">Device</th><th className="th">Terminal</th><th className="th">Hash</th></tr></thead>
+          <thead>
+            <tr>
+              <th className="th">Printed at</th>
+              <th className="th">Copy</th>
+              <th className="th">Device</th>
+              <th className="th">Terminal</th>
+              <th className="th">Hash</th>
+            </tr>
+          </thead>
           <tbody>
             {logs.map((log) => (
               <tr key={log.id}>
-                <td className="td">{fmtDate(log.printed_at)} {new Date(log.printed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</td>
+                <td className="td">
+                  {fmtDate(log.printed_at)}{' '}
+                  {new Date(log.printed_at).toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </td>
                 <td className="td font-semibold">{log.copy_type}</td>
                 <td className="td">{log.printer_device || '-'}</td>
                 <td className="td">{log.terminal || '-'}</td>
                 <td className="td">{log.document_hash || '-'}</td>
               </tr>
             ))}
-            {!logs.length && <tr><td className="td text-pine/50" colSpan={5}>No print logs yet.</td></tr>}
+            {!logs.length && (
+              <tr>
+                <td className="td text-pine/50" colSpan={5}>
+                  No print logs yet.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -623,18 +978,37 @@ function LogsPanel({ logs }) {
 }
 
 function InfoRow({ label, value }) {
-  return <tr><td className="td text-pine/50">{label}</td><td className="td font-semibold">{value}</td></tr>
+  return (
+    <tr>
+      <td className="td text-pine/50">{label}</td>
+      <td className="td font-semibold">{value}</td>
+    </tr>
+  )
 }
 
 function Input({ label, value, onChange }) {
-  return <div><label className="label">{label}</label><input className="input" value={value || ''} onChange={(event) => onChange(event.target.value)} /></div>
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <input
+        className="input"
+        value={value || ''}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  )
 }
 
 function Toggle({ label, checked, onChange }) {
   return (
     <label className="rounded-lg border border-leaf px-3 py-2 flex items-center justify-between gap-2 text-sm text-pine bg-white">
       <span className="capitalize">{label}</span>
-      <input type="checkbox" className="accent-forest" checked={!!checked} onChange={(event) => onChange(event.target.checked)} />
+      <input
+        type="checkbox"
+        className="accent-forest"
+        checked={!!checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
     </label>
   )
 }

@@ -1,36 +1,25 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from 'react'
 
-import FrontOfficeDialogShell from "./FrontOfficeDialogShell"
-import {
-  getAvailableRooms,
-  moveRoom,
-} from "../services/frontOfficeActions.service"
-import { Button } from "../../../components/ui/button"
-import { Input } from "../../../components/ui/input"
+import FrontOfficeDialogShell from './FrontOfficeDialogShell'
+import { getAvailableRooms, moveRoom } from '../services/frontOfficeActions.service'
+import { Button } from '../../../components/ui/button'
+import { Input } from '../../../components/ui/input'
+import SearchableSelect from '../../../components/SearchableSelect.jsx'
 
-const nativeSelectClass =
-  "h-8 w-full rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/30"
-
-export default function RoomMoveDialog({
-  open,
-  reservation,
-  userName,
-  onClose,
-  onCompleted,
-}) {
+export default function RoomMoveDialog({ open, reservation, userName, onClose, onCompleted }) {
   const assignment = reservation?.rooms?.[0]
   const [rooms, setRooms] = useState([])
-  const [newRoomId, setNewRoomId] = useState("")
-  const [reason, setReason] = useState("")
+  const [newRoomId, setNewRoomId] = useState('')
+  const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState("")
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (!open || !reservation) return
 
-    setError("")
-    setNewRoomId("")
-    setReason("")
+    setError('')
+    setNewRoomId('')
+    setReason('')
 
     getAvailableRooms({
       checkIn: reservation.checkIn,
@@ -38,34 +27,29 @@ export default function RoomMoveDialog({
       excludeReservationId: reservation.reservationId,
     })
       .then(setRooms)
-      .catch((loadError) =>
-        setError(loadError.message)
-      )
+      .catch((loadError) => setError(loadError.message))
   }, [open, reservation])
 
-  const selected = useMemo(
-    () => rooms.find((room) => room.id === newRoomId),
-    [rooms, newRoomId]
-  )
+  const selected = useMemo(() => rooms.find((room) => room.id === newRoomId), [rooms, newRoomId])
 
   async function submit() {
     if (!assignment?.assignmentId) {
-      setError("No active room assignment found.")
+      setError('No active room assignment found.')
       return
     }
 
     if (!assignment?.roomId) {
-      setError("Current room is missing.")
+      setError('Current room is missing.')
       return
     }
 
     if (!newRoomId) {
-      setError("Select a new room.")
+      setError('Select a new room.')
       return
     }
 
     setSaving(true)
-    setError("")
+    setError('')
 
     try {
       await moveRoom({
@@ -73,15 +57,9 @@ export default function RoomMoveDialog({
         assignmentId: assignment.assignmentId,
         oldRoomId: assignment.roomId,
         newRoomId,
-        fromDate:
-          assignment.fromDate || reservation.checkIn,
-        toDate:
-          assignment.toDate || reservation.checkOut,
-        rate: Number(
-          selected?.base_rate ||
-            assignment.baseRate ||
-            0
-        ),
+        fromDate: assignment.fromDate || reservation.checkIn,
+        toDate: assignment.toDate || reservation.checkOut,
+        rate: Number(selected?.base_rate || assignment.baseRate || 0),
         userName,
         reason,
       })
@@ -100,57 +78,42 @@ export default function RoomMoveDialog({
       open={open}
       title="Room Move"
       subtitle={
-        reservation
-          ? `${reservation.guestName} · Current Room ${assignment?.number || "—"}`
-          : ""
+        reservation ? `${reservation.guestName} · Current Room ${assignment?.number || '—'}` : ''
       }
       onClose={onClose}
       footer={
         <>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-          >
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
 
-          <Button
-            type="button"
-            disabled={saving}
-            onClick={submit}
-          >
-            {saving ? "Moving..." : "Move Room"}
+          <Button type="button" disabled={saving} onClick={submit}>
+            {saving ? 'Moving...' : 'Move Room'}
           </Button>
         </>
       }
     >
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="New Room">
-          <select
-            className={nativeSelectClass}
+          <SearchableSelect
             value={newRoomId}
-            onChange={(event) =>
-              setNewRoomId(event.target.value)
-            }
-          >
-            <option value="">Select room</option>
-            {rooms
+            onChange={(value) => setNewRoomId(value)}
+            options={rooms
               .filter((room) => room.id !== assignment?.roomId)
-              .map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.room_no} · {room.room_name || room.room_type}
-                </option>
-              ))}
-          </select>
+              .map((room) => ({
+                value: room.id,
+                label: room.room_no,
+                sublabel: room.room_name || room.room_type || '',
+              }))}
+            placeholder="Select room"
+            searchPlaceholder="Search room"
+          />
         </Field>
 
         <Field label="Reason">
           <Input
             value={reason}
-            onChange={(event) =>
-              setReason(event.target.value)
-            }
+            onChange={(event) => setReason(event.target.value)}
             placeholder="Guest request, maintenance..."
           />
         </Field>

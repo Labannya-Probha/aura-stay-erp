@@ -7,8 +7,16 @@ import PrintPortal from '../components/PrintPortal.jsx'
 import ComplianceTab from '../components/ComplianceTab'
 import EmployeeProfile from '../components/EmployeeProfile.jsx'
 import HrLetterDoc from '../components/print/HrLetterDoc.jsx'
+import SearchableSelect from '../components/SearchableSelect.jsx'
 import '../styles/aeds-v6-workspaces.css'
 import AedsDataGrid from '../components/data-grid/AedsDataGrid.jsx'
+
+const EMPLOYEE_STATUS_OPTIONS = ['ACTIVE', 'RESIGNED', 'TERMINATED']
+const WARNING_NUMBER_OPTIONS = ['1st', '2nd', '3rd', 'Final']
+const RESIGNATION_TYPE_OPTIONS = [
+  { value: 'RESIGNATION', label: 'Resignation' },
+  { value: 'TERMINATION', label: 'Termination' },
+]
 
 /* ─── shared flash helper ─── */
 function useFlash() {
@@ -275,14 +283,17 @@ export function HrLetterPage({ type, company }) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Employee</label>
-            <select className="input" value={empId} onChange={(e) => setEmpId(e.target.value)}>
-              <option value="">Select employee…</option>
-              {emps.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.full_name} ({e.emp_code})
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={empId}
+              onChange={(value) => setEmpId(value)}
+              options={emps.map((employee) => ({
+                value: employee.id,
+                label: employee.full_name,
+                sublabel: employee.emp_code,
+              }))}
+              placeholder="Select employee"
+              searchPlaceholder="Search employee"
+            />
           </div>
           <div>
             <label className="label">Date</label>
@@ -376,28 +387,25 @@ export function HrLetterPage({ type, company }) {
             {selectedType.extraFields.includes('warningNo') && (
               <div>
                 <label className="label">Warning Number</label>
-                <select
-                  className="input"
+                <SearchableSelect
                   value={extra.warningNo || '1st'}
-                  onChange={(e) => setE('warningNo', e.target.value)}
-                >
-                  {['1st', '2nd', '3rd', 'Final'].map((v) => (
-                    <option key={v}>{v}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setE('warningNo', value)}
+                  options={WARNING_NUMBER_OPTIONS}
+                  placeholder="Warning number"
+                  searchPlaceholder="Search warning number"
+                />
               </div>
             )}
             {selectedType.extraFields.includes('resignationType') && (
               <div>
                 <label className="label">Separation Type</label>
-                <select
-                  className="input"
+                <SearchableSelect
                   value={extra.resignationType || 'RESIGNATION'}
-                  onChange={(e) => setE('resignationType', e.target.value)}
-                >
-                  <option value="RESIGNATION">Resignation</option>
-                  <option value="TERMINATION">Termination</option>
-                </select>
+                  onChange={(value) => setE('resignationType', value)}
+                  options={RESIGNATION_TYPE_OPTIONS}
+                  placeholder="Separation type"
+                  searchPlaceholder="Search separation type"
+                />
               </div>
             )}
             {selectedType.extraFields.includes('showBreakdown') && (
@@ -676,16 +684,14 @@ function EmployeesTab({ flash, isAdmin, userName, company }) {
             width: 150,
             cell: ({ row }) =>
               isAdmin ? (
-                <select
-                  className="input !py-1 !w-32"
+                <SearchableSelect
+                  className="!w-32"
                   value={row.status}
-                  onClick={(event) => event.stopPropagation()}
-                  onChange={(event) => setStatus(row.id, event.target.value)}
-                >
-                  {['ACTIVE', 'RESIGNED', 'TERMINATED'].map((status) => (
-                    <option key={status}>{status}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setStatus(row.id, value)}
+                  options={EMPLOYEE_STATUS_OPTIONS}
+                  placeholder="Status"
+                  searchPlaceholder="Search status"
+                />
               ) : (
                 row.status
               ),
@@ -863,30 +869,21 @@ function LeaveTab({ flash, userName, canApprove }) {
   return (
     <div className="space-y-4">
       <div className="card p-4 grid grid-cols-6 gap-2">
-        <select
-          className="input col-span-2"
+        <SearchableSelect
+          className="col-span-2"
           value={f.employee_id}
-          onChange={(e) => setF({ ...f, employee_id: e.target.value })}
-        >
-          <option value="">Employee…</option>
-          {emps.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.full_name}
-            </option>
-          ))}
-        </select>
-        <select
-          className="input"
+          onChange={(value) => setF({ ...f, employee_id: value })}
+          options={emps.map((employee) => ({ value: employee.id, label: employee.full_name }))}
+          placeholder="Employee"
+          searchPlaceholder="Search employee"
+        />
+        <SearchableSelect
           value={f.leave_type_id}
-          onChange={(e) => setF({ ...f, leave_type_id: e.target.value })}
-        >
-          <option value="">Type…</option>
-          {types.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setF({ ...f, leave_type_id: value })}
+          options={types.map((typeRow) => ({ value: typeRow.id, label: typeRow.name }))}
+          placeholder="Leave type"
+          searchPlaceholder="Search leave type"
+        />
         <input
           type="date"
           className="input"
@@ -999,18 +996,14 @@ function CompLeaveTab({ flash }) {
   return (
     <div className="space-y-4">
       <div className="card p-4 grid grid-cols-5 gap-2">
-        <select
-          className="input col-span-2"
+        <SearchableSelect
+          className="col-span-2"
           value={f.employee_id}
-          onChange={(e) => setF({ ...f, employee_id: e.target.value })}
-        >
-          <option value="">Employee…</option>
-          {emps.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.full_name}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setF({ ...f, employee_id: value })}
+          options={emps.map((employee) => ({ value: employee.id, label: employee.full_name }))}
+          placeholder="Employee"
+          searchPlaceholder="Search employee"
+        />
         <input
           type="date"
           className="input"
@@ -1527,13 +1520,17 @@ function PayrollTab({ flash, userName, canApprove, isAdmin, company }) {
       <div className="card p-4 flex items-end gap-3 flex-wrap">
         <div>
           <label className="label">Month</label>
-          <select className="input !w-40" value={month} onChange={(e) => setMonth(+e.target.value)}>
-            {MONTH_NAMES.map((m, i) => (
-              <option key={m} value={i + 1}>
-                {m}
-              </option>
-            ))}
-          </select>
+          <SearchableSelect
+            className="!w-40"
+            value={String(month)}
+            onChange={(value) => setMonth(Number(value))}
+            options={MONTH_NAMES.map((monthName, index) => ({
+              value: String(index + 1),
+              label: monthName,
+            }))}
+            placeholder="Month"
+            searchPlaceholder="Search month"
+          />
         </div>
         <div>
           <label className="label">Year</label>

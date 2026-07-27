@@ -103,6 +103,18 @@ function dayName(dateStr) {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' })
 }
 
+function Field({ label, children, className, hint }) {
+  return (
+    <div className={cn('flex flex-col gap-1', className)}>
+      <label className="text-xs font-semibold text-pine/70 uppercase tracking-wide">{label}</label>
+      {children}
+      {hint && <span className="text-[11px] text-pine/40">{hint}</span>}
+    </div>
+  )
+}
+
+const F = Field
+
 export default function Reservations({ openReservation, userName, prefill, clearPrefill }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1207,15 +1219,6 @@ export function NewReservation({ close, openReservation, userName, prefill }) {
     setBusy(false)
   }
 
-  // Shared field wrapper: label + control stacked
-  const F = ({ label, children, className, hint }) => (
-    <div className={cn('flex flex-col gap-1', className)}>
-      <label className="text-xs font-semibold text-pine/70 uppercase tracking-wide">{label}</label>
-      {children}
-      {hint && <span className="text-[11px] text-pine/40">{hint}</span>}
-    </div>
-  )
-
   return (
     <div className="min-h-screen bg-slate-50 py-6 px-4 sm:px-0">
       <div className="max-w-2xl mx-auto space-y-3.5">
@@ -1673,17 +1676,17 @@ export function NewReservation({ close, openReservation, userName, prefill }) {
                 <div className="flex items-center gap-2 flex-wrap">
                   {reservationPolicy && policyDiscountPct !== null && (
                     <span className="text-xs text-forest font-semibold bg-forest/10 border border-forest/20 px-2.5 py-0.5 rounded-full">
-                      ðŸ“…{' '}
+                      Policy:{' '}
                       {(() => {
                         const dow = new Date(`${f.check_in}T00:00:00`).getDay()
                         const blackouts = reservationPolicy.policy_blackout_dates || []
                         const isBlackout = blackouts.some(
                           (b) => f.check_in >= b.from_date && f.check_in <= b.to_date,
                         )
-                        if (isBlackout) return `Blackout â€” ${policyDiscountPct}% auto`
+                        if (isBlackout) return `Blackout - ${policyDiscountPct}% auto`
                         return (reservationPolicy.weekend_days || [4, 5, 6]).includes(dow)
-                          ? `Weekend â€” ${policyDiscountPct}% auto`
-                          : `Weekday â€” ${policyDiscountPct}% auto`
+                          ? `Weekend - ${policyDiscountPct}% auto`
+                          : `Weekday - ${policyDiscountPct}% auto`
                       })()}
                     </span>
                   )}
@@ -1692,7 +1695,7 @@ export function NewReservation({ close, openReservation, userName, prefill }) {
                       const policy = discountPolicies.find((p) => p.id === selectedPolicyId)
                       return policy ? (
                         <span className="text-xs text-pine/60 flex items-center gap-1 bg-leaf/30 border border-leaf px-2 py-0.5 rounded-full">
-                          âœ“ {policy.name}
+                          Selected: {policy.name}
                           <button
                             type="button"
                             onClick={() => applyDiscountPolicy('')}
@@ -1709,7 +1712,7 @@ export function NewReservation({ close, openReservation, userName, prefill }) {
                         items={discountPolicies.map((p) => ({
                           value: p.id,
                           label: p.name,
-                          sublabel: p.type === 'fixed' ? `à§³${p.value}` : `${p.value}%`,
+                          sublabel: p.type === 'fixed' ? `Fixed ${p.value}` : `${p.value}%`,
                         }))}
                         value=""
                         onChange={(v) => applyDiscountPolicy(v)}
@@ -1724,7 +1727,7 @@ export function NewReservation({ close, openReservation, userName, prefill }) {
                 <div className="flex gap-1 shrink-0">
                   {[
                     { v: 'percentage', label: '%' },
-                    { v: 'fixed', label: 'à§³ Fixed' },
+                    { v: 'fixed', label: 'Fixed' },
                   ].map((opt) => (
                     <Button
                       key={opt.v}
@@ -1783,7 +1786,7 @@ export function NewReservation({ close, openReservation, userName, prefill }) {
                             min="0"
                             step="0.01"
                             className="input !h-7 !w-24 money text-right"
-                            placeholder="Price à§³"
+                            placeholder="Price"
                             value={addons[it.id].price}
                             onChange={(e) => updAddon(it.id, 'price', e.target.value)}
                           />

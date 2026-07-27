@@ -21,6 +21,7 @@ export default function SearchableSelect({
   value = '',
   onChange,
   placeholder = 'Select…',
+  searchPlaceholder = 'Type to search…',
   allowCreate = false,
   onCreate,
   disabled = false,
@@ -38,7 +39,7 @@ export default function SearchableSelect({
       value={value}
       onChange={(v) => onChange?.(v)}
       placeholder={placeholder}
-      searchPlaceholder="Type to search…"
+      searchPlaceholder={searchPlaceholder}
       emptyText="No matches."
       disabled={disabled}
       className={className}
