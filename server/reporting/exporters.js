@@ -1,5 +1,11 @@
 import ExcelJS from 'exceljs'
 
+function resolveFieldValue(row, fieldKey) {
+  return String(fieldKey || '')
+    .split('.')
+    .reduce((value, segment) => value?.[segment], row)
+}
+
 const escapeCsv = (value) => {
   const raw = value == null ? '' : String(value)
   return /[",\n]/.test(raw) ? `"${raw.replaceAll('"', '""')}"` : raw
@@ -17,8 +23,8 @@ export function toCsv(reportPayload) {
     [`Category: ${report.category}`],
     [],
     columns.map(colLabel),
-    ...rows.map((row) => columns.map((col) => row[colKey(col)] ?? '')),
-    columns.map((col, index) => index === 0 ? 'Grand Total' : totals[colKey(col)] ?? ''),
+    ...rows.map((row) => columns.map((col) => resolveFieldValue(row, colKey(col)) ?? '')),
+    columns.map((col, index) => (index === 0 ? 'Grand Total' : (totals[colKey(col)] ?? ''))),
   ]
   return data.map((row) => row.map(escapeCsv).join(',')).join('\n')
 }
@@ -32,21 +38,34 @@ export async function toExcel(reportPayload) {
   sheet.addRow([`Category: ${report.category}`])
   sheet.addRow([])
   sheet.addRow(columns.map(colLabel))
-  rows.forEach((row) => sheet.addRow(columns.map((col) => row[colKey(col)] ?? '')))
-  sheet.addRow(columns.map((col, index) => index === 0 ? 'Grand Total' : totals[colKey(col)] ?? ''))
+  rows.forEach((row) =>
+    sheet.addRow(columns.map((col) => resolveFieldValue(row, colKey(col)) ?? '')),
+  )
+  sheet.addRow(
+    columns.map((col, index) => (index === 0 ? 'Grand Total' : (totals[colKey(col)] ?? ''))),
+  )
   sheet.views = [{ state: 'frozen', ySplit: 4 }]
   sheet.getRow(4).font = { bold: true, color: { argb: 'FFFFFFFF' } }
   sheet.getRow(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F3A5F' } }
-  sheet.columns.forEach((column) => { column.width = 18 })
+  sheet.columns.forEach((column) => {
+    column.width = 18
+  })
   return workbook.xlsx.writeBuffer()
 }
 
 export function toPdfHtml(reportPayload) {
   const { report, rows, totals, filters, audit } = reportPayload
   const columns = report.columns
-  const head = columns.map((col) => `<th style="text-align:${colAlign(col)}">${colLabel(col)}</th>`).join('')
-  const body = rows.map((row) => `<tr>${columns.map((col) => `<td style="text-align:${colAlign(col)}">${row[colKey(col)] ?? ''}</td>`).join('')}</tr>`).join('')
-  const total = `<tr class="grand">${columns.map((col, index) => `<td style="text-align:${colAlign(col)}">${index === 0 ? 'Grand Total' : totals[colKey(col)] ?? ''}</td>`).join('')}</tr>`
+  const head = columns
+    .map((col) => `<th style="text-align:${colAlign(col)}">${colLabel(col)}</th>`)
+    .join('')
+  const body = rows
+    .map(
+      (row) =>
+        `<tr>${columns.map((col) => `<td style="text-align:${colAlign(col)}">${resolveFieldValue(row, colKey(col)) ?? ''}</td>`).join('')}</tr>`,
+    )
+    .join('')
+  const total = `<tr class="grand">${columns.map((col, index) => `<td style="text-align:${colAlign(col)}">${index === 0 ? 'Grand Total' : (totals[colKey(col)] ?? '')}</td>`).join('')}</tr>`
   return `<!doctype html>
     <html>
       <head>

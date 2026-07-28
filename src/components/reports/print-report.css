@@ -158,6 +158,18 @@
   padding-top: 12px;
 }
 
+.erp-group-row td {
+  background: #f7f4ec;
+}
+
+.erp-subtotal-row td {
+  background: #fcfbf7;
+}
+
+.erp-grandtotal-row td {
+  background: #f7f4ec;
+}
+
 .erp-drilldown-cell {
   color: var(--tenant-primary, #1b4d2e);
   text-decoration: underline dotted;

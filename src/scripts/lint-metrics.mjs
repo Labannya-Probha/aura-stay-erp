@@ -1,16 +1,16 @@
 import { execSync } from "node:child_process"
 import fs from "node:fs"
 
-let output = "[]"
-
-try {
-  output = execSync("npx eslint src --format json", {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  })
-} catch (error) {
-  output = error.stdout?.toString() || "[]"
-}
+const output = (() => {
+  try {
+    return execSync("npx eslint src --format json", {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    })
+  } catch (error) {
+    return error.stdout?.toString() || "[]"
+  }
+})()
 
 const results = JSON.parse(output)
 const counts = {}

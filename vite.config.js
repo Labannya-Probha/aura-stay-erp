@@ -28,11 +28,20 @@ export default defineConfig({
     chunkSizeWarningLimit: 2500,
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
-          supabase: ['@supabase/supabase-js'],
-          exceljs: ['exceljs'],
-          lucide: ['lucide-react'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (
+              id.includes('/react/') ||
+              id.includes('/react-dom/') ||
+              id.includes('/react-router-dom/')
+            ) {
+              return 'react'
+            }
+            if (id.includes('/@supabase/supabase-js/')) return 'supabase'
+            if (id.includes('/exceljs/')) return 'exceljs'
+            if (id.includes('/lucide-react/')) return 'lucide'
+          }
+          return undefined
         },
       },
     },

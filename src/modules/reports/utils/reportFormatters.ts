@@ -1,13 +1,6 @@
 /**
  * Formats a report cell value according to its registered data_type AND
  * display_format string (e.g. "DD-MMM-YYYY", "#,##0", "#,##0.00", "0.0%").
- *
- * Previously this function accepted `displayFormat` but never used it,
- * hardcoding one fixed rendering per data type instead — most visibly, dates
- * rendered as "26 Jul 2026" (en-GB, spaces) instead of the spec's required
- * "26-Jul-2026" (hyphens). Fixed to genuinely honor whatever format string
- * is registered in report_fields.display_format, falling back to a sensible
- * default only when no format is registered at all.
  */
 export function formatReportCell(value, dataType, displayFormat) {
   if (value === null || value === undefined || value === '') return '-'
@@ -31,6 +24,32 @@ export function formatReportCell(value, dataType, displayFormat) {
   return String(value)
 }
 
+export function resolveFieldValue(row, fieldKey) {
+  return String(fieldKey || '')
+    .split('.')
+    .reduce((value, segment) => (value == null ? undefined : value?.[segment]), row)
+}
+
+export function getVarianceToneClass(row, variance) {
+  const normalized = Number(variance || 0)
+  if (!row?.usali_line_group) {
+    return normalized >= 0 ? 'text-emerald-600' : 'text-rose-600'
+  }
+
+  const isRevenue = row.usali_line_group === 'REVENUE'
+  const isExpenseClass = ['PAYROLL_AND_RELATED', 'OTHER_EXPENSE'].includes(row.usali_line_group)
+
+  if (isRevenue) {
+    return normalized >= 0 ? 'text-emerald-600' : 'text-rose-600'
+  }
+
+  if (isExpenseClass) {
+    return normalized <= 0 ? 'text-emerald-600' : 'text-rose-600'
+  }
+
+  return normalized >= 0 ? 'text-emerald-600' : 'text-rose-600'
+}
+
 const MONTH_ABBR = [
   'Jan',
   'Feb',
@@ -46,16 +65,35 @@ const MONTH_ABBR = [
   'Dec',
 ]
 
-/** Supports the two date formats this codebase actually registers today:
- *  DD-MMM-YYYY (spec default, e.g. "26-Jul-2026") and ISO passthrough as a
- *  safe fallback for any unrecognized format string. */
-function formatReportDate(value, displayFormat) {
-  const date = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return String(value)
+function parseDate(value) {
+  if (value instanceof Date) return value
+  if (typeof value === 'number') {
+    const asDate = new Date(value)
+    return Number.isNaN(asDate.getTime()) ? null : asDate
+  }
 
-  const dd = String(date.getDate()).padStart(2, '0')
-  const mmm = MONTH_ABBR[date.getMonth()]
-  const yyyy = date.getFullYear()
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    const isoMatch = /^\d{4}-\d{2}-\d{2}$/.exec(trimmed)
+    if (isoMatch) {
+      const [year, month, day] = trimmed.split('-').map(Number)
+      return new Date(Date.UTC(year, month - 1, day))
+    }
+    const fallback = new Date(`${trimmed}T00:00:00`)
+    return Number.isNaN(fallback.getTime()) ? null : fallback
+  }
+
+  return null
+}
+
+function formatReportDate(value, displayFormat) {
+  const date = parseDate(value)
+  if (!date) return String(value)
+
+  const dd = String(date.getUTCDate()).padStart(2, '0')
+  const mmm = MONTH_ABBR[date.getUTCMonth()]
+  const yyyy = date.getUTCFullYear()
 
   switch (displayFormat) {
     case 'DD-MMM-YYYY':
@@ -63,19 +101,22 @@ function formatReportDate(value, displayFormat) {
     case null:
       return `${dd}-${mmm}-${yyyy}`
     case 'DD/MM/YYYY':
-      return `${dd}/${String(date.getMonth() + 1).padStart(2, '0')}/${yyyy}`
+      return `${dd}/${String(date.getUTCMonth() + 1).padStart(2, '0')}/${yyyy}`
     case 'YYYY-MM-DD':
-      return date.toISOString().slice(0, 10)
+      return `${yyyy}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
     default:
       return `${dd}-${mmm}-${yyyy}`
   }
 }
 
-/** Reads decimal-place count from the format string itself (e.g. "#,##0.00"
- * -> 2 decimals, "#,##0" -> 0 decimals) rather than hardcoding one choice. */
+function getDecimalPlaces(format) {
+  const normalized = String(format || '').trim()
+  const decimalMatch = /\.(0+)/.exec(normalized)
+  return decimalMatch ? decimalMatch[1].length : 0
+}
+
 function formatReportNumber(value, format) {
-  const decimalMatch = /\.(0+)/.exec(format || '')
-  const decimals = decimalMatch ? decimalMatch[1].length : 0
+  const decimals = getDecimalPlaces(format)
   return Number(value || 0).toLocaleString('en-BD', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -83,7 +124,7 @@ function formatReportNumber(value, format) {
 }
 
 function formatReportPercent(value, format) {
-  const decimalMatch = /\.(0+)/.exec(format || '')
-  const decimals = decimalMatch ? decimalMatch[1].length : 1
-  return `${Number(value || 0).toFixed(decimals)}%`
+  const decimals = getDecimalPlaces(format) || 1
+  const numericValue = Number(value || 0) * 100
+  return `${numericValue.toFixed(decimals)}%`
 }
