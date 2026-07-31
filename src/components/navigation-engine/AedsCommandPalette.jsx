@@ -18,7 +18,7 @@ export default function AedsCommandPalette({ open, onClose, items = [], go }) {
         <div className="aeds-command-search">
           <Search size={20} />
           <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search pages, modules, reports..." />
-          <button className="aeds-topbar-btn" type="button" onClick={onClose}><X size={16} /></button>
+          <button className="aeds-topbar-btn" type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>
         </div>
         <div className="aeds-command-list">
           {results.map((item) => {
