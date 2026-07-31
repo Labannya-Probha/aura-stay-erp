@@ -1,11 +1,11 @@
 :root {
-  --aeds-sidebar-width: 286px;
-  --aeds-topbar-height: 58px;
-  --aeds-mobile-bar-height: 56px;
-  --aeds-footer-height: 44px;
-  --aeds-page-max: 1700px;
+  --aeds-sidebar-width: 268px;
+  --aeds-topbar-height: 60px;
+  --aeds-mobile-bar-height: 58px;
+  --aeds-footer-height: 0px;
+  --aeds-page-max: 1680px;
   --aeds-page-x: clamp(18px, 2.1vw, 32px);
-  --aeds-page-y: clamp(18px, 2.1vw, 30px);
+  --aeds-page-y: clamp(18px, 2.1vw, 28px);
 }
 
 .aeds-shell {
@@ -16,25 +16,20 @@
   background:
     radial-gradient(
       circle at 12% -4%,
-      color-mix(in srgb, var(--tenant-primary) 14%, transparent),
+      color-mix(in srgb, var(--tenant-primary) 16%, transparent),
       transparent 34%
     ),
     radial-gradient(
       circle at 98% 8%,
       color-mix(in srgb, var(--tenant-accent) 10%, transparent),
-      transparent 26%
-    ),
-    radial-gradient(
-      circle at 60% 120%,
-      color-mix(in srgb, var(--tenant-primary) 8%, transparent),
-      transparent 40%
+      transparent 28%
     ),
     linear-gradient(
       180deg,
       color-mix(in srgb, var(--tenant-shell-bg) 94%, white),
       var(--tenant-shell-bg)
     );
-  overflow-x: clip;
+  overflow: hidden;
   isolation: isolate;
 }
 
@@ -58,23 +53,21 @@
   min-width: 0;
   width: 100%;
   flex: 1;
-  overflow-x: clip;
+  overflow-x: hidden;
   overflow-y: auto;
   min-height: 0;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--tenant-surface) 76%, transparent),
-      transparent 30%
-    ),
-    transparent;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tenant-surface) 74%, transparent),
+    transparent 30%
+  );
 }
 
 .aeds-page-container {
   width: 100%;
   max-width: var(--aeds-page-max);
   margin-inline: auto;
-  padding: var(--aeds-page-y) var(--aeds-page-x) calc(var(--aeds-footer-height) + 28px);
+  padding: var(--aeds-page-y) var(--aeds-page-x) 24px;
 }
 
 .aeds-page-container > * {
@@ -83,6 +76,12 @@
 
 .aeds-mobile-bar {
   display: none;
+}
+
+.aeds-shell .aeds-sidebar {
+  transition:
+    width 220ms ease,
+    transform 220ms ease;
 }
 
 @media (max-width: 639px) {
@@ -98,35 +97,20 @@
     min-height: calc(var(--aeds-mobile-bar-height) + env(safe-area-inset-top));
     align-items: center;
     gap: 10px;
-    margin: 0;
-    padding: calc(env(safe-area-inset-top) + 6px) 14px 6px;
-    border: 1px solid color-mix(in srgb, var(--tenant-border) 88%, transparent);
-    border-top: 0;
-    border-left: 0;
-    border-right: 0;
-    border-radius: 0 0 14px 14px;
-    background:
-      linear-gradient(180deg, rgb(255 255 255 / 0.94), rgb(248 250 252 / 0.96)),
-      color-mix(in srgb, var(--tenant-surface) 94%, transparent);
-    box-shadow:
-      0 4px 16px rgb(15 23 42 / 0.08),
-      inset 0 1px 0 rgb(255 255 255 / 0.45);
-    backdrop-filter: blur(14px) saturate(130%);
-    -webkit-backdrop-filter: blur(14px) saturate(130%);
+    padding: calc(env(safe-area-inset-top) + 8px) 14px 8px;
+    border-bottom: 1px solid color-mix(in srgb, var(--tenant-border) 88%, transparent);
+    background: color-mix(in srgb, var(--tenant-surface) 94%, white);
+    backdrop-filter: blur(12px) saturate(130%);
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
   }
 
-  .aeds-mobile-menu-trigger {
-    height: 2.4rem;
-    width: 2.4rem;
+  .aeds-mobile-bar .aeds-mobile-menu-trigger {
+    height: 2.5rem;
+    width: 2.5rem;
     border-radius: 12px;
-    color: rgb(51 65 85);
-    background: rgb(255 255 255 / 0.86);
+    color: var(--tenant-text);
+    background: color-mix(in srgb, var(--tenant-surface) 92%, white);
     border-color: color-mix(in srgb, var(--tenant-border) 88%, transparent);
-  }
-
-  .aeds-mobile-menu-trigger:hover {
-    color: rgb(15 23 42);
-    background: rgb(255 255 255 / 0.98);
   }
 
   .aeds-page-container {
@@ -137,64 +121,17 @@
 @media (min-width: 640px) and (max-width: 1023px) {
   :root {
     --aeds-sidebar-width: 252px;
-    --aeds-topbar-height: 52px;
+    --aeds-topbar-height: 54px;
     --aeds-page-x: clamp(14px, 1.8vw, 20px);
     --aeds-page-y: clamp(14px, 1.8vw, 20px);
-  }
-
-  .aeds-shell > .aeds-sidebar {
-    display: flex !important;
   }
 }
 
 @media (min-width: 1024px) and (max-height: 900px) {
   :root {
-    --aeds-sidebar-width: 264px;
-    --aeds-topbar-height: 50px;
+    --aeds-sidebar-width: 258px;
+    --aeds-topbar-height: 54px;
     --aeds-page-x: clamp(14px, 1.5vw, 20px);
     --aeds-page-y: clamp(12px, 1.3vw, 16px);
-  }
-
-  .aeds-page-container {
-    padding-bottom: 14px;
-  }
-}
-
-/* Fixed enterprise footer */
-.aeds-fixed-footer {
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  z-index: 35;
-  height: var(--aeds-footer-height);
-  border-top: 1px solid color-mix(in srgb, var(--tenant-border, rgb(226 232 240)) 88%, transparent);
-  background: color-mix(in srgb, var(--tenant-surface, #fff) 90%, transparent);
-  box-shadow: 0 -12px 32px rgb(15 23 42 / 0.08);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-}
-
-.aeds-fixed-footer__inner {
-  width: 100%;
-  max-width: var(--aeds-page-max);
-  height: 100%;
-  margin-inline: auto;
-  padding-inline: var(--aeds-page-x);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  color: rgb(100 116 139);
-  font-size: 0.8125rem;
-}
-
-.aeds-shell-content {
-  position: relative;
-  padding-bottom: var(--aeds-footer-height);
-}
-
-@media (max-width: 640px) {
-  .aeds-fixed-footer__inner {
-    font-size: 0.75rem;
   }
 }

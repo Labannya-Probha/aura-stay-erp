@@ -60,34 +60,42 @@ export default function ModuleContainer({
 
   return (
     <section className="space-y-4">
-      <Card className="rounded-2xl border border-slate-200 bg-white p-0 shadow-sm">
-        <CardContent className="space-y-4 p-5 sm:p-6">
-          <ModulePageHeader
-            title={title}
-            description={description}
-            eyebrow={eyebrow}
-            breadcrumb={breadcrumb}
-            icon={icon}
-            actions={actions}
-            onRefresh={onRefresh}
-            refreshing={refreshing}
-          />
+      <div
+        className="rounded-[28px] border border-slate-200/80 bg-white/90 p-[1px] shadow-[0_18px_42px_rgba(15,23,42,0.06)]"
+        style={{
+          backgroundImage:
+            'linear-gradient(135deg, var(--tenant-surface) 0%, var(--tenant-surface-muted) 100%)',
+        }}
+      >
+        <Card className="rounded-[27px] border-0 bg-transparent p-0 shadow-none">
+          <CardContent className="space-y-4 p-5 sm:p-6">
+            <ModulePageHeader
+              title={title}
+              description={description}
+              eyebrow={eyebrow}
+              breadcrumb={breadcrumb}
+              icon={icon}
+              actions={actions}
+              onRefresh={onRefresh}
+              refreshing={refreshing}
+            />
 
-          {kpis ? <div>{kpis}</div> : null}
-          {filterBar ? <div>{filterBar}</div> : null}
-          {showTabs && tabs ? <div>{tabs}</div> : null}
+            {kpis ? <div>{kpis}</div> : null}
+            {filterBar ? <div>{filterBar}</div> : null}
+            {showTabs && tabs ? <div>{tabs}</div> : null}
 
-          {error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-              {error}
-            </div>
-          ) : null}
+            {error ? (
+              <div className="rounded-[18px] border border-red-200/80 bg-red-50/80 p-4 text-sm font-medium text-red-700">
+                {error}
+              </div>
+            ) : null}
 
-          <ModuleRouteBoundary moduleName={moduleName} routeKey={routeKey}>
-            {content}
-          </ModuleRouteBoundary>
-        </CardContent>
-      </Card>
+            <ModuleRouteBoundary moduleName={moduleName} routeKey={routeKey}>
+              {content}
+            </ModuleRouteBoundary>
+          </CardContent>
+        </Card>
+      </div>
     </section>
   )
 }

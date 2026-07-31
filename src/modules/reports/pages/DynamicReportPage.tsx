@@ -15,6 +15,7 @@ import MetadataReportFilters from '../components/MetadataReportFilters'
 import MetadataReportTable from '../components/MetadataReportTable'
 import { useDynamicReport } from '../hooks/useDynamicReport'
 import { exportReportExcel } from '../utils/reportExport'
+import KpiGrid from '../../../components/report-engine/KpiGrid'
 
 export default function DynamicReportPage({ role, company }) {
   const params = useParams()
@@ -40,6 +41,16 @@ export default function DynamicReportPage({ role, company }) {
     currency: 'BDT',
     compareTo: filters?.compare_to,
   }
+
+  const headlineKpis = [
+    { metric: 'revenue', value: data?.summary?.revenue ?? data?.summary?.current_revenue },
+    { metric: 'net_profit', value: data?.summary?.net_profit ?? data?.summary?.current_net_profit },
+    {
+      metric: 'gross_margin_pct',
+      value: data?.summary?.gross_margin_pct ?? data?.summary?.gross_margin,
+    },
+    { metric: 'occupancy_rate', value: data?.summary?.occupancy_rate },
+  ].filter((metric) => metric.value != null && metric.value !== '')
 
   const summaryStrip = (
     <div className="flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-wide text-slate-500">
@@ -136,6 +147,15 @@ export default function DynamicReportPage({ role, company }) {
           <ReportMetaStrip filters={printFilters} />
           <ReportAuditStrip generatedBy={role} />
         </section>
+
+        {headlineKpis.length > 0 && (
+          <KpiGrid
+            title="Statement Summary"
+            description="Headline operating metrics for the current selection"
+            rows={headlineKpis}
+            summary={data.summary || {}}
+          />
+        )}
 
         <MetadataReportTable
           fields={fields}

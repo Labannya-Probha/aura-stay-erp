@@ -10,6 +10,20 @@
   font-variant-numeric: lining-nums tabular-nums;
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.aeds-theme-root[data-theme-mode='dark'] {
+  color-scheme: dark;
+}
+
+.aeds-theme-root[data-theme-mode='dark'] .aeds-topbar,
+.aeds-theme-root[data-theme-mode='dark'] .aeds-card,
+.aeds-theme-root[data-theme-mode='dark'] .aeds-panel,
+.aeds-theme-root[data-theme-mode='dark'] .aeds-surface {
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.26);
 }
 
 @media (max-width: 1280px) {

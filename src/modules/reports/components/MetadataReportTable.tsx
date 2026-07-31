@@ -60,6 +60,7 @@ export default function MetadataReportTable({
   }, {})
 
   const comparisonFields = activeFields.filter(isComparableField)
+  const hasComparativeData = comparisonSummary?.enabled || comparisonRows.length > 0
 
   const groupedRows = rows.reduce((acc, row) => {
     const section = getSectionKey(row)
@@ -79,7 +80,7 @@ export default function MetadataReportTable({
 
   return (
     <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_55px_-28px_rgba(27,77,46,0.35)]">
-      {comparisonSummary?.enabled && comparisonFields.length > 0 && (
+      {hasComparativeData && comparisonFields.length > 0 && (
         <div className="border-b border-slate-200 bg-slate-50 px-4 py-4">
           <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-500">
             <span className="rounded-full bg-white px-3 py-1 text-[#1B4D2E]">

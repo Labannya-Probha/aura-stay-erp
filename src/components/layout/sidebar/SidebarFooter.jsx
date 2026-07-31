@@ -28,7 +28,7 @@ export default function SidebarFooter({ company, role, userName }) {
 
   return (
     <SidebarFooterPrimitive className="text-xs text-white/72">
-      <div className="rounded-2xl border border-white/9 bg-white/[0.05] p-3.5 shadow-[0_10px_22px_rgba(0,0,0,0.14)] backdrop-blur-sm">
+      <div className="rounded-[18px] border border-white/10 bg-white/[0.06] p-3.5 shadow-[0_12px_28px_rgba(0,0,0,0.14)] backdrop-blur-sm">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="truncate text-sm font-extrabold text-white">{userName}</div>

@@ -100,6 +100,19 @@ export function buildTenantTheme(company = {}, logoPalette = null) {
     ) || secondary
 
   const fontFamily = safeTextColor(safeCompany.font_family, null)
+  const themeMode = safeCompany.theme_mode || AEDS_DEFAULT_THEME.mode || 'light'
+  const isDark = themeMode === 'dark'
+
+  const themeSurface = isDark ? '#101827' : AEDS_DEFAULT_THEME.surface
+  const themeSurfaceMuted = isDark ? '#172233' : AEDS_DEFAULT_THEME.surfaceMuted
+  const themeShellBg = isDark ? '#0b1220' : AEDS_DEFAULT_THEME.shellBg
+  const themeText = isDark ? '#f8fafc' : AEDS_DEFAULT_THEME.text
+  const themeTextMuted = isDark ? '#9aa5b1' : AEDS_DEFAULT_THEME.textMuted
+  const themeBorder = isDark ? '#243244' : AEDS_DEFAULT_THEME.border
+  const themeDanger = isDark ? '#f87171' : AEDS_DEFAULT_THEME.danger
+  const themeWarning = isDark ? '#fbbf24' : AEDS_DEFAULT_THEME.warning
+  const themeSuccess = isDark ? '#34d399' : AEDS_DEFAULT_THEME.success
+  const themeInfo = isDark ? '#60a5fa' : AEDS_DEFAULT_THEME.info
 
   return {
     ...AEDS_DEFAULT_THEME,
@@ -113,21 +126,29 @@ export function buildTenantTheme(company = {}, logoPalette = null) {
     primarySoft: lighten(primary, 0.9),
     secondary,
     accent,
-    shellBg: mix(lighten(primary, 0.92), '#F8FAFC', 0.55),
-    border: mix(primary, '#E2E8F0', 0.88),
+    shellBg: isDark ? themeShellBg : mix(lighten(primary, 0.92), '#F8FAFC', 0.55),
+    border: isDark ? themeBorder : mix(primary, '#E2E8F0', 0.88),
     buttonColor,
     buttonText: getReadableText(buttonColor),
     sidebarBg,
     sidebarText: safeTextColor(safeCompany.sidebar_text_color, getReadableText(sidebarBg)),
     tableHeader,
     reportHeader,
+    surface: isDark ? themeSurface : AEDS_DEFAULT_THEME.surface,
+    surfaceMuted: isDark ? themeSurfaceMuted : AEDS_DEFAULT_THEME.surfaceMuted,
+    text: isDark ? themeText : AEDS_DEFAULT_THEME.text,
+    textMuted: isDark ? themeTextMuted : AEDS_DEFAULT_THEME.textMuted,
+    danger: isDark ? themeDanger : AEDS_DEFAULT_THEME.danger,
+    warning: isDark ? themeWarning : AEDS_DEFAULT_THEME.warning,
+    success: isDark ? themeSuccess : AEDS_DEFAULT_THEME.success,
+    info: isDark ? themeInfo : AEDS_DEFAULT_THEME.info,
     printPrimary: safeColor(safeCompany.brand_primary, null) || primaryDark,
     printAccent: safeColor(safeCompany.brand_accent, null) || accent,
     fontBody: fontFamily || AEDS_DEFAULT_THEME.fontBody,
     fontDisplay: fontFamily || AEDS_DEFAULT_THEME.fontDisplay,
     fontMono: AEDS_DEFAULT_THEME.fontMono,
     fontFamily: fontFamily || AEDS_DEFAULT_THEME.fontBody,
-    themeMode: safeCompany.theme_mode || AEDS_DEFAULT_THEME.mode,
+    themeMode,
     source: palette.source || 'company',
   }
 }

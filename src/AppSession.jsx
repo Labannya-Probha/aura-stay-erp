@@ -10,6 +10,7 @@ import { getTenantId, setTenantId } from './lib/tenant'
 import { PATHS } from './app/paths'
 
 import Login from './components/Login.jsx'
+import { DEFAULT_SLUG } from './components/login/login.constants'
 import {
   GuestPosKiosk,
   VerifyBillPage as VerifyBill,
@@ -69,6 +70,20 @@ function getTenantSlugFromPath(pathname) {
 function getLoginSlug(pathname) {
   const pathParts = pathname.split('/').filter(Boolean)
   return pathParts.length > 1 ? pathParts[0] : undefined
+}
+
+function getPreferredLoginSlug(pathname) {
+  const pathSlug = getTenantSlugFromPath(pathname)
+  if (pathSlug) return pathSlug
+
+  try {
+    const storedSlug = sessionStorage.getItem('aura_tenant_slug')
+    if (storedSlug) return storedSlug.trim().toLowerCase()
+  } catch {
+    // ignore storage errors
+  }
+
+  return DEFAULT_SLUG
 }
 
 function getTenantSlugHint(pathname, session) {
@@ -340,7 +355,15 @@ export default function AppSession() {
   }
 
   if (location.pathname.endsWith(PATHS.LOGIN)) {
-    if (!session) return <Login slug={getLoginSlug(location.pathname)} />
+    if (!session) {
+      const slug = getLoginSlug(location.pathname)
+      if (!slug) {
+        return (
+          <Navigate to={`/${getPreferredLoginSlug(location.pathname)}${PATHS.LOGIN}`} replace />
+        )
+      }
+      return <Login slug={slug} />
+    }
     return <Navigate to={PATHS.DASHBOARD} replace />
   }
 
@@ -353,7 +376,8 @@ export default function AppSession() {
     return <VerifyPayment />
   if (!session && location.pathname === PATHS.PREVIEW_RESERVATION_PAYMENT_RECEIPT)
     return <PreviewReservationPaymentReceipt />
-  if (!session) return <Login />
+  if (!session)
+    return <Navigate to={`/${getPreferredLoginSlug(location.pathname)}${PATHS.LOGIN}`} replace />
 
   if (!profile) {
     return (

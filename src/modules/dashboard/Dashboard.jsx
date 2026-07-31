@@ -1,4 +1,4 @@
-import { BarChart3, BedDouble, CalendarCheck, ClipboardList, Moon } from 'lucide-react'
+import { BarChart3, BedDouble, CalendarCheck, ClipboardList, Moon, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import { PATHS } from '../../app/paths'
@@ -112,8 +112,8 @@ export default function Dashboard({
 
   return (
     <ExecutiveCommandCenter
-      title="Executive Command Center"
-      subtitle="Live hotel operations, revenue pulse, and floor control in one command surface."
+      title="Operations command center"
+      subtitle="Live hotel performance, room flow, and staff priorities in a calm enterprise workspace."
       eyebrow="Hospitality Operations"
       companyName={company?.name}
       loading={loading}
@@ -129,12 +129,28 @@ export default function Dashboard({
       onRefresh={refresh}
     >
       <section className="aeds-dashboard aeds-v6-dashboard">
-        <OperationalPulse
-          summary={summary}
-          housekeeping={housekeeping}
-          restaurant={restaurant}
-          tasks={tasks}
-        />
+        <div className="rounded-[24px] border border-[color-mix(in_srgb,var(--tenant-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--tenant-surface)_78%,white)]/80 p-3 shadow-[0_14px_32px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--tenant-text-muted)]">
+                Operational pulse
+              </p>
+              <p className="text-sm font-semibold text-[color:var(--tenant-text)]">
+                The property is running at a glance.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--tenant-primary)_22%,var(--tenant-border))] bg-[color-mix(in_srgb,var(--tenant-primary)_10%,transparent)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--tenant-primary)]">
+              <Sparkles size={14} />
+              Live readiness
+            </div>
+          </div>
+          <OperationalPulse
+            summary={summary}
+            housekeeping={housekeeping}
+            restaurant={restaurant}
+            tasks={tasks}
+          />
+        </div>
 
         <div className="grid min-w-0 gap-4 xl:grid-cols-12">
           <div className="xl:col-span-7">

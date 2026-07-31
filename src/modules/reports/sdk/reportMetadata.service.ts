@@ -137,6 +137,13 @@ const FALLBACK_GROUPS = [
         description: 'Bank-wise receipts, payments and running balance.',
       },
       {
+        reportCode: 'RPT-008',
+        title: 'Depreciation',
+        slug: 'depreciation',
+        route: '/reports/accounts/depreciation',
+        description: 'Asset depreciation and book value movement.',
+      },
+      {
         reportCode: 'RPT-011',
         title: 'Ledger',
         slug: 'ledger',
@@ -672,6 +679,194 @@ function fallbackDefinition(department, slug) {
 
 function fallbackFieldsBySlug(slug) {
   const bySlug = {
+    'accounts-payable-aging': [
+      {
+        fieldKey: 'vendor_name',
+        label: 'Vendor',
+        dataType: 'Text',
+        alignment: 'left',
+        sortable: true,
+        filterable: true,
+      },
+      {
+        fieldKey: 'aging_bucket',
+        label: 'Bucket',
+        dataType: 'Text',
+        alignment: 'left',
+        sortable: true,
+      },
+      {
+        fieldKey: 'current_amount',
+        label: 'Current',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'days_30',
+        label: '0-30 Days',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'days_60',
+        label: '31-60 Days',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'days_90_plus',
+        label: '90+ Days',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'total_due',
+        label: 'Total Due',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+    ],
+    'accounts-receivable-aging': [
+      {
+        fieldKey: 'customer_name',
+        label: 'Customer',
+        dataType: 'Text',
+        alignment: 'left',
+        sortable: true,
+        filterable: true,
+      },
+      {
+        fieldKey: 'aging_bucket',
+        label: 'Bucket',
+        dataType: 'Text',
+        alignment: 'left',
+        sortable: true,
+      },
+      {
+        fieldKey: 'current_amount',
+        label: 'Current',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'days_30',
+        label: '0-30 Days',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'days_60',
+        label: '31-60 Days',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'days_90_plus',
+        label: '90+ Days',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'total_due',
+        label: 'Total Due',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+    ],
+    'balance-sheet': [
+      {
+        fieldKey: 'balance_sheet_class',
+        label: 'Classification',
+        dataType: 'Text',
+        alignment: 'left',
+        sortable: true,
+      },
+      {
+        fieldKey: 'account_name',
+        label: 'Account',
+        dataType: 'Text',
+        alignment: 'left',
+        sortable: true,
+        filterable: true,
+      },
+      {
+        fieldKey: 'opening_balance',
+        label: 'Opening Balance',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'closing_balance',
+        label: 'Closing Balance',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+    ],
+    depreciation: [
+      {
+        fieldKey: 'asset_name',
+        label: 'Asset',
+        dataType: 'Text',
+        alignment: 'left',
+        sortable: true,
+        filterable: true,
+      },
+      {
+        fieldKey: 'asset_category',
+        label: 'Category',
+        dataType: 'Text',
+        alignment: 'left',
+        sortable: true,
+      },
+      {
+        fieldKey: 'opening_value',
+        label: 'Opening Value',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'depreciation',
+        label: 'Depreciation',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'book_value',
+        label: 'Book Value',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+    ],
     'item-wise-stock': [
       {
         fieldKey: 'item_name',
@@ -1052,9 +1247,49 @@ function fallbackFieldsBySlug(slug) {
         sortable: true,
       },
     ],
+    'vat-tax-payment': [
+      {
+        fieldKey: 'tax_type',
+        label: 'Tax Type',
+        dataType: 'Text',
+        alignment: 'left',
+        sortable: true,
+      },
+      {
+        fieldKey: 'tax_period',
+        label: 'Period',
+        dataType: 'Text',
+        alignment: 'left',
+        sortable: true,
+      },
+      {
+        fieldKey: 'tax_amount',
+        label: 'Tax Amount',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'paid_amount',
+        label: 'Paid Amount',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'balance_amount',
+        label: 'Balance',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+    ],
     'usali-departmental-statement': [
       {
-        fieldKey: 'department',
+        fieldKey: 'usali_department',
         label: 'Department',
         dataType: 'Text',
         alignment: 'left',
@@ -1062,7 +1297,7 @@ function fallbackFieldsBySlug(slug) {
         filterable: true,
       },
       {
-        fieldKey: 'line_group',
+        fieldKey: 'usali_line_group',
         label: 'Line Group',
         dataType: 'Text',
         alignment: 'left',
@@ -1306,6 +1541,116 @@ function getFallbackRows(department, slug) {
     }
   }
 
+  if (slug === 'accounts-payable-aging') {
+    return {
+      rows: [
+        {
+          vendor_name: 'Blue Ocean Supplies',
+          aging_bucket: 'Current',
+          current_amount: 125000,
+          days_30: 0,
+          days_60: 0,
+          days_90_plus: 0,
+          total_due: 125000,
+        },
+        {
+          vendor_name: 'Blue Ocean Supplies',
+          aging_bucket: '31-60 Days',
+          current_amount: 0,
+          days_30: 0,
+          days_60: 45000,
+          days_90_plus: 0,
+          total_due: 45000,
+        },
+      ],
+      summary: {
+        report: 'accounts_payable_aging',
+        source: 'fallback_accounts_payable_aging',
+        generatedAt: new Date().toISOString(),
+      },
+    }
+  }
+
+  if (slug === 'accounts-receivable-aging') {
+    return {
+      rows: [
+        {
+          customer_name: 'Alicia Fernandez',
+          aging_bucket: 'Current',
+          current_amount: 88000,
+          days_30: 0,
+          days_60: 0,
+          days_90_plus: 0,
+          total_due: 88000,
+        },
+        {
+          customer_name: 'Alicia Fernandez',
+          aging_bucket: '61-90 Days',
+          current_amount: 0,
+          days_30: 0,
+          days_60: 0,
+          days_90_plus: 32000,
+          total_due: 32000,
+        },
+      ],
+      summary: {
+        report: 'accounts_receivable_aging',
+        source: 'fallback_accounts_receivable_aging',
+        generatedAt: new Date().toISOString(),
+      },
+    }
+  }
+
+  if (slug === 'balance-sheet') {
+    return {
+      rows: [
+        {
+          balance_sheet_class: 'Assets',
+          account_name: 'Cash at Bank',
+          opening_balance: 2500000,
+          closing_balance: 3000000,
+        },
+        {
+          balance_sheet_class: 'Liabilities',
+          account_name: 'Accounts Payable',
+          opening_balance: 750000,
+          closing_balance: 820000,
+        },
+      ],
+      summary: {
+        report: 'balance_sheet',
+        source: 'fallback_balance_sheet',
+        generatedAt: new Date().toISOString(),
+      },
+    }
+  }
+
+  if (slug === 'depreciation') {
+    return {
+      rows: [
+        {
+          asset_name: 'Air Conditioner - Main Hall',
+          asset_category: 'Furniture & Equipment',
+          opening_value: 1200000,
+          depreciation: 120000,
+          book_value: 1080000,
+        },
+        {
+          asset_name: 'Generator Backup Unit',
+          asset_category: 'Plant & Machinery',
+          opening_value: 950000,
+          depreciation: 95000,
+          book_value: 855000,
+        },
+      ],
+      summary: {
+        report: 'depreciation',
+        source: 'fallback_depreciation',
+        generatedAt: new Date().toISOString(),
+      },
+    }
+  }
+
   if (slug === 'ledger') {
     return {
       rows: [
@@ -1458,6 +1803,45 @@ function getFallbackRows(department, slug) {
     }
   }
 
+  if (slug === 'usali-departmental-statement') {
+    return {
+      rows: [
+        {
+          usali_department: 'Rooms',
+          usali_line_group: 'Revenue',
+          ifrs_statement_class: 'REVENUE',
+          current_period: { amount: 1850000, balance: 1850000, presentation_balance: 1850000 },
+          prior_period: { amount: 1750000, balance: 1750000 },
+          budget: { amount: 1800000, balance: 1800000 },
+          variance: { vs_prior: 100000, vs_budget: 50000 },
+        },
+        {
+          usali_department: 'Rooms',
+          usali_line_group: 'Payroll & Related',
+          ifrs_statement_class: 'EXPENSE',
+          current_period: { amount: -620000, balance: -620000, presentation_balance: -620000 },
+          prior_period: { amount: -590000, balance: -590000 },
+          budget: { amount: -600000, balance: -600000 },
+          variance: { vs_prior: -30000, vs_budget: -20000 },
+        },
+        {
+          usali_department: 'Food & Beverage',
+          usali_line_group: 'Revenue',
+          ifrs_statement_class: 'REVENUE',
+          current_period: { amount: 980000, balance: 980000, presentation_balance: 980000 },
+          prior_period: { amount: 910000, balance: 910000 },
+          budget: { amount: 950000, balance: 950000 },
+          variance: { vs_prior: 70000, vs_budget: 30000 },
+        },
+      ],
+      summary: {
+        report: 'usali_departmental_statement',
+        source: 'fallback_usali_departmental_statement',
+        generatedAt: new Date().toISOString(),
+      },
+    }
+  }
+
   if (slug === 'expense-by-category-department') {
     return {
       rows: [
@@ -1529,6 +1913,32 @@ function getFallbackRows(department, slug) {
       summary: {
         report: 'vat_tax_collection',
         source: 'fallback_vat_tax_collection',
+        generatedAt: new Date().toISOString(),
+      },
+    }
+  }
+
+  if (slug === 'vat-tax-payment') {
+    return {
+      rows: [
+        {
+          tax_type: 'VAT',
+          tax_period: '2026-06',
+          tax_amount: 216000,
+          paid_amount: 180000,
+          balance_amount: 36000,
+        },
+        {
+          tax_type: 'AIT',
+          tax_period: '2026-06',
+          tax_amount: 95000,
+          paid_amount: 95000,
+          balance_amount: 0,
+        },
+      ],
+      summary: {
+        report: 'vat_tax_payment',
+        source: 'fallback_vat_tax_payment',
         generatedAt: new Date().toISOString(),
       },
     }

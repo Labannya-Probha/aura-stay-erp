@@ -267,10 +267,10 @@ function NavButton({ item, active, open, expandable, onClick }) {
       aria-current={active ? 'page' : undefined}
       aria-expanded={expandable ? open : undefined}
       data-active={active || open ? 'true' : undefined}
-      className={`flex w-full items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-left text-[13px] font-medium transition-all focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-0 ${
+      className={`flex w-full items-center justify-between gap-3 rounded-[14px] px-3 py-2.5 text-left text-[13px] font-medium transition-all focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-0 ${
         active || open
-          ? 'bg-white/9 text-white shadow-[0_10px_20px_rgba(0,0,0,0.14)] ring-1 ring-white/9'
-          : 'text-white/72 hover:bg-white/7 hover:text-white'
+          ? 'bg-white/[0.12] text-white shadow-[0_10px_20px_rgba(0,0,0,0.14)] ring-1 ring-white/10'
+          : 'text-white/78 hover:bg-white/[0.08] hover:text-white'
       }`}
       onClick={onClick}
     >
@@ -324,8 +324,8 @@ function SubGroup({ group, onNavigate }) {
         variant="ghost"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2.5 text-left text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-white/18 focus-visible:ring-offset-0 ${
-          group.active ? 'text-white' : 'text-white/72 hover:bg-white/6 hover:text-white'
+        className={`flex w-full items-center justify-between gap-2 rounded-[12px] px-2.5 py-2.25 text-left text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-white/18 focus-visible:ring-offset-0 ${
+          group.active ? 'text-white' : 'text-white/78 hover:bg-white/[0.08] hover:text-white'
         }`}
       >
         <span className="flex min-w-0 flex-1 items-center gap-2">
@@ -714,7 +714,7 @@ export default function SidebarNavigation({
   return (
     <SidebarContent asChild>
       <nav aria-label="Primary navigation" className="flex h-full flex-col gap-4 px-3 py-3">
-        <div className="flex items-center gap-2 rounded-2xl border border-white/8 bg-white/6 px-3 py-2.5 text-white/80 shadow-inner shadow-black/10 focus-within:border-white/16 focus-within:bg-white/10">
+        <div className="flex items-center gap-2 rounded-[14px] border border-white/10 bg-white/[0.06] px-3 py-2.5 text-white/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] focus-within:border-white/20 focus-within:bg-white/[0.12]">
           <Search size={15} aria-hidden="true" className="shrink-0 text-white/65" />
           <SidebarInput
             className="h-auto border-0 bg-transparent px-0 text-sm font-medium text-white placeholder:text-white/50 focus-visible:ring-0"
@@ -749,7 +749,7 @@ export default function SidebarNavigation({
           return (
             <section
               key={group.title}
-              className="rounded-2xl border border-white/8 bg-white/[0.03] p-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.1)] backdrop-blur-sm"
+              className="rounded-[18px] border border-white/10 bg-white/[0.04] p-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm"
             >
               <div className="px-2 pb-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/48">
                 {group.title}

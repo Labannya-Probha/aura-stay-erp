@@ -5,23 +5,16 @@ import OnlineStatusBadge from './OnlineStatusBadge'
 
 export default function UniversalActionBar({ role, onOpenCommand }) {
   return (
-    <div className="ml-4 flex shrink-0 items-center gap-2">
+    <div className="flex shrink-0 items-center gap-2">
       <QuickCreate role={role} />
       <NotificationCenter />
       <OnlineStatusBadge />
       <button
         type="button"
         onClick={onOpenCommand}
-        className="hidden h-9 items-center gap-2 rounded-xl border px-3 text-xs font-extrabold transition xl:flex"
-        style={{
-          borderColor: 'color-mix(in srgb, var(--tenant-border) 88%, transparent)',
-          background:
-            'linear-gradient(180deg, color-mix(in srgb, var(--tenant-surface) 95%, white), var(--tenant-surface))',
-          color: 'var(--tenant-text-muted)',
-          boxShadow: '0 8px 18px rgb(15 23 42 / 0.06)',
-        }}
+        className="hidden h-9 items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--tenant-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--tenant-surface)_93%,white)] px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--tenant-text-muted)] transition hover:border-[color-mix(in_srgb,var(--tenant-primary)_28%,var(--tenant-border))] hover:text-[color:var(--tenant-text)] xl:flex"
       >
-        <Command size={15} />
+        <Command size={14} />
         Ctrl K
       </button>
     </div>

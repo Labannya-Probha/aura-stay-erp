@@ -8,6 +8,20 @@ import { ToastProvider } from './components/Toast'
 import { PopoverProvider } from './contexts/PopoverContext'
 import { AedsDialogProvider } from './components/dialog-engine'
 
+function renderFallback(message = 'The app could not start.') {
+  const rootElement = document.getElementById('root')
+  if (!rootElement) return
+
+  rootElement.innerHTML = `
+    <div style="display:flex;min-height:100vh;align-items:center;justify-content:center;font-family:'IBM Plex Sans',sans-serif;background:#F7F5F2;">
+      <div style="text-align:center;color:#1B4D2E;max-width:440px;padding:40px;">
+        <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:10px;">Unable to load the app</h2>
+        <p style="color:#5F5A55;font-size:14px;line-height:1.6;">${message}</p>
+      </div>
+    </div>
+  `
+}
+
 installUiDebugInstrumentation()
 
 // Catch any React render-tree error and show a helpful message rather than a
@@ -62,33 +76,31 @@ class ErrorBoundary extends React.Component {
 }
 
 if (!SUPABASE_CONFIGURED) {
-  // Supabase env vars were not set at build time.
-  // Show a clear message instead of a blank page.
-  document.getElementById('root').innerHTML = `
-    <div style="display:flex;min-height:100vh;align-items:center;justify-content:center;
-                font-family:'IBM Plex Sans',sans-serif;background:#F7F5F2;">
-      <div style="text-align:center;color:#1B4D2E;max-width:440px;padding:40px;">
-        <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:10px;">App Not Configured</h2>
-        <p style="color:#5F5A55;font-size:14px;line-height:1.6;">
-          Supabase environment variables are not set.<br/>
-          Please add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>
-          (or <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code>)
-          to your deployment environment and redeploy.
-        </p>
-      </div>
-    </div>`
-} else {
-  ReactDOM.createRoot(document.getElementById('root')).render(
-    <React.StrictMode>
-      <PopoverProvider>
-        <ToastProvider>
-          <AedsDialogProvider>
-            <ErrorBoundary>
-              <App />
-            </ErrorBoundary>
-          </AedsDialogProvider>
-        </ToastProvider>
-      </PopoverProvider>
-    </React.StrictMode>,
+  renderFallback(
+    'Supabase environment variables are not set. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (or SUPABASE_URL and SUPABASE_ANON_KEY) and reload the app.',
   )
+} else {
+  try {
+    const rootElement = document.getElementById('root')
+    if (!rootElement) {
+      renderFallback('The root container was not found.')
+    } else {
+      ReactDOM.createRoot(rootElement).render(
+        <React.StrictMode>
+          <PopoverProvider>
+            <ToastProvider>
+              <AedsDialogProvider>
+                <ErrorBoundary>
+                  <App />
+                </ErrorBoundary>
+              </AedsDialogProvider>
+            </ToastProvider>
+          </PopoverProvider>
+        </React.StrictMode>,
+      )
+    }
+  } catch (error) {
+    console.error('Failed to mount app:', error)
+    renderFallback(error?.message || 'Unexpected startup error.')
+  }
 }

@@ -134,7 +134,7 @@ export default function PaymentConfigurationPage() {
         </button>
       }
       kpis={
-        <div className="grid border border-slate-200 bg-slate-50/70 sm:grid-cols-4 rounded-xl overflow-hidden">
+        <div className="grid overflow-hidden rounded-[24px] border border-slate-200/80 bg-white/90 shadow-[0_12px_28px_rgba(15,23,42,0.05)] sm:grid-cols-4">
           <Summary label="Configured" value={summary.total} />
           <Summary label="Active" value={summary.active} />
           <Summary label="Inactive" value={summary.inactive} />
@@ -143,18 +143,18 @@ export default function PaymentConfigurationPage() {
       }
     >
       {notice ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <div className="rounded-[18px] border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800">
           {notice}
         </div>
       ) : null}
 
       {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-[18px] border border-red-200/80 bg-red-50/80 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+      <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-white/90 shadow-[0_14px_32px_rgba(15,23,42,0.05)]">
         <PaymentTerminalToolbar
           search={search}
           onSearchChange={setSearch}
@@ -212,9 +212,13 @@ export default function PaymentConfigurationPage() {
 
 function Summary({ label, value }) {
   return (
-    <div className="border-b px-5 py-4 sm:border-b-0 sm:border-r last:sm:border-r-0">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="metric-value mt-1 text-2xl font-semibold">{value}</p>
+    <div className="border-b border-slate-200/80 px-5 py-4 sm:border-b-0 sm:border-r sm:last:border-r-0">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+        {label}
+      </p>
+      <p className="metric-value mt-1 text-2xl font-semibold tracking-tight text-slate-950">
+        {value}
+      </p>
     </div>
   )
 }

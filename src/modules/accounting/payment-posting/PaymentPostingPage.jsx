@@ -120,13 +120,17 @@ export default function PaymentPostingPage() {
       }
     >
       {notice ? (
-        <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">{notice}</div>
+        <div className="rounded-[18px] border border-slate-200/80 bg-slate-50/80 px-3 py-2 text-sm text-slate-700">
+          {notice}
+        </div>
       ) : null}
       {error ? (
-        <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+        <div className="rounded-[18px] border border-red-200/80 bg-red-50/80 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
       ) : null}
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="rounded-[24px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_14px_32px_rgba(15,23,42,0.05)]">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
           Posting Payload JSON
         </p>
@@ -138,21 +142,21 @@ export default function PaymentPostingPage() {
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             disabled={isPosting}
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-slate-900 px-3 text-sm font-semibold text-white disabled:opacity-60"
+            className="inline-flex min-h-10 items-center gap-2 rounded-[14px] bg-slate-900 px-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-60"
             onClick={() => run(postNow)}
           >
             <Send size={15} /> Post Now
           </button>
           <button
             disabled={isPosting}
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold disabled:opacity-60"
+            className="inline-flex min-h-10 items-center gap-2 rounded-[14px] border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 disabled:opacity-60"
             onClick={() => run(queue)}
           >
             <Play size={15} /> Queue
           </button>
           <button
             disabled={isPosting}
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold disabled:opacity-60"
+            className="inline-flex min-h-10 items-center gap-2 rounded-[14px] border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 disabled:opacity-60"
             onClick={() => processQueue(25).then(loadRows)}
           >
             <ListChecks size={15} /> Process Queue
