@@ -22,7 +22,7 @@ export default function Login({ slug }) {
         fontSize: 'var(--tenant-base-font-size)',
       }}
     >
-      <section className="grid min-h-screen grid-cols-1 lg:grid-cols-[minmax(420px,560px)_1fr]">
+      <section className="grid min-h-screen grid-cols-1 min-[992px]:grid-cols-[minmax(420px,560px)_1fr]">
         <LoginBrandPanel brand={brand} />
 
         <section className="relative flex min-h-screen items-start justify-center overflow-hidden px-3 py-4 sm:items-center sm:px-8 sm:py-6 lg:px-12">
