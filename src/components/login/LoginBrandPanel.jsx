@@ -2,7 +2,7 @@ import BrandLogo from './BrandLogo'
 
 export default function LoginBrandPanel({ brand = {} }) {
   return (
-    <aside className="relative hidden min-h-screen overflow-hidden lg:flex">
+    <aside className="relative hidden min-h-screen overflow-hidden min-[992px]:flex">
       <div
         className="absolute inset-0"
         style={{
