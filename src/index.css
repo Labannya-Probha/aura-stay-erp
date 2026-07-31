@@ -8,9 +8,22 @@
 @import '@fontsource-variable/inter';
 @import './styles/premium-forms.css';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  /* Tailwind v4 requires breakpoints declared here via CSS custom
+     properties — the legacy tailwind.config.js `theme.screens` object is
+     NOT read by v4. Without this block, ALL responsive variants
+     (sm:/md:/lg:/xl:) silently generate zero CSS project-wide, which was
+     the root cause of both the login page's `lg:flex` brand panel not
+     showing, and the dashboard sidebar's `sm:flex` not showing — two
+     seemingly unrelated bugs from the exact same underlying cause. */
+  --breakpoint-sm: 40rem;   /* 640px */
+  --breakpoint-md: 48rem;   /* 768px */
+  --breakpoint-lg: 64rem;   /* 1024px */
+  --breakpoint-xl: 80rem;   /* 1280px */
+  --breakpoint-2xl: 96rem;  /* 1536px */
+}
 
 /* ============================================================
    AURA STAY — ENTERPRISE LUXE ERP DESIGN SYSTEM
