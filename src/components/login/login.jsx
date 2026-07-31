@@ -22,10 +22,10 @@ export default function Login({ slug }) {
         fontSize: 'var(--tenant-base-font-size)',
       }}
     >
-      <section className="grid min-h-screen grid-cols-1 min-[992px]:grid-cols-[minmax(420px,560px)_1fr]">
+      <section className="grid h-screen grid-cols-1 min-[992px]:grid-cols-[minmax(420px,560px)_1fr]">
         <LoginBrandPanel brand={brand} />
-
-        <section className="relative flex min-h-screen items-start justify-center overflow-hidden px-3 py-4 sm:items-center sm:px-8 sm:py-6 lg:px-12">
+      
+        <section className="relative flex h-screen items-center justify-center overflow-y-auto overflow-x-hidden px-3 py-4 sm:px-8 sm:py-6 lg:px-12">
           <LoginVideoBackground
             brand={brand}
             loading={loading}
