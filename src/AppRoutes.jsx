@@ -52,6 +52,7 @@ import { FRONT_OFFICE_LEGACY_TAB_REDIRECTS } from './modules/front-office/frontO
 import ReservationsPage from './modules/reservations/ReservationsPage.jsx'
 import InventoryPage from './modules/inventory/InventoryPage.jsx'
 import ReportsCenterPage from './modules/reports/ReportsCenterPage.jsx'
+import NotesEditorPage from './modules/reports/pages/NotesEditorPage.jsx'
 import { DynamicReportPage } from './modules/reports'
 import Settings from './modules/settings/SettingsPage.jsx'
 import MasterDataPage from './modules/master-data/MasterDataPage.jsx'
@@ -1272,6 +1273,23 @@ export default function AppRoutes({
               'reports-center',
               <ReportsCenterPage company={company} role={role} userName={userName} userId={userId} />,
             )}
+          </SaasModuleRoute>
+        }
+      />
+
+      <Route
+        path={PATHS.REPORTS_NOTES}
+        element={
+          <SaasModuleRoute
+            moduleId="reports"
+            role={role}
+            navId="reports"
+            privileges={privileges}
+            modulesEnabled={modulesEnabled}
+            company={company}
+            userName={userName}
+          >
+            {withModuleBoundary('Reports', 'reports-notes', <NotesEditorPage />)}
           </SaasModuleRoute>
         }
       />
