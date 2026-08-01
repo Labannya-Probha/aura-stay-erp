@@ -1,4 +1,5 @@
 import { Plus, RefreshCw, Search } from 'lucide-react'
+import { Button } from 'src/components/ui/button'
 
 export default function PaymentTerminalToolbar({ search, onSearchChange, onRefresh, onCreate, isRefreshing = false, lastRefresh = null }) {
   return (
@@ -16,14 +17,14 @@ export default function PaymentTerminalToolbar({ search, onSearchChange, onRefre
       </label>
 
       <div className="flex items-center gap-2">
-        <button type="button" onClick={onRefresh} disabled={isRefreshing} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
+        <Button variant="outline" onClick={onRefresh} disabled={isRefreshing}>
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
           Refresh
-        </button>
-        <button type="button" onClick={onCreate} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+        </Button>
+        <Button variant="default" onClick={onCreate}>
           <Plus className="h-4 w-4" aria-hidden="true" />
           Add
-        </button>
+        </Button>
       </div>
 
       {lastRefresh ? <p className="text-xs text-slate-500 sm:ml-auto">Last refreshed {new Intl.DateTimeFormat(undefined,{hour:'2-digit',minute:'2-digit'}).format(lastRefresh)}</p> : null}
