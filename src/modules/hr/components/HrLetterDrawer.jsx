@@ -78,7 +78,8 @@ export default function HrLetterDrawer({ item, onClose }) {
         </dl>
 
         <p className="text-xs text-pine/40 italic">
-          Full letter content generation is not yet implemented — this record currently stores docket metadata only.
+          Full letter content generation is not yet implemented — this record currently stores
+          docket metadata only.
         </p>
 
         <Button

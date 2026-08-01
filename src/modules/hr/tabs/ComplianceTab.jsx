@@ -8,38 +8,88 @@ import ComplianceDrawer from '../components/ComplianceDrawer'
 
 function IncidentsView({ flash, userName }) {
   const [rows, setRows] = useState([])
-  const [f, setF] = useState({ incident_date: todayISO(), category: 'GENERAL', description: '', action_taken: '' })
+  const [f, setF] = useState({
+    incident_date: todayISO(),
+    category: 'GENERAL',
+    description: '',
+    action_taken: '',
+  })
   const [viewing, setViewing] = useState(null)
 
   const load = async () => {
-    const { data } = await supabase.from('incident_register').select('*').order('incident_date', { ascending: false })
+    const { data } = await supabase
+      .from('incident_register')
+      .select('*')
+      .order('incident_date', { ascending: false })
     setRows(data || [])
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+  }, [])
 
   const add = async () => {
     if (!f.description) return
-    const { error } = await supabase.from('incident_register').insert({ ...f, reported_by: userName })
+    const { error } = await supabase
+      .from('incident_register')
+      .insert({ ...f, reported_by: userName })
     if (error) flash(error.message)
-    else { setF({ incident_date: todayISO(), category: 'GENERAL', description: '', action_taken: '' }); load() }
+    else {
+      setF({ incident_date: todayISO(), category: 'GENERAL', description: '', action_taken: '' })
+      load()
+    }
   }
   const toggle = async (r) => {
-    await supabase.from('incident_register').update({ status: r.status === 'OPEN' ? 'CLOSED' : 'OPEN' }).eq('id', r.id)
+    await supabase
+      .from('incident_register')
+      .update({ status: r.status === 'OPEN' ? 'CLOSED' : 'OPEN' })
+      .eq('id', r.id)
     load()
   }
 
   return (
     <div className="space-y-4">
       <div className="card p-4 grid grid-cols-6 gap-2">
-        <input type="date" className="input" value={f.incident_date} onChange={(e) => setF({ ...f, incident_date: e.target.value })} />
-        <input className="input" placeholder="Category" value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} />
-        <input className="input col-span-2" placeholder="Description" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
-        <input className="input" placeholder="Action taken" value={f.action_taken} onChange={(e) => setF({ ...f, action_taken: e.target.value })} />
-        <Button variant="default" className="justify-center" onClick={add}><Plus size={15} /> Log</Button>
+        <input
+          type="date"
+          className="input"
+          value={f.incident_date}
+          onChange={(e) => setF({ ...f, incident_date: e.target.value })}
+        />
+        <input
+          className="input"
+          placeholder="Category"
+          value={f.category}
+          onChange={(e) => setF({ ...f, category: e.target.value })}
+        />
+        <input
+          className="input col-span-2"
+          placeholder="Description"
+          value={f.description}
+          onChange={(e) => setF({ ...f, description: e.target.value })}
+        />
+        <input
+          className="input"
+          placeholder="Action taken"
+          value={f.action_taken}
+          onChange={(e) => setF({ ...f, action_taken: e.target.value })}
+        />
+        <Button variant="default" className="justify-center" onClick={add}>
+          <Plus size={15} /> Log
+        </Button>
       </div>
       <div className="card overflow-hidden">
         <table className="w-full">
-          <thead><tr><th className="th">Date</th><th className="th">Category</th><th className="th">Description</th><th className="th">Action</th><th className="th">By</th><th className="th">Status</th><th className="th"></th></tr></thead>
+          <thead>
+            <tr>
+              <th className="th">Date</th>
+              <th className="th">Category</th>
+              <th className="th">Description</th>
+              <th className="th">Action</th>
+              <th className="th">By</th>
+              <th className="th">Status</th>
+              <th className="th"></th>
+            </tr>
+          </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.id}>
@@ -48,15 +98,34 @@ function IncidentsView({ flash, userName }) {
                 <td className="td text-sm">{r.description}</td>
                 <td className="td text-xs">{r.action_taken || '—'}</td>
                 <td className="td text-xs">{r.reported_by}</td>
-                <td className="td"><button onClick={() => toggle(r)} className={`status-chip ${r.status === 'OPEN' ? 'bg-amber/20 text-amber' : 'bg-forest/15 text-forest'}`}>{r.status}</button></td>
                 <td className="td">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewing(r)} aria-label={`View incident from ${fmtDate(r.incident_date)}`}>
+                  <button
+                    onClick={() => toggle(r)}
+                    className={`status-chip ${r.status === 'OPEN' ? 'bg-amber/20 text-amber' : 'bg-forest/15 text-forest'}`}
+                  >
+                    {r.status}
+                  </button>
+                </td>
+                <td className="td">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setViewing(r)}
+                    aria-label={`View incident from ${fmtDate(r.incident_date)}`}
+                  >
                     <Eye size={14} />
                   </Button>
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td className="td text-pine/40" colSpan={7}>No incidents logged.</td></tr>}
+            {rows.length === 0 && (
+              <tr>
+                <td className="td text-pine/40" colSpan={7}>
+                  No incidents logged.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -86,12 +155,22 @@ export default function ComplianceTab({ flash, userName, view, setView }) {
         <TabsTrigger value="service-book-register">Service Book Register</TabsTrigger>
       </TabsList>
 
-      <TabsContent value=""><IncidentsView flash={flash} userName={userName} /></TabsContent>
+      <TabsContent value="">
+        <IncidentsView flash={flash} userName={userName} />
+      </TabsContent>
       <TabsContent value="employee-register">
-        <PlaceholderView icon={Users} title="Employee Register" desc="Statutory employee register for labour law compliance." />
+        <PlaceholderView
+          icon={Users}
+          title="Employee Register"
+          desc="Statutory employee register for labour law compliance."
+        />
       </TabsContent>
       <TabsContent value="service-book-register">
-        <PlaceholderView icon={BookOpen} title="Service Book Register" desc="Service book register across all employees." />
+        <PlaceholderView
+          icon={BookOpen}
+          title="Service Book Register"
+          desc="Service book register across all employees."
+        />
       </TabsContent>
     </Tabs>
   )
