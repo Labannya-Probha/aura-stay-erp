@@ -616,3 +616,138 @@
     break-inside: avoid;
   }
 }
+
+.report-print-preview {
+  border: 1px solid #e5e2da;
+  border-radius: 16px;
+  background: #fff;
+  padding: 20px 22px;
+}
+
+.report-print-preview--portrait {
+  max-width: 940px;
+  margin: 0 auto;
+}
+
+.report-print-preview--landscape {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.report-print-preview__validation {
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: grid;
+  gap: 2px;
+  font-size: 0.8rem;
+}
+
+.report-print-preview__validation--ok {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.report-print-preview__validation--error {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.report-print-preview__table-wrap {
+  overflow-x: auto;
+}
+
+.report-print-preview__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.report-print-preview__table thead th {
+  padding: 8px 6px;
+  border-bottom: 2px solid #171717;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5b5b5b;
+  text-align: left;
+}
+
+.report-print-preview__table td,
+.report-print-preview__table tbody th {
+  padding: 7px 6px;
+  border-bottom: 1px solid #f0ede6;
+  vertical-align: top;
+}
+
+.report-print-preview__row--header th {
+  padding-top: 16px;
+  border-bottom: 1px solid #dedbd3;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tenant-primary, #1b4d2e);
+  font-size: 0.72rem;
+}
+
+.report-print-preview__row--subtotal td {
+  border-top: 1px solid #171717;
+  font-weight: 700;
+}
+
+.report-print-preview__row--grand-total td {
+  border-top: 3px double #171717;
+  border-bottom: 3px double #171717;
+  font-weight: 800;
+}
+
+.report-print-preview__row--bold td {
+  font-weight: 700;
+}
+
+.report-print-preview__amount {
+  text-align: right;
+  white-space: nowrap;
+  font-family: var(--aeds-font-mono, ui-monospace, monospace);
+}
+
+@media print {
+  .report-print-preview {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    width: 100%;
+    max-width: none;
+  }
+
+  .report-print-preview__table thead {
+    display: table-header-group;
+  }
+
+  .report-print-preview__table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-print-preview__validation {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .screen-only,
+  .reporting-shell-header,
+  .reporting-shell-filters {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 12mm 10mm;
+  }
+}

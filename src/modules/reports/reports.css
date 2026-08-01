@@ -23,6 +23,14 @@
   color: #fff;
 }
 
+.screen-only {
+  display: block;
+}
+
+.print-only {
+  display: none;
+}
+
 @media print {
   .no-print,
   aside,
@@ -31,5 +39,13 @@
   }
   main {
     width: 100% !important;
+  }
+
+  .screen-only {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
   }
 }
