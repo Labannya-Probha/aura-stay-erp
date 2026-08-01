@@ -39,7 +39,8 @@ export default function DynamicReportPage({ role, company }) {
     dateFrom: filters?.start_date,
     dateTo: filters?.end_date,
     cycle: filters?.cycle,
-    currency: 'BDT',
+    method: filters?.method,
+    currency: data?.summary?.currency || 'BDT',
     compareTo: filters?.compare_to,
   }
 

@@ -14,6 +14,8 @@ const FINANCIAL_STATEMENT_SLUGS = new Set([
   'profit-and-loss-statement',
   'balance-sheet',
   'cash-flow-statement',
+  'statement-of-cash-flows-direct',
+  'statement-of-cash-flows-indirect',
   'statement-of-changes-in-equity',
   'changes-in-equity',
   'usali-departmental-statement',

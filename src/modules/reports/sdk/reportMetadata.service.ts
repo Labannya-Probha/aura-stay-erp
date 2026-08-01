@@ -4,6 +4,20 @@ import { getReportByRoute } from '../../../lib/reporting/reportConfig'
 const COMPARISON_FILTER_OPTIONS =
   'Off,Previous Period,Previous Month,Previous Quarter,Previous Year'
 
+const CASH_FLOW_SLUGS = new Set([
+  'cash-flow-statement',
+  'statement-of-cash-flows-direct',
+  'statement-of-cash-flows-indirect',
+])
+
+function isCashFlowSlug(slug = '') {
+  return CASH_FLOW_SLUGS.has(
+    String(slug || '')
+      .trim()
+      .toLowerCase(),
+  )
+}
+
 function cloneFilters(filters = {}) {
   return { ...filters }
 }
@@ -296,17 +310,20 @@ function fallbackDefinition(department, slug) {
   }
 
   if (
-    ['ledger', 'trial-balance', 'bank-book', 'cash-book', 'cash-flow-statement'].includes(slug) ||
+    ['ledger', 'trial-balance', 'bank-book', 'cash-book'].includes(slug) ||
+    isCashFlowSlug(slug) ||
     ['expense-by-category-department', 'net-asset-value', 'vat-tax-collection'].includes(slug)
   ) {
     return {
       department: { code: 'ACCOUNTS', name: 'Accounts', slug: 'accounts' },
       report: {
-        reportCode: 'RPT-011',
-        title: 'Ledger',
-        slug,
+        reportCode: isCashFlowSlug(slug) ? 'RPT-007' : 'RPT-011',
+        title: isCashFlowSlug(slug) ? 'Cash Flow Statement' : 'Ledger',
+        slug: isCashFlowSlug(slug) ? 'cash-flow-statement' : slug,
         route: `/reports/accounts/${slug}`,
-        description: 'Operational account statement fallback.',
+        description: isCashFlowSlug(slug)
+          ? 'Tenant-configurable cash flow statement with direct and indirect methods.'
+          : 'Operational account statement fallback.',
         supportsPrint: true,
         supportsExportPdf: true,
         supportsExportExcel: true,
@@ -376,6 +393,17 @@ function fallbackDefinition(department, slug) {
         },
         { filterKey: 'start_date', label: 'Start Date', filterType: 'date' },
         { filterKey: 'end_date', label: 'End Date', filterType: 'date' },
+        ...(isCashFlowSlug(slug)
+          ? [
+              {
+                filterKey: 'method',
+                label: 'Method',
+                filterType: 'Dropdown',
+                sourceOptions: 'Direct,Indirect',
+                defaultValue: 'Direct',
+              },
+            ]
+          : []),
       ],
       actions: [
         { actionKey: 'print', label: 'Print' },
@@ -1132,6 +1160,74 @@ function fallbackFieldsBySlug(slug) {
         sortable: true,
       },
     ],
+    'statement-of-cash-flows-direct': [
+      {
+        fieldKey: 'section',
+        label: 'Section',
+        dataType: 'Text',
+        alignment: 'left',
+        sortable: true,
+      },
+      { fieldKey: 'line_item', label: 'Line Item', dataType: 'Text', alignment: 'left' },
+      {
+        fieldKey: 'current_period.amount',
+        label: 'Current Period',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'prior_period.amount',
+        label: 'Prior Period',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'variance.amount',
+        label: 'Variance',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+    ],
+    'statement-of-cash-flows-indirect': [
+      {
+        fieldKey: 'section',
+        label: 'Section',
+        dataType: 'Text',
+        alignment: 'left',
+        sortable: true,
+      },
+      { fieldKey: 'line_item', label: 'Line Item', dataType: 'Text', alignment: 'left' },
+      {
+        fieldKey: 'current_period.amount',
+        label: 'Current Period',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'prior_period.amount',
+        label: 'Prior Period',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'variance.amount',
+        label: 'Variance',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+    ],
     'expense-by-category-department': [
       {
         fieldKey: 'department',
@@ -1428,6 +1524,42 @@ export async function loadReportDefinition(department, slug, role = 'FRONT_OFFIC
           }
         : null
 
+      const resolvedFilters = (() => {
+        const baseFilters =
+          Array.isArray(data.filters) && data.filters.length ? data.filters : fallback.filters
+
+        const withComparison = baseFilters.some((filter) => filter.filterKey === 'compare_to')
+          ? baseFilters
+          : [
+              ...baseFilters,
+              {
+                filterKey: 'compare_to',
+                label: 'Compare To',
+                filterType: 'Dropdown',
+                sourceOptions: COMPARISON_FILTER_OPTIONS,
+                defaultValue: 'Previous Period',
+              },
+            ]
+
+        if (
+          !isCashFlowSlug(slug) ||
+          withComparison.some((filter) => filter.filterKey === 'method')
+        ) {
+          return withComparison
+        }
+
+        return [
+          ...withComparison,
+          {
+            filterKey: 'method',
+            label: 'Method',
+            filterType: 'Dropdown',
+            sourceOptions: 'Direct,Indirect',
+            defaultValue: 'Direct',
+          },
+        ]
+      })()
+
       return {
         ...fallback,
         ...data,
@@ -1452,22 +1584,7 @@ export async function loadReportDefinition(department, slug, role = 'FRONT_OFFIC
           Array.isArray(data.fields) && data.fields.length
             ? data.fields
             : slugFallbackFields || fallback.fields,
-        filters: (() => {
-          const resolvedFilters =
-            Array.isArray(data.filters) && data.filters.length ? data.filters : fallback.filters
-          return resolvedFilters.some((filter) => filter.filterKey === 'compare_to')
-            ? resolvedFilters
-            : [
-                ...resolvedFilters,
-                {
-                  filterKey: 'compare_to',
-                  label: 'Compare To',
-                  filterType: 'Dropdown',
-                  sourceOptions: COMPARISON_FILTER_OPTIONS,
-                  defaultValue: 'Previous Period',
-                },
-              ]
-        })(),
+        filters: resolvedFilters,
         actions:
           Array.isArray(data.actions) && data.actions.length ? data.actions : fallback.actions,
       }
@@ -1777,7 +1894,7 @@ function getFallbackRows(department, slug) {
     }
   }
 
-  if (slug === 'cash-flow-statement') {
+  if (isCashFlowSlug(slug)) {
     return {
       rows: [
         {
@@ -1952,7 +2069,10 @@ export async function runMetadataReport(department, slug, filters, tenantId) {
   if (!tenantId && !fallbackRows) {
     return { rows: [], summary: { error: 'missing tenant context' } }
   }
-  const reportFilters = stripComparisonOnlyFilters(filters)
+  const reportFilters = {
+    ...stripComparisonOnlyFilters(filters),
+    ...(isCashFlowSlug(slug) && !filters?.method ? { method: 'Direct' } : {}),
+  }
   const comparisonMode = getComparisonMode(filters?.compare_to)
   const range = getRangeFromFilters(reportFilters)
   const comparisonRange = getShiftedComparisonRange(range, comparisonMode)

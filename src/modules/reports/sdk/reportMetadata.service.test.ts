@@ -76,4 +76,36 @@ describe('loadReportDefinition', () => {
       ]),
     )
   })
+
+  it('adds a method filter for cash-flow statement variants', async () => {
+    ;(supabase.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: null })
+
+    const direct = await loadReportDefinition(
+      'accounts',
+      'statement-of-cash-flows-direct',
+      'FRONT_OFFICE',
+    )
+    const indirect = await loadReportDefinition(
+      'accounts',
+      'statement-of-cash-flows-indirect',
+      'FRONT_OFFICE',
+    )
+
+    expect(direct.filters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          filterKey: 'method',
+          filterType: 'Dropdown',
+          sourceOptions: 'Direct,Indirect',
+        }),
+      ]),
+    )
+
+    expect(indirect.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fieldKey: 'current_period.amount', label: 'Current Period' }),
+        expect.objectContaining({ fieldKey: 'variance.amount', label: 'Variance' }),
+      ]),
+    )
+  })
 })

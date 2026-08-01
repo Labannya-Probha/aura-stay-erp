@@ -55,6 +55,11 @@ export function ReportMetaStrip({ filters }) {
       <span>
         Cycle: <b>{filters?.cycle || 'Monthly'}</b>
       </span>
+      {filters?.method ? (
+        <span>
+          Method: <b>{filters.method}</b>
+        </span>
+      ) : null}
       <span>
         Period:{' '}
         <b>
