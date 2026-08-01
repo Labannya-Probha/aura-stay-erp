@@ -21,6 +21,10 @@ vi.mock('../../../lib/supabase', () => ({
   },
 }))
 
+vi.mock('../../../lib/tenant', () => ({
+  getTenantId: () => 'tenant-123',
+}))
+
 const { loadAedsReportCatalog, loadAedsReportDefinition, runAedsReport } =
   await import('../reportEngine.service.js')
 
@@ -48,16 +52,18 @@ describe('reportEngine.service', () => {
         start_date: '2026-07-01',
         end_date: '2026-07-31',
       },
+      p_tenant_id: 'tenant-123',
     })
     expect(result.summary.report).toBe('ifrs_profit_or_loss')
   })
 
-  it('falls back to an empty report payload when aeds_run_report fails', async () => {
+  it('throws when aeds_run_report fails', async () => {
     rpcMock.mockResolvedValue({ data: null, error: { message: 'RPC unavailable' } })
 
-    const result = await runAedsReport({ department: 'accounts', slug: 'ledger' })
-
-    expect(result).toEqual({ rows: [], summary: { source: 'fallback_empty' } })
+    await expect(runAedsReport({ department: 'accounts', slug: 'ledger' })).rejects.toMatchObject({
+      message: 'RPC unavailable',
+      code: 'REPORT_REQUEST_FAILED',
+    })
   })
 
   it('uses aeds_report_metadata and aeds_report_definition RPCs for catalog and definition', async () => {
