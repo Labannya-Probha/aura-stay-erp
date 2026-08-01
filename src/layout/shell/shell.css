@@ -135,3 +135,48 @@
     --aeds-page-y: clamp(12px, 1.3vw, 16px);
   }
 }
+
+/* ============================================================
+   PRINT: root cause fix — printing any page inside .aeds-shell
+   previously kept the full sidebar+content grid intact (no
+   @media print rule existed here at all), reserving the
+   sidebar's grid column even though the sidebar itself becomes
+   invisible during print elsewhere. That squeezed report
+   content into a narrow column with a large blank area on the
+   side — exactly the print-preview issue reported for the
+   Balance Sheet. This collapses the shell to a simple, full-
+   width single column during print, additive only (does not
+   touch any screen-mode rule above).
+   ============================================================ */
+@media print {
+  .aeds-shell {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    background: none !important;
+  }
+
+  .aeds-sidebar,
+  .aeds-mobile-bar {
+    display: none !important;
+  }
+
+  .aeds-shell-content {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .aeds-shell-main {
+    width: 100% !important;
+    overflow: visible !important;
+    background: none !important;
+  }
+
+  .aeds-page-container {
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
