@@ -14,7 +14,6 @@ vi.mock('../../../lib/tenant', () => ({
 vi.mock('../../../lib/supabase', () => ({
   supabase: {
     rpc: (...args) => mocks.rpc(...args),
-
     auth: {
       getSession: vi.fn(async () => ({
         data: {
@@ -23,7 +22,6 @@ vi.mock('../../../lib/supabase', () => ({
         error: null,
       })),
     },
-
     from: vi.fn(() => ({
       insert: vi.fn(() => ({
         select: vi.fn(() => ({
@@ -35,7 +33,6 @@ vi.mock('../../../lib/supabase', () => ({
           })),
         })),
       })),
-
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
           eq: vi.fn(async () => ({
@@ -87,9 +84,7 @@ describe('reportEngine.service', () => {
     })
 
     expect(mocks.getTenantId).toHaveBeenCalledTimes(1)
-
     expect(mocks.rpc).toHaveBeenCalledTimes(1)
-
     expect(mocks.rpc).toHaveBeenCalledWith('aeds_run_report', {
       p_department_slug: 'accounts',
       p_report_slug: 'statement-of-profit-or-loss',
