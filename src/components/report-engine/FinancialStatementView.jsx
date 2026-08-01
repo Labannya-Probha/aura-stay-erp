@@ -1,30 +1,55 @@
 import { useMemo } from 'react'
 
-/**
- * Renders a financial statement (P&L, Balance Sheet, USALI departmental
- * statement, Cash Flow, Changes in Equity) the way an accountant expects to
- * see one — grouped sections with headers, indented line items, bold
- * subtotal rows with a top border, negative amounts in parentheses, and a
- * final grand-total row with a double border. This intentionally does NOT
- * use pagination or a generic data-grid — a financial statement is read as
- * one continuous document, not browsed page-by-page.
- *
- * Distinct from AedsDataGrid (used for tabular/list reports like Trial
- * Balance or AR Aging), which is the right tool for row-per-transaction
- * data but the wrong one for a formatted statement.
- */
-
-const BDT = new Intl.NumberFormat('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const BDT = new Intl.NumberFormat('en-BD', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
 
 function formatAmount(value) {
-  const n = Number(value || 0)
-  const abs = BDT.format(Math.abs(n))
-  if (n < 0) return `(৳${abs})`
-  return `৳${abs}`
+  const number = Number(value || 0)
+  const absolute = BDT.format(Math.abs(number))
+  if (number < 0) return `(৳${absolute})`
+  if (number === 0) return '—'
+  return `৳${absolute}`
 }
 
-function sumBy(rows, key) {
-  return rows.reduce((total, row) => total + Number(row[key] || 0), 0)
+function isStructuredStatement(rows) {
+  return rows.some((row) => row.line_code || row.current_amount !== undefined)
+}
+
+function legacyRowsToStatement(rows, groupByField) {
+  const grouped = new Map()
+  for (const row of rows) {
+    const key = groupByField ? row[groupByField] || 'Other' : 'Statement'
+    if (!grouped.has(key)) grouped.set(key, [])
+    grouped.get(key).push(row)
+  }
+
+  const result = []
+  let order = 100
+  for (const [label, groupRows] of grouped.entries()) {
+    if (groupByField) {
+      result.push({
+        line_code: `LEGACY.HEADER.${order}`,
+        label,
+        line_type: 'HEADER',
+        display_order: order++,
+        current_amount: 0,
+      })
+    }
+    for (const row of groupRows) {
+      result.push({
+        ...row,
+        line_code: row.account_code || `LEGACY.LINE.${order}`,
+        label: row.account_name || row.line_item || 'Line item',
+        line_type: 'DETAIL',
+        display_order: order++,
+        current_amount: Number(row.amount ?? row.value ?? 0),
+        comparison_amount: Number(row.comparison_amount ?? 0),
+      })
+    }
+  }
+  return result
 }
 
 export default function FinancialStatementView({
@@ -33,25 +58,21 @@ export default function FinancialStatementView({
   rows = [],
   summary = {},
   groupByField,
-  summaryTotalKey,
 }) {
-  const groups = useMemo(() => {
-    if (!groupByField) {
-      // No grouping (e.g. Statement of Changes in Equity) — render as a
-      // simple sequential list of line items instead of sectioned groups.
-      return [{ label: null, rows }]
-    }
-    const byGroup = new Map()
-    for (const row of rows) {
-      const key = row[groupByField] || 'Other'
-      if (!byGroup.has(key)) byGroup.set(key, [])
-      byGroup.get(key).push(row)
-    }
-    return Array.from(byGroup.entries()).map(([label, groupRows]) => ({ label, rows: groupRows }))
+  const statementRows = useMemo(() => {
+    const normalized = isStructuredStatement(rows)
+      ? rows
+      : legacyRowsToStatement(rows, groupByField)
+    return [...normalized].sort(
+      (left, right) => Number(left.display_order || 0) - Number(right.display_order || 0),
+    )
   }, [rows, groupByField])
 
-  const grandTotal = summaryTotalKey ? Number(summary[summaryTotalKey] || 0) : null
-  const isEmpty = rows.length === 0
+  const hasComparison = Boolean(
+    summary.comparison_start ||
+    summary.comparison_end ||
+    statementRows.some((row) => Number(row.comparison_amount || 0) !== 0),
+  )
 
   return (
     <section className="financial-statement">
@@ -65,67 +86,69 @@ export default function FinancialStatementView({
         ) : summary.as_of_date ? (
           <p className="financial-statement__period">As of {summary.as_of_date}</p>
         ) : null}
+        {summary.validation?.valid === false ? (
+          <p className="financial-statement__validation-error">
+            Report validation failed. Review mapping and ledger warnings before publication.
+          </p>
+        ) : null}
       </header>
 
-      {isEmpty ? (
+      {statementRows.length === 0 ? (
         <div className="financial-statement__empty">
-          No transactions posted for this period yet. This statement will populate once journal
-          entries exist for the selected date range.
+          No posted transactions were found for the selected reporting period.
         </div>
       ) : (
         <table className="financial-statement__table">
+          <thead>
+            <tr>
+              <th scope="col">Particulars</th>
+              <th scope="col">Current period</th>
+              {hasComparison ? <th scope="col">Comparative</th> : null}
+              {hasComparison ? <th scope="col">Variance</th> : null}
+            </tr>
+          </thead>
           <tbody>
-            {groups.map((group, groupIndex) => {
-              const groupSubtotal = sumBy(group.rows, 'amount')
+            {statementRows.map((row) => {
+              const rowType = String(row.line_type || 'DETAIL').toLowerCase()
+              const classNames = [
+                'financial-statement__row',
+                `financial-statement__row--${rowType}`,
+                row.is_bold ? 'is-bold' : '',
+                row.is_underlined ? 'is-underlined' : '',
+                row.is_double_underlined ? 'is-double-underlined' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')
 
               return (
-                <>
-                  {group.label ? (
-                    <tr className="financial-statement__section-header" key={`h-${groupIndex}`}>
-                      <td colSpan={2}>{group.label}</td>
-                    </tr>
+                <tr className={classNames} key={row.id || row.line_code}>
+                  <td>
+                    <span
+                      className="financial-statement__label"
+                      style={{ paddingInlineStart: `${Number(row.indent_level || 0) * 18}px` }}
+                    >
+                      {row.label || row.account_name || row.line_item}
+                    </span>
+                    {row.notes_reference ? (
+                      <sup className="financial-statement__note-ref">{row.notes_reference}</sup>
+                    ) : null}
+                  </td>
+                  <td className="financial-statement__line-amount">
+                    {rowType === 'header' ? '' : formatAmount(row.current_amount ?? row.amount)}
+                  </td>
+                  {hasComparison ? (
+                    <td className="financial-statement__line-amount">
+                      {rowType === 'header' ? '' : formatAmount(row.comparison_amount)}
+                    </td>
                   ) : null}
-
-                  {group.rows.map((row, rowIndex) => (
-                    <tr className="financial-statement__line" key={`${groupIndex}-${rowIndex}`}>
-                      <td className="financial-statement__line-label">
-                        <span className="financial-statement__account-code">
-                          {row.account_code}
-                        </span>
-                        <span>{row.account_name || row.line_item}</span>
-                      </td>
-                      <td className="financial-statement__line-amount">
-                        {formatAmount(row.amount ?? row.value)}
-                      </td>
-                    </tr>
-                  ))}
-
-                  {group.label ? (
-                    <tr className="financial-statement__subtotal" key={`st-${groupIndex}`}>
-                      <td>Total {group.label}</td>
-                      <td className="financial-statement__line-amount">
-                        {formatAmount(groupSubtotal)}
-                      </td>
-                    </tr>
+                  {hasComparison ? (
+                    <td className="financial-statement__line-amount">
+                      {rowType === 'header' ? '' : formatAmount(row.variance_amount)}
+                    </td>
                   ) : null}
-                </>
+                </tr>
               )
             })}
-
-            {grandTotal !== null && (
-              <tr className="financial-statement__grand-total">
-                <td>
-                  {summaryTotalKey === 'net_profit'
-                    ? 'Net Profit / (Loss)'
-                    : summaryTotalKey === 'net_change_in_cash'
-                      ? 'Net Change in Cash'
-                      : summaryTotalKey === 'closing_equity'
-                        ? 'Closing Equity'
-                        : 'Total'}
-                </td>
-                <td className="financial-statement__line-amount">{formatAmount(grandTotal)}</td>
-              </tr>
-            )}
           </tbody>
         </table>
       )}
