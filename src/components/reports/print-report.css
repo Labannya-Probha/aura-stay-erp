@@ -200,6 +200,21 @@
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm;
+  }
+
+  html,
+  body {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   .erp-print-footer {
     display: flex;
     justify-content: space-between;
@@ -220,10 +235,6 @@
     padding-top: 4px;
   }
 
-  @page {
-    margin: 20mm 14mm;
-  }
-
   .erp-report-body thead {
     display: table-header-group;
   }
@@ -238,6 +249,80 @@
 
   body {
     background: #fff !important;
+  }
+
+  .erp-print-doc,
+  .enterprise-print-doc,
+  .erp-report-body {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 10pt !important;
+    line-height: 1.35 !important;
+  }
+
+  .erp-letterhead,
+  .erp-meta-strip,
+  .erp-audit-strip,
+  .erp-print-footer,
+  .financial-statement-heading,
+  .financial-statement-validation {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .erp-report-body table,
+  .report-print-table,
+  .financial-statement-table {
+    width: 100% !important;
+    table-layout: fixed;
+  }
+
+  /* Prevent auto-shrink caused by nowrap overflow in long text columns. */
+  .report-print-table th,
+  .report-print-table td,
+  .financial-statement-table th,
+  .financial-statement-table td {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    font-size: 9.5pt !important;
+  }
+
+  /* First column stays dominant for account/particular text. */
+  .report-print-table th:first-child,
+  .report-print-table td:first-child,
+  .financial-statement-table th:first-child,
+  .financial-statement-table td:first-child {
+    width: 56%;
+  }
+
+  /* Numeric columns remain compact and right-aligned. */
+  .report-print-table th.text-right,
+  .report-print-table td.text-right,
+  .financial-statement-table th.financial-statement-amount,
+  .financial-statement-table td.financial-statement-amount {
+    width: 22%;
+    text-align: right !important;
+    white-space: nowrap !important;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  .report-print-table thead th,
+  .financial-statement-table thead th {
+    font-size: 8pt !important;
+    letter-spacing: 0.04em;
+  }
+
+  .erp-report-body tbody tr,
+  .report-print-table tbody tr,
+  .financial-statement-table tbody tr,
+  .erp-group-row,
+  .erp-subtotal-row,
+  .erp-grandtotal-row {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }
 
@@ -413,6 +498,122 @@
   .financial-statement-table tr {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  .financial-statement-table .financial-statement-label {
+    align-items: flex-start;
+  }
+}
+
+/* Screenshot-style final polish for Chrome print preview readability. */
+@media print {
+  .erp-print-doc,
+  .enterprise-print-doc,
+  .erp-report-body {
+    font-size: 10.5pt !important;
+    line-height: 1.4 !important;
+  }
+
+  .erp-letterhead {
+    align-items: flex-start;
+    gap: 14px;
+    padding-bottom: 8px;
+    border-bottom-width: 2px;
+  }
+
+  .erp-letterhead__logo {
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+  }
+
+  .erp-letterhead__company-name {
+    font-size: 11.2pt;
+    line-height: 1.2;
+  }
+
+  .erp-letterhead__company-meta {
+    margin-top: 1px;
+    font-size: 8pt;
+    line-height: 1.2;
+  }
+
+  .erp-letterhead__report-title {
+    font-size: 14pt;
+    line-height: 1.15;
+  }
+
+  .erp-letterhead__report-period {
+    margin-top: 1px;
+    font-size: 8.2pt;
+    line-height: 1.2;
+  }
+
+  .erp-meta-strip {
+    gap: 2px 14px;
+    padding: 6px 0;
+    margin-bottom: 2px;
+    font-size: 8.1pt;
+    line-height: 1.2;
+    border-bottom-color: #ddd8ca;
+  }
+
+  .erp-audit-strip {
+    padding: 4px 0 8px;
+    font-size: 7.7pt;
+    line-height: 1.2;
+  }
+
+  .erp-report-body table,
+  .report-print-table,
+  .financial-statement-table {
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+
+  .erp-report-body thead th,
+  .report-print-table thead th,
+  .financial-statement-table thead th {
+    font-size: 7.7pt !important;
+    letter-spacing: 0.03em;
+    padding: 5px 5px;
+    border-bottom-width: 1.5px;
+  }
+
+  .erp-report-body tbody td,
+  .report-print-table tbody td,
+  .financial-statement-table tbody td,
+  .financial-statement-table tbody th {
+    font-size: 9.4pt !important;
+    line-height: 1.28;
+    padding: 4px 5px;
+  }
+
+  .report-print-table th:first-child,
+  .report-print-table td:first-child,
+  .financial-statement-table th:first-child,
+  .financial-statement-table td:first-child {
+    width: 66%;
+  }
+
+  .report-print-table th.text-right,
+  .report-print-table td.text-right,
+  .financial-statement-table th.financial-statement-amount,
+  .financial-statement-table td.financial-statement-amount {
+    width: 17%;
+    min-width: 17%;
+    text-align: right !important;
+    white-space: nowrap !important;
+  }
+
+  .erp-group-row td,
+  .erp-subtotal-row td,
+  .erp-grandtotal-row td,
+  .financial-statement-line--header th,
+  .financial-statement-line--subtotal td,
+  .financial-statement-line--grand-total td {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }
 
