@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import { AgingAndReconciliationService } from '../AgingAndReconciliationService'
 
+vi.mock('../../../../lib/supabase', () => ({
+  supabase: {
+    rpc: vi.fn(),
+    from: vi.fn(),
+  },
+}))
+
 function mockClient() {
   return {
     rpc: vi.fn(),
