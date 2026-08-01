@@ -203,6 +203,9 @@ export default function MetadataReportTable({
                               ? getVarianceToneClass(row, cellValue)
                               : ''
 
+                            const isLabelField = ['account_name', 'particulars', 'label'].includes(field.fieldKey)
+                            const noteRef = isLabelField ? row?.notes_reference : null
+
                             return (
                               <td
                                 key={field.fieldKey}
@@ -211,6 +214,15 @@ export default function MetadataReportTable({
                                 } ${varianceClass}`.trim()}
                               >
                                 {formatReportCell(cellValue, field.dataType, field.displayFormat)}
+                                {noteRef ? (
+                                  <a
+                                    href={`/reports/notes#note-${noteRef}`}
+                                    className="ml-1 align-super text-[0.7em] font-semibold text-emerald-700 hover:underline"
+                                    title={`See Note ${noteRef}`}
+                                  >
+                                    [{noteRef}]
+                                  </a>
+                                ) : null}
                               </td>
                             )
                           })}
