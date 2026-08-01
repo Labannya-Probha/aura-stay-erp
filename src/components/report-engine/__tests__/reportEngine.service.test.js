@@ -1,24 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const rpcMock = vi.fn()
+const tenantId = '22222222-2222-2222-2222-222222222222'
 
-vi.mock('../../../lib/supabase', () => ({
-  supabase: {
-    rpc: (...args) => rpcMock(...args),
-    auth: {
-      getSession: async () => ({ data: { session: null } }),
-    },
-    from: () => ({
-      insert: () => ({
-        select: () => ({
-          single: async () => ({ data: null, error: { message: 'not used' } }),
-        }),
-      }),
-      select: () => ({
-        eq: () => [],
-      }),
-    }),
-  },
+vi.mock('../../../lib/tenant', () => ({
+  getTenantId: () => tenantId,
 }))
 
 const { loadAedsReportCatalog, loadAedsReportDefinition, runAedsReport } =
@@ -52,12 +38,25 @@ describe('reportEngine.service', () => {
     expect(result.summary.report).toBe('ifrs_profit_or_loss')
   })
 
-  it('falls back to an empty report payload when aeds_run_report fails', async () => {
-    rpcMock.mockResolvedValue({ data: null, error: { message: 'RPC unavailable' } })
+  it('throws a visible report error when aeds_run_report fails', async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: {
+        code: '42501',
+        message: 'RPC unavailable',
+      },
+    })
 
-    const result = await runAedsReport({ department: 'accounts', slug: 'ledger' })
-
-    expect(result).toEqual({ rows: [], summary: { source: 'fallback_empty' } })
+    await expect(
+      runAedsReport({
+        department: 'accounts',
+        slug: 'ledger',
+        filters: {},
+      }),
+    ).rejects.toMatchObject({
+      code: '42501',
+      message: 'RPC unavailable',
+    })
   })
 
   it('uses aeds_report_metadata and aeds_report_definition RPCs for catalog and definition', async () => {
