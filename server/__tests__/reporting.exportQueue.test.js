@@ -128,7 +128,10 @@ describe('pdf report queue processor', () => {
       { contentType: 'text/csv', upsert: false },
     )
 
-    expect(createSignedUrlMock).toHaveBeenCalledWith('tenant-001/RPT-LIVE-001-job-123.csv', 900)
+    expect(createSignedUrlMock).toHaveBeenCalledWith(
+      'tenant-001/RPT-LIVE-001-job-123.csv',
+      900,
+    )
 
     expect(insertMock).toHaveBeenCalledWith(
       expect.objectContaining({

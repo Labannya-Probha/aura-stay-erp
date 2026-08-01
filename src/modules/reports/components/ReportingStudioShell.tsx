@@ -63,7 +63,7 @@ export default function ReportingStudioShell({
 
   return (
     <section className={cn('space-y-4', className)}>
-      <header className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <header className="reporting-shell-header no-print rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
@@ -102,7 +102,7 @@ export default function ReportingStudioShell({
       </header>
 
       {filters ? (
-        <section className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm">
+        <section className="reporting-shell-filters no-print rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm">
           {filters}
         </section>
       ) : null}

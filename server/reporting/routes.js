@@ -14,11 +14,23 @@ const toReportUser = (req) => ({
 })
 
 const enqueueReportExport = async (req, format) => {
+  const user = toReportUser(req)
+
   const job = await pdfReportQueue.add('generate', {
     reportCode: req.params.reportCode,
-    params: req.body,
-    user: toReportUser(req),
+    params: {
+      ...(req.body || {}),
+      tenantId: user.tenantId,
+    },
+    user,
     format,
+    requestedBy: user.id,
+    tenantId: user.tenantId,
+    requestMeta: {
+      requestedAt: new Date().toISOString(),
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') || '',
+    },
   })
 
   return {
@@ -75,11 +87,47 @@ router.get(
   '/reports/jobs/:jobId',
   asyncRoute(async (req, res) => {
     const job = await pdfReportQueue.getJob(req.params.jobId)
-    if (!job) return res.status(404).json({ error: 'Job not found' })
+
+    if (!job) {
+      return res.status(404).json({
+        error: 'Export job not found',
+      })
+    }
+
+    const requestUser = toReportUser(req)
+    const jobTenantId = job.data?.tenantId || job.data?.user?.tenantId
+
+    const jobUserId = job.data?.requestedBy || job.data?.user?.id
+
+    const isSuperuser = requestUser.role === 'SUPERUSER'
+
+    if (
+      !isSuperuser &&
+      (!jobTenantId ||
+        jobTenantId !== requestUser.tenantId ||
+        !jobUserId ||
+        jobUserId !== requestUser.id)
+    ) {
+      return res.status(403).json({
+        error: 'Export job access denied',
+      })
+    }
+
     const state = await job.getState()
-    const payload = { jobId: job.id, status: state }
-    if (state === 'completed') payload.result = job.returnvalue
-    if (state === 'failed') payload.error = job.failedReason
+
+    const payload = {
+      jobId: job.id,
+      status: state,
+    }
+
+    if (state === 'completed') {
+      payload.result = job.returnvalue
+    }
+
+    if (state === 'failed') {
+      payload.error = job.failedReason || 'Export generation failed'
+    }
+
     res.json(payload)
   }),
 )
