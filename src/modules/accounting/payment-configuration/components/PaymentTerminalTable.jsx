@@ -2,6 +2,7 @@ import { Loader2, Pencil, Power, Trash2 } from 'lucide-react'
 import { useMemo } from 'react'
 import ModuleDataTable from 'src/components/shared/ModuleDataTable'
 import ModuleStatusPill from 'src/components/shared/ModuleStatusPill'
+import { Button } from 'src/components/ui/button'
 
 const TERMINAL_STATUS_TONES = {
   ACTIVE: 'success',
@@ -122,14 +123,16 @@ export default function PaymentTerminalTable({
 
 function A({ label, onClick, children, danger = false }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="icon"
       title={label}
       aria-label={label}
       onClick={onClick}
-      className={`grid h-9 w-9 place-items-center rounded-lg ${danger ? 'text-slate-400 hover:bg-red-50 hover:text-red-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'}`}
+      className={danger ? 'text-slate-400 hover:bg-red-50 hover:text-red-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'}
     >
       {children}
-    </button>
+    </Button>
   )
 }
