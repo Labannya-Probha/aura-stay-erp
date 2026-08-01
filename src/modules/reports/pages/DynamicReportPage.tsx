@@ -13,6 +13,7 @@ import {
 import ReportingStudioShell from '../components/ReportingStudioShell'
 import MetadataReportFilters from '../components/MetadataReportFilters'
 import MetadataReportTable from '../components/MetadataReportTable'
+import ReportRenderer from '../renderers/ReportRenderer'
 import { useDynamicReport } from '../hooks/useDynamicReport'
 import { exportReportExcel } from '../utils/reportExport'
 import KpiGrid from '../../../components/report-engine/KpiGrid'
@@ -137,7 +138,7 @@ export default function DynamicReportPage({ role, company }) {
       loading={false}
       empty={false}
     >
-      <main className="min-w-0 space-y-5 enterprise-print-doc">
+      <main className="erp-print-doc erp-report-body min-w-0 space-y-5 enterprise-print-doc">
         <section className="print-only">
           <EnterpriseReportHeader
             company={company}
@@ -157,12 +158,20 @@ export default function DynamicReportPage({ role, company }) {
           />
         )}
 
-        <MetadataReportTable
-          fields={fields}
-          rows={data.rows}
-          comparisonRows={data.comparisonRows || []}
-          comparisonSummary={data.comparisonSummary || { enabled: false }}
+        <ReportRenderer
+          definition={definition}
+          slug={slug}
+          data={data}
           loading={loading}
+          fallback={
+            <MetadataReportTable
+              fields={fields}
+              rows={data.rows}
+              comparisonRows={data.comparisonRows || []}
+              comparisonSummary={data.comparisonSummary || { enabled: false }}
+              loading={loading}
+            />
+          }
         />
 
         <ReportSignatureFooter />
