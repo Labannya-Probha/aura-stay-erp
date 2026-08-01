@@ -14,7 +14,18 @@
  */
 export function resolveCycleDateRange(cycle, referenceDate = new Date()) {
   const ref = new Date(referenceDate)
-  const iso = (d) => d.toISOString().slice(0, 10)
+  // Build YYYY-MM-DD from LOCAL date components — do NOT use
+  // .toISOString(), which converts to UTC first. For any timezone ahead
+  // of UTC (e.g. Bangladesh, UTC+6), that conversion silently shifts a
+  // local midnight back to the previous day, making every cycle option
+  // (Monthly especially, since it starts exactly at a local
+  // midnight-of-the-1st boundary) resolve to the wrong start date.
+  const iso = (d) => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
   const endOfToday = iso(ref)
 
   switch (cycle) {
