@@ -89,6 +89,7 @@ export const PATHS = {
 
   // Reports
   REPORTS: '/reports',
+  REPORTS_NOTES: '/reports/notes',
   REPORTS_CASED_ALIAS: '/Reports',
   TENANT_REPORTS: '/:slug/reports',
   TENANT_REPORTS_CASED_ALIAS: '/:slug/Reports',
