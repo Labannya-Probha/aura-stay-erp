@@ -23,13 +23,28 @@ export default function DynamicReportPage({ role, company }) {
   const slug = params.slug || 'accounts-payable-aging'
   const [pdfBusy, setPdfBusy] = useState(false)
 
-  const { definition, data, filters, reportFilters, setFilters, loading } = useDynamicReport(
-    department,
-    slug,
-    role,
-  )
+  const {
+    definition,
+    data,
+    filters,
+    reportFilters,
+    setFilters,
+    loading,
+    refreshing,
+    error,
+    refresh,
+  } = useDynamicReport(department, slug, role)
   const report = definition?.report
   const fields = definition?.fields || []
+  const reportError = error || data?.summary?.error || null
+  const isEmpty = !loading && !reportError && data.rows.length === 0
+  const canPrint = Boolean(report?.reportCode && report?.supportsPrint && !loading && !reportError)
+  const canPdfExport = Boolean(
+    report?.reportCode && report?.supportsExportPdf && !loading && !reportError && !pdfBusy,
+  )
+  const canExcelExport = Boolean(
+    report?.reportCode && report?.supportsExportExcel && !loading && !reportError,
+  )
   const printReportModel = {
     name: report?.title || 'Report',
     reportCategory: definition?.department?.name || 'Reports',
@@ -68,7 +83,7 @@ export default function DynamicReportPage({ role, company }) {
 
   const handlePdfExport = async () => {
     const reportCode = report?.reportCode
-    if (!reportCode) {
+    if (!canPdfExport || !reportCode) {
       window.alert('Missing report code for PDF export.')
       return
     }
@@ -100,6 +115,9 @@ export default function DynamicReportPage({ role, company }) {
       subtitle={report?.description}
       eyebrow={definition?.department?.name || 'Reports'}
       summary={summaryStrip}
+      error={reportError}
+      onRefresh={refresh}
+      refreshing={refreshing}
       actions={
         <>
           <button
@@ -107,6 +125,7 @@ export default function DynamicReportPage({ role, company }) {
             onClick={() => window.print()}
             className="report-action-btn"
             title="Print current page layout in browser"
+            disabled={!canPrint}
           >
             <Printer size={16} />
             Print View
@@ -115,7 +134,7 @@ export default function DynamicReportPage({ role, company }) {
             type="button"
             onClick={handlePdfExport}
             className="report-action-btn"
-            disabled={pdfBusy}
+            disabled={!canPdfExport}
             title="Generate PDF from server export queue"
           >
             <Download size={16} />
@@ -125,6 +144,7 @@ export default function DynamicReportPage({ role, company }) {
             type="button"
             onClick={() => exportReportExcel(report, fields, data.rows)}
             className="report-primary-btn"
+            disabled={!canExcelExport}
           >
             <FileSpreadsheet size={16} />
             Excel
@@ -134,8 +154,8 @@ export default function DynamicReportPage({ role, company }) {
       filters={
         <MetadataReportFilters filters={reportFilters} values={filters} onChange={setFilters} />
       }
-      loading={false}
-      empty={false}
+      loading={loading}
+      empty={isEmpty}
     >
       <main className="min-w-0 space-y-5 enterprise-print-doc">
         <section className="print-only">

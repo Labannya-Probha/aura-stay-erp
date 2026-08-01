@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import {
   formatReportCell,
   getVarianceToneClass,
@@ -5,7 +6,7 @@ import {
 } from '../utils/reportFormatters'
 
 function isComparableField(field) {
-  return field?.aggregation === 'SUM' || /Currency|Number|Percent/i.test(field?.dataType || '')
+  return field?.aggregation === 'SUM'
 }
 
 function totalForField(rows, field) {
@@ -20,7 +21,7 @@ function formatSectionLabel(value) {
 }
 
 function getSectionKey(row) {
-  return row?.usali_department || row?.department || row?.section || row?.line_group || 'main'
+  return row?.usali_department || row?.department || row?.section || row?.line_group || null
 }
 
 export default function MetadataReportTable({
@@ -61,14 +62,15 @@ export default function MetadataReportTable({
 
   const comparisonFields = activeFields.filter(isComparableField)
   const hasComparativeData = comparisonSummary?.enabled || comparisonRows.length > 0
-
-  const groupedRows = rows.reduce((acc, row) => {
-    const section = getSectionKey(row)
-    if (!acc[section]) acc[section] = []
-    acc[section].push(row)
-    return acc
-  }, {})
-
+  const hasExplicitSections = rows.some((row) => getSectionKey(row))
+  const groupedRows = hasExplicitSections
+    ? rows.reduce((acc, row) => {
+        const section = getSectionKey(row) || '__ungrouped__'
+        if (!acc[section]) acc[section] = []
+        acc[section].push(row)
+        return acc
+      }, {})
+    : {}
   const sectionOrder = Object.keys(groupedRows)
   const comparisonTotals = comparisonFields.reduce((acc, field) => {
     acc[field.fieldKey] = {
@@ -186,7 +188,7 @@ export default function MetadataReportTable({
                   }, 0)
 
                   return (
-                    <>
+                    <Fragment key={sectionKey}>
                       <tr className="erp-group-row border-b border-[#e7dfce] bg-[#F7F4EC] text-[#1B4D2E]">
                         <td
                           colSpan={activeFields.length}
@@ -216,22 +218,24 @@ export default function MetadataReportTable({
                           })}
                         </tr>
                       ))}
-                      <tr className="erp-subtotal-row border-t border-[#e7dfce] bg-[#FCFBF7]">
-                        <td className="px-5 py-4 text-sm font-black text-slate-900">
-                          Section Total
-                        </td>
-                        <td
-                          className="px-5 py-4 text-right text-sm font-black text-slate-900"
-                          colSpan={activeFields.length - 1}
-                        >
-                          {formatReportCell(
-                            sectionTotal,
-                            totalField.dataType,
-                            totalField.displayFormat,
-                          )}
-                        </td>
-                      </tr>
-                    </>
+                      {sectionKey !== '__ungrouped__' && totalField?.aggregation === 'SUM' ? (
+                        <tr className="erp-subtotal-row border-t border-[#e7dfce] bg-[#FCFBF7]">
+                          <td className="px-5 py-4 text-sm font-black text-slate-900">
+                            Section Total
+                          </td>
+                          <td
+                            className="px-5 py-4 text-right text-sm font-black text-slate-900"
+                            colSpan={activeFields.length - 1}
+                          >
+                            {formatReportCell(
+                              sectionTotal,
+                              totalField.dataType,
+                              totalField.displayFormat,
+                            )}
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
                   )
                 })
               : rows.map((row, rowIndex) => (

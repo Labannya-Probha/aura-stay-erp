@@ -6,6 +6,10 @@ function escapeCsv(value) {
 }
 
 export function exportReportExcel(report, fields, rows) {
+  if (!report?.reportCode || !Array.isArray(fields) || fields.length === 0) {
+    throw new Error('Report export is not available for an invalid report definition.')
+  }
+
   const csv = [
     fields.map((field) => field.label),
     ...rows.map((row) =>

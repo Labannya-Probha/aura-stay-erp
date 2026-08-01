@@ -93,6 +93,13 @@ function periodLabel(startDate, endDate) {
   return `${startDate} to ${endDate}`
 }
 
+function createReportError(code, message, details = {}) {
+  const error = new Error(message)
+  error.code = code
+  Object.assign(error, details)
+  return error
+}
+
 async function executeReport(department, slug, filters) {
   const { data, error } = await supabase.rpc('aeds_run_report', {
     p_department_slug: department,
@@ -100,8 +107,22 @@ async function executeReport(department, slug, filters) {
     p_filters: filters,
   })
 
-  if (!error && data) return data
-  return null
+  if (error) {
+    throw createReportError(
+      'REPORT_EXECUTION_FAILED',
+      error.message || `Failed to execute report ${department}/${slug}.`,
+    )
+  }
+  if (!data) {
+    throw createReportError(
+      'REPORT_EXECUTION_EMPTY',
+      `Report ${department}/${slug} returned no execution payload.`,
+    )
+  }
+  if (data?.summary?.error) {
+    throw createReportError('REPORT_EXECUTION_FAILED', String(data.summary.error))
+  }
+  return data
 }
 
 const FALLBACK_GROUPS = [
@@ -1397,87 +1418,143 @@ function fallbackFieldsBySlug(slug) {
 }
 
 export async function loadReportMetadata(role = 'FRONT_OFFICE') {
-  try {
-    const { data, error } = await supabase.rpc('aeds_report_metadata', { p_role: role })
-    if (!error && Array.isArray(data) && data.length) return data
-  } catch {
-    // fallback below
+  const { data, error } = await supabase.rpc('aeds_report_metadata', { p_role: role })
+  if (error) {
+    throw createReportError(
+      'REPORT_CATALOG_UNAVAILABLE',
+      error.message || 'Failed to load report catalog.',
+    )
   }
-  return FALLBACK_GROUPS
+  if (!Array.isArray(data)) {
+    throw createReportError('REPORT_CATALOG_INVALID', 'Report catalog returned an invalid payload.')
+  }
+  return data
 }
 
 export async function loadReportDefinition(department, slug, role = 'FRONT_OFFICE') {
-  const fallback = fallbackDefinition(department, slug)
-  const slugFallbackFields = fallbackFieldsBySlug(slug)
   const canonicalTemplate = getReportByRoute(department, slug)
+  const legacyDefinition = fallbackDefinition(department, slug)
 
-  try {
-    const { data, error } = await supabase.rpc('aeds_report_definition', {
-      p_department_slug: department,
-      p_report_slug: slug,
-      p_role: role,
-    })
-    if (!error && data) {
-      const canonicalReport = canonicalTemplate
-        ? {
-            reportCode: canonicalTemplate.reportCode,
-            title: canonicalTemplate.title,
-            slug: canonicalTemplate.slug,
-            route: canonicalTemplate.route,
-            description: canonicalTemplate.description,
-          }
-        : null
-
-      return {
-        ...fallback,
-        ...data,
-        department: canonicalTemplate
-          ? {
-              code: String(
-                canonicalTemplate.departmentSlug || department || 'REPORTS',
-              ).toUpperCase(),
-              name: canonicalTemplate.department || fallback.department?.name || 'Reports',
-              slug:
-                canonicalTemplate.departmentSlug ||
-                department ||
-                fallback.department?.slug ||
-                'reports',
-            }
-          : data.department || fallback.department,
-        report: {
-          ...(data.report || fallback.report || {}),
-          ...(canonicalReport || {}),
-        },
-        fields:
-          Array.isArray(data.fields) && data.fields.length
-            ? data.fields
-            : slugFallbackFields || fallback.fields,
-        filters: (() => {
-          const resolvedFilters =
-            Array.isArray(data.filters) && data.filters.length ? data.filters : fallback.filters
-          return resolvedFilters.some((filter) => filter.filterKey === 'compare_to')
-            ? resolvedFilters
-            : [
-                ...resolvedFilters,
-                {
-                  filterKey: 'compare_to',
-                  label: 'Compare To',
-                  filterType: 'Dropdown',
-                  sourceOptions: COMPARISON_FILTER_OPTIONS,
-                  defaultValue: 'Previous Period',
-                },
-              ]
-        })(),
-        actions:
-          Array.isArray(data.actions) && data.actions.length ? data.actions : fallback.actions,
-      }
-    }
-  } catch {
-    // fallback below
+  if (!canonicalTemplate) {
+    throw createReportError(
+      'REPORT_CONFIGURATION_MISSING',
+      `No report configuration found for route ${department}/${slug}.`,
+      { department, slug, legacyDefinition: !!legacyDefinition },
+    )
   }
+
+  const { data, error } = await supabase.rpc('aeds_report_definition', {
+    p_department_slug: department,
+    p_report_slug: slug,
+    p_role: role,
+  })
+
+  if (error) {
+    throw createReportError(
+      'REPORT_DEFINITION_FAILED',
+      error.message || `Failed to load report definition for ${department}/${slug}.`,
+    )
+  }
+
+  if (!data?.report) {
+    throw createReportError(
+      'REPORT_DEFINITION_MISSING',
+      `No report definition returned for ${department}/${slug}.`,
+    )
+  }
+
+  const sourceReportCode = String(data.report.reportCode || data.report.report_code || '').trim()
+  const sourceSlug = String(data.report.slug || '').trim()
+  const sourceTitle = String(data.report.title || '').trim()
+  const sourceRoute = String(data.report.route || canonicalTemplate.route || '').trim()
+
+  if (!sourceReportCode || !sourceSlug || !sourceTitle || !sourceRoute) {
+    throw createReportError(
+      'REPORT_IDENTITY_INCOMPLETE',
+      `Report definition identity is incomplete for ${department}/${slug}.`,
+    )
+  }
+
+  if (
+    sourceReportCode !== canonicalTemplate.reportCode ||
+    sourceSlug !== canonicalTemplate.slug ||
+    sourceTitle !== canonicalTemplate.title ||
+    sourceRoute !== canonicalTemplate.route
+  ) {
+    throw createReportError(
+      'REPORT_IDENTITY_MISMATCH',
+      `Report definition identity does not match route ${department}/${slug}.`,
+      {
+        expected: {
+          reportCode: canonicalTemplate.reportCode,
+          slug: canonicalTemplate.slug,
+          title: canonicalTemplate.title,
+          route: canonicalTemplate.route,
+        },
+        actual: {
+          reportCode: sourceReportCode,
+          slug: sourceSlug,
+          title: sourceTitle,
+          route: sourceRoute,
+        },
+      },
+    )
+  }
+
+  if (!Array.isArray(data.fields) || data.fields.length === 0) {
+    throw createReportError(
+      'REPORT_FIELDS_MISSING',
+      `Report definition fields are missing for ${department}/${slug}.`,
+    )
+  }
+
   return {
-    ...fallback,
-    fields: slugFallbackFields || fallback.fields,
+    ...data,
+    department: {
+      code: String(canonicalTemplate.departmentSlug || department || 'REPORTS').toUpperCase(),
+      name: canonicalTemplate.department || data.department?.name || 'Reports',
+      slug: canonicalTemplate.departmentSlug || department || data.department?.slug || 'reports',
+    },
+    report: {
+      ...(data.report || {}),
+      reportCode: canonicalTemplate.reportCode,
+      title: canonicalTemplate.title,
+      slug: canonicalTemplate.slug,
+      route: canonicalTemplate.route,
+      description: data.report?.description || canonicalTemplate.description,
+      supportsPrint: Boolean(
+        data.report?.supportsPrint ??
+        data.report?.supports_print ??
+        canonicalTemplate.printPermission,
+      ),
+      supportsExportPdf: Boolean(
+        data.report?.supportsExportPdf ??
+        data.report?.supports_export_pdf ??
+        canonicalTemplate.exportPermission,
+      ),
+      supportsExportExcel: Boolean(
+        data.report?.supportsExportExcel ??
+        data.report?.supports_export_excel ??
+        canonicalTemplate.exportPermission,
+      ),
+    },
+    fields: data.fields,
+    filters: (() => {
+      const resolvedFilters = Array.isArray(data.filters) ? data.filters : []
+      return resolvedFilters.some((filter) => filter.filterKey === 'compare_to')
+        ? resolvedFilters
+        : [
+            ...resolvedFilters,
+            {
+              filterKey: 'compare_to',
+              label: 'Compare To',
+              filterType: 'Dropdown',
+              sourceOptions: COMPARISON_FILTER_OPTIONS,
+              defaultValue: 'Previous Period',
+            },
+          ]
+    })(),
+    actions: Array.isArray(data.actions) ? data.actions : [],
   }
 }
 
@@ -1948,35 +2025,47 @@ function getFallbackRows(department, slug) {
 }
 
 export async function runMetadataReport(department, slug, filters, tenantId) {
-  const fallbackRows = getFallbackRows(department, slug)
-  if (!tenantId && !fallbackRows) {
-    return { rows: [], summary: { error: 'missing tenant context' } }
+  const canonicalTemplate = getReportByRoute(department, slug)
+  if (!canonicalTemplate) {
+    throw createReportError(
+      'REPORT_CONFIGURATION_MISSING',
+      `No report configuration found for route ${department}/${slug}.`,
+    )
+  }
+  if (!tenantId) {
+    throw createReportError('REPORT_TENANT_MISSING', 'Missing tenant context.')
   }
   const reportFilters = stripComparisonOnlyFilters(filters)
   const comparisonMode = getComparisonMode(filters?.compare_to)
   const range = getRangeFromFilters(reportFilters)
   const comparisonRange = getShiftedComparisonRange(range, comparisonMode)
 
-  try {
-    const currentData = (await executeReport(department, slug, reportFilters)) || fallbackRows
-    if (!currentData) throw new Error('report engine unavailable')
+  const currentData = await executeReport(department, slug, reportFilters)
 
-    if (!comparisonRange || !comparisonMode) {
-      return {
-        ...currentData,
-        comparisonRows: [],
-        comparisonSummary: {
-          enabled: false,
-          compareTo: comparisonMode || 'Off',
-          currentPeriodLabel: periodLabel(
-            reportFilters.start_date || range?.start,
-            reportFilters.end_date || range?.end,
-          ),
-          previousPeriodLabel: '',
-        },
-      }
+  if (!comparisonMode) {
+    return {
+      ...currentData,
+      comparisonRows: [],
+      comparisonSummary: {
+        enabled: false,
+        compareTo: 'Off',
+        currentPeriodLabel: periodLabel(
+          reportFilters.start_date || range?.start,
+          reportFilters.end_date || range?.end,
+        ),
+        previousPeriodLabel: '',
+      },
     }
+  }
 
+  if (!comparisonRange) {
+    throw createReportError(
+      'REPORT_COMPARISON_INVALID',
+      'Comparison period could not be resolved from the selected filters.',
+    )
+  }
+
+  try {
     const comparisonData = await executeReport(department, slug, {
       ...reportFilters,
       ...comparisonRange,
@@ -1995,19 +2084,11 @@ export async function runMetadataReport(department, slug, filters, tenantId) {
         previousPeriodLabel: periodLabel(comparisonRange.start_date, comparisonRange.end_date),
       },
     }
-  } catch {
-    // fallback below
-  }
-
-  return {
-    rows: [],
-    summary: { error: 'report engine unavailable' },
-    comparisonRows: [],
-    comparisonSummary: {
-      enabled: false,
-      compareTo: 'Off',
-      currentPeriodLabel: 'Selected Period',
-      previousPeriodLabel: '',
-    },
+  } catch (error) {
+    throw createReportError(
+      'REPORT_COMPARISON_FAILED',
+      error instanceof Error ? error.message : 'Comparison report execution failed.',
+      { blockedFallback: !!getFallbackRows(department, slug) },
+    )
   }
 }
