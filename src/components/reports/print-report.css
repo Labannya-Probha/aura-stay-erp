@@ -246,3 +246,172 @@
     display: none;
   }
 }
+
+/* F1_FINANCIAL_STATEMENT_STYLES */
+.financial-statement-document {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #e5e2da;
+  border-radius: 18px;
+  background: #fff;
+  color: #171717;
+}
+
+.financial-statement-heading {
+  padding: 24px 28px 18px;
+  text-align: center;
+  border-bottom: 1px solid #dedbd3;
+}
+
+.financial-statement-heading h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.financial-statement-heading p {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: #6b6b6b;
+}
+
+.financial-statement-validation {
+  display: grid;
+  gap: 4px;
+  margin: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.financial-statement-validation--error {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.financial-statement-validation--warning {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.financial-statement-table-wrap {
+  overflow-x: auto;
+  padding: 14px 24px 26px;
+}
+
+.financial-statement-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.financial-statement-table thead th {
+  padding: 8px 6px;
+  border-bottom: 2px solid #171717;
+  color: #555;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.financial-statement-table thead th:first-child {
+  text-align: left;
+}
+
+.financial-statement-table td,
+.financial-statement-table tbody th {
+  padding: 7px 6px;
+  vertical-align: top;
+}
+
+.financial-statement-line--header th {
+  padding-top: 18px;
+  border-bottom: 1px solid #d8d4cb;
+  color: var(--tenant-primary, #1b4d2e);
+  font-size: 0.74rem;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.financial-statement-label {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.financial-statement-code {
+  min-width: 68px;
+  color: #777;
+  font-family: var(--aeds-font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+}
+
+.financial-statement-amount {
+  min-width: 132px;
+  text-align: right;
+  white-space: nowrap;
+  font-family: var(--aeds-font-mono, ui-monospace, monospace);
+}
+
+.financial-statement-line--bold td,
+.financial-statement-line--calculated td {
+  font-weight: 700;
+}
+
+.financial-statement-line--subtotal td {
+  padding-top: 9px;
+  border-top: 1px solid #171717;
+  font-weight: 700;
+}
+
+.financial-statement-line--grand-total td {
+  padding-top: 10px;
+  border-top: 3px double #171717;
+  border-bottom: 3px double #171717;
+  font-weight: 800;
+}
+
+.financial-statement-empty,
+.financial-statement-loading {
+  padding: 48px 24px;
+  text-align: center;
+  color: #777;
+  font-size: 0.85rem;
+}
+
+@media print {
+  .erp-print-doc,
+  .enterprise-print-doc {
+    max-width: none;
+    margin: 0;
+  }
+
+  .erp-report-body,
+  .financial-statement-document {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .financial-statement-heading {
+    padding: 0 0 14px;
+  }
+
+  .financial-statement-table-wrap {
+    overflow: visible;
+    padding: 0;
+  }
+
+  .financial-statement-table thead {
+    display: table-header-group;
+  }
+
+  .financial-statement-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
