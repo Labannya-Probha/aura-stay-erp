@@ -39,19 +39,21 @@ export function getReportIdentityByCode(code) {
 export function resolveReportIdentity(report = {}, { departmentSlug } = {}) {
   const routeIdentity = parseReportRoute(report.route)
   const resolvedDepartmentSlug =
-    departmentSlug || report.departmentSlug || report.category || routeIdentity?.departmentSlug || 'reports'
+    departmentSlug ||
+    report.departmentSlug ||
+    report.category ||
+    routeIdentity?.departmentSlug ||
+    'reports'
   const resolvedSlug =
     report.slug ||
     report.report_slug ||
     routeIdentity?.reportSlug ||
-    toReportSlug(report.title || report.name || report.report_name || report.code || report.reportCode)
+    toReportSlug(
+      report.title || report.name || report.report_name || report.code || report.reportCode,
+    )
 
   const byCode = getReportIdentityByCode(report.reportCode || report.report_code || report.code)
-  if (
-    byCode &&
-    (!resolvedDepartmentSlug || byCode.departmentSlug === resolvedDepartmentSlug) &&
-    (!resolvedSlug || byCode.slug === resolvedSlug || !report.slug)
-  ) {
+  if (byCode && (!resolvedDepartmentSlug || byCode.departmentSlug === resolvedDepartmentSlug)) {
     return byCode
   }
 

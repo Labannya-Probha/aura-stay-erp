@@ -16,9 +16,9 @@ describe('reportIdentityRegistry', () => {
   })
 
   it('resolves canonical report identity by report code', () => {
-    expect(getReportIdentityByCode('RPT-032')).toMatchObject({
-      departmentSlug: 'admin',
-      slug: 'multi-property-consolidated-performance',
+    expect(getReportIdentityByCode('RPT-013')).toMatchObject({
+      departmentSlug: 'accounts',
+      slug: 'profit-and-loss-statement',
     })
   })
 
