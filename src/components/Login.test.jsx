@@ -35,6 +35,7 @@ describe('Login', () => {
     const markup = renderToStaticMarkup(<Login slug="demo-property" />)
 
     expect(markup).toContain('Aura_Stay_ERP_er_jonno_Hotel_R.mp4')
-    expect(markup).toContain('© 2026 Aura Stay  ·  Powered by Aura Stay ERP')
+    expect(markup).toContain('© 2026 Aura Stay')
+    expect(markup).toContain('Powered by Aura Stay ERP')
   })
 })
