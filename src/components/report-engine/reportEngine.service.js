@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { getTenantId } from '../../lib/tenant'
 
 const FALLBACK_GROUPS = [
   {
@@ -84,6 +85,36 @@ const FALLBACK_DEFINITION = {
   ],
 }
 
+function shouldUseDevelopmentFallback() {
+  return Boolean(import.meta.env?.DEV)
+}
+
+function toReportError(error, fallbackMessage) {
+  const message =
+    error?.message ||
+    error?.details ||
+    error?.hint ||
+    fallbackMessage ||
+    'Unable to load report data.'
+
+  const next = new Error(message)
+  next.code = error?.code || 'REPORT_REQUEST_FAILED'
+  next.details = error?.details || null
+  next.hint = error?.hint || null
+  return next
+}
+
+function requireTenantId() {
+  const tenantId = getTenantId()
+  if (!tenantId) {
+    throw toReportError(
+      { code: 'TENANT_CONTEXT_MISSING' },
+      'Tenant context is missing. Sign out and sign in again before running reports.',
+    )
+  }
+  return tenantId
+}
+
 async function authFetch(path, init = {}) {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData?.session?.access_token
@@ -102,44 +133,59 @@ async function authFetch(path, init = {}) {
 }
 
 export async function loadAedsReportCatalog(role = 'ADMIN') {
-  try {
-    const { data, error } = await supabase.rpc('aeds_report_metadata', { p_role: role })
-    if (!error && Array.isArray(data) && data.length) return data
-  } catch {
-    // fallback below
+  const { data, error } = await supabase.rpc('aeds_report_metadata', { p_role: role })
+  if (error) {
+    if (shouldUseDevelopmentFallback()) return FALLBACK_GROUPS
+    throw toReportError(error, 'Unable to load the report catalog.')
   }
-  return FALLBACK_GROUPS
+  return Array.isArray(data) ? data : []
 }
 
 export async function loadAedsReportDefinition({ department, slug, role = 'ADMIN' }) {
-  try {
-    const { data, error } = await supabase.rpc('aeds_report_definition', {
-      p_department_slug: department,
-      p_report_slug: slug,
-      p_role: role,
-    })
-    if (!error && data) return data
-  } catch {
-    // fallback below
+  const { data, error } = await supabase.rpc('aeds_report_definition', {
+    p_department_slug: department,
+    p_report_slug: slug,
+    p_role: role,
+  })
+
+  if (error) {
+    if (shouldUseDevelopmentFallback()) return FALLBACK_DEFINITION
+    throw toReportError(error, 'Unable to load the report definition.')
   }
-  return FALLBACK_DEFINITION
+
+  if (!data) {
+    throw toReportError(
+      { code: 'REPORT_ACCESS_DENIED' },
+      'This report is unavailable or your role does not have access.',
+    )
+  }
+
+  return data
 }
 
 export async function runAedsReport({ department, slug, filters }) {
-  try {
-    const { data, error } = await supabase.rpc('aeds_run_report', {
-      p_department_slug: department,
-      p_report_slug: slug,
-      p_filters: filters || {},
-    })
-    if (!error && data) return data
-  } catch {
-    // fallback below
+  const tenantId = requireTenantId()
+  const { data, error } = await supabase.rpc('aeds_run_report', {
+    p_department_slug: department,
+    p_report_slug: slug,
+    p_filters: filters || {},
+    p_tenant_id: tenantId,
+  })
+
+  if (error) {
+    throw toReportError(error, 'Unable to run the selected report.')
+  }
+
+  if (data?.summary?.error) {
+    throw toReportError(
+      { code: 'REPORT_ENGINE_ERROR', message: data.summary.error },
+      'The report engine rejected this request.',
+    )
   }
 
   return {
-    rows: [],
-    summary: { source: 'fallback_empty' },
+    rows: Array.isArray(data?.rows) ? data.rows : [],
+    summary: data?.summary && typeof data.summary === 'object' ? data.summary : {},
   }
 }
 
@@ -155,7 +201,7 @@ export async function enqueueAedsReportExport({ reportCode, filters = {}, format
     `/api/reports/${encodeURIComponent(reportCode)}/export/${safeFormat}`,
     {
       method: 'POST',
-      body: JSON.stringify({ filters }),
+      body: JSON.stringify({ filters, tenantId: requireTenantId() }),
     },
   )
 
@@ -200,6 +246,7 @@ export async function waitForAedsReportExportJob(jobId, { pollMs = 1200, maxAtte
 
 export async function saveAedsReportView({ reportSlug, name, filters, columns }) {
   const payload = {
+    tenant_id: requireTenantId(),
     report_slug: reportSlug,
     name,
     filters,
@@ -214,7 +261,8 @@ export async function saveAedsReportView({ reportSlug, name, filters, columns })
       .single()
     if (error) throw error
     return data
-  } catch {
+  } catch (error) {
+    if (!shouldUseDevelopmentFallback()) throw toReportError(error, 'Unable to save report view.')
     const saved = JSON.parse(localStorage.getItem('aeds.report.savedViews') || '[]')
     const next = [{ ...payload, id: Date.now() }, ...saved].slice(0, 20)
     localStorage.setItem('aeds.report.savedViews', JSON.stringify(next))
@@ -223,17 +271,21 @@ export async function saveAedsReportView({ reportSlug, name, filters, columns })
 }
 
 export async function loadAedsReportViews(reportSlug) {
-  try {
-    const { data, error } = await supabase
-      .from('report_saved_views')
-      .select('*')
-      .eq('report_slug', reportSlug)
-    if (!error) return data || []
-  } catch {
-    // fallback below
+  const tenantId = requireTenantId()
+  const { data, error } = await supabase
+    .from('report_saved_views')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('report_slug', reportSlug)
+
+  if (error) {
+    if (!shouldUseDevelopmentFallback()) {
+      throw toReportError(error, 'Unable to load saved report views.')
+    }
+    return JSON.parse(localStorage.getItem('aeds.report.savedViews') || '[]').filter(
+      (item) => item.report_slug === reportSlug,
+    )
   }
 
-  return JSON.parse(localStorage.getItem('aeds.report.savedViews') || '[]').filter(
-    (item) => item.report_slug === reportSlug,
-  )
+  return data || []
 }

@@ -1,0 +1,800 @@
+--- a/src/components/report-engine/reportEngine.service.js+++ b/src/components/report-engine/reportEngine.service.js@@ -0,0 +1,291 @@+import { supabase } from '../../lib/supabase'
++import { getTenantId } from '../../lib/tenant'
++
++const FALLBACK_GROUPS = [
++  {
++    department: { name: 'Accounts', slug: 'accounts' },
++    reports: [
++      {
++        reportCode: 'RPT-011',
++        title: 'Ledger',
++        slug: 'ledger',
++        route: '/reports/accounts/ledger',
++        description: 'Account-wise ledger movement.',
++      },
++      {
++        reportCode: 'RPT-014',
++        title: 'Trial Balance',
++        slug: 'trial-balance',
++        route: '/reports/accounts/trial-balance',
++        description: 'Debit, credit and closing balance.',
++      },
++    ],
++  },
++  {
++    department: { name: 'Inventory', slug: 'inventory' },
++    reports: [
++      {
++        reportCode: 'RPT-023',
++        title: 'Purchase Report',
++        slug: 'purchase',
++        route: '/reports/inventory/purchase',
++        description: 'Purchase by vendor and item.',
++      },
++    ],
++  },
++]
++
++const FALLBACK_DEFINITION = {
++  department: { name: 'Accounts', slug: 'accounts' },
++  report: {
++    reportCode: 'RPT-011',
++    title: 'Ledger',
++    slug: 'ledger',
++    description: 'Account-wise ledger movement.',
++    supportsPrint: true,
++    supportsExportExcel: true,
++    supportsExportPdf: true,
++  },
++  fields: [
++    { fieldKey: 'transaction_date', label: 'Date', dataType: 'Date', alignment: 'left' },
++    { fieldKey: 'reference_no', label: 'Reference No', dataType: 'Text', alignment: 'left' },
++    { fieldKey: 'account_name', label: 'Account', dataType: 'Text', alignment: 'left' },
++    { fieldKey: 'particulars', label: 'Particulars', dataType: 'Text', alignment: 'left' },
++    {
++      fieldKey: 'debit',
++      label: 'Debit',
++      dataType: 'Currency-BDT',
++      aggregation: 'SUM',
++      alignment: 'right',
++    },
++    {
++      fieldKey: 'credit',
++      label: 'Credit',
++      dataType: 'Currency-BDT',
++      aggregation: 'SUM',
++      alignment: 'right',
++    },
++    {
++      fieldKey: 'balance',
++      label: 'Balance',
++      dataType: 'Currency-BDT',
++      aggregation: 'SUM',
++      alignment: 'right',
++    },
++    { fieldKey: 'status', label: 'Status', dataType: 'status', alignment: 'left' },
++  ],
++  filters: [
++    { filterKey: 'cycle', label: 'Cycle', filterType: 'cycle', defaultValue: 'this_month' },
++    {
++      filterKey: 'status',
++      label: 'Status',
++      filterType: 'select',
++      sourceOptions: 'Posted,Draft,Pending,Cancelled',
++    },
++  ],
++}
++
++function shouldUseDevelopmentFallback() {
++  return Boolean(import.meta.env?.DEV)
++}
++
++function toReportError(error, fallbackMessage) {
++  const message =
++    error?.message ||
++    error?.details ||
++    error?.hint ||
++    fallbackMessage ||
++    'Unable to load report data.'
++
++  const next = new Error(message)
++  next.code = error?.code || 'REPORT_REQUEST_FAILED'
++  next.details = error?.details || null
++  next.hint = error?.hint || null
++  return next
++}
++
++function requireTenantId() {
++  const tenantId = getTenantId()
++  if (!tenantId) {
++    throw toReportError(
++      { code: 'TENANT_CONTEXT_MISSING' },
++      'Tenant context is missing. Sign out and sign in again before running reports.',
++    )
++  }
++  return tenantId
++}
++
++async function authFetch(path, init = {}) {
++  const { data: sessionData } = await supabase.auth.getSession()
++  const token = sessionData?.session?.access_token
++
++  const headers = {
++    'Content-Type': 'application/json',
++    ...(init.headers || {}),
++  }
++
++  if (token) headers.Authorization = `Bearer ${token}`
++
++  return fetch(path, {
++    ...init,
++    headers,
++  })
++}
++
++export async function loadAedsReportCatalog(role = 'ADMIN') {
++  const { data, error } = await supabase.rpc('aeds_report_metadata', { p_role: role })
++  if (error) {
++    if (shouldUseDevelopmentFallback()) return FALLBACK_GROUPS
++    throw toReportError(error, 'Unable to load the report catalog.')
++  }
++  return Array.isArray(data) ? data : []
++}
++
++export async function loadAedsReportDefinition({ department, slug, role = 'ADMIN' }) {
++  const { data, error } = await supabase.rpc('aeds_report_definition', {
++    p_department_slug: department,
++    p_report_slug: slug,
++    p_role: role,
++  })
++
++  if (error) {
++    if (shouldUseDevelopmentFallback()) return FALLBACK_DEFINITION
++    throw toReportError(error, 'Unable to load the report definition.')
++  }
++
++  if (!data) {
++    throw toReportError(
++      { code: 'REPORT_ACCESS_DENIED' },
++      'This report is unavailable or your role does not have access.',
++    )
++  }
++
++  return data
++}
++
++export async function runAedsReport({ department, slug, filters }) {
++  const tenantId = requireTenantId()
++  const { data, error } = await supabase.rpc('aeds_run_report', {
++    p_department_slug: department,
++    p_report_slug: slug,
++    p_filters: filters || {},
++    p_tenant_id: tenantId,
++  })
++
++  if (error) {
++    throw toReportError(error, 'Unable to run the selected report.')
++  }
++
++  if (data?.summary?.error) {
++    throw toReportError(
++      { code: 'REPORT_ENGINE_ERROR', message: data.summary.error },
++      'The report engine rejected this request.',
++    )
++  }
++
++  return {
++    rows: Array.isArray(data?.rows) ? data.rows : [],
++    summary: data?.summary && typeof data.summary === 'object' ? data.summary : {},
++  }
++}
++
++export async function enqueueAedsReportExport({ reportCode, filters = {}, format = 'excel' }) {
++  if (!reportCode) throw new Error('Report code is required for export.')
++
++  const safeFormat = String(format || 'excel').toLowerCase()
++  if (!['csv', 'excel', 'pdf'].includes(safeFormat)) {
++    throw new Error(`Unsupported export format: ${safeFormat}`)
++  }
++
++  const response = await authFetch(
++    `/api/reports/${encodeURIComponent(reportCode)}/export/${safeFormat}`,
++    {
++      method: 'POST',
++      body: JSON.stringify({ filters, tenantId: requireTenantId() }),
++    },
++  )
++
++  const payload = await response.json().catch(() => ({}))
++  if (!response.ok) {
++    throw new Error(payload?.error || `Failed to queue ${safeFormat} export.`)
++  }
++
++  return payload
++}
++
++export async function getAedsReportExportJob(jobId) {
++  if (!jobId) throw new Error('Job id is required.')
++
++  const response = await authFetch(`/api/reports/jobs/${encodeURIComponent(jobId)}`, {
++    method: 'GET',
++  })
++
++  const payload = await response.json().catch(() => ({}))
++  if (!response.ok) {
++    throw new Error(payload?.error || 'Failed to read export job status.')
++  }
++
++  return payload
++}
++
++export async function waitForAedsReportExportJob(jobId, { pollMs = 1200, maxAttempts = 120 } = {}) {
++  let attempts = 0
++  while (attempts < maxAttempts) {
++    const status = await getAedsReportExportJob(jobId)
++    if (status.status === 'completed') return status
++    if (status.status === 'failed') {
++      throw new Error(status.error || 'Export job failed.')
++    }
++
++    await new Promise((resolve) => setTimeout(resolve, pollMs))
++    attempts += 1
++  }
++
++  throw new Error('Export job timed out. Please try again.')
++}
++
++export async function saveAedsReportView({ reportSlug, name, filters, columns }) {
++  const payload = {
++    tenant_id: requireTenantId(),
++    report_slug: reportSlug,
++    name,
++    filters,
++    columns,
++  }
++
++  try {
++    const { data, error } = await supabase
++      .from('report_saved_views')
++      .insert(payload)
++      .select()
++      .single()
++    if (error) throw error
++    return data
++  } catch (error) {
++    if (!shouldUseDevelopmentFallback()) throw toReportError(error, 'Unable to save report view.')
++    const saved = JSON.parse(localStorage.getItem('aeds.report.savedViews') || '[]')
++    const next = [{ ...payload, id: Date.now() }, ...saved].slice(0, 20)
++    localStorage.setItem('aeds.report.savedViews', JSON.stringify(next))
++    return next[0]
++  }
++}
++
++export async function loadAedsReportViews(reportSlug) {
++  const tenantId = requireTenantId()
++  const { data, error } = await supabase
++    .from('report_saved_views')
++    .select('*')
++    .eq('tenant_id', tenantId)
++    .eq('report_slug', reportSlug)
++
++  if (error) {
++    if (!shouldUseDevelopmentFallback()) {
++      throw toReportError(error, 'Unable to load saved report views.')
++    }
++    return JSON.parse(localStorage.getItem('aeds.report.savedViews') || '[]').filter(
++      (item) => item.report_slug === reportSlug,
++    )
++  }
++
++  return data || []
++}
+
+--- a/src/components/report-engine/AedsReportEngine.jsx+++ b/src/components/report-engine/AedsReportEngine.jsx@@ -0,0 +1,201 @@+import { useEffect, useMemo, useState } from 'react'
++import { AedsDataGrid } from '../data-grid'
++import { AedsFilterEngine } from '../filter-engine'
++import AedsReportCatalog from './AedsReportCatalog'
++import AedsReportHeader from './AedsReportHeader'
++import AedsReportSavedViews from './AedsReportSavedViews'
++import {
++  enqueueAedsReportExport,
++  waitForAedsReportExportJob,
++  loadAedsReportCatalog,
++  loadAedsReportDefinition,
++  loadAedsReportViews,
++  runAedsReport,
++  saveAedsReportView,
++} from './reportEngine.service'
++import { fieldsToDataGridColumns, filtersToFilterSchema } from './reportEngineAdapters'
++import './aeds-report-engine.css'
++import FinancialStatementView from './FinancialStatementView'
++import KpiGrid from './KpiGrid'
++import './financial-statement.css'
++import './kpi-grid.css'
++
++function ReportErrorState({ error, onRetry }) {
++  if (!error) return null
++  return (
++    <div className="aeds-report-error" role="alert">
++      <div>
++        <strong>Report could not be loaded.</strong>
++        <p>{error.message}</p>
++      </div>
++      <button type="button" onClick={onRetry}>Retry</button>
++    </div>
++  )
++}
++
++export default function AedsReportEngine({
++  role = 'ADMIN',
++  initialDepartment = 'accounts',
++  initialSlug = 'ledger',
++}) {
++  const [groups, setGroups] = useState([])
++  const [department, setDepartment] = useState(initialDepartment)
++  const [slug, setSlug] = useState(initialSlug)
++  const [definition, setDefinition] = useState(null)
++  const [reportData, setReportData] = useState({ rows: [], summary: {} })
++  const [filters, setFilters] = useState({ cycle: 'this_month' })
++  const [views, setViews] = useState([])
++  const [loadingKey, setLoadingKey] = useState(0)
++  const [exportBusy, setExportBusy] = useState('')
++  const [catalogError, setCatalogError] = useState(null)
++  const [definitionError, setDefinitionError] = useState(null)
++  const [reportError, setReportError] = useState(null)
++  const [reportLoading, setReportLoading] = useState(false)
++
++  useEffect(() => {
++    let active = true
++    setCatalogError(null)
++    loadAedsReportCatalog(role)
++      .then((data) => { if (active) setGroups(data) })
++      .catch((error) => { if (active) setCatalogError(error) })
++    return () => { active = false }
++  }, [role, loadingKey])
++
++  useEffect(() => {
++    let active = true
++    setDefinitionError(null)
++    setDefinition(null)
++    Promise.all([
++      loadAedsReportDefinition({ department, slug, role }),
++      loadAedsReportViews(slug),
++    ])
++      .then(([nextDefinition, nextViews]) => {
++        if (!active) return
++        setDefinition(nextDefinition)
++        setViews(nextViews)
++      })
++      .catch((error) => { if (active) setDefinitionError(error) })
++    return () => { active = false }
++  }, [department, slug, role, loadingKey])
++
++  useEffect(() => {
++    let active = true
++    setReportLoading(true)
++    setReportError(null)
++    runAedsReport({ department, slug, filters })
++      .then((data) => {
++        if (!active) return
++        setReportData(data)
++      })
++      .catch((error) => {
++        if (!active) return
++        setReportData({ rows: [], summary: {} })
++        setReportError(error)
++      })
++      .finally(() => { if (active) setReportLoading(false) })
++    return () => { active = false }
++  }, [department, slug, filters, loadingKey])
++
++  const columns = useMemo(() => fieldsToDataGridColumns(definition?.fields || []), [definition])
++  const filterSchema = useMemo(() => filtersToFilterSchema(definition?.filters || []), [definition])
++
++  const saveView = async () => {
++    const name = window.prompt('Saved view name', 'My Report View')
++    if (!name) return
++    try {
++      const view = await saveAedsReportView({ reportSlug: slug, name, filters, columns })
++      setViews((current) => [view, ...current])
++    } catch (error) {
++      window.alert(error?.message || 'Unable to save this report view.')
++    }
++  }
++
++  const loadView = (view) => setFilters(view.filters || {})
++
++  const handleExport = async (format) => {
++    const reportCode = definition?.report?.reportCode
++    if (!reportCode) {
++      window.alert('Missing report code for export.')
++      return
++    }
++
++    try {
++      setExportBusy(format)
++      const job = await enqueueAedsReportExport({ reportCode, filters, format })
++      const completed = await waitForAedsReportExportJob(job.jobId)
++      const downloadUrl = completed?.result?.downloadUrl
++      if (downloadUrl) window.open(downloadUrl, '_blank', 'noopener,noreferrer')
++      else window.alert('Export finished but download URL was not returned.')
++    } catch (error) {
++      window.alert(error?.message || 'Unable to export report right now.')
++    } finally {
++      setExportBusy('')
++    }
++  }
++
++  const retry = () => setLoadingKey((value) => value + 1)
++
++  return (
++    <section className="aeds-report-engine-page">
++      <ReportErrorState error={catalogError || definitionError} onRetry={retry} />
++      <div className="aeds-report-engine-layout">
++        <AedsReportCatalog
++          groups={groups}
++          active={`${department}/${slug}`}
++          onSelect={(nextDepartment, nextSlug) => {
++            setDepartment(nextDepartment)
++            setSlug(nextSlug)
++          }}
++        />
++
++        <main className="grid gap-4" aria-busy={reportLoading}>
++          <AedsReportHeader
++            definition={definition}
++            rows={reportData.rows || []}
++            onRefresh={retry}
++            onSaveView={saveView}
++            onExport={handleExport}
++            exportBusy={exportBusy}
++          />
++
++          <AedsFilterEngine
++            schema={filterSchema}
++            initialValues={filters}
++            onChange={setFilters}
++            storageKey={`aeds.report.filters.${slug}`}
++          />
++
++          <AedsReportSavedViews views={views} onLoad={loadView} />
++          <ReportErrorState error={reportError} onRetry={retry} />
++
++          {reportLoading ? (
++            <div className="aeds-report-loading">Generating report…</div>
++          ) : definition?.report?.displayMode === 'financial_statement' ? (
++            <FinancialStatementView
++              title={definition?.report?.title}
++              description={definition?.report?.description}
++              rows={reportData.rows || []}
++              summary={reportData.summary || {}}
++              groupByField={definition?.report?.groupByField}
++              summaryTotalKey={definition?.report?.summaryTotalKey}
++            />
++          ) : definition?.report?.displayMode === 'kpi_grid' ? (
++            <KpiGrid
++              title={definition?.report?.title}
++              description={definition?.report?.description}
++              rows={reportData.rows || []}
++              summary={reportData.summary || {}}
++            />
++          ) : (
++            <AedsDataGrid
++              title={definition?.report?.title || 'Report'}
++              subtitle={definition?.report?.description || 'Metadata-driven report'}
++              data={reportData.rows || []}
++              columns={columns}
++            />
++          )}
++        </main>
++      </div>
++    </section>
++  )
++}
+
+--- a/src/components/report-engine/FinancialStatementView.jsx+++ b/src/components/report-engine/FinancialStatementView.jsx@@ -0,0 +1,155 @@+import { useMemo } from 'react'
++
++const BDT = new Intl.NumberFormat('en-BD', {
++  minimumFractionDigits: 2,
++  maximumFractionDigits: 2,
++})
++
++function formatAmount(value) {
++  const number = Number(value || 0)
++  const absolute = BDT.format(Math.abs(number))
++  if (number < 0) return `(৳${absolute})`
++  if (number === 0) return '—'
++  return `৳${absolute}`
++}
++
++function isStructuredStatement(rows) {
++  return rows.some((row) => row.line_code || row.current_amount !== undefined)
++}
++
++function legacyRowsToStatement(rows, groupByField) {
++  const grouped = new Map()
++  for (const row of rows) {
++    const key = groupByField ? row[groupByField] || 'Other' : 'Statement'
++    if (!grouped.has(key)) grouped.set(key, [])
++    grouped.get(key).push(row)
++  }
++
++  const result = []
++  let order = 100
++  for (const [label, groupRows] of grouped.entries()) {
++    if (groupByField) {
++      result.push({
++        line_code: `LEGACY.HEADER.${order}`,
++        label,
++        line_type: 'HEADER',
++        display_order: order++,
++        current_amount: 0,
++      })
++    }
++    for (const row of groupRows) {
++      result.push({
++        ...row,
++        line_code: row.account_code || `LEGACY.LINE.${order}`,
++        label: row.account_name || row.line_item || 'Line item',
++        line_type: 'DETAIL',
++        display_order: order++,
++        current_amount: Number(row.amount ?? row.value ?? 0),
++        comparison_amount: Number(row.comparison_amount ?? 0),
++      })
++    }
++  }
++  return result
++}
++
++export default function FinancialStatementView({
++  title,
++  description,
++  rows = [],
++  summary = {},
++  groupByField,
++}) {
++  const statementRows = useMemo(() => {
++    const normalized = isStructuredStatement(rows)
++      ? rows
++      : legacyRowsToStatement(rows, groupByField)
++    return [...normalized].sort(
++      (left, right) => Number(left.display_order || 0) - Number(right.display_order || 0),
++    )
++  }, [rows, groupByField])
++
++  const hasComparison = Boolean(
++    summary.comparison_start ||
++    summary.comparison_end ||
++    statementRows.some((row) => Number(row.comparison_amount || 0) !== 0),
++  )
++
++  return (
++    <section className="financial-statement">
++      <header className="financial-statement__header">
++        <h2>{title}</h2>
++        {description ? <p className="financial-statement__description">{description}</p> : null}
++        {summary.start_date && summary.end_date ? (
++          <p className="financial-statement__period">
++            For the period {summary.start_date} to {summary.end_date}
++          </p>
++        ) : summary.as_of_date ? (
++          <p className="financial-statement__period">As of {summary.as_of_date}</p>
++        ) : null}
++        {summary.validation?.valid === false ? (
++          <p className="financial-statement__validation-error">
++            Report validation failed. Review mapping and ledger warnings before publication.
++          </p>
++        ) : null}
++      </header>
++
++      {statementRows.length === 0 ? (
++        <div className="financial-statement__empty">
++          No posted transactions were found for the selected reporting period.
++        </div>
++      ) : (
++        <table className="financial-statement__table">
++          <thead>
++            <tr>
++              <th scope="col">Particulars</th>
++              <th scope="col">Current period</th>
++              {hasComparison ? <th scope="col">Comparative</th> : null}
++              {hasComparison ? <th scope="col">Variance</th> : null}
++            </tr>
++          </thead>
++          <tbody>
++            {statementRows.map((row) => {
++              const rowType = String(row.line_type || 'DETAIL').toLowerCase()
++              const classNames = [
++                'financial-statement__row',
++                `financial-statement__row--${rowType}`,
++                row.is_bold ? 'is-bold' : '',
++                row.is_underlined ? 'is-underlined' : '',
++                row.is_double_underlined ? 'is-double-underlined' : '',
++              ].filter(Boolean).join(' ')
++
++              return (
++                <tr className={classNames} key={row.id || row.line_code}>
++                  <td>
++                    <span
++                      className="financial-statement__label"
++                      style={{ paddingInlineStart: `${Number(row.indent_level || 0) * 18}px` }}
++                    >
++                      {row.label || row.account_name || row.line_item}
++                    </span>
++                    {row.notes_reference ? (
++                      <sup className="financial-statement__note-ref">{row.notes_reference}</sup>
++                    ) : null}
++                  </td>
++                  <td className="financial-statement__line-amount">
++                    {rowType === 'header' ? '' : formatAmount(row.current_amount ?? row.amount)}
++                  </td>
++                  {hasComparison ? (
++                    <td className="financial-statement__line-amount">
++                      {rowType === 'header' ? '' : formatAmount(row.comparison_amount)}
++                    </td>
++                  ) : null}
++                  {hasComparison ? (
++                    <td className="financial-statement__line-amount">
++                      {rowType === 'header' ? '' : formatAmount(row.variance_amount)}
++                    </td>
++                  ) : null}
++                </tr>
++              )
++            })}
++          </tbody>
++        </table>
++      )}
++    </section>
++  )
++}
+
+--- a/src/components/report-engine/financial-statement.css+++ b/src/components/report-engine/financial-statement.css@@ -0,0 +1,149 @@+.financial-statement {
++  background: #ffffff;
++  border: 1px solid rgb(var(--tenant-primary-rgb) / 0.12);
++  border-radius: 12px;
++  padding: 32px 40px;
++  font-family: var(--aeds-font-mono);
++  max-width: 1040px;
++  margin: 0 auto;
++  color: #171717;
++}
++
++.financial-statement__header {
++  text-align: center;
++  margin-bottom: 24px;
++  border-bottom: 2px solid var(--tenant-primary, #1b4d2e);
++  padding-bottom: 16px;
++}
++
++.financial-statement__header h2 {
++  font-family: 'Inter', sans-serif;
++  font-size: 1.25rem;
++  font-weight: 700;
++  color: var(--tenant-primary, #1b4d2e);
++  margin: 0;
++}
++
++.financial-statement__description,
++.financial-statement__period {
++  font-family: 'Inter', sans-serif;
++  font-size: 0.8rem;
++  color: #5f5a55;
++  margin: 4px 0 0;
++}
++
++.financial-statement__validation-error {
++  margin: 10px auto 0;
++  max-width: 640px;
++  padding: 8px 12px;
++  border: 1px solid #dc2626;
++  border-radius: 8px;
++  color: #991b1b;
++  background: #fef2f2;
++  font: 600 0.78rem/1.4 'Inter', sans-serif;
++}
++
++.financial-statement__empty,
++.aeds-report-loading {
++  font-family: 'Inter', sans-serif;
++  text-align: center;
++  padding: 48px 16px;
++  color: #78716c;
++  font-size: 0.9rem;
++}
++
++.aeds-report-error {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 20px;
++  padding: 14px 16px;
++  border: 1px solid #dc2626;
++  border-radius: 10px;
++  background: #fef2f2;
++  color: #7f1d1d;
++  font-family: 'Inter', sans-serif;
++}
++
++.aeds-report-error p { margin: 3px 0 0; font-size: 0.84rem; }
++.aeds-report-error button {
++  border: 1px solid #b91c1c;
++  border-radius: 7px;
++  padding: 7px 12px;
++  background: #fff;
++  color: #991b1b;
++  font-weight: 600;
++}
++
++.financial-statement__table {
++  width: 100%;
++  border-collapse: collapse;
++  font-size: 0.84rem;
++}
++
++.financial-statement__table thead th {
++  padding: 8px 6px;
++  border-bottom: 1px solid #a8a29e;
++  font-family: 'Inter', sans-serif;
++  font-size: 0.72rem;
++  font-weight: 700;
++  text-align: right;
++  color: #57534e;
++}
++
++.financial-statement__table thead th:first-child { text-align: left; }
++.financial-statement__row td { padding: 5px 6px; vertical-align: bottom; }
++.financial-statement__label { display: inline-block; }
++.financial-statement__note-ref { margin-left: 4px; color: #78716c; }
++
++.financial-statement__line-amount {
++  text-align: right;
++  white-space: nowrap;
++  font-family: var(--aeds-font-mono);
++  font-variant-numeric: tabular-nums;
++}
++
++.financial-statement__row--header td {
++  padding-top: 16px;
++  border-bottom: 1px solid rgb(var(--tenant-primary-rgb) / 0.2);
++  color: var(--tenant-primary, #1b4d2e);
++  font-family: 'Inter', sans-serif;
++  font-size: 0.75rem;
++  font-weight: 700;
++  letter-spacing: 0.05em;
++  text-transform: uppercase;
++}
++
++.financial-statement__row.is-bold td { font-weight: 700; }
++.financial-statement__row.is-underlined td { border-top: 1px solid #292524; }
++.financial-statement__row.is-double-underlined td {
++  border-top: 3px double #171717;
++  border-bottom: 3px double #171717;
++  padding-top: 10px;
++  padding-bottom: 10px;
++  font-weight: 800;
++}
++
++.financial-statement__row--grand_total td {
++  color: var(--tenant-primary, #1b4d2e);
++  font-family: 'Inter', sans-serif;
++}
++
++@media (max-width: 760px) {
++  .financial-statement { padding: 22px 18px; overflow-x: auto; }
++  .financial-statement__table { min-width: 680px; }
++}
++
++@media print {
++  @page { size: A4 portrait; margin: 14mm 12mm; }
++  .financial-statement {
++    max-width: none;
++    border: none;
++    box-shadow: none;
++    border-radius: 0;
++    padding: 0;
++  }
++  .financial-statement__table { font-size: 9.5pt; }
++  .financial-statement__row { break-inside: avoid; }
++  .aeds-report-error, .aeds-report-loading { display: none !important; }
++}
+
