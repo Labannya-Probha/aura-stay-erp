@@ -47,8 +47,18 @@ export function useDashboard({ realtime = true, tenantId } = {}) {
     inFlightRef.current = true
     const requestId = ++requestIdRef.current
     try {
-      if (silent && showRefreshing) setRefreshing(true)
-      else setLoading(true)
+      // A "silent" refresh (triggered by realtime background events) must
+      // NEVER flip `loading` back to true — that reintroduces the full
+      // loading skeleton on every incoming realtime event (any change to
+      // reservations/rooms/folio_charges/payments/etc. across the tenant),
+      // making the dashboard look permanently stuck loading. Only a
+      // non-silent (initial) load should show the full skeleton; a silent
+      // one shows the smaller "refreshing" indicator only if requested.
+      if (silent) {
+        if (showRefreshing) setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
       setError("")
 
       const nextData = await getDashboardData({ tenantId })

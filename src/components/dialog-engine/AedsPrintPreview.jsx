@@ -20,7 +20,7 @@ export default function AedsPrintPreview({ dialog, onClose }) {
               Print
             </button>
 
-            <button type="button" className="aeds-dialog-icon-btn" onClick={onClose}>
+            <button type="button" className="aeds-dialog-icon-btn" onClick={onClose} aria-label="Close">
               <X size={18} />
             </button>
           </div>

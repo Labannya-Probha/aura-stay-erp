@@ -1,5 +1,6 @@
 import { AlertTriangle } from 'lucide-react'
 import ModuleDialogShell from 'src/components/shared/ModuleDialogShell'
+import { Button } from 'src/components/ui/button'
 
 export default function ConfirmDeleteDialog({
   open,
@@ -18,20 +19,12 @@ export default function ConfirmDeleteDialog({
       subtitle="This action cannot be undone."
       footer={
         <>
-          <button
-            onClick={onCancel}
-            disabled={isDeleting}
-            className="rounded-xl border px-4 py-2 text-sm font-semibold"
-          >
+          <Button variant="outline" onClick={onCancel} disabled={isDeleting}>
             Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isDeleting}
-            className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white"
-          >
+          </Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={isDeleting}>
             {isDeleting ? 'Deleting...' : 'Delete terminal'}
-          </button>
+          </Button>
         </>
       }
     >

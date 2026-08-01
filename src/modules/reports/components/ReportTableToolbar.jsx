@@ -2,6 +2,7 @@ import { Download, FileSpreadsheet, Printer, Search } from "lucide-react"
 import ReportColumnManager from "./ReportColumnManager"
 import ReportGroupPanel from "./ReportGroupPanel"
 import { exportRowsToCsv, exportRowsToExcel, printLandscapeReport } from "../utils/reportExportPro"
+import { Button } from "src/components/ui/button"
 
 export default function ReportTableToolbar({
   report,
@@ -25,17 +26,17 @@ export default function ReportTableToolbar({
 
       <ReportColumnManager fields={fields} visibleKeys={visibleKeys} setVisibleKeys={setVisibleKeys} />
 
-      <button type="button" className="aeds-toolbar-btn" onClick={printLandscapeReport}>
+      <Button variant="outline" onClick={printLandscapeReport}>
         <Printer size={16} /> Print
-      </button>
+      </Button>
 
-      <button type="button" className="aeds-toolbar-btn" onClick={() => exportRowsToCsv({ report, fields, rows })}>
+      <Button variant="outline" onClick={() => exportRowsToCsv({ report, fields, rows })}>
         <Download size={16} /> CSV
-      </button>
+      </Button>
 
-      <button type="button" className="aeds-toolbar-primary" onClick={() => exportRowsToExcel({ report, fields, rows })}>
+      <Button variant="default" onClick={() => exportRowsToExcel({ report, fields, rows })}>
         <FileSpreadsheet size={16} /> Excel
-      </button>
+      </Button>
     </div>
   )
 }

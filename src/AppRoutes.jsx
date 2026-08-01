@@ -1246,7 +1246,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <ReportsCenterPage company={company} role={role} userName={userName} userId={userId} />
+            {withModuleBoundary(
+              'Reports',
+              'reports-center',
+              <ReportsCenterPage company={company} role={role} userName={userName} userId={userId} />,
+            )}
           </SaasModuleRoute>
         }
       />
@@ -1263,7 +1267,11 @@ export default function AppRoutes({
             company={company}
             userName={userName}
           >
-            <ReportsCenterPage company={company} role={role} userName={userName} userId={userId} />
+            {withModuleBoundary(
+              'Reports',
+              'reports-center',
+              <ReportsCenterPage company={company} role={role} userName={userName} userId={userId} />,
+            )}
           </SaasModuleRoute>
         }
       />

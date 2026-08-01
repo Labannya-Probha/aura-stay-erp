@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../../../lib/supabase'
 import { fmtBDT, fmtDate } from '../../../../lib/helpers'
 import { ChevronDown, ChevronRight, Printer } from 'lucide-react'
+import { Button } from 'src/components/ui/button'
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
@@ -89,10 +90,9 @@ export default function RegisterView() {
           {expanded === run.id && slips[run.id] && (
             <div>
               <div className="px-4 pb-2 flex justify-end">
-                <button className="btn-ghost text-xs flex items-center gap-1"
-                  onClick={() => PayslipPrint({ run, slips: slips[run.id] })}>
+                <Button variant="ghost" size="sm" onClick={() => PayslipPrint({ run, slips: slips[run.id] })}>
                   <Printer size={13} /> Print Register
-                </button>
+                </Button>
               </div>
               <table className="w-full text-sm">
                 <thead>

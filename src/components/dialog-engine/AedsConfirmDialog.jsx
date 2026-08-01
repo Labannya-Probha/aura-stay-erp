@@ -13,7 +13,7 @@ export default function AedsConfirmDialog({ dialog, onClose }) {
       <div className="aeds-dialog-backdrop" onClick={onClose} />
 
       <section className="aeds-confirm-dialog" role="alertdialog" aria-modal="true">
-        <button type="button" className="aeds-dialog-icon-btn aeds-confirm-close" onClick={onClose}>
+        <button type="button" className="aeds-dialog-icon-btn aeds-confirm-close" onClick={onClose} aria-label="Close">
           <X size={18} />
         </button>
 

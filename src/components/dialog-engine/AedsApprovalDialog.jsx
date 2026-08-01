@@ -26,7 +26,7 @@ export default function AedsApprovalDialog({ dialog, onClose }) {
             <p>{dialog.description || "Review the request and add a comment before approval or rejection."}</p>
           </div>
 
-          <button type="button" className="aeds-dialog-icon-btn" onClick={onClose}>
+          <button type="button" className="aeds-dialog-icon-btn" onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
         </header>
