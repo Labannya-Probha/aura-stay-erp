@@ -1,0 +1,271 @@
+diff --git a/src/modules/reports/hooks/useDynamicReport.ts b/src/modules/reports/hooks/useDynamicReport.ts
+--- a/src/modules/reports/hooks/useDynamicReport.ts
++++ b/src/modules/reports/hooks/useDynamicReport.ts
+@@
+ export function useDynamicReport(department = 'accounts', slug = 'accounts-payable-aging', role) {
+   const [definition, setDefinition] = useState(null)
+   const [data, setData] = useState({
+     rows: [],
+     summary: {},
+     comparisonRows: [],
+     comparisonSummary: { enabled: false },
+   })
++  const [error, setError] = useState(null)
++  const [refreshKey, setRefreshKey] = useState(0)
+   const [filters, setFiltersState] = useState({
+     cycle: 'Monthly',
+     start_date: monthStart(),
+     end_date: today(),
+     compare_to: 'Previous Period',
+@@
+   useEffect(() => {
+     let active = true
+     Promise.resolve().then(async () => {
+       setLoading(true)
+-      const tenantId = getTenantId()
+-      const def = await loadReportDefinition(department, slug, role)
+-      const rows = await runMetadataReport(department, slug, filters, tenantId)
+-      if (!active) return
+-      setDefinition(def)
+-      setData(rows)
+-      setLoading(false)
++      setError(null)
++
++      try {
++        const tenantId = getTenantId()
++        if (!tenantId) {
++          throw new Error('Tenant context is missing. Sign in again before running this report.')
++        }
++
++        const [def, result] = await Promise.all([
++          loadReportDefinition(department, slug, role),
++          runMetadataReport(department, slug, filters, tenantId),
++        ])
++
++        if (!active) return
++
++        const source = String(result?.summary?.source || '')
++        const serviceError = result?.summary?.error
++        const isFallback = source.startsWith('fallback_')
++
++        if (serviceError || isFallback) {
++          setDefinition(def)
++          setData({
++            rows: [],
++            summary: {},
++            comparisonRows: [],
++            comparisonSummary: { enabled: false },
++          })
++          setError(
++            serviceError ||
++              'This report could not be loaded from the reporting service. Demo or fallback data was blocked.',
++          )
++          return
++        }
++
++        setDefinition(def)
++        setData(result)
++      } catch (caughtError) {
++        if (!active) return
++        setError(caughtError?.message || 'Unable to load this report.')
++        setData({
++          rows: [],
++          summary: {},
++          comparisonRows: [],
++          comparisonSummary: { enabled: false },
++        })
++      } finally {
++        if (active) setLoading(false)
++      }
+     })
+
+     return () => {
+       active = false
+     }
+-  }, [department, slug, role, filters])
++  }, [department, slug, role, filters, refreshKey])
+@@
+-  return { definition, data, filters, reportFilters, setFilters, loading }
++  const refresh = useCallback(() => {
++    setRefreshKey((value) => value + 1)
++  }, [])
++
++  return {
++    definition,
++    data,
++    filters,
++    reportFilters,
++    setFilters,
++    loading,
++    error,
++    refresh,
++    isFallback: Boolean(error && /fallback|reporting service/i.test(error)),
++  }
+ }
+diff --git a/src/modules/reports/pages/DynamicReportPage.tsx b/src/modules/reports/pages/DynamicReportPage.tsx
+--- a/src/modules/reports/pages/DynamicReportPage.tsx
++++ b/src/modules/reports/pages/DynamicReportPage.tsx
+@@
+-  const { definition, data, filters, reportFilters, setFilters, loading } = useDynamicReport(
+-    department,
+-    slug,
+-    role,
+-  )
++  const {
++    definition,
++    data,
++    filters,
++    reportFilters,
++    setFilters,
++    loading,
++    error,
++    refresh,
++    isFallback,
++  } = useDynamicReport(department, slug, role)
+@@
+   const handlePdfExport = async () => {
++    if (loading || error || isFallback) {
++      window.alert('Resolve the report loading error before exporting PDF.')
++      return
++    }
++
+     const reportCode = report?.reportCode
+@@
+           <button
+             type="button"
+             onClick={() => window.print()}
+             className="report-action-btn"
++            disabled={loading || Boolean(error) || isFallback}
+             title="Print current page layout in browser"
+@@
+             onClick={handlePdfExport}
+             className="report-action-btn"
+-            disabled={pdfBusy}
++            disabled={pdfBusy || loading || Boolean(error) || isFallback}
+@@
+             type="button"
+             onClick={() => exportReportExcel(report, fields, data.rows)}
+             className="report-primary-btn"
++            disabled={loading || Boolean(error) || isFallback || data.rows.length === 0}
+@@
+-      loading={false}
+-      empty={false}
++      loading={loading}
++      empty={!loading && !error && data.rows.length === 0}
++      error={error}
++      onRefresh={refresh}
++      refreshing={loading}
+diff --git a/src/modules/reports/components/MetadataReportTable.tsx b/src/modules/reports/components/MetadataReportTable.tsx
+--- a/src/modules/reports/components/MetadataReportTable.tsx
++++ b/src/modules/reports/components/MetadataReportTable.tsx
+@@
++import { Fragment } from 'react'
+ import {
+   formatReportCell,
+   getVarianceToneClass,
+   resolveFieldValue,
+ } from '../utils/reportFormatters'
+
+-function isComparableField(field) {
+-  return field?.aggregation === 'SUM' || /Currency|Number|Percent/i.test(field?.dataType || '')
++function isAdditiveField(field) {
++  if (field?.aggregation !== 'SUM') return false
++
++  const identity = `${field?.fieldKey || ''} ${field?.label || ''}`.toLowerCase()
++  return !/(percent|percentage|rate|ratio|margin|occupancy|adr|revpar|average|\bavg\b)/i.test(
++    identity,
++  )
+ }
+@@
+ function getSectionKey(row) {
+-  return row?.usali_department || row?.department || row?.section || row?.line_group || 'main'
++  return row?.usali_department || row?.department || row?.section || row?.line_group || null
+ }
+@@
+-  const totalField =
+-    activeFields.find(
+-      (field) =>
+-        field.aggregation === 'SUM' || /Currency|Number|Percent/i.test(field.dataType || ''),
+-    ) || activeFields[0]
++  const totalField = activeFields.find(isAdditiveField) || null
+
+   const totals = activeFields.reduce((acc, field) => {
+-    if (field.aggregation === 'SUM') {
++    if (isAdditiveField(field)) {
+       acc[field.fieldKey] = totalForField(rows, field)
+     }
+     return acc
+   }, {})
+
+-  const comparisonFields = activeFields.filter(isComparableField)
++  const comparisonFields = activeFields.filter(isAdditiveField)
+   const hasComparativeData = comparisonSummary?.enabled || comparisonRows.length > 0
+
+   const groupedRows = rows.reduce((acc, row) => {
+     const section = getSectionKey(row)
++    if (!section) return acc
+     if (!acc[section]) acc[section] = []
+     acc[section].push(row)
+     return acc
+   }, {})
+
+   const sectionOrder = Object.keys(groupedRows)
++  const hasGroupedRows = sectionOrder.length > 0
+@@
+-            {sectionOrder.length > 0
++            {hasGroupedRows
+               ? sectionOrder.map((sectionKey) => {
+                   const sectionRows = groupedRows[sectionKey]
+                   const sectionLabel = formatSectionLabel(sectionKey)
+-                  const sectionTotal = sectionRows.reduce((sum, row) => {
+-                    const value = resolveFieldValue(row, totalField.fieldKey)
+-                    return sum + Number(value || 0)
+-                  }, 0)
++                  const sectionTotal = totalField
++                    ? sectionRows.reduce((sum, row) => {
++                        const value = resolveFieldValue(row, totalField.fieldKey)
++                        return sum + Number(value || 0)
++                      }, 0)
++                    : null
+
+                   return (
+-                    <>
++                    <Fragment key={sectionKey}>
+                       <tr className="erp-group-row border-b border-[#e7dfce] bg-[#F7F4EC] text-[#1B4D2E]">
+@@
+-                      <tr className="erp-subtotal-row border-t border-[#e7dfce] bg-[#FCFBF7]">
+-                        <td className="px-5 py-4 text-sm font-black text-slate-900">
+-                          Section Total
+-                        </td>
+-                        <td
+-                          className="px-5 py-4 text-right text-sm font-black text-slate-900"
+-                          colSpan={activeFields.length - 1}
+-                        >
+-                          {formatReportCell(
+-                            sectionTotal,
+-                            totalField.dataType,
+-                            totalField.displayFormat,
+-                          )}
+-                        </td>
+-                      </tr>
+-                    </>
++                      {totalField ? (
++                        <tr className="erp-subtotal-row border-t border-[#e7dfce] bg-[#FCFBF7]">
++                          <td className="px-5 py-4 text-sm font-black text-slate-900">
++                            Section Total
++                          </td>
++                          <td
++                            className="px-5 py-4 text-right text-sm font-black text-slate-900"
++                            colSpan={activeFields.length - 1}
++                          >
++                            {formatReportCell(
++                              sectionTotal,
++                              totalField.dataType,
++                              totalField.displayFormat,
++                            )}
++                          </td>
++                        </tr>
++                      ) : null}
++                    </Fragment>
+                   )
+                 })
