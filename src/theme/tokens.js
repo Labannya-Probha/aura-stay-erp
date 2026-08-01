@@ -24,8 +24,9 @@ export const AEDS_DEFAULT_THEME = {
   shadowMd: '0 16px 40px rgba(15, 23, 42, 0.08)',
   shadowLg: '0 28px 80px rgba(15, 23, 42, 0.12)',
   fontBody:
-    'Manrope, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
-  fontDisplay: 'Fraunces, Georgia, Cambria, Times New Roman, serif',
+    'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  fontDisplay:
+    'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   fontMono:
-    'IBM Plex Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace',
+    'Inter, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
 }

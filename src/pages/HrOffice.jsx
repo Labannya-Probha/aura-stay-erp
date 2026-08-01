@@ -1613,7 +1613,12 @@ function PayslipDoc({ slip, run, company }) {
         )}
         <div style={{ flex: 1, textAlign: company?.logo_url ? 'left' : 'center' }}>
           <div
-            style={{ fontSize: 19, fontWeight: 700, fontFamily: 'Fraunces, serif', color: primary }}
+            style={{
+              fontSize: 19,
+              fontWeight: 700,
+              fontFamily: 'Inter, sans-serif',
+              color: primary,
+            }}
           >
             {company?.name || 'Resort'}
           </div>

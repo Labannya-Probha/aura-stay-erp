@@ -107,7 +107,7 @@ export default function ReportPrintDocument({ company, report, filters, rows, ge
                     textAlign: column.align || 'left',
                     fontFamily:
                       column.align === 'right' || isNumericType(column)
-                        ? 'var(--aeds-font-mono)'
+                        ? 'var(--aeds-font-body)'
                         : undefined,
                     fontVariantNumeric:
                       column.align === 'right' || isNumericType(column)
@@ -130,7 +130,7 @@ export default function ReportPrintDocument({ company, report, filters, rows, ge
                   textAlign: column.align || 'left',
                   fontFamily:
                     column.align === 'right' || isNumericType(column)
-                      ? 'var(--aeds-font-mono)'
+                      ? 'var(--aeds-font-body)'
                       : undefined,
                   fontVariantNumeric:
                     column.align === 'right' || isNumericType(column)

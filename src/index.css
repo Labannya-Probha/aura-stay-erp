@@ -2,7 +2,6 @@
    FONTS — Inter
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/inter';
@@ -18,11 +17,11 @@
      the root cause of both the login page's `lg:flex` brand panel not
      showing, and the dashboard sidebar's `sm:flex` not showing — two
      seemingly unrelated bugs from the exact same underlying cause. */
-  --breakpoint-sm: 40rem;   /* 640px */
-  --breakpoint-md: 48rem;   /* 768px */
-  --breakpoint-lg: 64rem;   /* 1024px */
-  --breakpoint-xl: 80rem;   /* 1280px */
-  --breakpoint-2xl: 96rem;  /* 1536px */
+  --breakpoint-sm: 40rem; /* 640px */
+  --breakpoint-md: 48rem; /* 768px */
+  --breakpoint-lg: 64rem; /* 1024px */
+  --breakpoint-xl: 80rem; /* 1280px */
+  --breakpoint-2xl: 96rem; /* 1536px */
 }
 
 /* ============================================================
@@ -56,7 +55,7 @@
     --tenant-button: #1f6f78;
     --tenant-button-rgb: 31 111 120;
     --tenant-font-family: 'Inter', sans-serif;
-    --tenant-data-font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --tenant-data-font-family: 'Inter', ui-monospace, SFMono-Regular, Menlo, monospace;
 
     /* ── Design tokens ───────────────────────────────────────────────── */
     --brand-color: var(--tenant-primary);

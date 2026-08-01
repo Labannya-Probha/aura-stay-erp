@@ -87,7 +87,7 @@
   padding: 10px 0;
   margin-bottom: 4px;
   border-bottom: 1px solid #e5e2da;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--aeds-font-body, 'Inter', sans-serif);
   font-size: 0.72rem;
   color: #4a4a4a;
 }
