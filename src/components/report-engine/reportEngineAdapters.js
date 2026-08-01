@@ -1,3 +1,5 @@
+import { resolveReportIdentity } from '../../lib/reporting/reportIdentityRegistry'
+
 export function fieldsToDataGridColumns(fields = []) {
   return fields.map((field) => {
     const dataType = field.dataType || field.data_type || "text"
@@ -32,11 +34,18 @@ export function filtersToFilterSchema(filters = []) {
 export function normalizeReportGroup(group) {
   return {
     department: group.department,
-    reports: (group.reports || []).map((report) => ({
-      ...report,
-      title: report.title || report.name || report.report_name,
-      slug: report.slug || report.report_slug,
-      route: report.route || `/reports/${group.department?.slug}/${report.slug || report.report_slug}`,
-    })),
+    reports: (group.reports || []).map((report) => {
+      const identity = resolveReportIdentity(report, {
+        departmentSlug: group.department?.slug,
+      })
+
+      return {
+        ...report,
+        ...identity,
+        title: identity.title || report.title || report.name || report.report_name,
+        slug: identity.slug,
+        route: identity.route,
+      }
+    }),
   }
 }

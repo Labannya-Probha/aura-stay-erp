@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase'
 import { getTenantId } from '../tenant'
 import { REPORT_TEMPLATES } from './reportConfig'
+import { resolveReportIdentity } from './reportIdentityRegistry'
 
 const ROLE_CATEGORY_ACCESS = {
   SUPERUSER: null,
@@ -21,19 +22,17 @@ function canSeeCategory(role, category) {
 }
 
 function normalizeReport(report) {
-  const departmentSlug = report.departmentSlug || report.category || 'reports'
-  const slug = report.slug || String(report.name || report.code)
-    .toLowerCase()
-    .replace(/&/g, 'and')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
+  const identity = resolveReportIdentity(report)
 
   return {
     ...report,
-    category: departmentSlug,
-    departmentSlug,
-    slug,
-    route: report.route || `/reports/${departmentSlug}/${slug}`,
+    ...identity,
+    category: identity.departmentSlug,
+    departmentSlug: identity.departmentSlug,
+    slug: identity.slug,
+    route: identity.route,
+    code: report.code || identity.code || identity.reportCode,
+    reportCode: report.reportCode || identity.reportCode || identity.code,
   }
 }
 

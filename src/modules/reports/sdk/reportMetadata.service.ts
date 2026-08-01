@@ -1,5 +1,5 @@
 import { supabase } from '../../../lib/supabase'
-import { getReportByRoute } from '../../../lib/reporting/reportConfig'
+import { getReportIdentity } from '../../../lib/reporting/reportIdentityRegistry'
 
 const COMPARISON_FILTER_OPTIONS =
   'Off,Previous Period,Previous Month,Previous Quarter,Previous Year'
@@ -98,6 +98,25 @@ function createReportError(code, message, details = {}) {
   error.code = code
   Object.assign(error, details)
   return error
+}
+
+function getCanonicalReportTemplate(department, slug) {
+  return getReportIdentity(department, slug)
+}
+
+function createCanonicalReportDetails(template, overrides = {}) {
+  return {
+    reportCode: template.reportCode,
+    title: template.title,
+    slug: template.slug,
+    route: template.route,
+    description: template.description,
+    supportsPrint: true,
+    supportsExportPdf: true,
+    supportsExportExcel: true,
+    supportsSchedule: false,
+    ...overrides,
+  }
 }
 
 async function executeReport(department, slug, filters) {
@@ -228,20 +247,18 @@ const FALLBACK_GROUPS = [
 ]
 
 function fallbackDefinition(department, slug) {
+  const canonicalTemplate = getCanonicalReportTemplate(department, slug)
+
   if (department === 'accounts' && slug === 'bank-reconciliation') {
     return {
       department: { code: 'ACCOUNTS', name: 'Accounts', slug: 'accounts' },
-      report: {
+      report: createCanonicalReportDetails(canonicalTemplate || {
         reportCode: 'RPT-004',
         title: 'Bank Reconciliation',
         slug: 'bank-reconciliation',
         route: '/reports/accounts/bank-reconciliation',
         description: 'Bank statement and ledger variance analysis.',
-        supportsPrint: true,
-        supportsExportPdf: true,
-        supportsExportExcel: true,
-        supportsSchedule: false,
-      },
+      }),
       fields: [
         {
           fieldKey: 'account_name',
@@ -322,17 +339,13 @@ function fallbackDefinition(department, slug) {
   ) {
     return {
       department: { code: 'ACCOUNTS', name: 'Accounts', slug: 'accounts' },
-      report: {
+      report: createCanonicalReportDetails(canonicalTemplate || {
         reportCode: 'RPT-011',
         title: 'Ledger',
         slug,
         route: `/reports/accounts/${slug}`,
         description: 'Operational account statement fallback.',
-        supportsPrint: true,
-        supportsExportPdf: true,
-        supportsExportExcel: true,
-        supportsSchedule: false,
-      },
+      }),
       fields: fallbackFieldsBySlug(slug) || [
         {
           fieldKey: 'transaction_date',
@@ -409,17 +422,13 @@ function fallbackDefinition(department, slug) {
   if (department === 'admin' && slug === 'multi-property-consolidated-performance') {
     return {
       department: { code: 'ADMIN', name: 'Admin & Audit', slug: 'admin' },
-      report: {
+      report: createCanonicalReportDetails(canonicalTemplate || {
         reportCode: 'RPT-032',
         title: 'Multi Property Consolidated Performance',
         slug: 'multi-property-consolidated-performance',
         route: '/reports/admin/multi-property-consolidated-performance',
         description: 'Consolidated hospitality performance across properties.',
-        supportsPrint: true,
-        supportsExportPdf: true,
-        supportsExportExcel: true,
-        supportsSchedule: false,
-      },
+      }),
       fields: [
         {
           fieldKey: 'property_name',
@@ -504,7 +513,7 @@ function fallbackDefinition(department, slug) {
     }
   }
 
-  const template = getReportByRoute(department, slug)
+  const template = canonicalTemplate
   if (template) {
     return {
       department: {
@@ -1432,7 +1441,7 @@ export async function loadReportMetadata(role = 'FRONT_OFFICE') {
 }
 
 export async function loadReportDefinition(department, slug, role = 'FRONT_OFFICE') {
-  const canonicalTemplate = getReportByRoute(department, slug)
+  const canonicalTemplate = getCanonicalReportTemplate(department, slug)
   const legacyDefinition = fallbackDefinition(department, slug)
 
   if (!canonicalTemplate) {
@@ -2025,7 +2034,7 @@ function getFallbackRows(department, slug) {
 }
 
 export async function runMetadataReport(department, slug, filters, tenantId) {
-  const canonicalTemplate = getReportByRoute(department, slug)
+  const canonicalTemplate = getCanonicalReportTemplate(department, slug)
   if (!canonicalTemplate) {
     throw createReportError(
       'REPORT_CONFIGURATION_MISSING',
