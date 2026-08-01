@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { loadReportDefinition } from './reportMetadata.service'
+import { loadReportDefinition, runMetadataReport } from './reportMetadata.service'
 import { supabase } from '../../../lib/supabase'
 
 vi.mock('../../../lib/supabase', () => ({
@@ -59,8 +59,8 @@ describe('loadReportDefinition', () => {
     )
     expect(balanceSheet.fields).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ fieldKey: 'balance_sheet_class', label: 'Classification' }),
-        expect.objectContaining({ fieldKey: 'closing_balance', label: 'Closing Balance' }),
+        expect.objectContaining({ fieldKey: 'opening_amount', label: 'Opening Balance' }),
+        expect.objectContaining({ fieldKey: 'current_amount', label: 'Closing Balance' }),
       ]),
     )
     expect(depreciation.fields).toEqual(
@@ -106,6 +106,60 @@ describe('loadReportDefinition', () => {
         expect.objectContaining({ fieldKey: 'current_period.amount', label: 'Current Period' }),
         expect.objectContaining({ fieldKey: 'variance.amount', label: 'Variance' }),
       ]),
+    )
+  })
+
+  it('normalizes legacy balance-sheet slug to statement-of-financial-position for report definition RPC', async () => {
+    ;(supabase.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        department: { slug: 'accounts', name: 'Accounts' },
+        report: { reportCode: 'RPT-IFRS-BS', title: 'Statement of Financial Position' },
+        fields: [],
+        filters: [],
+        actions: [],
+      },
+      error: null,
+    })
+
+    await loadReportDefinition('accounts', 'balance-sheet', 'FRONT_OFFICE')
+
+    expect(supabase.rpc).toHaveBeenCalledWith('aeds_report_definition', {
+      p_department_slug: 'accounts',
+      p_report_slug: 'statement-of-financial-position',
+      p_role: 'FRONT_OFFICE',
+    })
+  })
+
+  it('returns structured fallback rows for balance-sheet rendering', async () => {
+    ;(supabase.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: null })
+
+    const report = await runMetadataReport('accounts', 'balance-sheet', {}, 'tenant-1')
+
+    expect(report.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ line_code: 'BS.ASSETS', line_type: 'HEADER' }),
+        expect.objectContaining({
+          line_code: 'BS.CA.CASH',
+          opening_amount: 2500000,
+          current_amount: 3000000,
+        }),
+        expect.objectContaining({
+          line_code: 'BS.EQ_LIAB.TOTAL',
+          line_type: 'GRAND_TOTAL',
+          current_amount: 3000000,
+        }),
+      ]),
+    )
+    expect(report.validation).toEqual(
+      expect.objectContaining({
+        valid: true,
+      }),
+    )
+    expect(report.summary.period).toEqual(
+      expect.objectContaining({
+        opening_label: 'Opening Balance',
+        current_label: 'Closing Balance',
+      }),
     )
   })
 })

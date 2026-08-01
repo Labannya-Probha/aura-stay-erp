@@ -9,6 +9,7 @@ type StatementLine = {
   indent_level?: number
   line_type?: string
   current_amount?: number | string | null
+  opening_amount?: number | string | null
   comparison_amount?: number | string | null
   amount?: number | string | null
   value?: number | string | null
@@ -63,6 +64,7 @@ function normalizeLine(line: StatementLine, index: number): StatementLine {
         : line.amount !== undefined
           ? line.amount
           : line.value,
+    opening_amount: line.opening_amount,
   }
 }
 
@@ -149,13 +151,23 @@ export default function FinancialStatementRenderer({
     .filter((line) => {
       if (line.show_if_zero) return true
       if (String(line.line_type).toUpperCase() === 'HEADER') return true
-      return toNumber(line.current_amount) !== 0 || toNumber(line.comparison_amount) !== 0
+      return (
+        toNumber(line.opening_amount) !== 0 ||
+        toNumber(line.current_amount) !== 0 ||
+        toNumber(line.comparison_amount) !== 0
+      )
     })
     .sort((left, right) => Number(left.display_order || 0) - Number(right.display_order || 0))
 
+  const hasOpening = normalizedLines.some(
+    (line) => line.opening_amount !== undefined && line.opening_amount !== null,
+  )
   const hasComparison = normalizedLines.some(
     (line) => line.comparison_amount !== undefined && line.comparison_amount !== null,
   )
+  const openingLabel = String(period?.opening_label || 'Opening')
+  const currentLabel = String(period?.current_label || 'Current')
+  const comparisonLabel = String(period?.comparison_label || 'Comparative')
   const showNotes = Boolean(formatting.show_notes_column)
   const showCodes = Boolean(formatting.show_account_codes)
   const formatAmount = createAmountFormatter(formatting)
@@ -215,12 +227,17 @@ export default function FinancialStatementRenderer({
             <thead>
               <tr>
                 <th scope="col">Particulars</th>
+                {hasOpening ? (
+                  <th scope="col" className="financial-statement-amount">
+                    {openingLabel}
+                  </th>
+                ) : null}
                 <th scope="col" className="financial-statement-amount">
-                  Current
+                  {currentLabel}
                 </th>
                 {hasComparison ? (
                   <th scope="col" className="financial-statement-amount">
-                    Comparative
+                    {comparisonLabel}
                   </th>
                 ) : null}
                 {showNotes ? <th scope="col">Notes</th> : null}
@@ -229,7 +246,8 @@ export default function FinancialStatementRenderer({
             <tbody>
               {normalizedLines.map((line, index) => {
                 const isHeader = String(line.line_type).toUpperCase() === 'HEADER'
-                const visibleColumns = 2 + Number(hasComparison) + Number(showNotes)
+                const visibleColumns =
+                  2 + Number(hasOpening) + Number(hasComparison) + Number(showNotes)
 
                 if (isHeader) {
                   return (
@@ -258,6 +276,11 @@ export default function FinancialStatementRenderer({
                         <span>{line.label}</span>
                       </div>
                     </td>
+                    {hasOpening ? (
+                      <td className="financial-statement-amount">
+                        {formatAmount(line.opening_amount)}
+                      </td>
+                    ) : null}
                     <td className="financial-statement-amount">
                       {formatAmount(line.current_amount)}
                     </td>

@@ -20,16 +20,27 @@ describe('buildReportPrintPreviewModel', () => {
     const data = {
       rows: [
         { line_code: 'HDR', line_type: 'HEADER', label: 'Revenue' },
-        { line_code: 'R1', label: 'Room Revenue', current_amount: 120000, comparison_amount: 95000 },
+        {
+          line_code: 'R1',
+          label: 'Room Revenue',
+          opening_amount: 87000,
+          current_amount: 120000,
+          comparison_amount: 95000,
+        },
       ],
       summary: {
         currency: 'BDT',
         prepared_by: 'Finance Manager',
-      },
-      validation: {
-        valid: false,
-        errors: [{ code: 'BALANCE_MISMATCH', message: 'Trial balance mismatch.' }],
-        warnings: [{ code: 'ROUNDING', message: 'Rounded values used.' }],
+        period: {
+          opening_label: 'Opening Balance',
+          current_label: 'Closing Balance',
+          comparison_label: 'Prior Year',
+        },
+        validation: {
+          valid: false,
+          errors: [{ code: 'BALANCE_MISMATCH', message: 'Trial balance mismatch.' }],
+          warnings: [{ code: 'ROUNDING', message: 'Rounded values used.' }],
+        },
       },
       audit: {
         generatedBy: 'System User',
@@ -49,7 +60,9 @@ describe('buildReportPrintPreviewModel', () => {
     expect(model.report.name).toBe('Income Statement')
     expect(model.validation.valid).toBe(false)
     expect(model.validation.errors).toContain('Trial balance mismatch.')
+    expect(model.financial?.hasOpening).toBe(true)
     expect(model.financial?.hasComparison).toBe(true)
+    expect(model.financial?.currentLabel).toBe('Closing Balance')
     expect(model.signatures.preparedBy).toBe('Finance Manager')
     expect(model.signatures.printedBy).toBe('System User')
   })
@@ -118,7 +131,11 @@ describe('ReportPrintPreview rendering', () => {
         printedBy: 'Nabila',
       },
       financial: {
+        hasOpening: true,
         hasComparison: true,
+        openingLabel: 'Opening Balance',
+        currentLabel: 'Closing Balance',
+        comparisonLabel: 'Prior Year',
         lines: [
           {
             key: 'HDR',
@@ -128,6 +145,7 @@ describe('ReportPrintPreview rendering', () => {
             isBold: true,
             isUnderlined: false,
             isDoubleUnderlined: false,
+            openingAmount: 0,
             currentAmount: 0,
             comparisonAmount: 0,
           },
@@ -139,6 +157,7 @@ describe('ReportPrintPreview rendering', () => {
             isBold: false,
             isUnderlined: false,
             isDoubleUnderlined: false,
+            openingAmount: 80000,
             currentAmount: 120000,
             comparisonAmount: 100000,
           },
@@ -149,7 +168,8 @@ describe('ReportPrintPreview rendering', () => {
     const html = renderToStaticMarkup(<ReportPrintPreview model={model} company={company} />)
 
     expect(html).toContain('Validation Status: Failed')
-    expect(html).toContain('Comparative')
+    expect(html).toContain('Opening Balance')
+    expect(html).toContain('Prior Year')
     expect(html).toContain('Prepared By: Finance Manager')
     expect(html).toContain('Approved By: GM')
     expect(html).toContain('Room Revenue')

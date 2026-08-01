@@ -164,12 +164,11 @@ export async function loadAedsReportDefinition({ department, slug, role = 'ADMIN
 }
 
 export async function runAedsReport({ department, slug, filters }) {
-  const tenantId = requireTenantId()
+  requireTenantId()
   const { data, error } = await supabase.rpc('aeds_run_report', {
     p_department_slug: department,
     p_report_slug: slug,
     p_filters: filters || {},
-    p_tenant_id: tenantId,
   })
 
   if (error) {
@@ -191,6 +190,7 @@ export async function runAedsReport({ department, slug, filters }) {
 
 export async function enqueueAedsReportExport({ reportCode, filters = {}, format = 'excel' }) {
   if (!reportCode) throw new Error('Report code is required for export.')
+  requireTenantId()
 
   const safeFormat = String(format || 'excel').toLowerCase()
   if (!['csv', 'excel', 'pdf'].includes(safeFormat)) {
@@ -201,7 +201,7 @@ export async function enqueueAedsReportExport({ reportCode, filters = {}, format
     `/api/reports/${encodeURIComponent(reportCode)}/export/${safeFormat}`,
     {
       method: 'POST',
-      body: JSON.stringify({ filters, tenantId: requireTenantId() }),
+      body: JSON.stringify({ filters }),
     },
   )
 

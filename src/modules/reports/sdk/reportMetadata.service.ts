@@ -10,6 +10,22 @@ const CASH_FLOW_SLUGS = new Set([
   'statement-of-cash-flows-indirect',
 ])
 
+const LEGACY_REPORT_SLUG_ALIASES = Object.freeze({
+  'balance-sheet': 'statement-of-financial-position',
+})
+
+function normalizeReportSlug(slug = '') {
+  const normalized = String(slug || '')
+    .trim()
+    .toLowerCase()
+
+  return LEGACY_REPORT_SLUG_ALIASES[normalized] || normalized
+}
+
+function isBalanceSheetSlug(slug = '') {
+  return normalizeReportSlug(slug) === 'statement-of-financial-position'
+}
+
 function isCashFlowSlug(slug = '') {
   return CASH_FLOW_SLUGS.has(
     String(slug || '')
@@ -108,9 +124,10 @@ function periodLabel(startDate, endDate) {
 }
 
 async function executeReport(department, slug, filters) {
+  const resolvedSlug = normalizeReportSlug(slug)
   const { data, error } = await supabase.rpc('aeds_run_report', {
     p_department_slug: department,
-    p_report_slug: slug,
+    p_report_slug: resolvedSlug,
     p_filters: filters,
   })
 
@@ -221,6 +238,39 @@ const FALLBACK_GROUPS = [
 ]
 
 function fallbackDefinition(department, slug) {
+  if (department === 'accounts' && isBalanceSheetSlug(slug)) {
+    return {
+      department: { code: 'ACCOUNTS', name: 'Accounts', slug: 'accounts' },
+      report: {
+        reportCode: 'RPT-IFRS-BS',
+        title: 'Statement of Financial Position',
+        slug,
+        route: '/reports/accounts/balance-sheet',
+        description:
+          'IAS 1 statement of financial position with opening, closing and comparative balances.',
+        supportsPrint: true,
+        supportsExportPdf: true,
+        supportsExportExcel: true,
+        supportsSchedule: false,
+      },
+      fields: fallbackFieldsBySlug(slug) || [],
+      filters: [
+        { filterKey: 'start_date', label: 'Start Date', filterType: 'date' },
+        { filterKey: 'as_of_date', label: 'As Of Date', filterType: 'date' },
+        {
+          filterKey: 'comparison_as_of_date',
+          label: 'Comparative As Of Date',
+          filterType: 'date',
+        },
+      ],
+      actions: [
+        { actionKey: 'print', label: 'Print' },
+        { actionKey: 'export_pdf', label: 'Export PDF' },
+        { actionKey: 'export_excel', label: 'Export Excel' },
+      ],
+    }
+  }
+
   if (department === 'accounts' && slug === 'bank-reconciliation') {
     return {
       department: { code: 'ACCOUNTS', name: 'Accounts', slug: 'accounts' },
@@ -706,6 +756,7 @@ function fallbackDefinition(department, slug) {
 }
 
 function fallbackFieldsBySlug(slug) {
+  const normalizedSlug = normalizeReportSlug(slug)
   const bySlug = {
     'accounts-payable-aging': [
       {
@@ -821,24 +872,16 @@ function fallbackFieldsBySlug(slug) {
         sortable: true,
       },
     ],
-    'balance-sheet': [
+    'statement-of-financial-position': [
       {
-        fieldKey: 'balance_sheet_class',
-        label: 'Classification',
+        fieldKey: 'label',
+        label: 'Particulars',
         dataType: 'Text',
         alignment: 'left',
         sortable: true,
       },
       {
-        fieldKey: 'account_name',
-        label: 'Account',
-        dataType: 'Text',
-        alignment: 'left',
-        sortable: true,
-        filterable: true,
-      },
-      {
-        fieldKey: 'opening_balance',
+        fieldKey: 'opening_amount',
         label: 'Opening Balance',
         dataType: 'Currency-BDT',
         alignment: 'right',
@@ -846,8 +889,16 @@ function fallbackFieldsBySlug(slug) {
         sortable: true,
       },
       {
-        fieldKey: 'closing_balance',
+        fieldKey: 'current_amount',
         label: 'Closing Balance',
+        dataType: 'Currency-BDT',
+        alignment: 'right',
+        aggregation: 'SUM',
+        sortable: true,
+      },
+      {
+        fieldKey: 'comparison_amount',
+        label: 'Prior Year',
         dataType: 'Currency-BDT',
         alignment: 'right',
         aggregation: 'SUM',
@@ -1489,7 +1540,7 @@ function fallbackFieldsBySlug(slug) {
     ],
   }
 
-  return bySlug[slug] || null
+  return bySlug[normalizedSlug] || null
 }
 
 export async function loadReportMetadata(role = 'FRONT_OFFICE') {
@@ -1503,6 +1554,7 @@ export async function loadReportMetadata(role = 'FRONT_OFFICE') {
 }
 
 export async function loadReportDefinition(department, slug, role = 'FRONT_OFFICE') {
+  const resolvedSlug = normalizeReportSlug(slug)
   const fallback = fallbackDefinition(department, slug)
   const slugFallbackFields = fallbackFieldsBySlug(slug)
   const canonicalTemplate = getReportByRoute(department, slug)
@@ -1510,14 +1562,12 @@ export async function loadReportDefinition(department, slug, role = 'FRONT_OFFIC
   try {
     const { data, error } = await supabase.rpc('aeds_report_definition', {
       p_department_slug: department,
-      p_report_slug: slug,
+      p_report_slug: resolvedSlug,
       p_role: role,
     })
     if (!error && data) {
       const canonicalReport = canonicalTemplate
         ? {
-            reportCode: canonicalTemplate.reportCode,
-            title: canonicalTemplate.title,
             slug: canonicalTemplate.slug,
             route: canonicalTemplate.route,
             description: canonicalTemplate.description,
@@ -1614,6 +1664,7 @@ export async function searchFilterOptions(sourceHint, search = '', tenantId) {
 }
 
 function getFallbackRows(department, slug) {
+  const normalizedSlug = normalizeReportSlug(slug)
   if (department !== 'accounts') return null
 
   if (slug === 'bank-reconciliation') {
@@ -1718,26 +1769,175 @@ function getFallbackRows(department, slug) {
     }
   }
 
-  if (slug === 'balance-sheet') {
+  if (normalizedSlug === 'statement-of-financial-position') {
     return {
       rows: [
         {
-          balance_sheet_class: 'Assets',
-          account_name: 'Cash at Bank',
-          opening_balance: 2500000,
-          closing_balance: 3000000,
+          line_code: 'BS.ASSETS',
+          label: 'Assets',
+          line_type: 'HEADER',
+          display_order: 10,
+          indent_level: 0,
+          show_if_zero: true,
         },
         {
-          balance_sheet_class: 'Liabilities',
-          account_name: 'Accounts Payable',
-          opening_balance: 750000,
-          closing_balance: 820000,
+          line_code: 'BS.CA.CASH',
+          label: 'Cash',
+          line_type: 'DETAIL',
+          display_order: 30,
+          indent_level: 2,
+          opening_amount: 2500000,
+          current_amount: 3000000,
+          comparison_amount: 2200000,
+          notes_reference: '1',
+        },
+        {
+          line_code: 'BS.CA.TOTAL',
+          label: 'Total Current Assets',
+          line_type: 'SUBTOTAL',
+          display_order: 100,
+          indent_level: 1,
+          opening_amount: 2500000,
+          current_amount: 3000000,
+          comparison_amount: 2200000,
+          show_if_zero: true,
+          is_underlined: true,
+        },
+        {
+          line_code: 'BS.ASSETS.TOTAL',
+          label: 'Total Assets',
+          line_type: 'GRAND_TOTAL',
+          display_order: 200,
+          indent_level: 0,
+          opening_amount: 2500000,
+          current_amount: 3000000,
+          comparison_amount: 2200000,
+          show_if_zero: true,
+          is_double_underlined: true,
+        },
+        {
+          line_code: 'BS.EQUITY',
+          label: 'Equity',
+          line_type: 'HEADER',
+          display_order: 210,
+          indent_level: 0,
+          show_if_zero: true,
+        },
+        {
+          line_code: 'BS.EQ.RETAINED_EARNINGS',
+          label: 'Retained Earnings',
+          line_type: 'DETAIL',
+          display_order: 240,
+          indent_level: 1,
+          opening_amount: 1750000,
+          current_amount: 2000000,
+          comparison_amount: 1600000,
+        },
+        {
+          line_code: 'BS.EQUITY.TOTAL',
+          label: 'Total Equity',
+          line_type: 'SUBTOTAL',
+          display_order: 280,
+          indent_level: 0,
+          opening_amount: 1750000,
+          current_amount: 2000000,
+          comparison_amount: 1600000,
+          show_if_zero: true,
+        },
+        {
+          line_code: 'BS.LIABILITIES',
+          label: 'Liabilities',
+          line_type: 'HEADER',
+          display_order: 290,
+          indent_level: 0,
+          show_if_zero: true,
+        },
+        {
+          line_code: 'BS.CL.ACCOUNTS_PAYABLE',
+          label: 'Accounts Payable',
+          line_type: 'DETAIL',
+          display_order: 310,
+          indent_level: 2,
+          opening_amount: 750000,
+          current_amount: 820000,
+          comparison_amount: 600000,
+        },
+        {
+          line_code: 'BS.CL.OTHER_CURRENT_LIABILITIES',
+          label: 'Other Current Liabilities',
+          line_type: 'DETAIL',
+          display_order: 370,
+          indent_level: 2,
+          opening_amount: 0,
+          current_amount: 180000,
+          comparison_amount: 0,
+        },
+        {
+          line_code: 'BS.CL.TOTAL',
+          label: 'Total Current Liabilities',
+          line_type: 'SUBTOTAL',
+          display_order: 380,
+          indent_level: 1,
+          opening_amount: 750000,
+          current_amount: 1000000,
+          comparison_amount: 600000,
+          show_if_zero: true,
+        },
+        {
+          line_code: 'BS.LIABILITIES.TOTAL',
+          label: 'Total Liabilities',
+          line_type: 'SUBTOTAL',
+          display_order: 450,
+          indent_level: 0,
+          opening_amount: 750000,
+          current_amount: 1000000,
+          comparison_amount: 600000,
+          show_if_zero: true,
+        },
+        {
+          line_code: 'BS.EQ_LIAB.TOTAL',
+          label: 'Total Equity + Liabilities',
+          line_type: 'GRAND_TOTAL',
+          display_order: 460,
+          indent_level: 0,
+          opening_amount: 2500000,
+          current_amount: 3000000,
+          comparison_amount: 2200000,
+          show_if_zero: true,
+          is_double_underlined: true,
         },
       ],
       summary: {
-        report: 'balance_sheet',
+        report: 'ifrs_balance_sheet',
         source: 'fallback_balance_sheet',
+        as_of_date: '2026-07-31',
+        start_date: '2026-01-01',
+        opening_as_of_date: '2025-12-31',
+        comparison_as_of_date: '2025-07-31',
+        assets: 3000000,
+        liabilities: 1000000,
+        equity: 2000000,
+        equity_and_liabilities: 3000000,
+        balance_delta: 0,
+        period: {
+          opening_label: 'Opening Balance',
+          current_label: 'Closing Balance',
+          comparison_label: 'Prior Year',
+          as_of_date: '2026-07-31',
+          opening_as_of_date: '2025-12-31',
+          comparison_as_of_date: '2025-07-31',
+        },
+        validation: {
+          valid: true,
+          errors: [],
+          warnings: [],
+        },
         generatedAt: new Date().toISOString(),
+      },
+      validation: {
+        valid: true,
+        errors: [],
+        warnings: [],
       },
     }
   }

@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   getTenantId: vi.fn(),
+  getSession: vi.fn(),
 }))
 
 const TENANT_ID = '22222222-2222-2222-2222-222222222222'
@@ -15,21 +16,14 @@ vi.mock('../../../lib/supabase', () => ({
   supabase: {
     rpc: (...args) => mocks.rpc(...args),
     auth: {
-      getSession: vi.fn(async () => ({
-        data: {
-          session: null,
-        },
-        error: null,
-      })),
+      getSession: (...args) => mocks.getSession(...args),
     },
     from: vi.fn(() => ({
       insert: vi.fn(() => ({
         select: vi.fn(() => ({
           single: vi.fn(async () => ({
             data: null,
-            error: {
-              message: 'Not used in this test',
-            },
+            error: { message: 'Not used in this test' },
           })),
         })),
       })),
@@ -45,20 +39,28 @@ vi.mock('../../../lib/supabase', () => ({
   },
 }))
 
-const { loadAedsReportCatalog, loadAedsReportDefinition, runAedsReport } =
+const { enqueueAedsReportExport, loadAedsReportCatalog, loadAedsReportDefinition, runAedsReport } =
   await import('../reportEngine.service.js')
 
 describe('reportEngine.service', () => {
   beforeEach(() => {
     mocks.rpc.mockReset()
     mocks.getTenantId.mockReset()
+    mocks.getSession.mockReset()
     mocks.getTenantId.mockReturnValue(TENANT_ID)
+    mocks.getSession.mockResolvedValue({
+      data: { session: { access_token: 'session-token' } },
+      error: null,
+    })
+    vi.stubGlobal('fetch', vi.fn())
   })
 
-  it('calls aeds_run_report with tenant-aware parameters', async () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('calls aeds_run_report without sending tenant id to the RPC', async () => {
     mocks.rpc.mockResolvedValue({
-  it('calls aeds_run_report with report and filter parameters', async () => {
-    rpcMock.mockResolvedValue({
       data: {
         rows: [
           {
@@ -86,26 +88,14 @@ describe('reportEngine.service', () => {
     })
 
     expect(mocks.getTenantId).toHaveBeenCalledTimes(1)
-    expect(mocks.rpc).toHaveBeenCalledTimes(1)
     expect(mocks.rpc).toHaveBeenCalledWith('aeds_run_report', {
       p_department_slug: 'accounts',
       p_report_slug: 'statement-of-profit-or-loss',
       p_filters: {
         start_date: '2026-07-01',
         end_date: '2026-07-31',
-    expect(rpcMock).toHaveBeenCalledWith(
-      'aeds_run_report',
-      {
-        p_department_slug: 'accounts',
-        p_report_slug: 'statement-of-profit-or-loss',
-        p_filters: {
-          start_date: '2026-07-01',
-          end_date: '2026-07-31',
-        },
       },
-      p_tenant_id: TENANT_ID,
     })
-
     expect(result).toEqual({
       rows: [
         {
@@ -124,8 +114,6 @@ describe('reportEngine.service', () => {
 
   it('throws a visible report error when aeds_run_report fails', async () => {
     mocks.rpc.mockResolvedValue({
-  it('returns fallback payload when report RPC fails', async () => {
-    rpcMock.mockResolvedValue({
       data: null,
       error: {
         code: '42501',
@@ -152,20 +140,11 @@ describe('reportEngine.service', () => {
       p_department_slug: 'accounts',
       p_report_slug: 'ledger',
       p_filters: {},
-      p_tenant_id: TENANT_ID,
     })
   })
 
   it('throws when report engine returns summary.error', async () => {
     mocks.rpc.mockResolvedValue({
-    ).resolves.toEqual({
-      rows: [],
-      summary: { source: 'fallback_empty' },
-    })
-  })
-
-  it('returns rpc data as-is when report engine summary includes error', async () => {
-    rpcMock.mockResolvedValue({
       data: {
         rows: [],
         summary: {
@@ -181,11 +160,9 @@ describe('reportEngine.service', () => {
         slug: 'unknown-report',
         filters: {},
       }),
-    ).resolves.toEqual({
-      rows: [],
-      summary: {
-        error: 'unknown report',
-      },
+    ).rejects.toMatchObject({
+      code: 'REPORT_ENGINE_ERROR',
+      message: 'unknown report',
     })
   })
 
@@ -248,7 +225,6 @@ describe('reportEngine.service', () => {
     expect(mocks.rpc).toHaveBeenCalledWith('aeds_report_metadata', {
       p_role: 'ADMIN',
     })
-
     expect(result).toEqual(catalogPayload)
   })
 
@@ -284,7 +260,6 @@ describe('reportEngine.service', () => {
       p_report_slug: 'statement-of-profit-or-loss',
       p_role: 'ADMIN',
     })
-
     expect(result).toEqual(definitionPayload)
   })
 
@@ -304,5 +279,35 @@ describe('reportEngine.service', () => {
       code: 'REPORT_ACCESS_DENIED',
       message: 'This report is unavailable or your role does not have access.',
     })
+  })
+
+  it('queues exports without sending tenant id in the request body', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ jobId: 'job-1', status: 'QUEUED' }),
+    })
+
+    const result = await enqueueAedsReportExport({
+      reportCode: 'RPT-IFRS-PNL',
+      filters: { start_date: '2026-07-01', end_date: '2026-07-31' },
+      format: 'pdf',
+    })
+
+    expect(mocks.getTenantId).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith('/api/reports/RPT-IFRS-PNL/export/pdf', {
+      method: 'POST',
+      body: JSON.stringify({
+        filters: {
+          start_date: '2026-07-01',
+          end_date: '2026-07-31',
+        },
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer session-token',
+      },
+    })
+    expect(result).toEqual({ jobId: 'job-1', status: 'QUEUED' })
   })
 })

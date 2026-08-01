@@ -28,7 +28,11 @@ type PrintPreviewModel = {
     printedBy: string
   }
   financial?: {
+    hasOpening: boolean
     hasComparison: boolean
+    openingLabel?: string
+    currentLabel?: string
+    comparisonLabel?: string
     lines: Array<{
       key: string
       label: string
@@ -37,6 +41,7 @@ type PrintPreviewModel = {
       isBold: boolean
       isUnderlined: boolean
       isDoubleUnderlined: boolean
+      openingAmount: number
       currentAmount: number
       comparisonAmount: number
     }>
@@ -84,6 +89,10 @@ function formatBdt(value: unknown) {
   return amount < 0 ? `(BDT ${formatted})` : `BDT ${formatted}`
 }
 
+function resolveValidation(data: any) {
+  return data?.validation || data?.summary?.validation || { valid: true, errors: [], warnings: [] }
+}
+
 export function buildReportPrintPreviewModel({
   definition,
   data,
@@ -103,6 +112,8 @@ export function buildReportPrintPreviewModel({
   const summary = data?.summary || {}
   const audit = data?.audit || {}
   const modeFinancial = isFinancial(definition, data)
+  const validation = resolveValidation(data)
+  const periodContext = data?.period || summary?.period || summary
 
   const generatedBy = safeText(audit.generatedBy || userName || role, 'System')
 
@@ -113,14 +124,14 @@ export function buildReportPrintPreviewModel({
     printedBy: safeText(summary.printed_by || generatedBy, '-'),
   }
 
-  const validationErrors = Array.isArray(data?.validation?.errors)
-    ? data.validation.errors.map((item: any) => safeText(item?.message || item?.code)).filter(Boolean)
+  const validationErrors = Array.isArray(validation?.errors)
+    ? validation.errors
+        .map((item: any) => safeText(item?.message || item?.code || item))
+        .filter(Boolean)
     : []
 
-  const validationWarnings = Array.isArray(data?.validation?.warnings)
-    ? data.validation.warnings
-        .map((item: any) => safeText(item?.message || item?.code))
-        .filter(Boolean)
+  const validationWarnings = Array.isArray(validation?.warnings)
+    ? validation.warnings.map((item: any) => safeText(item?.message || item?.code)).filter(Boolean)
     : []
 
   const model: PrintPreviewModel = {
@@ -142,7 +153,7 @@ export function buildReportPrintPreviewModel({
     },
     generatedBy,
     validation: {
-      valid: data?.validation?.valid !== false,
+      valid: validation?.valid !== false,
       errors: validationErrors,
       warnings: validationWarnings,
     },
@@ -150,7 +161,8 @@ export function buildReportPrintPreviewModel({
   }
 
   if (modeFinancial) {
-    const sourceLines = Array.isArray(data?.lines) && data.lines.length ? data.lines : data?.rows || []
+    const sourceLines =
+      Array.isArray(data?.lines) && data.lines.length ? data.lines : data?.rows || []
 
     const normalizedLines = sourceLines.map((line: any, index: number) => ({
       key: safeText(line?.line_code || line?.id, `line-${index}`),
@@ -160,14 +172,19 @@ export function buildReportPrintPreviewModel({
       isBold: Boolean(line?.is_bold),
       isUnderlined: Boolean(line?.is_underlined),
       isDoubleUnderlined: Boolean(line?.is_double_underlined),
+      openingAmount: toNumber(line?.opening_amount),
       currentAmount: toNumber(line?.current_amount ?? line?.amount ?? line?.value),
       comparisonAmount: toNumber(line?.comparison_amount),
     }))
 
     model.financial = {
+      hasOpening: normalizedLines.some((line) => line.openingAmount !== 0),
       hasComparison:
         normalizedLines.some((line) => line.comparisonAmount !== 0) ||
         Boolean(summary?.comparison_start || summary?.comparison_end),
+      openingLabel: safeText(periodContext?.opening_label, 'Opening Balance'),
+      currentLabel: safeText(periodContext?.current_label, 'Current'),
+      comparisonLabel: safeText(periodContext?.comparison_label, 'Comparative'),
       lines: normalizedLines,
     }
   } else {
@@ -220,6 +237,9 @@ function renderFinancialRows(model: PrintPreviewModel) {
         <td>
           <div style={{ paddingInlineStart: `${line.indentLevel * 1.25}rem` }}>{line.label}</div>
         </td>
+        {model.financial?.hasOpening ? (
+          <td className="report-print-preview__amount">{formatBdt(line.openingAmount)}</td>
+        ) : null}
         <td className="report-print-preview__amount">{formatBdt(line.currentAmount)}</td>
         {model.financial?.hasComparison ? (
           <td className="report-print-preview__amount">{formatBdt(line.comparisonAmount)}</td>
@@ -301,9 +321,18 @@ export default function ReportPrintPreview({
             {model.financial ? (
               <tr>
                 <th>Particulars</th>
-                <th className="report-print-preview__amount">Current</th>
+                {model.financial.hasOpening ? (
+                  <th className="report-print-preview__amount">
+                    {model.financial.openingLabel || 'Opening Balance'}
+                  </th>
+                ) : null}
+                <th className="report-print-preview__amount">
+                  {model.financial.currentLabel || 'Current'}
+                </th>
                 {model.financial.hasComparison ? (
-                  <th className="report-print-preview__amount">Comparative</th>
+                  <th className="report-print-preview__amount">
+                    {model.financial.comparisonLabel || 'Comparative'}
+                  </th>
                 ) : null}
               </tr>
             ) : (
