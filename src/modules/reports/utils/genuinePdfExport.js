@@ -28,15 +28,49 @@ import autoTable from 'jspdf-autotable'
  * @returns {jsPDF} the generated document — caller decides whether to
  *          .save(), .output('blob'), or upload it.
  */
-export function generateGenuineFinancialStatementPdf({ title, periodLabel, rows, meta = {} }) {
+// Fetches a remote logo image and converts it to a data URL jsPDF can
+// embed via addImage — jsPDF cannot take a bare remote URL directly.
+// Fails silently (returns null) so a broken/missing logo never blocks
+// PDF generation — the header still renders correctly without an image.
+async function loadLogoAsDataUrl(logoUrl) {
+  if (!logoUrl) return null
+  try {
+    const response = await fetch(logoUrl, { mode: 'cors' })
+    const blob = await response.blob()
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
+
+export async function generateGenuineFinancialStatementPdf({ title, periodLabel, rows, meta = {} }) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
+  const logoDataUrl = await loadLogoAsDataUrl(meta.logoUrl)
+
+  let headerTextX = 14
+  if (logoDataUrl) {
+    try {
+      // 12mm square logo, top-left — real embedded image data, not a
+      // screenshot of the page.
+      doc.addImage(logoDataUrl, 14, 8, 12, 12)
+      headerTextX = 29
+    } catch {
+      // Unsupported image format (e.g. SVG) — fall back to text-only
+      // header rather than failing the whole PDF.
+    }
+  }
 
   // Header: tenant identity + report title + period — real, selectable
   // text, not a screenshot.
   doc.setFontSize(9)
   doc.setTextColor(100)
-  doc.text(meta.tenantName || '', 14, 12)
+  doc.text(meta.tenantName || '', headerTextX, 14)
 
   doc.setFontSize(16)
   doc.setTextColor(20)
