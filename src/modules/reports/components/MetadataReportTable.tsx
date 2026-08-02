@@ -1,26 +1,78 @@
+import { Fragment, useMemo, useState } from 'react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Columns3,
+  ExternalLink,
+  Rows3,
+  RotateCcw,
+} from 'lucide-react'
+
 import {
   formatReportCell,
   getVarianceToneClass,
   resolveFieldValue,
 } from '../utils/reportFormatters'
 
-function isComparableField(field) {
-  return field?.aggregation === 'SUM' || /Currency|Number|Percent/i.test(field?.dataType || '')
+type Density = 'compact' | 'comfortable' | 'spacious'
+type SortDirection = 'asc' | 'desc'
+
+type SortState = {
+  fieldKey: string
+  direction: SortDirection
+} | null
+
+function isNumericField(field: any) {
+  return (
+    field?.alignment === 'right' ||
+    field?.aggregation === 'SUM' ||
+    /Currency|Number|Percent|Decimal|Integer/i.test(field?.dataType || '')
+  )
 }
 
-function totalForField(rows, field) {
+function isComparableField(field: any) {
+  return field?.aggregation === 'SUM' || isNumericField(field)
+}
+
+function totalForField(rows: any[], field: any) {
   return rows.reduce((sum, row) => sum + Number(resolveFieldValue(row, field.fieldKey) || 0), 0)
 }
 
-function formatSectionLabel(value) {
+function formatSectionLabel(value: unknown) {
   if (!value) return 'Unclassified'
   return String(value)
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
-function getSectionKey(row) {
+function getSectionKey(row: any) {
   return row?.usali_department || row?.department || row?.section || row?.line_group || 'main'
+}
+
+function compareValues(left: unknown, right: unknown, numeric: boolean) {
+  if (numeric) {
+    const a = Number(left ?? 0)
+    const b = Number(right ?? 0)
+    return a - b
+  }
+
+  return String(left ?? '').localeCompare(String(right ?? ''), undefined, {
+    numeric: true,
+    sensitivity: 'base',
+  })
+}
+
+function rowKey(row: any, index: number) {
+  return (
+    row?.id ||
+    row?.uuid ||
+    row?.entry_id ||
+    row?.journal_line_id ||
+    row?.document_no ||
+    row?.reference ||
+    index
+  )
 }
 
 export default function MetadataReportTable({
@@ -29,98 +81,233 @@ export default function MetadataReportTable({
   comparisonRows = [],
   comparisonSummary = { enabled: false },
   loading = false,
+  onRowOpen,
+}: {
+  fields?: any[]
+  rows?: any[]
+  comparisonRows?: any[]
+  comparisonSummary?: any
+  loading?: boolean
+  onRowOpen?: (row: any) => void
 }) {
-  if (loading) {
-    return (
-      <div className="rounded-[24px] border border-slate-200 bg-white p-8 text-center text-sm font-semibold text-slate-400">
-        Loading report...
-      </div>
-    )
-  }
+  const inferredFields = useMemo(
+    () =>
+      Object.keys(rows[0] || {}).map((key) => ({
+        fieldKey: key,
+        label: key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
+        dataType: 'Text',
+        alignment: 'left',
+      })),
+    [rows],
+  )
 
-  const inferredFields = Object.keys(rows[0] || {}).map((key) => ({
-    fieldKey: key,
-    label: key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
-    dataType: 'Text',
-    alignment: 'left',
-  }))
+  const allFields = fields.length ? fields : inferredFields
+  const [density, setDensity] = useState<Density>('comfortable')
+  const [sortState, setSortState] = useState<SortState>(null)
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set())
+  const [columnMenuOpen, setColumnMenuOpen] = useState(false)
 
-  const activeFields = fields.length ? fields : inferredFields
+  const activeFields = useMemo(
+    () => allFields.filter((field: any) => !hiddenColumns.has(field.fieldKey)),
+    [allFields, hiddenColumns],
+  )
+
+  const sortedRows = useMemo(() => {
+    if (!sortState) return rows
+
+    const field = allFields.find((item: any) => item.fieldKey === sortState.fieldKey)
+    const numeric = isNumericField(field)
+
+    return [...rows].sort((left, right) => {
+      const result = compareValues(
+        resolveFieldValue(left, sortState.fieldKey),
+        resolveFieldValue(right, sortState.fieldKey),
+        numeric,
+      )
+      return sortState.direction === 'asc' ? result : -result
+    })
+  }, [rows, sortState, allFields])
+
   const totalField =
-    activeFields.find(
-      (field) =>
-        field.aggregation === 'SUM' || /Currency|Number|Percent/i.test(field.dataType || ''),
-    ) || activeFields[0]
+    activeFields.find((field: any) => field.aggregation === 'SUM' || isNumericField(field)) ||
+    activeFields[0]
 
-  const totals = activeFields.reduce((acc, field) => {
-    if (field.aggregation === 'SUM') {
-      acc[field.fieldKey] = totalForField(rows, field)
-    }
-    return acc
-  }, {})
+  const totals = useMemo(
+    () =>
+      activeFields.reduce((acc: Record<string, number>, field: any) => {
+        if (field.aggregation === 'SUM') {
+          acc[field.fieldKey] = totalForField(rows, field)
+        }
+        return acc
+      }, {}),
+    [activeFields, rows],
+  )
 
   const comparisonFields = activeFields.filter(isComparableField)
   const hasComparativeData = comparisonSummary?.enabled || comparisonRows.length > 0
 
-  const groupedRows = rows.reduce((acc, row) => {
-    const section = getSectionKey(row)
-    if (!acc[section]) acc[section] = []
-    acc[section].push(row)
-    return acc
-  }, {})
+  const groupedRows = useMemo(
+    () =>
+      sortedRows.reduce((acc: Record<string, any[]>, row: any) => {
+        const section = getSectionKey(row)
+        if (!acc[section]) acc[section] = []
+        acc[section].push(row)
+        return acc
+      }, {}),
+    [sortedRows],
+  )
 
   const sectionOrder = Object.keys(groupedRows)
-  const comparisonTotals = comparisonFields.reduce((acc, field) => {
-    acc[field.fieldKey] = {
-      current: totalForField(rows, field),
-      previous: totalForField(comparisonRows, field),
-    }
-    return acc
-  }, {})
+
+  const comparisonTotals = useMemo(
+    () =>
+      comparisonFields.reduce((acc: Record<string, any>, field: any) => {
+        acc[field.fieldKey] = {
+          current: totalForField(rows, field),
+          previous: totalForField(comparisonRows, field),
+        }
+        return acc
+      }, {}),
+    [comparisonFields, rows, comparisonRows],
+  )
+
+  const densityClass = {
+    compact: 'report-table-density-compact',
+    comfortable: 'report-table-density-comfortable',
+    spacious: 'report-table-density-spacious',
+  }[density]
+
+  const toggleSort = (field: any) => {
+    setSortState((current) => {
+      if (!current || current.fieldKey !== field.fieldKey) {
+        return { fieldKey: field.fieldKey, direction: 'asc' }
+      }
+      if (current.direction === 'asc') {
+        return { fieldKey: field.fieldKey, direction: 'desc' }
+      }
+      return null
+    })
+  }
+
+  const toggleColumn = (fieldKey: string) => {
+    setHiddenColumns((current) => {
+      const next = new Set(current)
+      if (next.has(fieldKey)) next.delete(fieldKey)
+      else if (activeFields.length > 1) next.add(fieldKey)
+      return next
+    })
+  }
+
+  if (loading) {
+    return <div className="report-table-loading">Loading report data…</div>
+  }
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_55px_-28px_rgba(27,77,46,0.35)]">
-      {hasComparativeData && comparisonFields.length > 0 && (
-        <div className="border-b border-slate-200 bg-slate-50 px-4 py-4">
-          <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-500">
-            <span className="rounded-full bg-white px-3 py-1 text-[#1B4D2E]">
-              Comparison enabled
-            </span>
-            {comparisonSummary.currentPeriodLabel && (
-              <span className="rounded-full bg-white px-3 py-1">
-                {comparisonSummary.currentPeriodLabel}
+    <section className="enterprise-report-table">
+      <header className="report-table-toolbar no-print">
+        <div className="report-table-toolbar__summary">
+          <strong>{rows.length.toLocaleString()}</strong>
+          <span>records</span>
+          <span className="report-table-toolbar__divider" />
+          <span>{activeFields.length} visible columns</span>
+          {sortState ? (
+            <>
+              <span className="report-table-toolbar__divider" />
+              <span>
+                Sorted by{' '}
+                {allFields.find((field: any) => field.fieldKey === sortState.fieldKey)?.label}
               </span>
-            )}
-            {comparisonSummary.previousPeriodLabel && (
-              <span className="rounded-full bg-white px-3 py-1">
-                {comparisonSummary.previousPeriodLabel}
-              </span>
-            )}
+            </>
+          ) : null}
+        </div>
+
+        <div className="report-table-toolbar__actions">
+          <div className="report-table-segmented" aria-label="Table density">
+            {(['compact', 'comfortable', 'spacious'] as Density[]).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setDensity(option)}
+                className={density === option ? 'is-active' : ''}
+                title={`${option} row density`}
+                aria-pressed={density === option}
+              >
+                <Rows3 size={14} />
+                <span>{option}</span>
+              </button>
+            ))}
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50">
+          <div className="report-column-control">
+            <button
+              type="button"
+              className="report-table-tool-button"
+              onClick={() => setColumnMenuOpen((open) => !open)}
+              aria-expanded={columnMenuOpen}
+            >
+              <Columns3 size={15} />
+              Columns
+            </button>
+
+            {columnMenuOpen ? (
+              <div className="report-column-menu">
+                <div className="report-column-menu__header">
+                  <div>
+                    <strong>Visible columns</strong>
+                    <span>Keep at least one column visible.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setHiddenColumns(new Set())}
+                    title="Restore all columns"
+                  >
+                    <RotateCcw size={14} />
+                  </button>
+                </div>
+
+                <div className="report-column-menu__list">
+                  {allFields.map((field: any) => (
+                    <label key={field.fieldKey}>
+                      <input
+                        type="checkbox"
+                        checked={!hiddenColumns.has(field.fieldKey)}
+                        onChange={() => toggleColumn(field.fieldKey)}
+                      />
+                      <span>{field.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </header>
+
+      {hasComparativeData && comparisonFields.length > 0 ? (
+        <section className="report-comparison-summary">
+          <header>
+            <div>
+              <strong>Comparative summary</strong>
+              <span>
+                {comparisonSummary.currentPeriodLabel || 'Current period'} against{' '}
+                {comparisonSummary.previousPeriodLabel || 'previous period'}
+              </span>
+            </div>
+          </header>
+
+          <div className="report-table-scroll">
+            <table>
+              <thead>
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wide text-slate-500">
-                    Metric
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-wide text-slate-500">
-                    Current
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-wide text-slate-500">
-                    Previous
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-wide text-slate-500">
-                    Variance
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-wide text-slate-500">
-                    Variance %
-                  </th>
+                  <th>Metric</th>
+                  <th className="numeric">Current</th>
+                  <th className="numeric">Previous</th>
+                  <th className="numeric">Variance</th>
+                  <th className="numeric">Variance %</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {comparisonFields.map((field) => {
+              <tbody>
+                {comparisonFields.map((field: any) => {
                   const currentValue = comparisonTotals[field.fieldKey]?.current || 0
                   const previousValue = comparisonTotals[field.fieldKey]?.previous || 0
                   const variance = currentValue - previousValue
@@ -135,18 +322,18 @@ export default function MetadataReportTable({
                   )
 
                   return (
-                    <tr key={field.fieldKey} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-semibold text-slate-700">{field.label}</td>
-                      <td className="px-4 py-3 text-right font-mono text-slate-700">
+                    <tr key={field.fieldKey}>
+                      <td>{field.label}</td>
+                      <td className="numeric">
                         {formatReportCell(currentValue, field.dataType, field.displayFormat)}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-slate-700">
+                      <td className="numeric">
                         {formatReportCell(previousValue, field.dataType, field.displayFormat)}
                       </td>
-                      <td className={`px-4 py-3 text-right font-mono ${varianceClass}`}>
+                      <td className={`numeric ${varianceClass}`}>
                         {formatReportCell(variance, field.dataType, field.displayFormat)}
                       </td>
-                      <td className={`px-4 py-3 text-right font-mono ${varianceClass}`}>
+                      <td className={`numeric ${varianceClass}`}>
                         {formatReportCell(variancePercent, 'Percent')}
                       </td>
                     </tr>
@@ -155,69 +342,93 @@ export default function MetadataReportTable({
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        </section>
+      ) : null}
 
-      <div className="max-h-[560px] overflow-auto">
-        <table className="min-w-full divide-y divide-slate-200 text-sm report-print-table">
-          <thead className="sticky top-0 z-10 bg-[#F7F4EC]">
+      <div className={`report-table-scroll report-table-main ${densityClass}`}>
+        <table className="report-print-table">
+          <thead>
             <tr>
-              {activeFields.map((field) => (
-                <th
-                  key={field.fieldKey}
-                  className={`whitespace-nowrap px-5 py-4 text-[11px] font-black uppercase tracking-[0.22em] text-[#4B5B4E] ${
-                    field.alignment === 'right' ? 'text-right' : 'text-left'
-                  }`}
-                >
-                  {field.label}
-                </th>
-              ))}
+              {activeFields.map((field: any) => {
+                const sorted = sortState?.fieldKey === field.fieldKey
+                const SortIcon = !sorted
+                  ? ArrowUpDown
+                  : sortState?.direction === 'asc'
+                    ? ArrowUp
+                    : ArrowDown
+
+                return (
+                  <th
+                    key={field.fieldKey}
+                    className={isNumericField(field) ? 'numeric' : undefined}
+                    aria-sort={
+                      sorted
+                        ? sortState?.direction === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                  >
+                    <button type="button" onClick={() => toggleSort(field)}>
+                      <span>{field.label}</span>
+                      <SortIcon size={13} aria-hidden="true" />
+                    </button>
+                  </th>
+                )
+              })}
+              {onRowOpen ? <th className="report-row-action-column no-print">Open</th> : null}
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-slate-100 bg-white">
+          <tbody>
             {sectionOrder.length > 0
               ? sectionOrder.map((sectionKey) => {
                   const sectionRows = groupedRows[sectionKey]
                   const sectionLabel = formatSectionLabel(sectionKey)
-                  const sectionTotal = sectionRows.reduce((sum, row) => {
-                    const value = resolveFieldValue(row, totalField.fieldKey)
-                    return sum + Number(value || 0)
-                  }, 0)
+                  const sectionTotal = totalField
+                    ? sectionRows.reduce((sum, row) => {
+                        const value = resolveFieldValue(row, totalField.fieldKey)
+                        return sum + Number(value || 0)
+                      }, 0)
+                    : 0
 
                   return (
-                    <>
-                      <tr className="erp-group-row border-b border-[#e7dfce] bg-[#F7F4EC] text-[#1B4D2E]">
-                        <td
-                          colSpan={activeFields.length}
-                          className="px-5 py-4 text-[11px] font-black uppercase tracking-[0.24em]"
-                        >
+                    <Fragment key={sectionKey}>
+                      <tr className="report-group-row">
+                        <td colSpan={activeFields.length + (onRowOpen ? 1 : 0)}>
                           {sectionLabel}
+                          <span>{sectionRows.length} records</span>
                         </td>
                       </tr>
+
                       {sectionRows.map((row, rowIndex) => (
-                        <tr key={`${sectionKey}-${rowIndex}`} className="hover:bg-[#FCFBF7]">
-                          {activeFields.map((field) => {
+                        <tr
+                          key={rowKey(row, rowIndex)}
+                          className={onRowOpen ? 'is-drillable' : undefined}
+                          onDoubleClick={onRowOpen ? () => onRowOpen(row) : undefined}
+                        >
+                          {activeFields.map((field: any) => {
                             const cellValue = resolveFieldValue(row, field.fieldKey)
                             const varianceClass = /variance/i.test(field.fieldKey || '')
                               ? getVarianceToneClass(row, cellValue)
                               : ''
-
-                            const isLabelField = ['account_name', 'particulars', 'label'].includes(field.fieldKey)
-                            const noteRef = isLabelField ? row?.notes_reference : null
+                            const labelField = ['account_name', 'particulars', 'label'].includes(
+                              field.fieldKey,
+                            )
+                            const noteRef = labelField ? row?.notes_reference : null
 
                             return (
                               <td
                                 key={field.fieldKey}
-                                className={`whitespace-nowrap px-5 py-4 text-[0.94rem] font-medium text-slate-700 ${
-                                  field.alignment === 'right' ? 'text-right font-mono' : ''
-                                } ${varianceClass}`.trim()}
+                                className={`${isNumericField(field) ? 'numeric' : ''} ${varianceClass}`.trim()}
                               >
-                                {formatReportCell(cellValue, field.dataType, field.displayFormat)}
+                                <span className="report-cell-value">
+                                  {formatReportCell(cellValue, field.dataType, field.displayFormat)}
+                                </span>
                                 {noteRef ? (
                                   <a
                                     href={`/reports/notes#note-${noteRef}`}
-                                    className="ml-1 align-super text-[0.7em] font-semibold text-emerald-700 hover:underline"
+                                    className="report-note-reference"
                                     title={`See Note ${noteRef}`}
                                   >
                                     [{noteRef}]
@@ -226,29 +437,46 @@ export default function MetadataReportTable({
                               </td>
                             )
                           })}
+
+                          {onRowOpen ? (
+                            <td className="report-row-action-column no-print">
+                              <button
+                                type="button"
+                                onClick={() => onRowOpen(row)}
+                                aria-label="Open report record"
+                              >
+                                <ExternalLink size={14} />
+                              </button>
+                            </td>
+                          ) : null}
                         </tr>
                       ))}
-                      <tr className="erp-subtotal-row border-t border-[#e7dfce] bg-[#FCFBF7]">
-                        <td className="px-5 py-4 text-sm font-black text-slate-900">
-                          Section Total
-                        </td>
-                        <td
-                          className="px-5 py-4 text-right text-sm font-black text-slate-900"
-                          colSpan={activeFields.length - 1}
-                        >
-                          {formatReportCell(
-                            sectionTotal,
-                            totalField.dataType,
-                            totalField.displayFormat,
-                          )}
-                        </td>
-                      </tr>
-                    </>
+
+                      {totalField ? (
+                        <tr className="report-subtotal-row">
+                          <td>Section total</td>
+                          <td
+                            className="numeric"
+                            colSpan={Math.max(activeFields.length - 1 + (onRowOpen ? 1 : 0), 1)}
+                          >
+                            {formatReportCell(
+                              sectionTotal,
+                              totalField.dataType,
+                              totalField.displayFormat,
+                            )}
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
                   )
                 })
-              : rows.map((row, rowIndex) => (
-                  <tr key={rowIndex} className="hover:bg-[#FCFBF7]">
-                    {activeFields.map((field) => {
+              : sortedRows.map((row, rowIndex) => (
+                  <tr
+                    key={rowKey(row, rowIndex)}
+                    className={onRowOpen ? 'is-drillable' : undefined}
+                    onDoubleClick={onRowOpen ? () => onRowOpen(row) : undefined}
+                  >
+                    {activeFields.map((field: any) => {
                       const cellValue = resolveFieldValue(row, field.fieldKey)
                       const varianceClass = /variance/i.test(field.fieldKey || '')
                         ? getVarianceToneClass(row, cellValue)
@@ -257,41 +485,45 @@ export default function MetadataReportTable({
                       return (
                         <td
                           key={field.fieldKey}
-                          className={`whitespace-nowrap px-5 py-4 text-[0.94rem] font-medium text-slate-700 ${
-                            field.alignment === 'right' ? 'text-right font-mono' : ''
-                          } ${varianceClass}`.trim()}
+                          className={`${isNumericField(field) ? 'numeric' : ''} ${varianceClass}`.trim()}
                         >
                           {formatReportCell(cellValue, field.dataType, field.displayFormat)}
                         </td>
                       )
                     })}
+
+                    {onRowOpen ? (
+                      <td className="report-row-action-column no-print">
+                        <button type="button" onClick={() => onRowOpen(row)}>
+                          <ExternalLink size={14} />
+                        </button>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
 
-            {rows.length === 0 && (
+            {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={Math.max(activeFields.length, 1)}
-                  className="px-5 py-12 text-center text-sm font-semibold text-slate-400"
+                  colSpan={Math.max(activeFields.length + (onRowOpen ? 1 : 0), 1)}
+                  className="report-table-empty"
                 >
-                  No data found.
+                  No data found for the selected criteria.
                 </td>
               </tr>
-            )}
+            ) : null}
           </tbody>
 
-          {Object.keys(totals).length > 0 && (
-            <tfoot className="sticky bottom-0 bg-slate-50">
-              <tr className="erp-grandtotal-row border-t border-[#d9d2c2] bg-[#F7F4EC]">
-                {activeFields.map((field, index) => (
+          {Object.keys(totals).length > 0 ? (
+            <tfoot>
+              <tr>
+                {activeFields.map((field: any, index: number) => (
                   <td
                     key={field.fieldKey}
-                    className={`whitespace-nowrap px-5 py-4 text-sm font-black text-slate-900 ${
-                      field.alignment === 'right' ? 'text-right font-mono' : ''
-                    }`}
+                    className={isNumericField(field) ? 'numeric' : undefined}
                   >
                     {index === 0
-                      ? 'Total'
+                      ? 'Grand total'
                       : totals[field.fieldKey] !== undefined
                         ? formatReportCell(
                             totals[field.fieldKey],
@@ -301,11 +533,12 @@ export default function MetadataReportTable({
                         : ''}
                   </td>
                 ))}
+                {onRowOpen ? <td className="no-print" /> : null}
               </tr>
             </tfoot>
-          )}
+          ) : null}
         </table>
       </div>
-    </div>
+    </section>
   )
 }

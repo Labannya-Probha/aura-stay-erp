@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Hotel, RefreshCw } from 'lucide-react'
 
+import CheckoutHistoryPage from './CheckoutHistoryPage'
+
+import PrintPortal from '../../components/PrintPortal'
+import GuestBill from '../../components/print/GuestBill'
+import Mushak63 from '../../components/print/Mushak63'
+import { getPrintBrandProps } from '../../lib/companySettings'
+
 import EnterpriseWorkspace from '../../components/layout/EnterpriseWorkspace'
 import { Button } from '../../components/ui/button'
 import { can } from '../../lib/roles'
@@ -40,31 +47,33 @@ export default function FrontOfficePage({
   privileges,
 }) {
   const { activeSlug, activePage, setActiveTab } = useFrontOfficeTabs()
+  const location = window.location.pathname
   const [checkInTarget, setCheckInTarget] = useState(null)
   const [checkOutTarget, setCheckOutTarget] = useState(null)
   const [roomMoveTarget, setRoomMoveTarget] = useState(null)
   const [stayAmendTarget, setStayAmendTarget] = useState(null)
+  const [printDoc, setPrintDoc] = useState(null)
 
-  const {
-    summary,
-    arrivals,
-    departures,
-    inHouse,
-    roomRack,
-    loading,
-    refreshing,
-    error,
-    refresh,
-  } = useFrontOfficeData()
+  const { summary, arrivals, departures, inHouse, roomRack, loading, refreshing, error, refresh } =
+    useFrontOfficeData()
 
   const visiblePages = useMemo(
     () => FRONT_OFFICE_PAGES.filter((page) => hasPageAccess(page, { role, isAdmin, privileges })),
-    [role, isAdmin, privileges]
+    [role, isAdmin, privileges],
   )
 
-  const currentPage = visiblePages.some((page) => page.slug === activeSlug)
-    ? activePage
-    : visiblePages[0] || getFrontOfficePage('room-rack')
+  const currentPage = useMemo(() => {
+    const slugFromPath = location.split('/').filter(Boolean).pop()
+    const resolvedSlug =
+      slugFromPath && visiblePages.some((page) => page.slug === slugFromPath)
+        ? slugFromPath
+        : activeSlug
+
+    if (visiblePages.some((page) => page.slug === resolvedSlug)) {
+      return getFrontOfficePage(resolvedSlug)
+    }
+    return visiblePages[0] || getFrontOfficePage('room-rack')
+  }, [activeSlug, location, visiblePages])
 
   const renderPage = () => {
     switch (currentPage.renderer) {
@@ -96,6 +105,7 @@ export default function FrontOfficePage({
             openReservation={openReservation}
             onRoomMove={setRoomMoveTarget}
             onStayAmend={setStayAmendTarget}
+            onCheckOut={setCheckOutTarget}
           />
         )
       case 'check-in-out':
@@ -111,7 +121,9 @@ export default function FrontOfficePage({
               />
             </section>
             <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4">
-              <h2 className="mb-4 text-sm font-semibold text-slate-900">Departure Checkout Queue</h2>
+              <h2 className="mb-4 text-sm font-semibold text-slate-900">
+                Departure Checkout Queue
+              </h2>
               <DepartureBoardPage
                 rows={departures}
                 loading={loading}
@@ -133,6 +145,14 @@ export default function FrontOfficePage({
         return <LostFoundPage />
       case 'guest-messages':
         return <GuestMessagesPage />
+      case 'checkout-history':
+        return (
+          <CheckoutHistoryPage
+            openReservation={openReservation}
+            onPrintBill={(payload) => setPrintDoc(payload)}
+            company={company}
+          />
+        )
       default:
         return null
     }
@@ -145,7 +165,10 @@ export default function FrontOfficePage({
           {error}
         </div>
       ) : null}
-      <section id={`front-office-page-${currentPage.slug}`} data-front-office-page={currentPage.slug}>
+      <section
+        id={`front-office-page-${currentPage.slug}`}
+        data-front-office-page={currentPage.slug}
+      >
         <FrontOfficeRouteBoundary routeKey={currentPage.slug}>
           {renderPage()}
         </FrontOfficeRouteBoundary>
@@ -173,7 +196,11 @@ export default function FrontOfficePage({
         </EnterpriseWorkspace>
       ) : (
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <FrontOfficePageHeader page={currentPage} onRefresh={refresh} refreshing={loading || refreshing} />
+          <FrontOfficePageHeader
+            page={currentPage}
+            onRefresh={refresh}
+            refreshing={loading || refreshing}
+          />
           {content}
         </section>
       )}
@@ -191,6 +218,9 @@ export default function FrontOfficePage({
         userName={userName}
         onClose={() => setCheckOutTarget(null)}
         onCompleted={refresh}
+        onPrintBill={(payload) => setPrintDoc(payload)}
+        company={company}
+        guest={checkOutTarget?.guest}
       />
       <RoomMoveDialog
         open={Boolean(roomMoveTarget)}
@@ -206,6 +236,51 @@ export default function FrontOfficePage({
         onClose={() => setStayAmendTarget(null)}
         onCompleted={refresh}
       />
+
+      {printDoc?.type === 'BILL' && (
+        <PrintPortal
+          title="Guest Bill"
+          onClose={() => setPrintDoc(null)}
+          {...getPrintBrandProps(company)}
+        >
+          <GuestBill
+            charges={printDoc.invoiceData?.charges ?? []}
+            line_snapshot={printDoc.invoiceData?.line_snapshot ?? []}
+            totals={printDoc.invoiceData?.totals ?? {}}
+            paid={printDoc.invoiceData?.paid ?? 0}
+            due={printDoc.invoiceData?.due ?? 0}
+            res={printDoc.res}
+            guest={printDoc.guest}
+            company={printDoc.company || company}
+            invoice_no={printDoc.invoiceData?.invoice_no}
+            issued_at={printDoc.invoiceData?.issued_at}
+            copyLabel="Guest Copy"
+            singleCopy
+          />
+        </PrintPortal>
+      )}
+
+      {printDoc?.type === 'MUSHAK' && (
+        <PrintPortal
+          title="Mushak-6.3"
+          onClose={() => setPrintDoc(null)}
+          {...getPrintBrandProps(company)}
+        >
+          <Mushak63
+            charges={printDoc.invoiceData?.charges ?? []}
+            line_snapshot={printDoc.invoiceData?.line_snapshot ?? []}
+            totals={printDoc.invoiceData?.totals ?? {}}
+            paid={printDoc.invoiceData?.paid ?? 0}
+            due={printDoc.invoiceData?.due ?? 0}
+            res={printDoc.res}
+            guest={printDoc.guest}
+            company={printDoc.company || company}
+            invoice_no={printDoc.invoiceData?.invoice_no}
+            issued_at={printDoc.invoiceData?.issued_at}
+            refNo={printDoc.res?.res_no}
+          />
+        </PrintPortal>
+      )}
     </>
   )
 }
