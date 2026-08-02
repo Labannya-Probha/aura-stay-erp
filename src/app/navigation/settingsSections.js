@@ -9,6 +9,7 @@ export const SETTINGS_SECTIONS = [
   { id: 'admin-feature-access', label: 'Admin Feature Access', superuserOnly: true },
   { id: 'staff', label: 'Staff Management' },
   { id: 'reservation-policy', label: 'Reservation Policy', adminOnly: true },
+  { id: 'room-types-rates', label: 'Room Types & Rate Plans', adminOnly: true },
   { id: 'data-system', label: 'Data & System', superuserOnly: true },
 ]
 

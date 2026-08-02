@@ -10,6 +10,7 @@ import EmptyState from '../../components/feedback/EmptyState'
 import PermissionDebugStrip from '../../components/debug/PermissionDebugStrip'
 import AdminFeatureAccessCard from '../../components/settings/AdminFeatureAccessCard'
 import ReservationPolicyCard from '../../components/settings/ReservationPolicyCard'
+import RoomTypesRatePlansSection from './sections/RoomTypesRatePlansSection'
 import {
   SETTINGS_SECTIONS,
   getVisibleSettingsSections,
@@ -88,6 +89,7 @@ export default function Settings({ userName, role, isAdmin, reloadCompany }) {
         />
       ),
       'reservation-policy': <ReservationPolicyCard />,
+      'room-types-rates': <RoomTypesRatePlansSection />,
       'data-system': <SystemDataSection />,
     }),
     [isAdminPlus, isSuperuser, myTenantId, reloadCompany, userName],
