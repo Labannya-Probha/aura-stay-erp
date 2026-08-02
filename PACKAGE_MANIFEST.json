@@ -1,0 +1,15 @@
+{
+  "package": "AEDS Report Center v2",
+  "release": "Cumulative Slice 6",
+  "includes": ["Slice 1", "Slice 2", "Slice 3", "Slice 4", "Slice 5", "Slice 6"],
+  "primary_scope": [
+    "Report Center explorer",
+    "Saved views and explicit run workflow",
+    "Enterprise report table",
+    "Financial statement renderer",
+    "Approval and version governance",
+    "Report health and provenance",
+    "Keyboard shortcuts and fullscreen workspace"
+  ],
+  "install": "Copy the src directory into the repository root and review README.md before merging."
+}

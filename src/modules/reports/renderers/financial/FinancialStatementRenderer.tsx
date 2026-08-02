@@ -10,6 +10,8 @@ type StatementLine = {
   line_type?: string
   current_amount?: number | string | null
   comparison_amount?: number | string | null
+  variance_amount?: number | string | null
+  variance_percent?: number | string | null
   amount?: number | string | null
   value?: number | string | null
   show_if_zero?: boolean
@@ -17,6 +19,7 @@ type StatementLine = {
   is_underlined?: boolean
   is_double_underlined?: boolean
   notes_reference?: string | null
+  drilldown_url?: string | null
 }
 
 type FormattingSettings = {
@@ -25,18 +28,30 @@ type FormattingSettings = {
   currency_position?: string
   decimal_places?: number
   amount_scale?: number
+  amount_scale_label?: string
   negative_format?: string
   zero_format?: string
   show_account_codes?: boolean
   show_notes_column?: boolean
+  show_variance_columns?: boolean
+}
+
+type ReportDefinition = {
+  title?: string
+  description?: string
+  statement_type?: string
+  report_code?: string
+  status?: string
 }
 
 type Props = {
-  report?: { title?: string; description?: string }
+  report?: ReportDefinition
   period?: Record<string, any>
   formatting?: FormattingSettings
   validation?: {
     valid?: boolean
+    balanced?: boolean
+    generated_at?: string
     errors?: Array<{ code?: string; message?: string }>
     warnings?: Array<{ code?: string; message?: string }>
   }
@@ -50,6 +65,32 @@ function toNumber(value: unknown) {
 }
 
 function normalizeLine(line: StatementLine, index: number): StatementLine {
+  const current =
+    line.current_amount !== undefined
+      ? line.current_amount
+      : line.amount !== undefined
+        ? line.amount
+        : line.value
+
+  const comparison = line.comparison_amount
+  const variance =
+    line.variance_amount !== undefined && line.variance_amount !== null
+      ? line.variance_amount
+      : comparison !== undefined && comparison !== null
+        ? toNumber(current) - toNumber(comparison)
+        : null
+
+  const variancePercent =
+    line.variance_percent !== undefined && line.variance_percent !== null
+      ? line.variance_percent
+      : comparison !== undefined && comparison !== null
+        ? toNumber(comparison) !== 0
+          ? (toNumber(variance) / Math.abs(toNumber(comparison))) * 100
+          : toNumber(current) !== 0
+            ? 100
+            : 0
+        : null
+
   return {
     ...line,
     line_code: line.line_code || `LEGACY.${index}`,
@@ -57,12 +98,10 @@ function normalizeLine(line: StatementLine, index: number): StatementLine {
     display_order: Number(line.display_order ?? index),
     indent_level: Number(line.indent_level ?? 0),
     line_type: String(line.line_type || 'LINE').toUpperCase(),
-    current_amount:
-      line.current_amount !== undefined
-        ? line.current_amount
-        : line.amount !== undefined
-          ? line.amount
-          : line.value,
+    current_amount: current,
+    comparison_amount: comparison,
+    variance_amount: variance,
+    variance_percent: variancePercent,
   }
 }
 
@@ -101,31 +140,92 @@ function createAmountFormatter(settings: FormattingSettings = {}) {
   }
 }
 
+function createPercentFormatter(decimals = 1) {
+  return (value: unknown) => {
+    const numeric = toNumber(value)
+    if (Math.abs(numeric) < 0.0001) return '—'
+    return `${numeric.toLocaleString('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    })}%`
+  }
+}
+
 function lineClassName(line: StatementLine) {
   const type = String(line.line_type || '').toUpperCase()
 
   return [
     'financial-statement-line',
-    type === 'HEADER' ? 'financial-statement-line--header' : '',
+    type === 'HEADER' || type === 'SECTION' ? 'financial-statement-line--header' : '',
     type === 'SUBTOTAL' || line.is_underlined ? 'financial-statement-line--subtotal' : '',
     type === 'GRAND_TOTAL' || line.is_double_underlined
       ? 'financial-statement-line--grand-total'
       : '',
     type === 'CALCULATED' ? 'financial-statement-line--calculated' : '',
+    type === 'MEMO' ? 'financial-statement-line--memo' : '',
     line.is_bold ? 'financial-statement-line--bold' : '',
   ]
     .filter(Boolean)
     .join(' ')
 }
 
-function formatPeriod(period: Record<string, any> = {}) {
+function formatDate(value: unknown) {
+  if (!value) return null
+  const date = new Date(String(value))
+  if (Number.isNaN(date.getTime())) return String(value)
+
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date)
+}
+
+function resolvePeriod(period: Record<string, any> = {}) {
   const start = period.start_date || period.period_start || period.startDate || period.date_from
   const end = period.end_date || period.period_end || period.endDate || period.date_to
   const asOf = period.as_of_date || period.asOfDate
+  const comparisonStart =
+    period.comparison_start_date || period.previous_period_start || period.comparisonStartDate
+  const comparisonEnd =
+    period.comparison_end_date || period.previous_period_end || period.comparisonEndDate
 
-  if (start && end) return `For the period ${start} to ${end}`
-  if (asOf || end) return `As at ${asOf || end}`
-  return null
+  const currentLabel =
+    start && end
+      ? `${formatDate(start)} – ${formatDate(end)}`
+      : asOf || end
+        ? `As at ${formatDate(asOf || end)}`
+        : 'Current period'
+
+  const comparisonLabel =
+    comparisonStart && comparisonEnd
+      ? `${formatDate(comparisonStart)} – ${formatDate(comparisonEnd)}`
+      : period.comparison_label || period.previous_period_label || 'Comparative'
+
+  return {
+    currentLabel,
+    comparisonLabel,
+    statementLabel:
+      start && end
+        ? `For the period ended ${formatDate(end)}`
+        : asOf || end
+          ? `As at ${formatDate(asOf || end)}`
+          : null,
+  }
+}
+
+function varianceTone(value: unknown) {
+  const amount = toNumber(value)
+  if (amount > 0) return 'financial-statement-variance--positive'
+  if (amount < 0) return 'financial-statement-variance--negative'
+  return 'financial-statement-variance--neutral'
+}
+
+function statusLabel(report?: ReportDefinition, validation?: Props['validation']) {
+  if (validation?.valid === false) return 'Validation failed'
+  if (validation?.balanced === false) return 'Out of balance'
+  if (report?.status) return report.status
+  return 'Generated'
 }
 
 export default function FinancialStatementRenderer({
@@ -139,7 +239,7 @@ export default function FinancialStatementRenderer({
   if (loading) {
     return (
       <section className="financial-statement-document financial-statement-loading">
-        Loading financial statement…
+        Preparing financial statement…
       </section>
     )
   }
@@ -147,8 +247,9 @@ export default function FinancialStatementRenderer({
   const normalizedLines = lines
     .map(normalizeLine)
     .filter((line) => {
+      const lineType = String(line.line_type).toUpperCase()
       if (line.show_if_zero) return true
-      if (String(line.line_type).toUpperCase() === 'HEADER') return true
+      if (lineType === 'HEADER' || lineType === 'SECTION' || lineType === 'MEMO') return true
       return toNumber(line.current_amount) !== 0 || toNumber(line.comparison_amount) !== 0
     })
     .sort((left, right) => Number(left.display_order || 0) - Number(right.display_order || 0))
@@ -158,52 +259,85 @@ export default function FinancialStatementRenderer({
   )
   const showNotes = Boolean(formatting.show_notes_column)
   const showCodes = Boolean(formatting.show_account_codes)
+  const showVariance = Boolean(formatting.show_variance_columns && hasComparison)
   const formatAmount = createAmountFormatter(formatting)
-  const statementPeriod = formatPeriod(period)
+  const formatPercent = createPercentFormatter(1)
+  const resolvedPeriod = resolvePeriod(period)
   const validationErrors = validation?.errors || []
   const validationWarnings = validation?.warnings || []
+  const scaleLabel =
+    formatting.amount_scale_label ||
+    (Number(formatting.amount_scale || 1) === 1000
+      ? 'Amounts in thousands'
+      : Number(formatting.amount_scale || 1) === 1000000
+        ? 'Amounts in millions'
+        : null)
+
+  const visibleColumns = 2 + Number(hasComparison) + Number(showNotes) + Number(showVariance) * 2
 
   return (
-    <section
+    <article
       className="financial-statement-document"
       aria-label={report?.title || 'Financial statement'}
     >
-      {validation?.valid === false ? (
-        <div
+      <header className="financial-statement-heading">
+        <div className="financial-statement-heading__primary">
+          <span className="financial-statement-heading__type">
+            {report?.statement_type || 'Financial statement'}
+          </span>
+          <h2>{report?.title || 'Financial Statement'}</h2>
+          {resolvedPeriod.statementLabel ? <p>{resolvedPeriod.statementLabel}</p> : null}
+        </div>
+
+        <div className="financial-statement-heading__meta">
+          <dl>
+            {report?.report_code ? (
+              <div>
+                <dt>Report code</dt>
+                <dd>{report.report_code}</dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>Currency</dt>
+              <dd>{formatting.reporting_currency || 'BDT'}</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd>{statusLabel(report, validation)}</dd>
+            </div>
+          </dl>
+          {scaleLabel ? <span>{scaleLabel}</span> : null}
+        </div>
+      </header>
+
+      {validation?.valid === false || validation?.balanced === false ? (
+        <section
           className="financial-statement-validation financial-statement-validation--error"
           role="alert"
         >
-          <strong>Statement validation failed.</strong>
-          {validationErrors.map((error, index) => (
-            <span key={`${error.code || 'error'}-${index}`}>
-              {error.message || error.code || 'Financial validation error'}
-            </span>
-          ))}
-        </div>
+          <strong>Statement cannot be treated as final.</strong>
+          {validationErrors.length > 0 ? (
+            validationErrors.map((error, index) => (
+              <span key={`${error.code || 'error'}-${index}`}>
+                {error.message || error.code || 'Financial validation error'}
+              </span>
+            ))
+          ) : (
+            <span>The statement failed one or more financial validation controls.</span>
+          )}
+        </section>
       ) : null}
 
       {validationWarnings.length > 0 ? (
-        <div className="financial-statement-validation financial-statement-validation--warning">
+        <section className="financial-statement-validation financial-statement-validation--warning">
+          <strong>Review required</strong>
           {validationWarnings.map((warning, index) => (
             <span key={`${warning.code || 'warning'}-${index}`}>
               {warning.message || warning.code}
             </span>
           ))}
-        </div>
+        </section>
       ) : null}
-
-      <header className="financial-statement-heading">
-        <h2>{report?.title || 'Financial Statement'}</h2>
-        {statementPeriod ? <p>{statementPeriod}</p> : null}
-        {formatting.reporting_currency ? (
-          <p>
-            Currency: {formatting.reporting_currency}
-            {Number(formatting.amount_scale || 1) !== 1
-              ? ` · Amounts scaled by ${formatting.amount_scale}`
-              : ''}
-          </p>
-        ) : null}
-      </header>
 
       {normalizedLines.length === 0 ? (
         <div className="financial-statement-empty">
@@ -214,26 +348,48 @@ export default function FinancialStatementRenderer({
           <table className="financial-statement-table">
             <thead>
               <tr>
-                <th scope="col">Particulars</th>
+                <th scope="col" className="financial-statement-particulars">
+                  Particulars
+                </th>
+                {showNotes ? (
+                  <th scope="col" className="financial-statement-notes-column">
+                    Note
+                  </th>
+                ) : null}
                 <th scope="col" className="financial-statement-amount">
-                  Current
+                  <span>Current</span>
+                  <small>{resolvedPeriod.currentLabel}</small>
                 </th>
                 {hasComparison ? (
                   <th scope="col" className="financial-statement-amount">
-                    Comparative
+                    <span>Comparative</span>
+                    <small>{resolvedPeriod.comparisonLabel}</small>
                   </th>
                 ) : null}
-                {showNotes ? <th scope="col">Notes</th> : null}
+                {showVariance ? (
+                  <>
+                    <th scope="col" className="financial-statement-amount">
+                      <span>Variance</span>
+                      <small>Amount</small>
+                    </th>
+                    <th scope="col" className="financial-statement-amount">
+                      <span>Variance</span>
+                      <small>%</small>
+                    </th>
+                  </>
+                ) : null}
               </tr>
             </thead>
+
             <tbody>
               {normalizedLines.map((line, index) => {
-                const isHeader = String(line.line_type).toUpperCase() === 'HEADER'
-                const visibleColumns = 2 + Number(hasComparison) + Number(showNotes)
+                const lineType = String(line.line_type).toUpperCase()
+                const isHeader = lineType === 'HEADER' || lineType === 'SECTION'
+                const key = line.id || line.line_code || index
 
                 if (isHeader) {
                   return (
-                    <tr key={line.id || line.line_code || index} className={lineClassName(line)}>
+                    <tr key={key} className={lineClassName(line)}>
                       <th colSpan={visibleColumns} scope="rowgroup">
                         {line.label}
                       </th>
@@ -242,32 +398,30 @@ export default function FinancialStatementRenderer({
                 }
 
                 return (
-                  <tr key={line.id || line.line_code || index} className={lineClassName(line)}>
-                    <td>
+                  <tr key={key} className={lineClassName(line)}>
+                    <td className="financial-statement-particulars">
                       <div
                         className="financial-statement-label"
                         style={{
                           paddingInlineStart: `${
-                            Math.max(0, Number(line.indent_level || 0)) * 1.25
+                            Math.max(0, Number(line.indent_level || 0)) * 1.125
                           }rem`,
                         }}
                       >
                         {showCodes && line.account_code ? (
                           <span className="financial-statement-code">{line.account_code}</span>
                         ) : null}
-                        <span>{line.label}</span>
+
+                        {line.drilldown_url ? (
+                          <a href={line.drilldown_url}>{line.label}</a>
+                        ) : (
+                          <span>{line.label}</span>
+                        )}
                       </div>
                     </td>
-                    <td className="financial-statement-amount">
-                      {formatAmount(line.current_amount)}
-                    </td>
-                    {hasComparison ? (
-                      <td className="financial-statement-amount">
-                        {formatAmount(line.comparison_amount)}
-                      </td>
-                    ) : null}
+
                     {showNotes ? (
-                      <td>
+                      <td className="financial-statement-notes-column">
                         {line.notes_reference ? (
                           <a
                             href={`/reports/notes#note-${line.notes_reference}`}
@@ -281,6 +435,35 @@ export default function FinancialStatementRenderer({
                         )}
                       </td>
                     ) : null}
+
+                    <td className="financial-statement-amount">
+                      {formatAmount(line.current_amount)}
+                    </td>
+
+                    {hasComparison ? (
+                      <td className="financial-statement-amount">
+                        {formatAmount(line.comparison_amount)}
+                      </td>
+                    ) : null}
+
+                    {showVariance ? (
+                      <>
+                        <td
+                          className={`financial-statement-amount ${varianceTone(
+                            line.variance_amount,
+                          )}`}
+                        >
+                          {formatAmount(line.variance_amount)}
+                        </td>
+                        <td
+                          className={`financial-statement-amount ${varianceTone(
+                            line.variance_percent,
+                          )}`}
+                        >
+                          {formatPercent(line.variance_percent)}
+                        </td>
+                      </>
+                    ) : null}
                   </tr>
                 )
               })}
@@ -288,6 +471,28 @@ export default function FinancialStatementRenderer({
           </table>
         </div>
       )}
-    </section>
+
+      <footer className="financial-statement-footer">
+        <div>
+          <strong>Statement basis</strong>
+          <span>
+            Generated from the validated reporting dataset. Values displayed here must reconcile
+            with the server-generated PDF and Excel outputs.
+          </span>
+        </div>
+        <dl>
+          {validation?.generated_at ? (
+            <div>
+              <dt>Generated</dt>
+              <dd>{formatDate(validation.generated_at)}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>Validation</dt>
+            <dd>{validation?.valid === false ? 'Failed' : 'Passed'}</dd>
+          </div>
+        </dl>
+      </footer>
+    </article>
   )
 }

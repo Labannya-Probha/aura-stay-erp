@@ -109,6 +109,17 @@ export const FRONT_OFFICE_PAGES = [
     order: 80,
   },
   {
+    id: 'checkout-history',
+    slug: 'checkout-history',
+    label: 'Checkout History',
+    title: 'Checked-out Guest History',
+    description: 'Review recently checked-out reservations and reopen their invoice preview.',
+    icon: LogOut,
+    permission: 'frontoffice',
+    renderer: 'checkout-history',
+    order: 85,
+  },
+  {
     id: 'night-audit',
     slug: 'night-audit',
     label: 'Night Audit',
@@ -165,7 +176,9 @@ export const DEFAULT_FRONT_OFFICE_TAB = DEFAULT_FRONT_OFFICE_PAGE
 export const FRONT_OFFICE_LEGACY_TAB_REDIRECTS = FRONT_OFFICE_LEGACY_SLUGS
 
 export function normalizeFrontOfficeSlug(value) {
-  const raw = String(value || '').trim().toLowerCase()
+  const raw = String(value || '')
+    .trim()
+    .toLowerCase()
   const normalized = FRONT_OFFICE_LEGACY_SLUGS[raw] || raw || DEFAULT_FRONT_OFFICE_PAGE
   return FRONT_OFFICE_PAGES.some((page) => page.slug === normalized)
     ? normalized

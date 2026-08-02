@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Eye, LogOut, Search } from 'lucide-react'
-import { supabase } from '../../../lib/supabase'
-import { withTenantScope } from '../../../lib/companySettings'
-import { fmtBDT, fmtDate } from '../../../lib/helpers'
-import { Button } from '../../../components/ui/button'
+import { Eye, Printer, Search } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
+import { withTenantScope } from '../../lib/companySettings'
+import { fmtBDT, fmtDate } from '../../lib/helpers'
+import { Button } from '../../components/ui/button'
+import { buildCheckoutBillPayload } from './dialog/checkoutPrint.utils'
 
 /**
  * New Front Office page: a checked-out guest history was missing
@@ -11,10 +12,11 @@ import { Button } from '../../../components/ui/button'
  * lists reservations by checkout status). This is purely additive: a
  * new page + a new FRONT_OFFICE_PAGES entry, no existing page touched.
  */
-export default function CheckoutHistoryPage({ openReservation }) {
+export default function CheckoutHistoryPage({ openReservation, onPrintBill, company }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [printingId, setPrintingId] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -38,6 +40,60 @@ export default function CheckoutHistoryPage({ openReservation }) {
   useEffect(() => {
     load()
   }, [])
+
+  const handlePreviewInvoice = async (row, type = 'BILL') => {
+    const invoice = row.invoices?.[0]
+    if (!invoice) return
+
+    setPrintingId(row.id)
+
+    try {
+      const [{ data: chargesData }, { data: paymentsData }] = await Promise.all([
+        withTenantScope(
+          supabase
+            .from('folio_charges')
+            .select(
+              'charge_date, charge_type, description, base_amount, discount, service_charge, vat, total, status',
+            )
+            .eq('reservation_id', row.id)
+            .order('charge_date', { ascending: true }),
+        ),
+        withTenantScope(supabase.from('payments').select('amount').eq('reservation_id', row.id)),
+      ])
+
+      const charges = (chargesData || []).filter((charge) => charge?.total != null)
+      const payments = (paymentsData || []).filter((payment) => payment?.amount != null)
+
+      const roomNos = (row.reservation_rooms || []).map((rr) => rr.rooms?.room_no).filter(Boolean)
+
+      const payload = buildCheckoutBillPayload({
+        reservation: {
+          reservationId: row.id,
+          reservationNo: row.res_no,
+          guestName: row.reservation_name || row.guests?.full_name || 'Guest',
+          checkIn: row.check_in,
+          checkOut: row.check_out,
+          roomNumber: roomNos[0] || '',
+          mobile: row.guests?.phone,
+        },
+        charges,
+        payments,
+        company,
+        guest: {
+          full_name: row.guests?.full_name || row.reservation_name || 'Guest',
+          phone: row.guests?.phone || '',
+          email: '',
+          id: row.guests?.id || '',
+        },
+        issuedAt: invoice.issued_at || row.checked_out_at || new Date().toISOString(),
+        invoiceNo: invoice.invoice_no,
+      })
+
+      onPrintBill?.({ ...payload, type: type === 'MUSHAK' ? 'MUSHAK' : 'BILL' })
+    } finally {
+      setPrintingId(null)
+    }
+  }
 
   const filteredRows = rows.filter((row) => {
     const needle = query.trim().toLowerCase()
@@ -135,15 +191,35 @@ export default function CheckoutHistoryPage({ openReservation }) {
                     {invoice ? fmtBDT(invoice.due) : '—'}
                   </td>
                   <td className="td">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => openReservation?.(row.id)}
-                      aria-label={`Open ${row.res_no}`}
-                    >
-                      <Eye size={14} />
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={() => handlePreviewInvoice(row, 'BILL')}
+                        disabled={!invoice || printingId === row.id}
+                      >
+                        <Printer size={12} className="mr-1" />
+                        Bill
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={() => handlePreviewInvoice(row, 'MUSHAK')}
+                        disabled={!invoice || printingId === row.id}
+                      >
+                        <Printer size={12} className="mr-1" />
+                        Mushak
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => openReservation?.(row.id)}
+                        aria-label={`Open ${row.res_no}`}
+                      >
+                        <Eye size={14} />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               )
