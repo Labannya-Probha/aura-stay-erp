@@ -4,6 +4,7 @@ import ReportGroupPanel from "./ReportGroupPanel"
 import { exportRowsToCsv, exportRowsToExcel, printLandscapeReport } from "../utils/reportExportPro"
 import { generateGenuineFinancialStatementPdf } from "../utils/genuinePdfExport"
 import { Button } from "src/components/ui/button"
+import { getCompany } from "src/lib/pms.api"
 
 export default function ReportTableToolbar({
   report,
@@ -16,11 +17,23 @@ export default function ReportTableToolbar({
   groupKey,
   setGroupKey,
 }) {
-  const exportGenuinePdf = () => {
-    const doc = generateGenuineFinancialStatementPdf({
+  const exportGenuinePdf = async () => {
+    let company = null
+    try {
+      const result = await getCompany()
+      company = result?.data || null
+    } catch {
+      // Branding is a nice-to-have — a failed lookup must not block the
+      // export itself, just fall back to a text-only header.
+    }
+    const doc = await generateGenuineFinancialStatementPdf({
       title: report?.title || "Financial Statement",
       periodLabel: "",
       rows: rows || [],
+      meta: {
+        tenantName: company?.name || "",
+        logoUrl: company?.logo_url || null,
+      },
     })
     doc.save(`${report?.slug || "report"}.pdf`)
   }
