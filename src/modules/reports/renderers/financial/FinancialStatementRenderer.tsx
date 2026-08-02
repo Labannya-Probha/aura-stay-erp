@@ -266,7 +266,21 @@ export default function FinancialStatementRenderer({
                         {formatAmount(line.comparison_amount)}
                       </td>
                     ) : null}
-                    {showNotes ? <td>{line.notes_reference || ''}</td> : null}
+                    {showNotes ? (
+                      <td>
+                        {line.notes_reference ? (
+                          <a
+                            href={`/reports/notes#note-${line.notes_reference}`}
+                            className="financial-statement-note-link"
+                            title={`See Note ${line.notes_reference}`}
+                          >
+                            {line.notes_reference}
+                          </a>
+                        ) : (
+                          ''
+                        )}
+                      </td>
+                    ) : null}
                   </tr>
                 )
               })}
