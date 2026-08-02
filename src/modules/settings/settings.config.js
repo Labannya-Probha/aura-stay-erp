@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Building2,
   BedDouble,
+  BellRing,
 } from 'lucide-react'
 
 export const SECTION_ICONS = {
@@ -27,6 +28,7 @@ export const SECTION_ICONS = {
   'role-permissions': ShieldCheck,
   'admin-feature-access': Lock,
   staff: Users,
+  notifications: BellRing,
   'reservation-policy': Calendar,
   'room-types-rates': BedDouble,
   'data-system': AlertTriangle,

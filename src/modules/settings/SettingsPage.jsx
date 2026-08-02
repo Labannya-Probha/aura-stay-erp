@@ -27,6 +27,7 @@ import AccountingSetupSection from './sections/AccountingSetupSection'
 import RolesPermissionsSection from './sections/RolesPermissionsSection'
 import UsersStaffSection from './sections/UsersStaffSection'
 import SystemDataSection from './sections/SystemDataSection'
+import NotificationsSection from './sections/NotificationsSection'
 import { isUiDebugEnabled, recordPermissionHidden } from '../../debug/uiDebug'
 
 export default function Settings({ userName, role, isAdmin, reloadCompany }) {
@@ -90,6 +91,7 @@ export default function Settings({ userName, role, isAdmin, reloadCompany }) {
       ),
       'reservation-policy': <ReservationPolicyCard />,
       'room-types-rates': <RoomTypesRatePlansSection />,
+      notifications: <NotificationsSection />,
       'data-system': <SystemDataSection />,
     }),
     [isAdminPlus, isSuperuser, myTenantId, reloadCompany, userName],
