@@ -1,0 +1,12 @@
+{
+  "package": "AEDS Report Center v2 Runtime Alignment",
+  "base": "Cumulative Slice 6",
+  "changes": [
+    "Stable report runtime payload adapter",
+    "Hook error/refetch/stale-request protection",
+    "Dynamic page error and refresh integration",
+    "Safe four-argument RPC compatibility overload",
+    "Contract tests",
+    "Runtime audit and screenshot QA checklist"
+  ]
+}

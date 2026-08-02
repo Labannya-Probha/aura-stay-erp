@@ -124,11 +124,8 @@ export default function DynamicReportPage({ role, company, userName }) {
   const [historyOpen, setHistoryOpen] = useState(false)
   const filterRegionRef = useRef<HTMLDivElement | null>(null)
 
-  const { definition, data, filters, reportFilters, setFilters, loading } = useDynamicReport(
-    department,
-    slug,
-    role,
-  )
+  const { definition, data, filters, reportFilters, setFilters, loading, error, refetch } =
+    useDynamicReport(department, slug, role)
   const [draftFilters, setDraftFilters] = useState(filters || {})
 
   useEffect(() => {
@@ -350,8 +347,11 @@ export default function DynamicReportPage({ role, company, userName }) {
             </div>
           </div>
         }
-        loading={false}
-        empty={false}
+        loading={!definition && loading}
+        empty={!loading && !error && rows.length === 0}
+        error={error}
+        onRefresh={refetch}
+        refreshing={loading}
       >
         <ReportGovernanceBar
           status={reportStatus}

@@ -1,7 +1,12 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadReportDefinition, runMetadataReport } from '../sdk/reportMetadata.service'
 import { getTenantId } from '../../../lib/tenant'
 import { resolveCycleDateRange } from '../utils/resolveCycleDateRange'
+import {
+  createEmptyReportRuntimePayload,
+  normalizeReportRuntimePayload,
+  type ReportRuntimePayload,
+} from '../contracts/reportRuntime.contract'
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -12,66 +17,117 @@ function monthStart() {
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
 }
 
-export function useDynamicReport(department = 'accounts', slug = 'accounts-payable-aging', role) {
-  const [definition, setDefinition] = useState(null)
-  const [data, setData] = useState({
-    rows: [],
-    summary: {},
-    comparisonRows: [],
-    comparisonSummary: { enabled: false },
-  })
-  const [filters, setFiltersState] = useState({
+function initialFilters() {
+  return {
     cycle: 'Monthly',
     start_date: monthStart(),
     end_date: today(),
     compare_to: 'Previous Period',
-  })
+  }
+}
+
+function toMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === 'object') {
+    const record = error as Record<string, any>
+    return String(record.message || record.details || record.error || 'Unable to run report.')
+  }
+  return 'Unable to run report.'
+}
+
+export function useDynamicReport(
+  department = 'accounts',
+  slug = 'accounts-payable-aging',
+  role?: string,
+) {
+  const [definition, setDefinition] = useState<any>(null)
+  const [data, setData] = useState<ReportRuntimePayload>(createEmptyReportRuntimePayload())
+  const [filters, setFiltersState] = useState<Record<string, any>>(initialFilters)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshToken, setRefreshToken] = useState(0)
+  const requestSequence = useRef(0)
 
-  /**
-   * Wraps the raw setFilters so that whenever `cycle` changes to anything
-   * other than "Custom Date Range", start_date/end_date are recalculated
-   * from that cycle via resolveCycleDateRange — this is the fix that makes
-   * the Cycle dropdown actually change what data gets queried, not just
-   * what text it displays.
-   */
-  const setFilters = useCallback((next) => {
-    setFiltersState((prev) => {
-      const merged = typeof next === 'function' ? next(prev) : { ...prev, ...next }
-      const cycleChanged = merged.cycle !== prev.cycle
+  const setFilters = useCallback((next: any) => {
+    setFiltersState((previous) => {
+      const merged = typeof next === 'function' ? next(previous) : { ...previous, ...(next || {}) }
 
+      const cycleChanged = merged.cycle !== previous.cycle
       if (cycleChanged && merged.cycle !== 'Custom Date Range') {
         const resolved = resolveCycleDateRange(merged.cycle)
-        if (resolved) {
-          return { ...merged, ...resolved }
-        }
+        if (resolved) return { ...merged, ...resolved }
       }
+
       return merged
     })
   }, [])
 
+  const refetch = useCallback(() => {
+    setRefreshToken((value) => value + 1)
+  }, [])
+
   useEffect(() => {
-    let active = true
-    Promise.resolve().then(async () => {
+    setDefinition(null)
+    setData(createEmptyReportRuntimePayload())
+    setError(null)
+    setFiltersState(initialFilters())
+  }, [department, slug])
+
+  useEffect(() => {
+    const requestId = ++requestSequence.current
+    let disposed = false
+
+    const execute = async () => {
       setLoading(true)
-      const tenantId = getTenantId()
-      const def = await loadReportDefinition(department, slug, role)
-      const rows = await runMetadataReport(department, slug, filters, tenantId)
-      if (!active) return
-      setDefinition(def)
-      setData(rows)
-      setLoading(false)
-    })
+      setError(null)
+
+      try {
+        const tenantId = getTenantId()
+        const [nextDefinition, rawPayload] = await Promise.all([
+          loadReportDefinition(department, slug, role),
+          runMetadataReport(department, slug, filters, tenantId),
+        ])
+
+        if (disposed || requestId !== requestSequence.current) return
+
+        const normalized = normalizeReportRuntimePayload(rawPayload, {
+          compareTo: filters.compare_to,
+          currentPeriodLabel:
+            filters.start_date && filters.end_date
+              ? `${filters.start_date} to ${filters.end_date}`
+              : 'Selected Period',
+        })
+
+        setDefinition(nextDefinition)
+        setData(normalized)
+
+        if (normalized.error) {
+          setError(normalized.error.message)
+        }
+      } catch (caught) {
+        if (disposed || requestId !== requestSequence.current) return
+        setData(createEmptyReportRuntimePayload())
+        setError(toMessage(caught))
+      } finally {
+        if (!disposed && requestId === requestSequence.current) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void execute()
 
     return () => {
-      active = false
+      disposed = true
     }
-  }, [department, slug, role, filters])
+  }, [department, slug, role, filters, refreshToken])
 
-  const reportFilters = definition?.filters?.some((filter) => filter.filterKey === 'compare_to')
-    ? definition.filters
+  const configuredFilters = Array.isArray(definition?.filters) ? definition.filters : []
+
+  const reportFilters = configuredFilters.some((filter: any) => filter.filterKey === 'compare_to')
+    ? configuredFilters
     : [
-        ...(definition?.filters || []),
+        ...configuredFilters,
         {
           filterKey: 'compare_to',
           label: 'Compare To',
@@ -81,5 +137,14 @@ export function useDynamicReport(department = 'accounts', slug = 'accounts-payab
         },
       ]
 
-  return { definition, data, filters, reportFilters, setFilters, loading }
+  return {
+    definition,
+    data,
+    filters,
+    reportFilters,
+    setFilters,
+    loading,
+    error,
+    refetch,
+  }
 }
