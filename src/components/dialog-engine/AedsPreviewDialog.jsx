@@ -15,7 +15,7 @@ export default function AedsPreviewDialog({ dialog, onClose }) {
             {dialog.description && <p>{dialog.description}</p>}
           </div>
 
-          <button type="button" className="aeds-dialog-icon-btn" onClick={onClose}>
+          <button type="button" className="aeds-dialog-icon-btn" onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
         </header>

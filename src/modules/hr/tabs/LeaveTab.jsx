@@ -4,6 +4,7 @@ import { fmtDate, todayISO } from '../../../lib/helpers'
 import { Plus, Check, X } from 'lucide-react'
 import ModuleDataTable from 'src/components/shared/ModuleDataTable'
 import ModuleStatusPill from 'src/components/shared/ModuleStatusPill'
+import { Button } from 'src/components/ui/button'
 
 const LEAVE_STATUS_TONES = {
   APPROVED: 'success',
@@ -135,20 +136,24 @@ function LeaveApplications({ flash, userName, canApprove }) {
         render: (row) =>
           row.status === 'PENDING' && canApprove ? (
             <div className="flex gap-1">
-              <button
-                className="text-forest"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-forest"
                 onClick={() => setStatus(row.id, 'APPROVED')}
                 aria-label="Approve leave"
               >
                 <Check size={15} />
-              </button>
-              <button
-                className="text-red-500"
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-red-500"
                 onClick={() => setStatus(row.id, 'REJECTED')}
                 aria-label="Reject leave"
               >
                 <X size={15} />
-              </button>
+              </Button>
             </div>
           ) : null,
       },
@@ -195,9 +200,9 @@ function LeaveApplications({ flash, userName, canApprove }) {
           value={f.to_date}
           onChange={(e) => setF({ ...f, to_date: e.target.value })}
         />
-        <button className="btn-primary justify-center" onClick={apply}>
+        <Button variant="default" className="justify-center" onClick={apply}>
           <Plus size={15} /> Apply
-        </button>
+        </Button>
       </div>
       <ModuleDataTable
         columns={columns}
@@ -323,9 +328,9 @@ function CompLeave({ flash }) {
           value={f.reason}
           onChange={(e) => setF({ ...f, reason: e.target.value })}
         />
-        <button className="btn-primary justify-center" onClick={add}>
+        <Button variant="default" className="justify-center" onClick={add}>
           <Plus size={15} /> Earn
-        </button>
+        </Button>
       </div>
       <ModuleDataTable
         columns={columns}

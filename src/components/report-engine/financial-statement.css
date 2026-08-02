@@ -4,8 +4,9 @@
   border-radius: 12px;
   padding: 32px 40px;
   font-family: var(--aeds-font-mono);
-  max-width: 820px;
+  max-width: 1040px;
   margin: 0 auto;
+  color: #171717;
 }
 
 .financial-statement__header {
@@ -31,45 +32,83 @@
   margin: 4px 0 0;
 }
 
-.financial-statement__empty {
+.financial-statement__validation-error {
+  margin: 10px auto 0;
+  max-width: 640px;
+  padding: 8px 12px;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  color: #991b1b;
+  background: #fef2f2;
+  font:
+    600 0.78rem/1.4 'Inter',
+    sans-serif;
+}
+
+.financial-statement__empty,
+.aeds-report-loading {
   font-family: 'Inter', sans-serif;
   text-align: center;
   padding: 48px 16px;
-  color: #8a8580;
+  color: #78716c;
   font-size: 0.9rem;
+}
+
+.aeds-report-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 16px;
+  border: 1px solid #dc2626;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #7f1d1d;
+  font-family: 'Inter', sans-serif;
+}
+
+.aeds-report-error p {
+  margin: 3px 0 0;
+  font-size: 0.84rem;
+}
+.aeds-report-error button {
+  border: 1px solid #b91c1c;
+  border-radius: 7px;
+  padding: 7px 12px;
+  background: #fff;
+  color: #991b1b;
+  font-weight: 600;
 }
 
 .financial-statement__table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
 }
 
-.financial-statement__section-header td {
+.financial-statement__table thead th {
+  padding: 8px 6px;
+  border-bottom: 1px solid #a8a29e;
   font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
   font-weight: 700;
-  font-size: 0.75rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--tenant-primary, #1b4d2e);
-  padding: 16px 0 6px;
-  border-bottom: 1px solid rgb(var(--tenant-primary-rgb) / 0.2);
+  text-align: right;
+  color: #57534e;
 }
 
-.financial-statement__line td {
-  padding: 3px 0;
+.financial-statement__table thead th:first-child {
+  text-align: left;
 }
-
-.financial-statement__line-label {
-  padding-left: 20px !important;
-  display: flex;
-  gap: 10px;
+.financial-statement__row td {
+  padding: 5px 6px;
+  vertical-align: bottom;
 }
-
-.financial-statement__account-code {
-  color: #a8a29a;
-  min-width: 56px;
+.financial-statement__label {
   display: inline-block;
+}
+.financial-statement__note-ref {
+  margin-left: 4px;
+  color: #78716c;
 }
 
 .financial-statement__line-amount {
@@ -79,29 +118,66 @@
   font-variant-numeric: tabular-nums;
 }
 
-.financial-statement__subtotal td {
-  font-weight: 700;
-  padding: 6px 0 14px;
-  border-top: 1px solid #171717;
-}
-
-.financial-statement__subtotal td:first-child {
-  padding-left: 20px;
-}
-
-.financial-statement__grand-total td {
-  font-family: 'Inter', sans-serif;
-  font-weight: 800;
-  font-size: 0.95rem;
-  padding: 16px 0;
-  border-top: 3px double #171717;
+.financial-statement__row--header td {
+  padding-top: 16px;
+  border-bottom: 1px solid rgb(var(--tenant-primary-rgb) / 0.2);
   color: var(--tenant-primary, #1b4d2e);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.financial-statement__row.is-bold td {
+  font-weight: 700;
+}
+.financial-statement__row.is-underlined td {
+  border-top: 1px solid #292524;
+}
+.financial-statement__row.is-double-underlined td {
+  border-top: 3px double #171717;
+  border-bottom: 3px double #171717;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-weight: 800;
+}
+
+.financial-statement__row--grand_total td {
+  color: var(--tenant-primary, #1b4d2e);
+  font-family: 'Inter', sans-serif;
+}
+
+@media (max-width: 760px) {
+  .financial-statement {
+    padding: 22px 18px;
+    overflow-x: auto;
+  }
+  .financial-statement__table {
+    min-width: 680px;
+  }
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm 12mm;
+  }
   .financial-statement {
+    max-width: none;
     border: none;
     box-shadow: none;
+    border-radius: 0;
     padding: 0;
+  }
+  .financial-statement__table {
+    font-size: 9.5pt;
+  }
+  .financial-statement__row {
+    break-inside: avoid;
+  }
+  .aeds-report-error,
+  .aeds-report-loading {
+    display: none !important;
   }
 }

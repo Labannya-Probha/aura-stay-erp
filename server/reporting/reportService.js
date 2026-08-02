@@ -118,6 +118,38 @@ function calculateTotalsFromFields(fields, rows) {
   }, {})
 }
 
+function inferDisplayMode(report = {}) {
+  const code = String(report.code || '').toUpperCase()
+  const name = String(report.name || report.title || '').toLowerCase()
+
+  if (code.startsWith('RPT-IFRS') || name.includes('statement of')) {
+    return 'financial_statement'
+  }
+
+  return 'tabular'
+}
+
+function safeString(value) {
+  if (value === null || value === undefined) return ''
+  return String(value).replace(/\s+/g, ' ').trim()
+}
+
+function buildSummary(filters = {}, user = {}) {
+  return {
+    start_date: filters.start_date || filters.dateFrom || null,
+    end_date: filters.end_date || filters.dateTo || null,
+    as_of_date: filters.as_of_date || filters.dateTo || null,
+    company_name: safeString(filters.companyName || filters.company || 'Aura Stay ERP'),
+    property_name: safeString(filters.propertyName || filters.property || 'All Properties'),
+    currency: safeString(filters.currency || 'BDT'),
+    prepared_by: safeString(user.name || user.username || 'system'),
+    reviewed_by: null,
+    approved_by: null,
+    printed_by: safeString(user.name || user.username || 'system'),
+    legal_note: 'This report is system generated and intended for internal use only.',
+  }
+}
+
 async function loadCatalogReport(reportCode, role = 'ADMIN') {
   const { data: catalogRow, error: catalogError } = await supabaseAdmin
     .from('report_catalog')
@@ -169,6 +201,7 @@ async function loadCatalogReport(reportCode, role = 'ADMIN') {
       exportPermission: !!catalogRow.supports_export_excel || !!catalogRow.supports_export_pdf,
       printPermission: !!catalogRow.supports_print,
       columns,
+      displayMode: inferDisplayMode({ code: catalogRow.report_code, name: catalogRow.title }),
     },
   }
 }
@@ -205,29 +238,34 @@ async function runLiveReport(catalogReport, filters, user) {
   const rows = Array.isArray(data?.rows) ? data.rows : []
   const totals = calculateTotalsFromFields(catalogReport.fields, rows)
   const summary = data?.summary || {}
+  const normalizedSummary = {
+    ...buildSummary(filters, user),
+    ...summary,
+  }
 
   return {
     report: catalogReport.report,
     filters,
     rows,
     totals,
+    summary: normalizedSummary,
     kpis: {
-      totalRevenue: Number(summary.total_revenue || totals.net_amount || totals.netAmount || 0),
-      roomRevenue: Number(summary.room_revenue || 0),
-      restaurantRevenue: Number(summary.restaurant_revenue || 0),
-      otherRevenue: Number(summary.other_revenue || 0),
-      occupancy: Number(summary.occupancy_rate || 0),
-      adr: Number(summary.adr || 0),
-      revpar: Number(summary.revpar || 0),
-      cashCollection: Number(summary.cash_collection || 0),
-      cardCollection: Number(summary.card_collection || 0),
+      totalRevenue: Number(normalizedSummary.total_revenue || totals.net_amount || totals.netAmount || 0),
+      roomRevenue: Number(normalizedSummary.room_revenue || 0),
+      restaurantRevenue: Number(normalizedSummary.restaurant_revenue || 0),
+      otherRevenue: Number(normalizedSummary.other_revenue || 0),
+      occupancy: Number(normalizedSummary.occupancy_rate || 0),
+      adr: Number(normalizedSummary.adr || 0),
+      revpar: Number(normalizedSummary.revpar || 0),
+      cashCollection: Number(normalizedSummary.cash_collection || 0),
+      cardCollection: Number(normalizedSummary.card_collection || 0),
       outstandingReceivable: Number(
-        summary.total_outstanding || summary.outstanding_receivable || 0,
+        normalizedSummary.total_outstanding || normalizedSummary.outstanding_receivable || 0,
       ),
-      vatPayable: Number(summary.vat_payable || totals.vat || 0),
-      netProfit: Number(summary.net_profit || 0),
-      gop: Number(summary.gop || 0),
-      ebitdaMargin: Number(summary.ebitda_margin_pct || 0),
+      vatPayable: Number(normalizedSummary.vat_payable || totals.vat || 0),
+      netProfit: Number(normalizedSummary.net_profit || 0),
+      gop: Number(normalizedSummary.gop || 0),
+      ebitdaMargin: Number(normalizedSummary.ebitda_margin_pct || 0),
     },
     audit: {
       generatedBy: user.name || user.username || 'system',
@@ -285,6 +323,9 @@ export async function generateReport(reportCode, payload = {}, user = {}) {
     filters,
     rows,
     totals,
+    summary: {
+      ...buildSummary(filters, user),
+    },
     kpis,
     audit: {
       generatedBy: user.name || user.username || 'system',

@@ -1,11 +1,6 @@
 import { useState } from 'react'
 import { Download, FileSpreadsheet, Printer } from 'lucide-react'
 import { useParams } from 'react-router-dom'
-import EnterpriseReportHeader, {
-  ReportAuditStrip,
-  ReportMetaStrip,
-  ReportSignatureFooter,
-} from '../../../components/reports/EnterpriseReportHeader'
 import {
   enqueueAedsReportExport,
   waitForAedsReportExportJob,
@@ -13,11 +8,15 @@ import {
 import ReportingStudioShell from '../components/ReportingStudioShell'
 import MetadataReportFilters from '../components/MetadataReportFilters'
 import MetadataReportTable from '../components/MetadataReportTable'
+import ReportRenderer from '../renderers/ReportRenderer'
+import ReportPrintPreview, {
+  buildReportPrintPreviewModel,
+} from '../components/ReportPrintPreview'
 import { useDynamicReport } from '../hooks/useDynamicReport'
 import { exportReportExcel } from '../utils/reportExport'
 import KpiGrid from '../../../components/report-engine/KpiGrid'
 
-export default function DynamicReportPage({ role, company }) {
+export default function DynamicReportPage({ role, company, userName }) {
   const params = useParams()
   const department = params.department || 'accounts'
   const slug = params.slug || 'accounts-payable-aging'
@@ -30,17 +29,14 @@ export default function DynamicReportPage({ role, company }) {
   )
   const report = definition?.report
   const fields = definition?.fields || []
-  const printReportModel = {
-    name: report?.title || 'Report',
-    reportCategory: definition?.department?.name || 'Reports',
-  }
-  const printFilters = {
-    dateFrom: filters?.start_date,
-    dateTo: filters?.end_date,
-    cycle: filters?.cycle,
-    currency: 'BDT',
-    compareTo: filters?.compare_to,
-  }
+  const printPreviewModel = buildReportPrintPreviewModel({
+    definition,
+    data,
+    filters,
+    company,
+    role,
+    userName,
+  })
 
   const headlineKpis = [
     { metric: 'revenue', value: data?.summary?.revenue ?? data?.summary?.current_revenue },
@@ -137,35 +133,37 @@ export default function DynamicReportPage({ role, company }) {
       loading={false}
       empty={false}
     >
-      <main className="min-w-0 space-y-5 enterprise-print-doc">
-        <section className="print-only">
-          <EnterpriseReportHeader
-            company={company}
-            report={printReportModel}
-            filters={printFilters}
+      <main className="erp-print-doc erp-report-body min-w-0 space-y-5 enterprise-print-doc">
+        <section className="screen-only space-y-5">
+          {headlineKpis.length > 0 && (
+            <KpiGrid
+              title="Statement Summary"
+              description="Headline operating metrics for the current selection"
+              rows={headlineKpis}
+              summary={data.summary || {}}
+            />
+          )}
+
+          <ReportRenderer
+            definition={definition}
+            slug={slug}
+            data={data}
+            loading={loading}
+            fallback={
+              <MetadataReportTable
+                fields={fields}
+                rows={data.rows}
+                comparisonRows={data.comparisonRows || []}
+                comparisonSummary={data.comparisonSummary || { enabled: false }}
+                loading={loading}
+              />
+            }
           />
-          <ReportMetaStrip filters={printFilters} />
-          <ReportAuditStrip generatedBy={role} />
         </section>
 
-        {headlineKpis.length > 0 && (
-          <KpiGrid
-            title="Statement Summary"
-            description="Headline operating metrics for the current selection"
-            rows={headlineKpis}
-            summary={data.summary || {}}
-          />
-        )}
-
-        <MetadataReportTable
-          fields={fields}
-          rows={data.rows}
-          comparisonRows={data.comparisonRows || []}
-          comparisonSummary={data.comparisonSummary || { enabled: false }}
-          loading={loading}
-        />
-
-        <ReportSignatureFooter />
+        <section className="print-only">
+          <ReportPrintPreview model={printPreviewModel} company={company} />
+        </section>
       </main>
     </ReportingStudioShell>
   )
