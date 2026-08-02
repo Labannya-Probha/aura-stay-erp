@@ -67,6 +67,50 @@ describe('buildReportPrintPreviewModel', () => {
     expect(model.signatures.printedBy).toBe('System User')
   })
 
+  it('builds financial model when rows arrive under data.lines', () => {
+    const definition = {
+      department: { name: 'Accounts' },
+      report: { title: 'Statement of Financial Position' },
+      fields: [],
+    }
+
+    const data = {
+      lines: [
+        { line_code: 'BS.ASSETS', line_type: 'HEADER', label: 'Assets' },
+        {
+          line_code: 'BS.CA.CASH',
+          label: 'Cash',
+          opening_amount: 2500000,
+          current_amount: 3000000,
+          comparison_amount: 2200000,
+        },
+      ],
+      summary: {
+        currency: 'BDT',
+        period: {
+          opening_label: 'Opening Balance',
+          current_label: 'Closing Balance',
+          comparison_label: 'Prior Year',
+        },
+      },
+      validation: { valid: true, errors: [], warnings: [] },
+      audit: {},
+    }
+
+    const model = buildReportPrintPreviewModel({
+      definition,
+      data,
+      filters: { start_date: '2026-08-01', end_date: '2026-08-31' },
+      company,
+      role: 'ACCOUNTANT',
+      userName: 'Nabila',
+    })
+
+    expect(model.financial?.lines).toHaveLength(2)
+    expect(model.financial?.currentLabel).toBe('Closing Balance')
+    expect(model.financial?.hasOpening).toBe(true)
+  })
+
   it('builds tabular model when report is non-financial', () => {
     const definition = {
       department: { name: 'Front Office' },

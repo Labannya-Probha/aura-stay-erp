@@ -72,9 +72,21 @@ function safeText(value: unknown, fallback = '') {
 function isFinancial(definition: any, data: any) {
   const displayMode = String(definition?.report?.displayMode || '').toLowerCase()
   if (displayMode === 'financial_statement') return true
-  return Array.isArray(data?.rows)
-    ? data.rows.some((row: any) => row?.line_code || row?.current_amount !== undefined)
-    : false
+
+  const candidateRows = [
+    ...(Array.isArray(data?.lines) ? data.lines : []),
+    ...(Array.isArray(data?.rows) ? data.rows : []),
+  ]
+
+  return candidateRows.some((row: any) => {
+    return (
+      row?.line_code ||
+      row?.line_type ||
+      row?.opening_amount !== undefined ||
+      row?.current_amount !== undefined ||
+      row?.comparison_amount !== undefined
+    )
+  })
 }
 
 function formatBdt(value: unknown) {
