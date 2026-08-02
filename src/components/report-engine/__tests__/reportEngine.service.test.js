@@ -57,8 +57,6 @@ describe('reportEngine.service', () => {
 
   it('calls aeds_run_report with tenant-aware parameters', async () => {
     mocks.rpc.mockResolvedValue({
-  it('calls aeds_run_report with report and filter parameters', async () => {
-    rpcMock.mockResolvedValue({
       data: {
         rows: [
           {
@@ -93,15 +91,6 @@ describe('reportEngine.service', () => {
       p_filters: {
         start_date: '2026-07-01',
         end_date: '2026-07-31',
-    expect(rpcMock).toHaveBeenCalledWith(
-      'aeds_run_report',
-      {
-        p_department_slug: 'accounts',
-        p_report_slug: 'statement-of-profit-or-loss',
-        p_filters: {
-          start_date: '2026-07-01',
-          end_date: '2026-07-31',
-        },
       },
       p_tenant_id: TENANT_ID,
     })
@@ -124,8 +113,6 @@ describe('reportEngine.service', () => {
 
   it('throws a visible report error when aeds_run_report fails', async () => {
     mocks.rpc.mockResolvedValue({
-  it('returns fallback payload when report RPC fails', async () => {
-    rpcMock.mockResolvedValue({
       data: null,
       error: {
         code: '42501',
@@ -158,14 +145,6 @@ describe('reportEngine.service', () => {
 
   it('throws when report engine returns summary.error', async () => {
     mocks.rpc.mockResolvedValue({
-    ).resolves.toEqual({
-      rows: [],
-      summary: { source: 'fallback_empty' },
-    })
-  })
-
-  it('returns rpc data as-is when report engine summary includes error', async () => {
-    rpcMock.mockResolvedValue({
       data: {
         rows: [],
         summary: {
@@ -181,11 +160,9 @@ describe('reportEngine.service', () => {
         slug: 'unknown-report',
         filters: {},
       }),
-    ).resolves.toEqual({
-      rows: [],
-      summary: {
-        error: 'unknown report',
-      },
+    ).rejects.toMatchObject({
+      code: 'REPORT_ENGINE_ERROR',
+      message: 'unknown report',
     })
   })
 
