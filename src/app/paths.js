@@ -90,6 +90,7 @@ export const PATHS = {
   // Reports
   REPORTS: '/reports',
   REPORTS_NOTES: '/reports/notes',
+  REPORTS_PNL_V2: '/reports/pnl-v2',
   REPORTS_CASED_ALIAS: '/Reports',
   TENANT_REPORTS: '/:slug/reports',
   TENANT_REPORTS_CASED_ALIAS: '/:slug/Reports',
