@@ -33,7 +33,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
   const adminClient = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false },
@@ -48,25 +48,25 @@ Deno.serve(async (req: Request) => {
 
     if (error) {
       console.error('[auto-no-show] RPC error', { error: error.message, runAt })
-      return new Response(
-        JSON.stringify({ ok: false, error: error.message, runAt }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      )
+      return new Response(JSON.stringify({ ok: false, error: error.message, runAt }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     const affected = Number(data ?? 0)
     console.log('[auto-no-show] sweep complete', { affected, runAt })
 
-    return new Response(
-      JSON.stringify({ ok: true, affected, runAt }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    )
+    return new Response(JSON.stringify({ ok: true, affected, runAt }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[auto-no-show] unexpected error', { message, runAt })
-    return new Response(
-      JSON.stringify({ ok: false, error: 'Internal server error', runAt }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    )
+    return new Response(JSON.stringify({ ok: false, error: 'Internal server error', runAt }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })

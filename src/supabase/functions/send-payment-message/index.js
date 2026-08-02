@@ -18,15 +18,7 @@ Deno.serve(async (req) => {
     return json({ error: 'Invalid JSON payload' }, 400)
   }
 
-  const {
-    channel,
-    to,
-    subject,
-    message,
-    attachment,
-    reservation_id,
-    payment_id,
-  } = body || {}
+  const { channel, to, subject, message, attachment, reservation_id, payment_id } = body || {}
 
   if (!channel || !to || !message) {
     return json({ error: 'channel, to, and message are required' }, 400)
@@ -216,18 +208,14 @@ async function uploadAttachmentAndSignUrl({ attachment, reservation_id, payment_
   const safeName = String(attachment.name || 'attachment.bin').replace(/[^a-zA-Z0-9._-]/g, '_')
   const key = `${reservation_id || 'general'}/${payment_id || Date.now()}-${Date.now()}-${safeName}`
 
-  const { error: upErr } = await supabase.storage
-    .from(bucket)
-    .upload(key, bytes, {
-      contentType: attachment.type || 'application/octet-stream',
-      upsert: true,
-    })
+  const { error: upErr } = await supabase.storage.from(bucket).upload(key, bytes, {
+    contentType: attachment.type || 'application/octet-stream',
+    upsert: true,
+  })
 
   if (upErr) throw new Error(`Attachment upload failed: ${upErr.message}`)
 
-  const { data, error: signErr } = await supabase.storage
-    .from(bucket)
-    .createSignedUrl(key, 60 * 60)
+  const { data, error: signErr } = await supabase.storage.from(bucket).createSignedUrl(key, 60 * 60)
 
   if (signErr || !data?.signedUrl) {
     throw new Error(signErr?.message || 'Could not create signed URL for attachment')
@@ -245,7 +233,12 @@ async function ensureBucket(supabase, bucketName) {
     public: false,
     fileSizeLimit: `${MAX_ATTACHMENT_BYTES}`,
   })
-  if (createErr && !String(createErr.message || '').toLowerCase().includes('already exists')) {
+  if (
+    createErr &&
+    !String(createErr.message || '')
+      .toLowerCase()
+      .includes('already exists')
+  ) {
     throw new Error(`Could not create bucket: ${createErr.message}`)
   }
 }
